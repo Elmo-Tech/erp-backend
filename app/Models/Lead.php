@@ -4,15 +4,15 @@ namespace App\Models;
 
 use App\Contracts\Trackable;
 use App\Enums\LeadStatus;
+use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Lead extends Model implements Trackable
 {
-    use HasFactory;
+    use HasFactory, HasCreatedUpdatedBy;
 
     /**
      * The attributes that are mass assignable.
@@ -55,22 +55,6 @@ class Lead extends Model implements Trackable
     public function timeEntries(): MorphMany
     {
         return $this->morphMany(TimeEntry::class, 'trackable');
-    }
-
-    /**
-     * Get the user who created this lead.
-     */
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /**
-     * Get the user who last updated this lead.
-     */
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'updated_by');
     }
 
     /**
