@@ -51,7 +51,8 @@ class TimeTrackingService
         }
 
         $endTime = Carbon::now();
-        $durationMinutes = $activeTimer->start_time->diffInMinutes($endTime);
+        // Calculate duration in minutes, rounded down as per Requirements 5.4, 5.5
+        $durationMinutes = (int) floor($activeTimer->start_time->diffInSeconds($endTime) / 60);
 
         $activeTimer->update([
             'end_time' => $endTime,
