@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\LeadController;
+use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\ProjectHistoryController;
+use App\Http\Controllers\Api\V1\ProjectWikiController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use Illuminate\Support\Facades\Route;
@@ -36,4 +39,22 @@ Route::prefix('v1')->group(function () {
     Route::post('time-entries/stop', [TimeEntryController::class, 'stop'])->name('time-entries.stop');
     Route::get('time-entries', [TimeEntryController::class, 'index'])->name('time-entries.index');
     Route::get('time-entries/active', [TimeEntryController::class, 'active'])->name('time-entries.active');
+
+    // Project Management Routes
+    // All routes have auth:sanctum and locale middleware applied in controllers
+    
+    // Project CRUD Routes
+    Route::apiResource('projects', ProjectController::class);
+    
+    // Project Conversion Route (convert quotation to project)
+    Route::post('projects/convert', [ProjectController::class, 'convert'])->name('projects.convert');
+    
+    // Project UI Approval Route (manual approval of UI/UX deliverables)
+    Route::post('projects/{project}/approve-ui', [ProjectController::class, 'approveUI'])->name('projects.approve-ui');
+    
+    // Project History Route (audit trail)
+    Route::get('projects/{project}/history', [ProjectHistoryController::class, 'index'])->name('projects.history');
+    
+    // Project Wiki Routes (nested resource)
+    Route::apiResource('projects.wikis', ProjectWikiController::class);
 });

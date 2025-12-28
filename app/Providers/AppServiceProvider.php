@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Project;
+use App\Observers\ProjectObserver;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
 
@@ -24,5 +26,8 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production' || request()->isSecure()) {
             URL::forceScheme('https');
         }
+
+        // Register model observers
+        Project::observe(ProjectObserver::class);
     }
 }
