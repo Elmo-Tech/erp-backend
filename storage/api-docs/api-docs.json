@@ -1,14 +1,19 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "Business OS API",
-        "description": "ERP/CRM API for Business OS",
+        "title": "Business OS API - Project Management & Wiki",
+        "description": "ERP/CRM API for Business OS - Project Management and Secure Wiki Module",
         "version": "1.0.0"
     },
     "servers": [
         {
-            "url": "https://elmo-erp-api.elmotechsoft.online/api/v1",
-            "description": "Production API Server"
+            "url": "http://localhost:8000/api/v1",
+            "description": "Local Development Server"
+        }
+    ],
+    "security": [
+        {
+            "bearerAuth": []
         }
     ],
     "paths": {
@@ -16,6 +21,7 @@
             "get": {
                 "tags": ["Health"],
                 "summary": "Health check endpoint",
+                "security": [],
                 "responses": {
                     "200": {
                         "description": "API is healthy",
@@ -24,18 +30,1543 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ok"
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
                                         },
-                                        "timestamp": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "2025-12-27T10:00:00Z"
+                                            "example": "API is healthy"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "ok"
+                                                },
+                                                "version": {
+                                                    "type": "string",
+                                                    "example": "1.0.0"
+                                                },
+                                                "timestamp": {
+                                                    "type": "string",
+                                                    "example": "2025-12-30T08:30:34+00:00"
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/leads": {
+            "get": {
+                "tags": ["Leads"],
+                "summary": "List all leads with pagination and filtering",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "filter[status]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "new",
+                                "contacted",
+                                "qualified",
+                                "proposal",
+                                "negotiation",
+                                "closed_won",
+                                "closed_lost"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[source]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[search]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Leads retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LeadCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "post": {
+                "tags": ["Leads"],
+                "summary": "Create a new lead",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateLeadRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Lead created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LeadResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/leads/{lead}": {
+            "get": {
+                "tags": ["Leads"],
+                "summary": "Get lead details",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "lead",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lead details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LeadResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "put": {
+                "tags": ["Leads"],
+                "summary": "Update lead",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "lead",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateLeadRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Lead updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LeadResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Leads"],
+                "summary": "Delete lead",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "lead",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lead deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/quotations": {
+            "get": {
+                "tags": ["Quotations"],
+                "summary": "List all quotations with pagination and filtering",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "filter[status]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "draft",
+                                "sent",
+                                "accepted",
+                                "rejected",
+                                "expired"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[lead_id]",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "filter[search]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Quotations retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/QuotationCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "post": {
+                "tags": ["Quotations"],
+                "summary": "Create a new quotation",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateQuotationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Quotation created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/QuotationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/quotations/calculate": {
+            "post": {
+                "tags": ["Quotations"],
+                "summary": "Calculate quotation pricing",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CalculatePricingRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pricing calculated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PricingCalculationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/quotations/{quotation}": {
+            "get": {
+                "tags": ["Quotations"],
+                "summary": "Get quotation details",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "quotation",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Quotation details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/QuotationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "put": {
+                "tags": ["Quotations"],
+                "summary": "Update quotation",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "quotation",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateQuotationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Quotation updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/QuotationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Quotations"],
+                "summary": "Delete quotation",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "quotation",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Quotation deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/time-entries": {
+            "get": {
+                "tags": ["Time Entries"],
+                "summary": "List time entries with filtering",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "filter[trackable_type]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "App\\Models\\Lead",
+                                "App\\Models\\Quotation",
+                                "App\\Models\\Project"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[trackable_id]",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "filter[user_id]",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "filter[date_from]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "filter[date_to]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Time entries retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimeEntryCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/time-entries/active": {
+            "get": {
+                "tags": ["Time Entries"],
+                "summary": "Get active time entry for current user",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Active time entry retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimeEntryResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No active time entry found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/time-entries/start": {
+            "post": {
+                "tags": ["Time Entries"],
+                "summary": "Start time tracking for an entity",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StartTimerRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Timer started successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimeEntryResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "400": {
+                        "description": "Timer already active or invalid entity",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/time-entries/stop": {
+            "post": {
+                "tags": ["Time Entries"],
+                "summary": "Stop active time tracking",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StopTimerRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Timer stopped successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimeEntryResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "400": {
+                        "description": "No active timer found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/projects": {
+            "get": {
+                "tags": ["Projects"],
+                "summary": "List all projects with pagination and filtering",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "filter[status]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "draft",
+                                "active",
+                                "ui_ux",
+                                "development",
+                                "testing",
+                                "completed",
+                                "on_hold",
+                                "cancelled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[client_id]",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "filter[search]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Projects retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "post": {
+                "tags": ["Projects"],
+                "summary": "Create a new project",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateProjectRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Project created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/projects/convert": {
+            "post": {
+                "tags": ["Projects"],
+                "summary": "Convert accepted quotation to project",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConvertQuotationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Quotation converted to project successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "400": {
+                        "description": "Invalid quotation for conversion",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/projects/{project}": {
+            "get": {
+                "tags": ["Projects"],
+                "summary": "Get project details",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "project",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "put": {
+                "tags": ["Projects"],
+                "summary": "Update project",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "project",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateProjectRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Project updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Projects"],
+                "summary": "Delete project",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "project",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/projects/{project}/approve-ui": {
+            "post": {
+                "tags": ["Projects"],
+                "summary": "Manually approve UI/UX phase",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "project",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "UI/UX phase approved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Project not in UI/UX phase",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/projects/{project}/history": {
+            "get": {
+                "tags": ["Project History"],
+                "summary": "Get project change history",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "project",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "filter[field_name]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project history retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectHistoryCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/projects/{project}/wikis": {
+            "get": {
+                "tags": ["Project Wikis"],
+                "summary": "List project wiki entries",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "project",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project wikis retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectWikiCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "post": {
+                "tags": ["Project Wikis"],
+                "summary": "Create new wiki entry",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "project",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateProjectWikiRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Wiki entry created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectWikiResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/projects/{project}/wikis/{wiki}": {
+            "get": {
+                "tags": ["Project Wikis"],
+                "summary": "Get wiki entry details with decrypted content",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "project",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "wiki",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Wiki entry retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectWikiResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "put": {
+                "tags": ["Project Wikis"],
+                "summary": "Update wiki entry",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "project",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "wiki",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateProjectWikiRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Wiki entry updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectWikiResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Project Wikis"],
+                "summary": "Delete wiki entry",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "project",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "wiki",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Wiki entry deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     }
                 }
             }
@@ -46,7 +1577,1336 @@
             "bearerAuth": {
                 "type": "http",
                 "scheme": "bearer",
-                "bearerFormat": "JWT"
+                "bearerFormat": "JWT",
+                "description": "Enter your Bearer token in the format: Bearer {token}"
+            }
+        },
+        "schemas": {
+            "Lead": {
+                "type": "object",
+                "properties": {
+                    "leadId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "John Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john.doe@example.com"
+                    },
+                    "company": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Tech Solutions Inc"
+                    },
+                    "source": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Website Contact Form"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "new",
+                            "contacted",
+                            "qualified",
+                            "proposal",
+                            "negotiation",
+                            "closed_won",
+                            "closed_lost"
+                        ],
+                        "example": "new"
+                    },
+                    "createdBy": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "updatedBy": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T10:00:00Z"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T10:00:00Z"
+                    }
+                }
+            },
+            "Quotation": {
+                "type": "object",
+                "properties": {
+                    "quotationId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "leadId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "estimations": {
+                        "type": "object",
+                        "example": {
+                            "frontendHours": 40,
+                            "backendHours": 60,
+                            "uiUxHours": 20
+                        }
+                    },
+                    "hourlyRate": {
+                        "type": "number",
+                        "format": "decimal",
+                        "example": 50.0
+                    },
+                    "discountPercentage": {
+                        "type": "number",
+                        "format": "decimal",
+                        "example": 10.0
+                    },
+                    "finalPrice": {
+                        "type": "number",
+                        "format": "decimal",
+                        "example": 5400.0
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "USD"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "sent",
+                            "accepted",
+                            "rejected",
+                            "expired"
+                        ],
+                        "example": "draft"
+                    },
+                    "validUntil": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "example": "2025-02-15"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Additional requirements discussed"
+                    },
+                    "lead": {
+                        "$ref": "#/components/schemas/Lead"
+                    },
+                    "createdBy": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "updatedBy": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T10:00:00Z"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T10:00:00Z"
+                    }
+                }
+            },
+            "TimeEntry": {
+                "type": "object",
+                "properties": {
+                    "timeEntryId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "userId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "trackableType": {
+                        "type": "string",
+                        "enum": [
+                            "App\\Models\\Lead",
+                            "App\\Models\\Quotation",
+                            "App\\Models\\Project"
+                        ],
+                        "example": "App\\Models\\Project"
+                    },
+                    "trackableId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "startTime": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T09:00:00Z"
+                    },
+                    "endTime": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "example": "2025-01-01T17:00:00Z"
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Duration in minutes",
+                        "example": 480
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Working on project requirements"
+                    },
+                    "isManualEntry": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "trackable": {
+                        "type": "object",
+                        "description": "The trackable entity (Lead, Quotation, or Project)"
+                    },
+                    "user": {
+                        "type": "object",
+                        "properties": {
+                            "userId": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "John Developer"
+                            },
+                            "email": {
+                                "type": "string",
+                                "example": "john@company.com"
+                            }
+                        }
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T09:00:00Z"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T17:00:00Z"
+                    }
+                }
+            },
+            "CreateLeadRequest": {
+                "type": "object",
+                "required": ["name", "email"],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "example": "Jane Smith"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 255,
+                        "example": "jane.smith@example.com"
+                    },
+                    "company": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255,
+                        "example": "Digital Agency Ltd"
+                    },
+                    "source": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255,
+                        "example": "LinkedIn"
+                    },
+                    "status": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "new",
+                            "contacted",
+                            "qualified",
+                            "proposal",
+                            "negotiation",
+                            "closed_won",
+                            "closed_lost"
+                        ],
+                        "default": "new",
+                        "example": "new"
+                    }
+                }
+            },
+            "UpdateLeadRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255,
+                        "example": "Jane Smith Updated"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "nullable": true,
+                        "maxLength": 255,
+                        "example": "jane.updated@example.com"
+                    },
+                    "company": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255,
+                        "example": "Updated Digital Agency Ltd"
+                    },
+                    "source": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255,
+                        "example": "Referral"
+                    },
+                    "status": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "new",
+                            "contacted",
+                            "qualified",
+                            "proposal",
+                            "negotiation",
+                            "closed_won",
+                            "closed_lost"
+                        ],
+                        "example": "contacted"
+                    }
+                }
+            },
+            "CreateQuotationRequest": {
+                "type": "object",
+                "required": ["leadId", "estimations", "hourlyRate"],
+                "properties": {
+                    "leadId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "estimations": {
+                        "type": "object",
+                        "example": {
+                            "frontendHours": 40,
+                            "backendHours": 60,
+                            "uiUxHours": 20
+                        }
+                    },
+                    "hourlyRate": {
+                        "type": "number",
+                        "format": "decimal",
+                        "minimum": 0.01,
+                        "example": 50.0
+                    },
+                    "discountPercentage": {
+                        "type": "number",
+                        "format": "decimal",
+                        "nullable": true,
+                        "minimum": 0,
+                        "maximum": 100,
+                        "default": 0,
+                        "example": 10.0
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "default": "USD",
+                        "example": "USD"
+                    },
+                    "validUntil": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "example": "2025-02-15"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Special requirements noted"
+                    }
+                }
+            },
+            "UpdateQuotationRequest": {
+                "type": "object",
+                "properties": {
+                    "estimations": {
+                        "type": "object",
+                        "nullable": true,
+                        "example": {
+                            "frontendHours": 45,
+                            "backendHours": 65,
+                            "uiUxHours": 25
+                        }
+                    },
+                    "hourlyRate": {
+                        "type": "number",
+                        "format": "decimal",
+                        "nullable": true,
+                        "minimum": 0.01,
+                        "example": 55.0
+                    },
+                    "discountPercentage": {
+                        "type": "number",
+                        "format": "decimal",
+                        "nullable": true,
+                        "minimum": 0,
+                        "maximum": 100,
+                        "example": 15.0
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "EUR"
+                    },
+                    "status": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "draft",
+                            "sent",
+                            "accepted",
+                            "rejected",
+                            "expired"
+                        ],
+                        "example": "sent"
+                    },
+                    "validUntil": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "example": "2025-03-15"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Updated requirements"
+                    }
+                }
+            },
+            "CalculatePricingRequest": {
+                "type": "object",
+                "required": ["estimations", "hourlyRate"],
+                "properties": {
+                    "estimations": {
+                        "type": "object",
+                        "example": {
+                            "frontendHours": 40,
+                            "backendHours": 60,
+                            "uiUxHours": 20
+                        }
+                    },
+                    "hourlyRate": {
+                        "type": "number",
+                        "format": "decimal",
+                        "minimum": 0.01,
+                        "example": 50.0
+                    },
+                    "discountPercentage": {
+                        "type": "number",
+                        "format": "decimal",
+                        "nullable": true,
+                        "minimum": 0,
+                        "maximum": 100,
+                        "default": 0,
+                        "example": 10.0
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "default": "USD",
+                        "example": "USD"
+                    }
+                }
+            },
+            "StartTimerRequest": {
+                "type": "object",
+                "required": ["trackableType", "trackableId"],
+                "properties": {
+                    "trackableType": {
+                        "type": "string",
+                        "enum": ["lead", "quotation", "project"],
+                        "example": "project"
+                    },
+                    "trackableId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 500,
+                        "example": "Working on project implementation"
+                    }
+                }
+            },
+            "StopTimerRequest": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 500,
+                        "example": "Completed task implementation"
+                    }
+                }
+            },
+            "LeadResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Lead retrieved successfully"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Lead"
+                    }
+                }
+            },
+            "LeadCollectionResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Leads retrieved successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "leads": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Lead"
+                                }
+                            },
+                            "pagination": {
+                                "type": "object",
+                                "properties": {
+                                    "total": {
+                                        "type": "integer",
+                                        "example": 25
+                                    },
+                                    "count": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "perPage": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "currentPage": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "totalPages": {
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "QuotationResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Quotation retrieved successfully"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Quotation"
+                    }
+                }
+            },
+            "QuotationCollectionResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Quotations retrieved successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "quotations": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Quotation"
+                                }
+                            },
+                            "pagination": {
+                                "type": "object",
+                                "properties": {
+                                    "total": {
+                                        "type": "integer",
+                                        "example": 30
+                                    },
+                                    "count": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "perPage": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "currentPage": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "totalPages": {
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "PricingCalculationResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Pricing calculated successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "totalHours": {
+                                "type": "number",
+                                "example": 120
+                            },
+                            "subtotal": {
+                                "type": "number",
+                                "format": "decimal",
+                                "example": 6000.0
+                            },
+                            "discountAmount": {
+                                "type": "number",
+                                "format": "decimal",
+                                "example": 600.0
+                            },
+                            "finalPrice": {
+                                "type": "number",
+                                "format": "decimal",
+                                "example": 5400.0
+                            },
+                            "currency": {
+                                "type": "string",
+                                "example": "USD"
+                            },
+                            "breakdown": {
+                                "type": "object",
+                                "example": {
+                                    "frontendHours": 40,
+                                    "backendHours": 60,
+                                    "uiUxHours": 20
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "TimeEntryResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Time entry retrieved successfully"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/TimeEntry"
+                    }
+                }
+            },
+            "TimeEntryCollectionResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Time entries retrieved successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "timeEntries": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/TimeEntry"
+                                }
+                            },
+                            "pagination": {
+                                "type": "object",
+                                "properties": {
+                                    "total": {
+                                        "type": "integer",
+                                        "example": 100
+                                    },
+                                    "count": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "perPage": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "currentPage": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "totalPages": {
+                                        "type": "integer",
+                                        "example": 7
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "Project": {
+                "type": "object",
+                "properties": {
+                    "projectId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "clientId": {
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "quotationId": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 3
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "E-commerce Website Development"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Full-stack e-commerce platform with payment integration"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "active",
+                            "ui_ux",
+                            "development",
+                            "testing",
+                            "completed",
+                            "on_hold",
+                            "cancelled"
+                        ],
+                        "example": "active"
+                    },
+                    "previousStatus": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "draft",
+                            "active",
+                            "ui_ux",
+                            "development",
+                            "testing",
+                            "completed",
+                            "on_hold",
+                            "cancelled"
+                        ],
+                        "example": "draft"
+                    },
+                    "budget": {
+                        "type": "number",
+                        "format": "decimal",
+                        "example": 15000.0
+                    },
+                    "deadline": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "example": "2025-03-15"
+                    },
+                    "uiApprovedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "example": "2025-01-15T10:30:00Z"
+                    },
+                    "autoApprovalJobId": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "job_12345"
+                    },
+                    "createdBy": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "updatedBy": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T10:00:00Z"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T10:00:00Z"
+                    }
+                }
+            },
+            "ProjectHistory": {
+                "type": "object",
+                "properties": {
+                    "historyId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "projectId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "fieldName": {
+                        "type": "string",
+                        "example": "status"
+                    },
+                    "oldValue": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "draft"
+                    },
+                    "newValue": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "active"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Client approved project scope"
+                    },
+                    "changedBy": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "changedByUser": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "userId": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "John Doe"
+                            },
+                            "email": {
+                                "type": "string",
+                                "example": "john@example.com"
+                            }
+                        }
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T10:00:00Z"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T10:00:00Z"
+                    }
+                }
+            },
+            "ProjectWiki": {
+                "type": "object",
+                "properties": {
+                    "wikiId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "projectId": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Database Credentials"
+                    },
+                    "content": {
+                        "type": "string",
+                        "example": "# Database Configuration\n\nHost: localhost\nPort: 3306\nUsername: admin\nPassword: [ENCRYPTED]"
+                    },
+                    "isEncrypted": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "createdBy": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "updatedBy": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T10:00:00Z"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-01-01T10:00:00Z"
+                    }
+                }
+            },
+            "CreateProjectRequest": {
+                "type": "object",
+                "required": ["quotationId"],
+                "properties": {
+                    "quotationId": {
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255,
+                        "example": "Custom Project Title"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Custom project description"
+                    },
+                    "deadline": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "example": "2025-06-30"
+                    }
+                }
+            },
+            "UpdateProjectRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255,
+                        "example": "Updated Project Title"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Updated project description"
+                    },
+                    "status": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "draft",
+                            "active",
+                            "ui_ux",
+                            "development",
+                            "testing",
+                            "completed",
+                            "on_hold",
+                            "cancelled"
+                        ],
+                        "example": "ui_ux"
+                    },
+                    "budget": {
+                        "type": "number",
+                        "format": "decimal",
+                        "nullable": true,
+                        "minimum": 0.01,
+                        "example": 18000.0
+                    },
+                    "deadline": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "example": "2025-07-15"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Client requested scope expansion"
+                    }
+                }
+            },
+            "ConvertQuotationRequest": {
+                "type": "object",
+                "required": ["quotationId"],
+                "properties": {
+                    "quotationId": {
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255,
+                        "example": "Mobile App Development"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "iOS and Android mobile application"
+                    },
+                    "deadline": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "example": "2025-08-30"
+                    }
+                }
+            },
+            "CreateProjectWikiRequest": {
+                "type": "object",
+                "required": ["title", "content"],
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "example": "API Keys and Secrets"
+                    },
+                    "content": {
+                        "type": "string",
+                        "example": "# API Configuration\n\nStripe API Key: sk_test_123456\nAWS Access Key: AKIA123456"
+                    },
+                    "isEncrypted": {
+                        "type": "boolean",
+                        "nullable": true,
+                        "default": false,
+                        "example": true
+                    }
+                }
+            },
+            "UpdateProjectWikiRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255,
+                        "example": "Updated API Configuration"
+                    },
+                    "content": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "# Updated API Configuration\n\nStripe API Key: sk_live_789012"
+                    },
+                    "isEncrypted": {
+                        "type": "boolean",
+                        "nullable": true,
+                        "example": true
+                    }
+                }
+            },
+            "ProjectResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Project retrieved successfully"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Project"
+                    }
+                }
+            },
+            "ProjectCollectionResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Projects retrieved successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "projects": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Project"
+                                }
+                            },
+                            "pagination": {
+                                "type": "object",
+                                "properties": {
+                                    "total": {
+                                        "type": "integer",
+                                        "example": 50
+                                    },
+                                    "count": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "perPage": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "currentPage": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "totalPages": {
+                                        "type": "integer",
+                                        "example": 4
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "ProjectHistoryCollectionResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Project history retrieved successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "histories": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/ProjectHistory"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "ProjectWikiResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Wiki entry retrieved successfully"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/ProjectWiki"
+                    }
+                }
+            },
+            "ProjectWikiCollectionResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Project wikis retrieved successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "wikis": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/ProjectWiki"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "SuccessResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Operation completed successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "nullable": true
+                    }
+                }
+            },
+            "ErrorResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "An error occurred"
+                    },
+                    "errors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "Invalid quotation status",
+                            "Quotation already converted"
+                        ]
+                    }
+                }
+            },
+            "ValidationErrorResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Validation failed"
+                    },
+                    "errors": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "example": {
+                            "title": ["The title field is required."],
+                            "budget": ["The budget must be greater than 0."]
+                        }
+                    }
+                }
+            }
+        },
+        "responses": {
+            "Unauthenticated": {
+                "description": "Authentication required",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Unauthenticated."
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "NotFound": {
+                "description": "Resource not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorResponse"
+                        },
+                        "example": {
+                            "success": false,
+                            "message": "Resource not found",
+                            "errors": ["The requested resource was not found."]
+                        }
+                    }
+                }
+            },
+            "ValidationError": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ValidationErrorResponse"
+                        }
+                    }
+                }
             }
         }
     }
