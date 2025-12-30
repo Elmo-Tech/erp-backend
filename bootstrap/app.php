@@ -22,8 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'locale' => SetLocaleMiddleware::class,
         ]);
 
-        // Append locale middleware to API middleware group
+        // Append CORS and locale middleware to API middleware group
         $middleware->api(append: [
+            \Illuminate\Http\Middleware\HandleCors::class,
             SetLocaleMiddleware::class,
         ]);
     })

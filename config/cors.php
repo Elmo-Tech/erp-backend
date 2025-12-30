@@ -15,21 +15,33 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'auth/*'],
 
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
         env('FRONTEND_URL', 'https://elmo-erp.elmotechsoft.online'),
+        'https://elmo-erp.elmotechsoft.online',
+        'http://localhost:3000', // For local development
     ],
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => [
+        'Accept',
+        'Authorization',
+        'Content-Type',
+        'X-Requested-With',
+        'Accept-Language',
+        'Origin',
+        'X-CSRF-TOKEN',
+    ],
 
-    'exposed_headers' => [],
+    'exposed_headers' => [
+        'Authorization',
+    ],
 
-    'max_age' => 0,
+    'max_age' => 86400, // 24 hours
 
     'supports_credentials' => true,
 

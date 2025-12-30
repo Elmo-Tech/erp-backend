@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\ProjectController;
@@ -23,6 +24,14 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     // Health check endpoint
     Route::get('/health', HealthController::class)->name('api.v1.health');
+
+    // Authentication Routes
+    Route::prefix('auth')->group(function () {
+        Route::post('login', [AuthController::class, 'login'])->name('auth.login');
+        Route::post('register', [AuthController::class, 'register'])->name('auth.register');
+        Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::get('profile', [AuthController::class, 'profile'])->name('auth.profile');
+    });
 
     // Sales & Pricing Engine Routes
     // All routes have auth:sanctum and locale middleware applied in controllers
