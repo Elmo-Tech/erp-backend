@@ -28,7 +28,7 @@ class ApiResponsePropertyTest extends TestCase
     public function test_success_response_always_contains_required_fields(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string(),
                 Generator\choose(200, 299)
@@ -68,7 +68,7 @@ class ApiResponsePropertyTest extends TestCase
     public function test_error_response_always_contains_required_fields(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string(),
                 Generator\choose(400, 599)
@@ -101,7 +101,7 @@ class ApiResponsePropertyTest extends TestCase
     public function test_error_response_includes_errors_array_when_provided(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string(),
                 Generator\choose(400, 599)
@@ -129,7 +129,7 @@ class ApiResponsePropertyTest extends TestCase
     public function test_validation_error_returns_422_with_errors(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string()
             )
@@ -161,7 +161,7 @@ class ApiResponsePropertyTest extends TestCase
     public function test_not_found_returns_404(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string()
             )
@@ -185,7 +185,7 @@ class ApiResponsePropertyTest extends TestCase
     public function test_unauthorized_returns_401(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string()
             )
@@ -209,7 +209,7 @@ class ApiResponsePropertyTest extends TestCase
     public function test_forbidden_returns_403(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string()
             )

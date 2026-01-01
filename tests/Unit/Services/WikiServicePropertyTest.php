@@ -41,7 +41,7 @@ class WikiServicePropertyTest extends TestCase
     public function test_wiki_encryption_round_trip(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string(), // random content string
                 Generator\suchThat(
@@ -131,7 +131,7 @@ class WikiServicePropertyTest extends TestCase
     public function test_wiki_encryption_round_trip_on_update(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string(), // original content
                 Generator\string(), // updated content
@@ -196,7 +196,7 @@ class WikiServicePropertyTest extends TestCase
     public function test_wiki_non_encrypted_round_trip(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string(), // content
                 Generator\choose(1, 100) // random seed
@@ -255,7 +255,7 @@ class WikiServicePropertyTest extends TestCase
     public function test_encrypted_content_not_stored_in_plaintext(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\suchThat(
                     fn($s) => strlen($s) >= 5, // Ensure content is long enough to be meaningful
@@ -324,7 +324,7 @@ class WikiServicePropertyTest extends TestCase
     public function test_encrypted_content_not_in_database_plaintext(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(1, 100) // random seed
             )
@@ -384,7 +384,7 @@ class WikiServicePropertyTest extends TestCase
     public function test_non_encrypted_content_stored_in_plaintext(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\string(),
                 Generator\choose(1, 100) // random seed

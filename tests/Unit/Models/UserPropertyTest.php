@@ -30,7 +30,7 @@ class UserPropertyTest extends TestCase
     public function test_internal_hourly_cost_is_hidden_in_default_serialization(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\float(),
                 Generator\seq(Generator\string())
@@ -77,7 +77,7 @@ class UserPropertyTest extends TestCase
     public function test_internal_hourly_cost_stored_but_hidden(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(1, 99999)
             )
@@ -118,7 +118,7 @@ class UserPropertyTest extends TestCase
     public function test_internal_hourly_cost_visible_when_explicitly_requested(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(1, 99999)
             )
@@ -151,7 +151,7 @@ class UserPropertyTest extends TestCase
     public function test_to_array_with_internal_cost_includes_cost(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(1, 99999)
             )

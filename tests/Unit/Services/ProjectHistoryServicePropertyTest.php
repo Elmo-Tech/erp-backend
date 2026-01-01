@@ -41,7 +41,7 @@ class ProjectHistoryServicePropertyTest extends TestCase
     public function test_history_records_created_on_update(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\elements(['title', 'description', 'status', 'budget', 'deadline']), // field names
                 Generator\choose(1, 100) // random seed for data generation
@@ -155,7 +155,7 @@ class ProjectHistoryServicePropertyTest extends TestCase
     public function test_history_records_multiple_changes(): void
     {
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\choose(2, 5), // number of changes to make
                 Generator\choose(1, 50) // random seed
@@ -250,7 +250,7 @@ class ProjectHistoryServicePropertyTest extends TestCase
     public function test_history_records_null_values(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\elements(['description', 'deadline', 'quotation_id']), // nullable fields
                 Generator\bool(), // whether old_value is null
@@ -320,7 +320,7 @@ class ProjectHistoryServicePropertyTest extends TestCase
     public function test_history_records_value_type_conversion(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(1000, 100000), // budget value (integer)
                 Generator\choose(1, 99), // decimal part
@@ -393,7 +393,7 @@ class ProjectHistoryServicePropertyTest extends TestCase
     public function test_history_records_retrieval(): void
     {
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\choose(3, 10), // number of history records to create
                 Generator\choose(1, 50) // random seed

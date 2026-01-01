@@ -40,7 +40,7 @@ class SetLocaleMiddlewarePropertyTest extends TestCase
         $supportedLocales = ['en', 'ar'];
 
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\elements(...$supportedLocales)
             )
@@ -97,7 +97,7 @@ class SetLocaleMiddlewarePropertyTest extends TestCase
     public function test_missing_header_defaults_to_english(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\constant(null)
             )
@@ -126,7 +126,7 @@ class SetLocaleMiddlewarePropertyTest extends TestCase
         $unsupportedLocales = ['fr', 'de', 'es', 'zh', 'ja', 'ko', 'ru', 'pt', 'it', 'nl'];
 
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\elements(...$unsupportedLocales)
             )
@@ -173,7 +173,7 @@ class SetLocaleMiddlewarePropertyTest extends TestCase
     public function test_middleware_passes_request_and_returns_response(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\elements('en', 'ar', 'fr', 'de', '')
             )

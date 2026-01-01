@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Contracts\Trackable;
 use App\Enums\ProjectStatus;
+use App\Scopes\ClientScope;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -51,6 +52,12 @@ class Project extends Model implements Trackable
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Apply ClientScope when authenticated user is a client
+        static::addGlobalScope(new ClientScope());
+    }
+
     /**
      * Get the client (user) that owns this project.
      */
@@ -81,6 +88,14 @@ class Project extends Model implements Trackable
     public function wikis(): HasMany
     {
         return $this->hasMany(ProjectWiki::class);
+    }
+
+    /**
+     * Get all invoices for this project.
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
     }
 
     /**

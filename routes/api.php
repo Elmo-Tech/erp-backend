@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
+use App\Http\Controllers\Api\V1\Client\ClientProjectController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectHistoryController;
@@ -66,4 +69,23 @@ Route::prefix('v1')->group(function () {
     
     // Project Wiki Routes (nested resource)
     Route::apiResource('projects.wikis', ProjectWikiController::class);
+
+    // Client Portal Routes
+    // All routes have auth:sanctum, locale, and role:client middleware applied in controllers
+    // ClientScope automatically filters data to client's own records
+    Route::prefix('client')->middleware(['auth:sanctum', 'locale', 'role:client'])->group(function () {
+        // Client Project Routes
+        Route::get('projects', [ClientProjectController::class, 'index'])->name('client.projects.index');
+        Route::get('projects/{project}', [ClientProjectController::class, 'show'])->name('client.projects.show');
+        Route::post('projects/{project}/approve-ui', [ClientProjectController::class, 'approveUI'])->name('client.projects.approve-ui');
+        
+        // Client Invoice Routes
+        Route::get('invoices', [ClientInvoiceController::class, 'index'])->name('client.invoices.index');
+        Route::get('invoices/{invoice}', [ClientInvoiceController::class, 'show'])->name('client.invoices.show');
+        Route::post('invoices/{invoice}/pay', [ClientInvoiceController::class, 'pay'])->name('client.invoices.pay');
+    });
+
+    // Admin Invoice Management Routes
+    // All routes have auth:sanctum and locale middleware applied at route level
+    Route::apiResource('invoices', InvoiceController::class)->middleware(['auth:sanctum', 'locale']);
 });

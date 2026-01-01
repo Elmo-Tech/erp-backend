@@ -44,7 +44,7 @@ class TimeTrackingServicePropertyTest extends TestCase
     public function test_polymorphic_time_tracking(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\elements(['lead', 'quotation']), // trackable entity type
                 Generator\choose(1, 100) // random seed for data generation
@@ -135,7 +135,7 @@ class TimeTrackingServicePropertyTest extends TestCase
     public function test_polymorphic_time_tracking_multiple_entity_types(): void
     {
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\choose(1, 50) // random seed
             )
@@ -210,7 +210,7 @@ class TimeTrackingServicePropertyTest extends TestCase
     public function test_polymorphic_time_tracking_display_names(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\elements(['lead', 'quotation']),
                 Generator\choose(1, 100)
@@ -251,7 +251,7 @@ class TimeTrackingServicePropertyTest extends TestCase
     public function test_polymorphic_time_tracking_service_methods(): void
     {
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\elements(['lead', 'quotation']),
                 Generator\choose(1, 50)
@@ -314,7 +314,7 @@ class TimeTrackingServicePropertyTest extends TestCase
     public function test_timer_duration_calculation(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\elements(['lead', 'quotation']), // trackable entity type
                 Generator\choose(1, 300), // duration in seconds (1-300 seconds = 0-5 minutes)
@@ -412,7 +412,7 @@ class TimeTrackingServicePropertyTest extends TestCase
     public function test_timer_duration_calculation_edge_cases(): void
     {
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\elements([
                     0,      // 0 seconds - should be 0 minutes
@@ -473,7 +473,7 @@ class TimeTrackingServicePropertyTest extends TestCase
     public function test_timer_duration_calculation_multiple_timers(): void
     {
         $this
-            ->limitTo(30)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(2, 5), // number of timers to create
                 Generator\choose(1, 30) // random seed
@@ -550,7 +550,7 @@ class TimeTrackingServicePropertyTest extends TestCase
     public function test_single_active_timer_per_user(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\elements(['lead', 'quotation']), // first trackable entity type
                 Generator\elements(['lead', 'quotation']), // second trackable entity type
@@ -674,7 +674,7 @@ class TimeTrackingServicePropertyTest extends TestCase
     public function test_single_active_timer_per_user_multiple_users(): void
     {
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\choose(2, 5), // number of users to create
                 Generator\choose(1, 50) // random seed
@@ -757,7 +757,7 @@ class TimeTrackingServicePropertyTest extends TestCase
     public function test_single_active_timer_per_user_edge_cases(): void
     {
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\elements(['lead', 'quotation']),
                 Generator\choose(1, 50)

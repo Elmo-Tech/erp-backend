@@ -1,11 +1,15 @@
 <?php
 
 use App\Http\Middleware\SetLocaleMiddleware;
+use App\Providers\AuthServiceProvider;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
+    ->withProviders([
+        AuthServiceProvider::class,
+    ])
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -17,9 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Configure Sanctum stateful domains for SPA authentication
         $middleware->statefulApi();
 
-        // Register locale middleware alias for use in controllers
+        // Register middleware aliases for use in controllers
         $middleware->alias([
             'locale' => SetLocaleMiddleware::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         ]);
 
         // Append CORS and locale middleware to API middleware group

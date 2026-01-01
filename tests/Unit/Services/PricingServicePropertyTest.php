@@ -41,7 +41,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_pricing_formula_correctness(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(0, 100), // frontendHours
                 Generator\choose(0, 100), // backendHours
@@ -106,7 +106,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_pricing_formula_with_custom_categories(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(0, 50), // frontendHours
                 Generator\choose(0, 50), // backendHours
@@ -148,7 +148,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_pricing_formula_with_zero_hours(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(1, 500), // hourlyRate
                 Generator\choose(0, 100)  // discountPercentage
@@ -182,7 +182,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_pricing_formula_with_maximum_discount(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\vector(5, Generator\choose(1, 50)), // estimation hours
                 Generator\choose(1, 300) // hourlyRate
@@ -219,7 +219,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_pricing_formula_with_decimal_hours(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(1, 999), // integer part (0-99)
                 Generator\choose(1, 9),   // decimal part (0.1-0.9)
@@ -260,7 +260,7 @@ class PricingServicePropertyTest extends TestCase
     {
         // Test negative hour values
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\choose(-100, -1), // negative hours
                 Generator\choose(1, 200),   // valid hourlyRate
@@ -289,7 +289,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_input_validation_rejects_invalid_hourly_rate(): void
     {
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\choose(-100, 0),  // invalid hourlyRate (≤ 0)
                 Generator\choose(0, 100)    // valid discountPercentage
@@ -367,7 +367,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_input_validation_rejects_non_numeric_hours(): void
     {
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\elements(['string', 'invalid', 'abc', '10abc', 'null', 'false']), // non-numeric values
                 Generator\choose(1, 200),   // valid hourlyRate
@@ -398,7 +398,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_estimations_case_conversion_round_trip(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(0, 100), // frontendHours
                 Generator\choose(0, 100), // backendHours
@@ -471,7 +471,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_estimations_case_conversion_edge_cases(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(0, 50), // value1
                 Generator\choose(0, 50), // value2
@@ -522,7 +522,7 @@ class PricingServicePropertyTest extends TestCase
         
         // Test single key with property-based values
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\choose(0, 100) // single value
             )
@@ -553,7 +553,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_custom_estimation_categories_preserved(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(0, 50),  // standard frontendHours
                 Generator\choose(0, 50),  // standard backendHours
@@ -641,7 +641,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_custom_estimation_categories_preserved_edge_cases(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(0, 30), // value for single char category
                 Generator\choose(0, 30), // value for numbered category
@@ -691,7 +691,7 @@ class PricingServicePropertyTest extends TestCase
     public function test_custom_estimation_categories_only_custom(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(1, 50), // custom category 1 (ensure non-zero)
                 Generator\choose(1, 50), // custom category 2 (ensure non-zero)

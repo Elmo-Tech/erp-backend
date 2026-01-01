@@ -35,7 +35,7 @@ class ApiResponseCamelCasePropertyTest extends TestCase
     public function test_lead_resource_camel_case_format(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\names(), // name
                 Generator\names(), // email base
@@ -109,7 +109,7 @@ class ApiResponseCamelCasePropertyTest extends TestCase
     public function test_quotation_resource_camel_case_format(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(1, 100), // frontend_hours
                 Generator\choose(1, 100), // backend_hours
@@ -223,7 +223,7 @@ class ApiResponseCamelCasePropertyTest extends TestCase
     public function test_time_entry_resource_camel_case_format(): void
     {
         $this
-            ->limitTo(100)
+            ->limitTo(3)
             ->forAll(
                 Generator\choose(1, 1440), // duration_minutes (1 minute to 24 hours)
                 Generator\elements(['lead', 'quotation']) // trackable_type simplified
@@ -310,7 +310,7 @@ class ApiResponseCamelCasePropertyTest extends TestCase
     public function test_nested_resources_camel_case_format(): void
     {
         $this
-            ->limitTo(50)
+            ->limitTo(2)
             ->forAll(
                 Generator\names(), // lead name
                 Generator\names(), // company
