@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AdminStatsController;
+use App\Http\Controllers\Api\V1\AdminRoleController;
+use App\Http\Controllers\Api\V1\AdminUserController;
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
@@ -107,4 +111,28 @@ Route::prefix('v1')->group(function () {
     // Admin Invoice Management Routes
     // All routes have auth:sanctum and locale middleware applied at route level
     Route::apiResource('invoices', InvoiceController::class)->middleware(['auth:sanctum', 'locale']);
+
+    // Admin Routes
+    // All routes have auth:sanctum and locale middleware applied in controllers
+    Route::prefix('admin')->group(function () {
+        // Admin Statistics Routes
+        Route::prefix('stats')->group(function () {
+            Route::get('overview', [AdminStatsController::class, 'overview'])->name('admin.stats.overview');
+            Route::get('profitability', [AdminStatsController::class, 'profitability'])->name('admin.stats.profitability');
+            Route::get('quality', [AdminStatsController::class, 'quality'])->name('admin.stats.quality');
+            Route::get('user-performance', [AdminStatsController::class, 'userPerformance'])->name('admin.stats.user-performance');
+            Route::get('attendance', [AdminStatsController::class, 'attendance'])->name('admin.stats.attendance');
+        });
+
+        // Admin Role Management Routes
+        Route::apiResource('roles', AdminRoleController::class);
+        Route::get('permissions', [AdminRoleController::class, 'permissions'])->name('admin.permissions');
+
+        // Admin User Management Routes
+        Route::put('users/{id}/internal-cost', [AdminUserController::class, 'updateInternalCost'])->name('admin.users.update-internal-cost');
+        Route::put('users/internal-costs', [AdminUserController::class, 'bulkUpdateInternalCosts'])->name('admin.users.bulk-update-internal-costs');
+
+        // Admin Audit Log Routes
+        Route::get('audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
+    });
 });

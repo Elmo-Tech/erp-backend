@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Business OS API",
-        "description": "ERP/CRM API for Business OS - Complete API Documentation including Authentication, Sales, Projects, Client Portal, and Invoice Management",
+        "description": "ERP/CRM API for Business OS - Complete API Documentation including Authentication, Sales, Projects, Tasks, Client Portal, Admin Management, and Reporting",
         "version": "1.0.0"
     },
     "servers": [
@@ -124,7 +124,6 @@
             "post": {
                 "tags": ["Authentication"],
                 "summary": "User registration",
-                "description": "Register a new user account",
                 "security": [],
                 "parameters": [
                     {
@@ -167,7 +166,6 @@
             "post": {
                 "tags": ["Authentication"],
                 "summary": "User logout",
-                "description": "Logout user and revoke access token",
                 "parameters": [
                     {
                         "name": "Accept-Language",
@@ -199,7 +197,6 @@
             "get": {
                 "tags": ["Authentication"],
                 "summary": "Get user profile",
-                "description": "Get authenticated user profile information",
                 "parameters": [
                     {
                         "name": "Accept-Language",
@@ -746,7 +743,7 @@
                             "enum": [
                                 "App\\Models\\Lead",
                                 "App\\Models\\Quotation",
-                                "App\\Models\\Project"
+                                "App\\Models\\Task"
                             ]
                         }
                     },
@@ -841,6 +838,7 @@
             "post": {
                 "tags": ["Time Entries"],
                 "summary": "Start time tracking for an entity",
+                "description": "Start a timer for a trackable entity (Lead, Quotation, or Task). First timer of the day triggers automatic clock-in.",
                 "parameters": [
                     {
                         "name": "Accept-Language",
@@ -929,6 +927,117 @@
                     "422": { "$ref": "#/components/responses/ValidationError" },
                     "400": {
                         "description": "No active timer found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/attendance/today": {
+            "get": {
+                "tags": ["Attendance"],
+                "summary": "Get current user's attendance for today",
+                "description": "Retrieve the authenticated user's attendance record for the current date, including active timer status and total worked minutes",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Today's attendance retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Today's attendance retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "attendance": {
+                                                    "$ref": "#/components/schemas/AttendanceResource",
+                                                    "nullable": true
+                                                },
+                                                "hasActiveTimer": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "totalWorkedMinutes": {
+                                                    "type": "integer",
+                                                    "example": 240
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/attendance/clock-out": {
+            "post": {
+                "tags": ["Attendance"],
+                "summary": "Clock out for the day",
+                "description": "Set clock_out time for today's attendance record and calculate idle minutes. Requires an existing attendance record for today.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Clocked out successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AttendanceResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No attendance record found for today",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Already clocked out",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1537,6 +1646,434 @@
                 }
             }
         },
+        "/tasks": {
+            "get": {
+                "tags": ["Tasks"],
+                "summary": "Get all tasks with pagination and filtering",
+                "description": "Retrieve a paginated list of tasks with optional filtering by project, status, assignee, and search",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "filter[projectId]",
+                        "in": "query",
+                        "description": "Filter tasks by project ID",
+                        "schema": { "type": "integer" }
+                    },
+                    {
+                        "name": "filter[status]",
+                        "in": "query",
+                        "description": "Filter tasks by status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "todo",
+                                "in_progress",
+                                "review",
+                                "testing",
+                                "completed"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[assignedTo]",
+                        "in": "query",
+                        "description": "Filter tasks by assigned user ID",
+                        "schema": { "type": "integer" }
+                    },
+                    {
+                        "name": "filter[parentId]",
+                        "in": "query",
+                        "description": "Filter tasks by parent ID (use null for root tasks)",
+                        "schema": { "type": "integer", "nullable": true }
+                    },
+                    {
+                        "name": "filter[search]",
+                        "in": "query",
+                        "description": "Search tasks by title",
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 1 }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 15 }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tasks retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TaskCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "post": {
+                "tags": ["Tasks"],
+                "summary": "Create a new task",
+                "description": "Create a new task within a project",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["projectId", "title"],
+                                "properties": {
+                                    "projectId": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "parentId": {
+                                        "type": "integer",
+                                        "nullable": true,
+                                        "example": null
+                                    },
+                                    "assignedTo": {
+                                        "type": "integer",
+                                        "nullable": true,
+                                        "example": 2
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Implement user authentication"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Add JWT-based authentication to the API"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "todo",
+                                            "in_progress",
+                                            "review",
+                                            "testing",
+                                            "completed"
+                                        ],
+                                        "example": "todo"
+                                    },
+                                    "estimatedHours": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 8.5
+                                    },
+                                    "internalReviewerNotes": {
+                                        "type": "string",
+                                        "example": "Review security implementation carefully"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Task created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TaskResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/tasks/{task}": {
+            "get": {
+                "tags": ["Tasks"],
+                "summary": "Get a single task",
+                "description": "Retrieve a specific task by ID with related data",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "task",
+                        "in": "path",
+                        "required": true,
+                        "description": "Task ID",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TaskResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "put": {
+                "tags": ["Tasks"],
+                "summary": "Update an existing task",
+                "description": "Update a task with status transition validation. Bug bounce rate tracked when status moves Testing -> In Progress.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "task",
+                        "in": "path",
+                        "required": true,
+                        "description": "Task ID",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "parentId": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "assignedTo": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "title": { "type": "string" },
+                                    "description": { "type": "string" },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "todo",
+                                            "in_progress",
+                                            "review",
+                                            "testing",
+                                            "completed"
+                                        ]
+                                    },
+                                    "estimatedHours": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "internalReviewerNotes": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Task updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TaskResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "delete": {
+                "tags": ["Tasks"],
+                "summary": "Delete a task",
+                "description": "Delete a specific task by ID. Child tasks will also be deleted (cascade).",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "task",
+                        "in": "path",
+                        "required": true,
+                        "description": "Task ID",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/tasks/{task}/children": {
+            "get": {
+                "tags": ["Tasks"],
+                "summary": "Get children of a task",
+                "description": "Retrieve all direct children of a specific task for lazy loading",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "task",
+                        "in": "path",
+                        "required": true,
+                        "description": "Parent Task ID",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task children retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Task children retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/TaskResource"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/projects/{projectId}/tasks": {
+            "get": {
+                "tags": ["Tasks"],
+                "summary": "Get tasks for a project with hierarchy",
+                "description": "Retrieve root-level tasks for a project with their children loaded",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true,
+                        "description": "Project ID",
+                        "schema": { "type": "integer" }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 1 }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 15 }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project tasks retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TaskCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
         "/invoices": {
             "get": {
                 "tags": ["Invoices (Admin)"],
@@ -1583,16 +2120,6 @@
                         "schema": { "type": "string", "format": "date" }
                     },
                     {
-                        "name": "filter[dueDateFrom]",
-                        "in": "query",
-                        "schema": { "type": "string", "format": "date" }
-                    },
-                    {
-                        "name": "filter[dueDateTo]",
-                        "in": "query",
-                        "schema": { "type": "string", "format": "date" }
-                    },
-                    {
                         "name": "filter[search]",
                         "in": "query",
                         "schema": { "type": "string" }
@@ -1626,7 +2153,6 @@
             "post": {
                 "tags": ["Invoices (Admin)"],
                 "summary": "Create a new invoice",
-                "description": "Admin endpoint to create a new invoice for a project",
                 "parameters": [
                     {
                         "name": "Accept-Language",
@@ -1949,7 +2475,6 @@
             "get": {
                 "tags": ["Client Portal"],
                 "summary": "Get client's invoices with pagination",
-                "description": "Retrieve a paginated list of invoices for the authenticated client with limited data visibility",
                 "parameters": [
                     {
                         "name": "Accept-Language",
@@ -2016,7 +2541,6 @@
             "get": {
                 "tags": ["Client Portal"],
                 "summary": "Get a single client invoice",
-                "description": "Retrieve a specific invoice for the authenticated client",
                 "parameters": [
                     {
                         "name": "Accept-Language",
@@ -2099,6 +2623,1322 @@
                     "404": { "$ref": "#/components/responses/NotFound" },
                     "401": { "$ref": "#/components/responses/Unauthenticated" },
                     "403": { "$ref": "#/components/responses/Forbidden" }
+                }
+            }
+        },
+        "/admin/stats/overview": {
+            "get": {
+                "tags": ["Admin Stats"],
+                "summary": "Get admin dashboard overview statistics",
+                "description": "Retrieve comprehensive dashboard statistics including profitability, quality metrics, and performance overview. Requires view_admin_stats permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admin overview statistics retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Admin overview statistics retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "profitability": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "totalRevenue": {
+                                                            "type": "string",
+                                                            "example": "125000.00"
+                                                        },
+                                                        "totalProfit": {
+                                                            "type": "string",
+                                                            "example": "45000.00"
+                                                        },
+                                                        "overallMargin": {
+                                                            "type": "string",
+                                                            "example": "36.00"
+                                                        },
+                                                        "activeProjects": {
+                                                            "type": "integer",
+                                                            "example": 8
+                                                        },
+                                                        "completedProjects": {
+                                                            "type": "integer",
+                                                            "example": 15
+                                                        }
+                                                    }
+                                                },
+                                                "quality": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "overallBounceRate": {
+                                                            "type": "string",
+                                                            "example": "0.15"
+                                                        },
+                                                        "qualityScore": {
+                                                            "type": "string",
+                                                            "example": "85.00"
+                                                        },
+                                                        "totalBounces": {
+                                                            "type": "integer",
+                                                            "example": 23
+                                                        },
+                                                        "tasksWithBounces": {
+                                                            "type": "integer",
+                                                            "example": 18
+                                                        }
+                                                    }
+                                                },
+                                                "attendance": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "totalLateMinutes": {
+                                                            "type": "integer",
+                                                            "example": 120
+                                                        },
+                                                        "averageIdleTime": {
+                                                            "type": "string",
+                                                            "example": "45.50"
+                                                        },
+                                                        "usersWithExcessiveIdle": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "object"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/stats/profitability": {
+            "get": {
+                "tags": ["Admin Stats"],
+                "summary": "Get project profitability report",
+                "description": "Retrieve detailed profitability report for all projects with filtering and pagination. Requires both view_admin_stats AND view_internal_costs permissions.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter projects by status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "active",
+                                "completed",
+                                "on_hold",
+                                "cancelled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "dateFrom",
+                        "in": "query",
+                        "description": "Filter projects created from this date (YYYY-MM-DD)",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "dateTo",
+                        "in": "query",
+                        "description": "Filter projects created up to this date (YYYY-MM-DD)",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "sortBy",
+                        "in": "query",
+                        "description": "Sort results by field",
+                        "schema": {
+                            "type": "string",
+                            "enum": ["profit", "margin", "budget"]
+                        }
+                    },
+                    {
+                        "name": "sortDirection",
+                        "in": "query",
+                        "description": "Sort direction",
+                        "schema": { "type": "string", "enum": ["asc", "desc"] }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 1 }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 15 }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profitability report retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Profitability report retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "projects": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "projectId": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "title": {
+                                                                "type": "string",
+                                                                "example": "E-commerce Website"
+                                                            },
+                                                            "budget": {
+                                                                "type": "string",
+                                                                "example": "50000.00"
+                                                            },
+                                                            "totalCost": {
+                                                                "type": "string",
+                                                                "example": "35000.00"
+                                                            },
+                                                            "profit": {
+                                                                "type": "string",
+                                                                "example": "15000.00"
+                                                            },
+                                                            "profitMargin": {
+                                                                "type": "string",
+                                                                "example": "30.00"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "pagination": {
+                                                    "$ref": "#/components/schemas/Pagination"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/stats/quality": {
+            "get": {
+                "tags": ["Admin Stats"],
+                "summary": "Get quality metrics including bounce rates",
+                "description": "Retrieve comprehensive quality metrics including bounce rates by developer and top bouncing tasks. Requires view_admin_stats permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "dateFrom",
+                        "in": "query",
+                        "description": "Filter data from this date (YYYY-MM-DD)",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "dateTo",
+                        "in": "query",
+                        "description": "Filter data up to this date (YYYY-MM-DD)",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Limit for top bouncing tasks",
+                        "schema": { "type": "integer", "default": 10 }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Quality metrics retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Quality metrics retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "overview": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "overallBounceRate": {
+                                                            "type": "string",
+                                                            "example": "0.15"
+                                                        },
+                                                        "qualityScore": {
+                                                            "type": "string",
+                                                            "example": "85.00"
+                                                        },
+                                                        "totalBounces": {
+                                                            "type": "integer",
+                                                            "example": 23
+                                                        },
+                                                        "tasksWithBounces": {
+                                                            "type": "integer",
+                                                            "example": 18
+                                                        }
+                                                    }
+                                                },
+                                                "bounceRateByDeveloper": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "topBouncingTasks": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/stats/user-performance": {
+            "get": {
+                "tags": ["Admin Stats"],
+                "summary": "Get user performance metrics",
+                "description": "Retrieve comprehensive user performance metrics including tracked time, idle time, task completion rates, and bounce rates. Requires view_admin_stats permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "dateFrom",
+                        "in": "query",
+                        "description": "Filter data from this date (YYYY-MM-DD)",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "dateTo",
+                        "in": "query",
+                        "description": "Filter data up to this date (YYYY-MM-DD)",
+                        "schema": { "type": "string", "format": "date" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User performance metrics retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User performance metrics retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "userId": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "John Doe"
+                                                    },
+                                                    "totalTrackedMinutes": {
+                                                        "type": "integer",
+                                                        "example": 2400
+                                                    },
+                                                    "totalIdleMinutes": {
+                                                        "type": "integer",
+                                                        "example": 120
+                                                    },
+                                                    "taskCompletionRate": {
+                                                        "type": "string",
+                                                        "example": "85.50"
+                                                    },
+                                                    "averageBounceRate": {
+                                                        "type": "string",
+                                                        "example": "0.15"
+                                                    },
+                                                    "attendanceDays": {
+                                                        "type": "integer",
+                                                        "example": 22
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/stats/attendance": {
+            "get": {
+                "tags": ["Admin Stats"],
+                "summary": "Get attendance analytics",
+                "description": "Retrieve comprehensive attendance analytics including late arrivals, idle time statistics, and users with excessive idle time. Requires view_admin_stats permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "dateFrom",
+                        "in": "query",
+                        "description": "Filter data from this date (YYYY-MM-DD)",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "dateTo",
+                        "in": "query",
+                        "description": "Filter data up to this date (YYYY-MM-DD)",
+                        "schema": { "type": "string", "format": "date" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Attendance analytics retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Attendance analytics retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "totalLateMinutes": {
+                                                    "type": "integer",
+                                                    "example": 120
+                                                },
+                                                "averageIdleTime": {
+                                                    "type": "string",
+                                                    "example": "45.50"
+                                                },
+                                                "usersWithExcessiveIdle": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "userId": {
+                                                                "type": "integer",
+                                                                "example": 3
+                                                            },
+                                                            "userName": {
+                                                                "type": "string",
+                                                                "example": "John Doe"
+                                                            },
+                                                            "totalExcessiveIdleMinutes": {
+                                                                "type": "integer",
+                                                                "example": 180
+                                                            },
+                                                            "daysWithExcessiveIdle": {
+                                                                "type": "integer",
+                                                                "example": 3
+                                                            },
+                                                            "averageExcessiveIdlePerDay": {
+                                                                "type": "string",
+                                                                "example": "60.00"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/roles": {
+            "get": {
+                "tags": ["Admin Roles"],
+                "summary": "List all roles with permissions",
+                "description": "Retrieve all roles with their assigned permissions. Requires manage_roles permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Roles retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Roles retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "admin"
+                                                    },
+                                                    "guardName": {
+                                                        "type": "string",
+                                                        "example": "web"
+                                                    },
+                                                    "isProtected": {
+                                                        "type": "boolean",
+                                                        "example": true
+                                                    },
+                                                    "permissions": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        },
+                                                        "example": [
+                                                            "manage_users",
+                                                            "manage_roles"
+                                                        ]
+                                                    },
+                                                    "createdAt": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "updatedAt": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "post": {
+                "tags": ["Admin Roles"],
+                "summary": "Create new role",
+                "description": "Create a new role with specified permissions. Requires manage_roles permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["name"],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "project-manager",
+                                        "description": "Role name (must be unique)"
+                                    },
+                                    "permissions": {
+                                        "type": "array",
+                                        "items": { "type": "string" },
+                                        "example": [
+                                            "manage_projects",
+                                            "view_reports"
+                                        ],
+                                        "description": "Array of permission names to assign"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Role created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RoleResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/roles/{id}": {
+            "get": {
+                "tags": ["Admin Roles"],
+                "summary": "Get single role with permissions",
+                "description": "Retrieve a specific role with its assigned permissions. Requires manage_roles permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "Role ID",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RoleResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "put": {
+                "tags": ["Admin Roles"],
+                "summary": "Update role permissions",
+                "description": "Update role name and permissions. Cannot update protected roles (admin, client, super-admin). Requires manage_roles permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "Role ID",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "senior-developer"
+                                    },
+                                    "permissions": {
+                                        "type": "array",
+                                        "items": { "type": "string" },
+                                        "example": [
+                                            "manage_projects",
+                                            "view_reports"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Role updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RoleResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "delete": {
+                "tags": ["Admin Roles"],
+                "summary": "Delete role",
+                "description": "Delete a role. Cannot delete protected roles (admin, client, super-admin). Requires manage_roles permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "Role ID",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Cannot delete protected role",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/permissions": {
+            "get": {
+                "tags": ["Admin Roles"],
+                "summary": "List all permissions",
+                "description": "Retrieve all available permissions in the system. Requires manage_roles permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Permissions retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Permissions retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "manage_users"
+                                                    },
+                                                    "guardName": {
+                                                        "type": "string",
+                                                        "example": "web"
+                                                    },
+                                                    "group": {
+                                                        "type": "string",
+                                                        "example": "User Management"
+                                                    },
+                                                    "description": {
+                                                        "type": "string",
+                                                        "example": "Allows managing user accounts"
+                                                    },
+                                                    "createdAt": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "updatedAt": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/users/{id}/internal-cost": {
+            "put": {
+                "tags": ["Admin User Management"],
+                "summary": "Update user's internal hourly cost",
+                "description": "Update the internal hourly cost for a specific user. This endpoint requires manage_internal_costs permission and logs all changes to audit_logs. The actual cost value is never returned in the response for security.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "User ID",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["internalHourlyCost"],
+                                "properties": {
+                                    "internalHourlyCost": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "minimum": 0.01,
+                                        "example": 75.5,
+                                        "description": "The internal hourly cost for the user (must be positive)"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Internal cost updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Internal hourly cost updated successfully"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "userId": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "userName": {
+                                                    "type": "string",
+                                                    "example": "John Doe"
+                                                },
+                                                "updated": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "updatedAt": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/users/internal-costs": {
+            "put": {
+                "tags": ["Admin User Management"],
+                "summary": "Bulk update users' internal hourly costs",
+                "description": "Update internal hourly costs for multiple users in a single operation. This endpoint requires manage_internal_costs permission and logs all changes to audit_logs. All costs are validated before any updates are made.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["users"],
+                                "properties": {
+                                    "users": {
+                                        "type": "array",
+                                        "description": "Array of user cost updates",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "userId",
+                                                "internalHourlyCost"
+                                            ],
+                                            "properties": {
+                                                "userId": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "internalHourlyCost": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "minimum": 0.01,
+                                                    "example": 75.5
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Bulk internal costs updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Bulk internal costs updated successfully"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "totalUpdated": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                },
+                                                "updatedAt": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updatedUsers": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "userId": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "userName": {
+                                                                "type": "string",
+                                                                "example": "John Doe"
+                                                            },
+                                                            "updated": {
+                                                                "type": "boolean",
+                                                                "example": true
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/audit-logs": {
+            "get": {
+                "tags": ["Admin Audit Logs"],
+                "summary": "Get audit logs with filtering and pagination",
+                "description": "Retrieve audit logs with comprehensive filtering by action, user, date range, and resource ID search. Requires view_audit_logs permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "filter[action]",
+                        "in": "query",
+                        "description": "Filter by action type",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "login",
+                                "logout",
+                                "create_project",
+                                "update_project",
+                                "delete_project",
+                                "create_task",
+                                "update_task",
+                                "delete_task",
+                                "update_internal_cost",
+                                "update_role_permissions",
+                                "create_role",
+                                "delete_role",
+                                "view_profitability",
+                                "forbidden_access_attempt",
+                                "approve_ui",
+                                "pay_invoice"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[user_id]",
+                        "in": "query",
+                        "description": "Filter by user ID",
+                        "schema": { "type": "integer" }
+                    },
+                    {
+                        "name": "filter[auditable_type]",
+                        "in": "query",
+                        "description": "Filter by resource type",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "App\\Models\\User",
+                                "App\\Models\\Project",
+                                "App\\Models\\Task",
+                                "App\\Models\\Role",
+                                "App\\Models\\Invoice"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[date_from]",
+                        "in": "query",
+                        "description": "Filter logs from this date (YYYY-MM-DD)",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "filter[date_to]",
+                        "in": "query",
+                        "description": "Filter logs up to this date (YYYY-MM-DD)",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "filter[search]",
+                        "in": "query",
+                        "description": "Search by resource ID or IP address",
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "Sort by field (prefix with - for descending)",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "created_at",
+                                "-created_at",
+                                "action",
+                                "-action",
+                                "user_id",
+                                "-user_id"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 1 }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 15 }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Audit logs retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Audit logs retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "auditLogs": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "auditLogId": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "userId": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "userName": {
+                                                                "type": "string",
+                                                                "example": "John Doe"
+                                                            },
+                                                            "action": {
+                                                                "type": "string",
+                                                                "example": "update_internal_cost"
+                                                            },
+                                                            "auditableType": {
+                                                                "type": "string",
+                                                                "example": "App\\Models\\User"
+                                                            },
+                                                            "auditableId": {
+                                                                "type": "integer",
+                                                                "nullable": true,
+                                                                "example": 5
+                                                            },
+                                                            "ipAddress": {
+                                                                "type": "string",
+                                                                "example": "192.168.1.100"
+                                                            },
+                                                            "userAgent": {
+                                                                "type": "string",
+                                                                "example": "Mozilla/5.0"
+                                                            },
+                                                            "metadata": {
+                                                                "type": "object",
+                                                                "example": {
+                                                                    "old_cost": "50.00",
+                                                                    "new_cost": "75.00"
+                                                                }
+                                                            },
+                                                            "createdAt": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            },
+                                                            "isSensitive": {
+                                                                "type": "boolean",
+                                                                "example": true
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "pagination": {
+                                                    "$ref": "#/components/schemas/Pagination"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
                 }
             }
         }
@@ -2268,108 +4108,8 @@
                         ],
                         "example": "new"
                     },
-                    "createdBy": {
-                        "type": "integer",
-                        "nullable": true,
-                        "example": 1
-                    },
-                    "updatedBy": {
-                        "type": "integer",
-                        "nullable": true,
-                        "example": 1
-                    },
-                    "createdAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "example": "2025-01-01T10:00:00Z"
-                    },
-                    "updatedAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "example": "2025-01-01T10:00:00Z"
-                    }
-                }
-            },
-            "CreateLeadRequest": {
-                "type": "object",
-                "required": ["name", "email"],
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "maxLength": 255,
-                        "example": "Jane Smith"
-                    },
-                    "email": {
-                        "type": "string",
-                        "format": "email",
-                        "maxLength": 255,
-                        "example": "jane.smith@example.com"
-                    },
-                    "company": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255,
-                        "example": "Digital Agency Ltd"
-                    },
-                    "source": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255,
-                        "example": "LinkedIn"
-                    },
-                    "status": {
-                        "type": "string",
-                        "nullable": true,
-                        "enum": [
-                            "new",
-                            "contacted",
-                            "qualified",
-                            "proposal",
-                            "negotiation",
-                            "closed_won",
-                            "closed_lost"
-                        ],
-                        "default": "new"
-                    }
-                }
-            },
-            "UpdateLeadRequest": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "email": {
-                        "type": "string",
-                        "format": "email",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "company": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "source": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "status": {
-                        "type": "string",
-                        "nullable": true,
-                        "enum": [
-                            "new",
-                            "contacted",
-                            "qualified",
-                            "proposal",
-                            "negotiation",
-                            "closed_won",
-                            "closed_lost"
-                        ]
-                    }
+                    "createdAt": { "type": "string", "format": "date-time" },
+                    "updatedAt": { "type": "string", "format": "date-time" }
                 }
             },
             "LeadResponse": {
@@ -2405,6 +4145,64 @@
                     }
                 }
             },
+            "CreateLeadRequest": {
+                "type": "object",
+                "required": ["name", "email"],
+                "properties": {
+                    "name": { "type": "string", "example": "John Doe" },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john@example.com"
+                    },
+                    "company": {
+                        "type": "string",
+                        "example": "Tech Solutions Inc"
+                    },
+                    "source": { "type": "string", "example": "Website" },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "new",
+                            "contacted",
+                            "qualified",
+                            "proposal",
+                            "negotiation",
+                            "closed_won",
+                            "closed_lost"
+                        ],
+                        "example": "new"
+                    }
+                }
+            },
+            "UpdateLeadRequest": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "example": "John Doe" },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john@example.com"
+                    },
+                    "company": {
+                        "type": "string",
+                        "example": "Tech Solutions Inc"
+                    },
+                    "source": { "type": "string", "example": "Website" },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "new",
+                            "contacted",
+                            "qualified",
+                            "proposal",
+                            "negotiation",
+                            "closed_won",
+                            "closed_lost"
+                        ]
+                    }
+                }
+            },
             "Quotation": {
                 "type": "object",
                 "properties": {
@@ -2412,27 +4210,21 @@
                     "leadId": { "type": "integer", "example": 1 },
                     "estimations": {
                         "type": "object",
-                        "example": {
-                            "frontendHours": 40,
-                            "backendHours": 60,
-                            "uiUxHours": 20
+                        "properties": {
+                            "frontendHours": {
+                                "type": "number",
+                                "example": 40
+                            },
+                            "backendHours": { "type": "number", "example": 60 },
+                            "uiUxHours": { "type": "number", "example": 20 }
                         }
                     },
-                    "hourlyRate": {
-                        "type": "number",
-                        "format": "decimal",
-                        "example": 50.0
-                    },
+                    "hourlyRate": { "type": "string", "example": "50.00" },
                     "discountPercentage": {
-                        "type": "number",
-                        "format": "decimal",
-                        "example": 10.0
+                        "type": "string",
+                        "example": "10.00"
                     },
-                    "finalPrice": {
-                        "type": "number",
-                        "format": "decimal",
-                        "example": 5400.0
-                    },
+                    "finalPrice": { "type": "string", "example": "5400.00" },
                     "currency": { "type": "string", "example": "USD" },
                     "status": {
                         "type": "string",
@@ -2445,140 +4237,8 @@
                         ],
                         "example": "draft"
                     },
-                    "validUntil": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "example": "2025-02-15"
-                    },
-                    "notes": {
-                        "type": "string",
-                        "nullable": true,
-                        "example": "Additional requirements discussed"
-                    },
-                    "lead": { "$ref": "#/components/schemas/Lead" },
-                    "createdBy": {
-                        "type": "integer",
-                        "nullable": true,
-                        "example": 1
-                    },
-                    "updatedBy": {
-                        "type": "integer",
-                        "nullable": true,
-                        "example": 1
-                    },
                     "createdAt": { "type": "string", "format": "date-time" },
                     "updatedAt": { "type": "string", "format": "date-time" }
-                }
-            },
-            "CreateQuotationRequest": {
-                "type": "object",
-                "required": ["leadId", "estimations", "hourlyRate"],
-                "properties": {
-                    "leadId": { "type": "integer", "example": 1 },
-                    "estimations": {
-                        "type": "object",
-                        "example": {
-                            "frontendHours": 40,
-                            "backendHours": 60,
-                            "uiUxHours": 20
-                        }
-                    },
-                    "hourlyRate": {
-                        "type": "number",
-                        "format": "decimal",
-                        "minimum": 0.01,
-                        "example": 50.0
-                    },
-                    "discountPercentage": {
-                        "type": "number",
-                        "format": "decimal",
-                        "nullable": true,
-                        "minimum": 0,
-                        "maximum": 100,
-                        "default": 0
-                    },
-                    "currency": {
-                        "type": "string",
-                        "nullable": true,
-                        "default": "USD"
-                    },
-                    "validUntil": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "notes": { "type": "string", "nullable": true }
-                }
-            },
-            "UpdateQuotationRequest": {
-                "type": "object",
-                "properties": {
-                    "estimations": { "type": "object", "nullable": true },
-                    "hourlyRate": {
-                        "type": "number",
-                        "format": "decimal",
-                        "nullable": true,
-                        "minimum": 0.01
-                    },
-                    "discountPercentage": {
-                        "type": "number",
-                        "format": "decimal",
-                        "nullable": true,
-                        "minimum": 0,
-                        "maximum": 100
-                    },
-                    "currency": { "type": "string", "nullable": true },
-                    "status": {
-                        "type": "string",
-                        "nullable": true,
-                        "enum": [
-                            "draft",
-                            "sent",
-                            "accepted",
-                            "rejected",
-                            "expired"
-                        ]
-                    },
-                    "validUntil": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "notes": { "type": "string", "nullable": true }
-                }
-            },
-            "CalculatePricingRequest": {
-                "type": "object",
-                "required": ["estimations", "hourlyRate"],
-                "properties": {
-                    "estimations": {
-                        "type": "object",
-                        "example": {
-                            "frontendHours": 40,
-                            "backendHours": 60,
-                            "uiUxHours": 20
-                        }
-                    },
-                    "hourlyRate": {
-                        "type": "number",
-                        "format": "decimal",
-                        "minimum": 0.01,
-                        "example": 50.0
-                    },
-                    "discountPercentage": {
-                        "type": "number",
-                        "format": "decimal",
-                        "nullable": true,
-                        "minimum": 0,
-                        "maximum": 100,
-                        "default": 0
-                    },
-                    "currency": {
-                        "type": "string",
-                        "nullable": true,
-                        "default": "USD"
-                    }
                 }
             },
             "QuotationResponse": {
@@ -2616,6 +4276,65 @@
                     }
                 }
             },
+            "CreateQuotationRequest": {
+                "type": "object",
+                "required": ["leadId", "estimations", "hourlyRate", "currency"],
+                "properties": {
+                    "leadId": { "type": "integer", "example": 1 },
+                    "estimations": {
+                        "type": "object",
+                        "properties": {
+                            "frontendHours": {
+                                "type": "number",
+                                "example": 40
+                            },
+                            "backendHours": { "type": "number", "example": 60 },
+                            "uiUxHours": { "type": "number", "example": 20 }
+                        }
+                    },
+                    "hourlyRate": { "type": "number", "example": 50.0 },
+                    "discountPercentage": { "type": "number", "example": 10.0 },
+                    "currency": { "type": "string", "example": "USD" }
+                }
+            },
+            "UpdateQuotationRequest": {
+                "type": "object",
+                "properties": {
+                    "estimations": { "type": "object" },
+                    "hourlyRate": { "type": "number" },
+                    "discountPercentage": { "type": "number" },
+                    "currency": { "type": "string" },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "sent",
+                            "accepted",
+                            "rejected",
+                            "expired"
+                        ]
+                    }
+                }
+            },
+            "CalculatePricingRequest": {
+                "type": "object",
+                "required": ["estimations", "hourlyRate"],
+                "properties": {
+                    "estimations": {
+                        "type": "object",
+                        "properties": {
+                            "frontendHours": {
+                                "type": "number",
+                                "example": 40
+                            },
+                            "backendHours": { "type": "number", "example": 60 },
+                            "uiUxHours": { "type": "number", "example": 20 }
+                        }
+                    },
+                    "hourlyRate": { "type": "number", "example": 50.0 },
+                    "discountPercentage": { "type": "number", "example": 10.0 }
+                }
+            },
             "PricingCalculationResponse": {
                 "type": "object",
                 "properties": {
@@ -2629,22 +4348,17 @@
                         "properties": {
                             "totalHours": { "type": "number", "example": 120 },
                             "subtotal": {
-                                "type": "number",
-                                "format": "decimal",
-                                "example": 6000.0
+                                "type": "string",
+                                "example": "6000.00"
                             },
                             "discountAmount": {
-                                "type": "number",
-                                "format": "decimal",
-                                "example": 600.0
+                                "type": "string",
+                                "example": "600.00"
                             },
                             "finalPrice": {
-                                "type": "number",
-                                "format": "decimal",
-                                "example": 5400.0
-                            },
-                            "currency": { "type": "string", "example": "USD" },
-                            "breakdown": { "type": "object" }
+                                "type": "string",
+                                "example": "5400.00"
+                            }
                         }
                     }
                 }
@@ -2656,80 +4370,18 @@
                     "userId": { "type": "integer", "example": 1 },
                     "trackableType": {
                         "type": "string",
-                        "enum": [
-                            "App\\Models\\Lead",
-                            "App\\Models\\Quotation",
-                            "App\\Models\\Project"
-                        ],
-                        "example": "App\\Models\\Project"
+                        "example": "App\\Models\\Task"
                     },
-                    "trackableId": { "type": "integer", "example": 1 },
-                    "startTime": {
-                        "type": "string",
-                        "format": "date-time",
-                        "example": "2025-01-01T09:00:00Z"
-                    },
+                    "trackableId": { "type": "integer", "example": 5 },
+                    "startTime": { "type": "string", "format": "date-time" },
                     "endTime": {
                         "type": "string",
                         "format": "date-time",
-                        "nullable": true,
-                        "example": "2025-01-01T17:00:00Z"
+                        "nullable": true
                     },
-                    "duration": {
-                        "type": "integer",
-                        "nullable": true,
-                        "description": "Duration in minutes",
-                        "example": 480
-                    },
-                    "description": {
-                        "type": "string",
-                        "nullable": true,
-                        "example": "Working on project requirements"
-                    },
-                    "isManualEntry": { "type": "boolean", "example": false },
-                    "trackable": {
-                        "type": "object",
-                        "description": "The trackable entity (Lead, Quotation, or Project)"
-                    },
-                    "user": {
-                        "type": "object",
-                        "properties": {
-                            "userId": { "type": "integer" },
-                            "name": { "type": "string" },
-                            "email": { "type": "string" }
-                        }
-                    },
+                    "durationMinutes": { "type": "integer", "example": 120 },
                     "createdAt": { "type": "string", "format": "date-time" },
                     "updatedAt": { "type": "string", "format": "date-time" }
-                }
-            },
-            "StartTimerRequest": {
-                "type": "object",
-                "required": ["trackableType", "trackableId"],
-                "properties": {
-                    "trackableType": {
-                        "type": "string",
-                        "enum": ["lead", "quotation", "project"],
-                        "example": "project"
-                    },
-                    "trackableId": { "type": "integer", "example": 1 },
-                    "description": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 500,
-                        "example": "Working on project implementation"
-                    }
-                }
-            },
-            "StopTimerRequest": {
-                "type": "object",
-                "properties": {
-                    "description": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 500,
-                        "example": "Completed task implementation"
-                    }
                 }
             },
             "TimeEntryResponse": {
@@ -2767,6 +4419,62 @@
                     }
                 }
             },
+            "StartTimerRequest": {
+                "type": "object",
+                "required": ["trackableType", "trackableId"],
+                "properties": {
+                    "trackableType": {
+                        "type": "string",
+                        "enum": ["lead", "quotation", "task"],
+                        "example": "task"
+                    },
+                    "trackableId": { "type": "integer", "example": 5 }
+                }
+            },
+            "StopTimerRequest": {
+                "type": "object",
+                "properties": {
+                    "notes": {
+                        "type": "string",
+                        "example": "Completed initial implementation"
+                    }
+                }
+            },
+            "AttendanceResource": {
+                "type": "object",
+                "properties": {
+                    "attendanceId": { "type": "integer", "example": 1 },
+                    "userId": { "type": "integer", "example": 1 },
+                    "date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-01-15"
+                    },
+                    "clockIn": { "type": "string", "format": "date-time" },
+                    "clockOut": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "lateMinutes": { "type": "integer", "example": 0 },
+                    "idleMinutes": { "type": "integer", "example": 30 },
+                    "createdAt": { "type": "string", "format": "date-time" },
+                    "updatedAt": { "type": "string", "format": "date-time" }
+                }
+            },
+            "AttendanceResponse": {
+                "type": "object",
+                "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                        "type": "string",
+                        "example": "Attendance retrieved successfully"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/AttendanceResource"
+                    }
+                }
+            },
             "Project": {
                 "type": "object",
                 "properties": {
@@ -2779,12 +4487,11 @@
                     },
                     "title": {
                         "type": "string",
-                        "example": "E-commerce Website Development"
+                        "example": "E-commerce Website"
                     },
                     "description": {
                         "type": "string",
-                        "nullable": true,
-                        "example": "Full-stack e-commerce platform"
+                        "example": "Full-featured e-commerce platform"
                     },
                     "status": {
                         "type": "string",
@@ -2800,114 +4507,20 @@
                         ],
                         "example": "active"
                     },
-                    "previousStatus": {
-                        "type": "string",
-                        "nullable": true,
-                        "enum": [
-                            "draft",
-                            "active",
-                            "ui_ux",
-                            "development",
-                            "testing",
-                            "completed",
-                            "on_hold",
-                            "cancelled"
-                        ]
-                    },
-                    "budget": {
-                        "type": "number",
-                        "format": "decimal",
-                        "example": 15000.0
-                    },
+                    "budget": { "type": "string", "example": "50000.00" },
                     "deadline": {
                         "type": "string",
                         "format": "date",
-                        "nullable": true,
-                        "example": "2025-03-15"
+                        "example": "2024-06-30"
                     },
                     "uiApprovedAt": {
                         "type": "string",
                         "format": "date-time",
                         "nullable": true
                     },
-                    "autoApprovalJobId": { "type": "string", "nullable": true },
-                    "createdBy": { "type": "integer", "nullable": true },
-                    "updatedBy": { "type": "integer", "nullable": true },
+                    "progressPercentage": { "type": "number", "example": 45.5 },
                     "createdAt": { "type": "string", "format": "date-time" },
                     "updatedAt": { "type": "string", "format": "date-time" }
-                }
-            },
-            "CreateProjectRequest": {
-                "type": "object",
-                "required": ["quotationId"],
-                "properties": {
-                    "quotationId": { "type": "integer", "example": 3 },
-                    "title": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "description": { "type": "string", "nullable": true },
-                    "deadline": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    }
-                }
-            },
-            "UpdateProjectRequest": {
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "description": { "type": "string", "nullable": true },
-                    "status": {
-                        "type": "string",
-                        "nullable": true,
-                        "enum": [
-                            "draft",
-                            "active",
-                            "ui_ux",
-                            "development",
-                            "testing",
-                            "completed",
-                            "on_hold",
-                            "cancelled"
-                        ]
-                    },
-                    "budget": {
-                        "type": "number",
-                        "format": "decimal",
-                        "nullable": true,
-                        "minimum": 0.01
-                    },
-                    "deadline": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "reason": { "type": "string", "nullable": true }
-                }
-            },
-            "ConvertQuotationRequest": {
-                "type": "object",
-                "required": ["quotationId"],
-                "properties": {
-                    "quotationId": { "type": "integer", "example": 5 },
-                    "title": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "description": { "type": "string", "nullable": true },
-                    "deadline": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    }
                 }
             },
             "ProjectResponse": {
@@ -2945,43 +4558,59 @@
                     }
                 }
             },
-            "ProjectHistory": {
+            "CreateProjectRequest": {
+                "type": "object",
+                "required": ["clientId", "title"],
+                "properties": {
+                    "clientId": { "type": "integer", "example": 5 },
+                    "title": {
+                        "type": "string",
+                        "example": "E-commerce Website"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Full-featured e-commerce platform"
+                    },
+                    "budget": { "type": "number", "example": 50000.0 },
+                    "deadline": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-06-30"
+                    }
+                }
+            },
+            "UpdateProjectRequest": {
                 "type": "object",
                 "properties": {
-                    "historyId": { "type": "integer", "example": 1 },
-                    "projectId": { "type": "integer", "example": 1 },
-                    "fieldName": { "type": "string", "example": "status" },
-                    "oldValue": {
+                    "title": { "type": "string" },
+                    "description": { "type": "string" },
+                    "status": {
                         "type": "string",
-                        "nullable": true,
-                        "example": "draft"
+                        "enum": [
+                            "draft",
+                            "active",
+                            "ui_ux",
+                            "development",
+                            "testing",
+                            "completed",
+                            "on_hold",
+                            "cancelled"
+                        ]
                     },
-                    "newValue": {
+                    "budget": { "type": "number" },
+                    "deadline": { "type": "string", "format": "date" }
+                }
+            },
+            "ConvertQuotationRequest": {
+                "type": "object",
+                "required": ["quotationId"],
+                "properties": {
+                    "quotationId": { "type": "integer", "example": 3 },
+                    "deadline": {
                         "type": "string",
-                        "nullable": true,
-                        "example": "active"
-                    },
-                    "reason": {
-                        "type": "string",
-                        "nullable": true,
-                        "example": "Client approved project scope"
-                    },
-                    "changedBy": {
-                        "type": "integer",
-                        "nullable": true,
-                        "example": 1
-                    },
-                    "changedByUser": {
-                        "type": "object",
-                        "nullable": true,
-                        "properties": {
-                            "userId": { "type": "integer" },
-                            "name": { "type": "string" },
-                            "email": { "type": "string" }
-                        }
-                    },
-                    "createdAt": { "type": "string", "format": "date-time" },
-                    "updatedAt": { "type": "string", "format": "date-time" }
+                        "format": "date",
+                        "example": "2024-06-30"
+                    }
                 }
             },
             "ProjectHistoryCollectionResponse": {
@@ -2993,12 +4622,42 @@
                         "example": "Project history retrieved successfully"
                     },
                     "data": {
-                        "type": "object",
-                        "properties": {
-                            "histories": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/components/schemas/ProjectHistory"
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "historyId": {
+                                    "type": "integer",
+                                    "example": 1
+                                },
+                                "projectId": {
+                                    "type": "integer",
+                                    "example": 1
+                                },
+                                "fieldName": {
+                                    "type": "string",
+                                    "example": "status"
+                                },
+                                "oldValue": {
+                                    "type": "string",
+                                    "example": "active"
+                                },
+                                "newValue": {
+                                    "type": "string",
+                                    "example": "ui_ux"
+                                },
+                                "reason": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "example": "Moving to UI/UX phase"
+                                },
+                                "changedBy": {
+                                    "type": "integer",
+                                    "example": 1
+                                },
+                                "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time"
                                 }
                             }
                         }
@@ -3016,45 +4675,11 @@
                     },
                     "content": {
                         "type": "string",
-                        "example": "# Database Configuration\n\nHost: localhost"
+                        "example": "# Database Setup\n\nConnection details..."
                     },
                     "isEncrypted": { "type": "boolean", "example": true },
-                    "createdBy": { "type": "integer", "nullable": true },
-                    "updatedBy": { "type": "integer", "nullable": true },
                     "createdAt": { "type": "string", "format": "date-time" },
                     "updatedAt": { "type": "string", "format": "date-time" }
-                }
-            },
-            "CreateProjectWikiRequest": {
-                "type": "object",
-                "required": ["title", "content"],
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "maxLength": 255,
-                        "example": "API Keys and Secrets"
-                    },
-                    "content": {
-                        "type": "string",
-                        "example": "# API Configuration"
-                    },
-                    "isEncrypted": {
-                        "type": "boolean",
-                        "nullable": true,
-                        "default": false
-                    }
-                }
-            },
-            "UpdateProjectWikiRequest": {
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "content": { "type": "string", "nullable": true },
-                    "isEncrypted": { "type": "boolean", "nullable": true }
                 }
             },
             "ProjectWikiResponse": {
@@ -3077,13 +4702,115 @@
                         "example": "Project wikis retrieved successfully"
                     },
                     "data": {
+                        "type": "array",
+                        "items": { "$ref": "#/components/schemas/ProjectWiki" }
+                    }
+                }
+            },
+            "CreateProjectWikiRequest": {
+                "type": "object",
+                "required": ["title", "content"],
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "example": "Database Credentials"
+                    },
+                    "content": {
+                        "type": "string",
+                        "example": "# Database Setup\n\nConnection details..."
+                    },
+                    "isEncrypted": { "type": "boolean", "example": true }
+                }
+            },
+            "UpdateProjectWikiRequest": {
+                "type": "object",
+                "properties": {
+                    "title": { "type": "string" },
+                    "content": { "type": "string" },
+                    "isEncrypted": { "type": "boolean" }
+                }
+            },
+            "TaskResource": {
+                "type": "object",
+                "properties": {
+                    "taskId": { "type": "integer", "example": 1 },
+                    "projectId": { "type": "integer", "example": 1 },
+                    "parentId": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": null
+                    },
+                    "assignedTo": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 2
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Implement user authentication"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Add JWT-based authentication"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "todo",
+                            "in_progress",
+                            "review",
+                            "testing",
+                            "completed"
+                        ],
+                        "example": "in_progress"
+                    },
+                    "estimatedHours": { "type": "number", "example": 8.5 },
+                    "totalTimeSpent": { "type": "integer", "example": 240 },
+                    "reopenCount": { "type": "integer", "example": 0 },
+                    "internalReviewerNotes": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Review security implementation"
+                    },
+                    "hasChildren": { "type": "boolean", "example": false },
+                    "children": {
+                        "type": "array",
+                        "items": { "$ref": "#/components/schemas/TaskResource" }
+                    },
+                    "createdAt": { "type": "string", "format": "date-time" },
+                    "updatedAt": { "type": "string", "format": "date-time" }
+                }
+            },
+            "TaskResponse": {
+                "type": "object",
+                "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                        "type": "string",
+                        "example": "Task retrieved successfully"
+                    },
+                    "data": { "$ref": "#/components/schemas/TaskResource" }
+                }
+            },
+            "TaskCollectionResponse": {
+                "type": "object",
+                "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                        "type": "string",
+                        "example": "Tasks retrieved successfully"
+                    },
+                    "data": {
                         "type": "object",
                         "properties": {
-                            "wikis": {
+                            "tasks": {
                                 "type": "array",
                                 "items": {
-                                    "$ref": "#/components/schemas/ProjectWiki"
+                                    "$ref": "#/components/schemas/TaskResource"
                                 }
+                            },
+                            "pagination": {
+                                "$ref": "#/components/schemas/Pagination"
                             }
                         }
                     }
@@ -3096,13 +4823,9 @@
                     "projectId": { "type": "integer", "example": 1 },
                     "invoiceNumber": {
                         "type": "string",
-                        "example": "INV-2025-0001"
+                        "example": "INV-2024-001"
                     },
-                    "amount": {
-                        "type": "number",
-                        "format": "decimal",
-                        "example": 5000.0
-                    },
+                    "amount": { "type": "string", "example": "5000.00" },
                     "currency": { "type": "string", "example": "USD" },
                     "status": {
                         "type": "string",
@@ -3115,77 +4838,23 @@
                         ],
                         "example": "sent"
                     },
+                    "issueDate": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-01-15"
+                    },
                     "dueDate": {
                         "type": "string",
                         "format": "date",
-                        "example": "2025-02-15"
+                        "example": "2024-02-15"
                     },
                     "paidAt": {
                         "type": "string",
                         "format": "date-time",
                         "nullable": true
                     },
-                    "notes": {
-                        "type": "string",
-                        "nullable": true,
-                        "example": "Payment for milestone 1"
-                    },
-                    "project": { "$ref": "#/components/schemas/Project" },
-                    "createdBy": { "type": "integer", "nullable": true },
-                    "updatedBy": { "type": "integer", "nullable": true },
                     "createdAt": { "type": "string", "format": "date-time" },
                     "updatedAt": { "type": "string", "format": "date-time" }
-                }
-            },
-            "CreateInvoiceRequest": {
-                "type": "object",
-                "required": ["projectId", "amount", "dueDate"],
-                "properties": {
-                    "projectId": { "type": "integer", "example": 1 },
-                    "amount": {
-                        "type": "number",
-                        "format": "decimal",
-                        "example": 5000.0
-                    },
-                    "currency": { "type": "string", "example": "USD" },
-                    "dueDate": {
-                        "type": "string",
-                        "format": "date",
-                        "example": "2025-02-15"
-                    },
-                    "notes": {
-                        "type": "string",
-                        "nullable": true,
-                        "example": "Payment for project milestone 1"
-                    }
-                }
-            },
-            "UpdateInvoiceRequest": {
-                "type": "object",
-                "properties": {
-                    "amount": {
-                        "type": "number",
-                        "format": "decimal",
-                        "nullable": true
-                    },
-                    "currency": { "type": "string", "nullable": true },
-                    "status": {
-                        "type": "string",
-                        "nullable": true,
-                        "enum": [
-                            "draft",
-                            "sent",
-                            "paid",
-                            "overdue",
-                            "cancelled"
-                        ]
-                    },
-                    "dueDate": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "notes": { "type": "string", "nullable": true }
                 }
             },
             "InvoiceResponse": {
@@ -3223,59 +4892,65 @@
                     }
                 }
             },
-            "ClientProject": {
+            "CreateInvoiceRequest": {
                 "type": "object",
-                "description": "Client-facing project resource with limited visibility (Black Box principle)",
+                "required": ["projectId", "amount", "dueDate"],
                 "properties": {
                     "projectId": { "type": "integer", "example": 1 },
-                    "title": {
+                    "amount": { "type": "number", "example": 5000.0 },
+                    "currency": { "type": "string", "example": "USD" },
+                    "dueDate": {
                         "type": "string",
-                        "example": "E-commerce Website Development"
+                        "format": "date",
+                        "example": "2024-02-15"
                     },
+                    "notes": {
+                        "type": "string",
+                        "example": "First milestone payment"
+                    }
+                }
+            },
+            "UpdateInvoiceRequest": {
+                "type": "object",
+                "properties": {
+                    "amount": { "type": "number" },
+                    "currency": { "type": "string" },
                     "status": {
                         "type": "string",
                         "enum": [
                             "draft",
-                            "active",
-                            "ui_ux",
-                            "development",
-                            "testing",
-                            "completed",
-                            "on_hold",
+                            "sent",
+                            "paid",
+                            "overdue",
                             "cancelled"
-                        ],
-                        "example": "development"
+                        ]
                     },
-                    "progressPercentage": {
-                        "type": "number",
-                        "format": "decimal",
-                        "example": 65.5,
-                        "description": "Calculated progress based on task completion"
+                    "dueDate": { "type": "string", "format": "date" },
+                    "notes": { "type": "string" }
+                }
+            },
+            "ClientProject": {
+                "type": "object",
+                "description": "Limited project view for clients (Black Box principle)",
+                "properties": {
+                    "projectId": { "type": "integer", "example": 1 },
+                    "title": {
+                        "type": "string",
+                        "example": "E-commerce Website"
                     },
+                    "status": { "type": "string", "example": "development" },
+                    "progressPercentage": { "type": "number", "example": 45.5 },
                     "deadline": {
                         "type": "string",
                         "format": "date",
-                        "nullable": true,
-                        "example": "2025-03-15"
+                        "example": "2024-06-30"
                     },
                     "uiApprovedAt": {
                         "type": "string",
                         "format": "date-time",
                         "nullable": true
                     },
-                    "canApproveUI": {
-                        "type": "boolean",
-                        "example": true,
-                        "description": "Whether client can approve UI deliverables"
-                    },
-                    "invoices": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/ClientInvoice"
-                        }
-                    },
-                    "createdAt": { "type": "string", "format": "date-time" },
-                    "updatedAt": { "type": "string", "format": "date-time" }
+                    "createdAt": { "type": "string", "format": "date-time" }
                 }
             },
             "ClientProjectResponse": {
@@ -3315,51 +4990,23 @@
             },
             "ClientInvoice": {
                 "type": "object",
-                "description": "Client-facing invoice resource with limited visibility",
+                "description": "Limited invoice view for clients",
                 "properties": {
                     "invoiceId": { "type": "integer", "example": 1 },
                     "invoiceNumber": {
                         "type": "string",
-                        "example": "INV-2025-0001"
-                    },
-                    "amount": {
-                        "type": "number",
-                        "format": "decimal",
-                        "example": 5000.0
-                    },
-                    "currency": { "type": "string", "example": "USD" },
-                    "status": {
-                        "type": "string",
-                        "enum": [
-                            "draft",
-                            "sent",
-                            "paid",
-                            "overdue",
-                            "cancelled"
-                        ],
-                        "example": "sent"
-                    },
-                    "dueDate": {
-                        "type": "string",
-                        "format": "date",
-                        "example": "2025-02-15"
-                    },
-                    "paidAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "canPay": {
-                        "type": "boolean",
-                        "example": true,
-                        "description": "Whether client can pay this invoice"
+                        "example": "INV-2024-001"
                     },
                     "projectTitle": {
                         "type": "string",
-                        "example": "E-commerce Website Development"
+                        "example": "E-commerce Website"
                     },
-                    "createdAt": { "type": "string", "format": "date-time" },
-                    "updatedAt": { "type": "string", "format": "date-time" }
+                    "amount": { "type": "string", "example": "5000.00" },
+                    "currency": { "type": "string", "example": "USD" },
+                    "status": { "type": "string", "example": "sent" },
+                    "issueDate": { "type": "string", "format": "date" },
+                    "dueDate": { "type": "string", "format": "date" },
+                    "isPayable": { "type": "boolean", "example": true }
                 }
             },
             "ClientInvoiceResponse": {
@@ -3397,6 +5044,40 @@
                     }
                 }
             },
+            "RoleResponse": {
+                "type": "object",
+                "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                        "type": "string",
+                        "example": "Role retrieved successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "id": { "type": "integer", "example": 1 },
+                            "name": { "type": "string", "example": "admin" },
+                            "guardName": { "type": "string", "example": "web" },
+                            "isProtected": {
+                                "type": "boolean",
+                                "example": true
+                            },
+                            "permissions": {
+                                "type": "array",
+                                "items": { "type": "string" }
+                            },
+                            "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                            }
+                        }
+                    }
+                }
+            },
             "Pagination": {
                 "type": "object",
                 "properties": {
@@ -3426,11 +5107,7 @@
                         "type": "string",
                         "example": "An error occurred"
                     },
-                    "errors": {
-                        "type": "array",
-                        "items": { "type": "string" },
-                        "example": ["Invalid operation", "Resource not found"]
-                    }
+                    "errors": { "type": "object", "nullable": true }
                 }
             },
             "ValidationErrorResponse": {
@@ -3448,8 +5125,10 @@
                             "items": { "type": "string" }
                         },
                         "example": {
-                            "title": ["The title field is required."],
-                            "budget": ["The budget must be greater than 0."]
+                            "email": ["The email field is required."],
+                            "password": [
+                                "The password must be at least 8 characters."
+                            ]
                         }
                     }
                 }
@@ -3457,15 +5136,19 @@
         },
         "responses": {
             "Unauthenticated": {
-                "description": "Authentication required",
+                "description": "Unauthenticated - Invalid or missing token",
                 "content": {
                     "application/json": {
                         "schema": {
                             "type": "object",
                             "properties": {
+                                "success": {
+                                    "type": "boolean",
+                                    "example": false
+                                },
                                 "message": {
                                     "type": "string",
-                                    "example": "Unauthenticated."
+                                    "example": "Unauthenticated"
                                 }
                             }
                         }
@@ -3477,12 +5160,17 @@
                 "content": {
                     "application/json": {
                         "schema": {
-                            "$ref": "#/components/schemas/ErrorResponse"
-                        },
-                        "example": {
-                            "success": false,
-                            "message": "Resource not found",
-                            "errors": ["The requested resource was not found."]
+                            "type": "object",
+                            "properties": {
+                                "success": {
+                                    "type": "boolean",
+                                    "example": false
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "example": "Resource not found"
+                                }
+                            }
                         }
                     }
                 }
@@ -3498,18 +5186,21 @@
                 }
             },
             "Forbidden": {
-                "description": "Access denied",
+                "description": "Forbidden - Insufficient permissions",
                 "content": {
                     "application/json": {
                         "schema": {
-                            "$ref": "#/components/schemas/ErrorResponse"
-                        },
-                        "example": {
-                            "success": false,
-                            "message": "Access denied",
-                            "errors": [
-                                "You do not have permission to access this resource."
-                            ]
+                            "type": "object",
+                            "properties": {
+                                "success": {
+                                    "type": "boolean",
+                                    "example": false
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "example": "You do not have permission to perform this action"
+                                }
+                            }
                         }
                     }
                 }
@@ -3532,7 +5223,11 @@
         },
         {
             "name": "Time Entries",
-            "description": "Polymorphic time tracking for leads, quotations, and projects"
+            "description": "Polymorphic time tracking for tasks, quotations, and leads"
+        },
+        {
+            "name": "Attendance",
+            "description": "User attendance tracking (clock-in/clock-out)"
         },
         { "name": "Projects", "description": "Project management endpoints" },
         {
@@ -3541,7 +5236,11 @@
         },
         {
             "name": "Project Wikis",
-            "description": "Project wiki and documentation management with encryption support"
+            "description": "Project documentation and encrypted credentials storage"
+        },
+        {
+            "name": "Tasks",
+            "description": "Task management with hierarchical structure"
         },
         {
             "name": "Invoices (Admin)",
@@ -3549,7 +5248,23 @@
         },
         {
             "name": "Client Portal",
-            "description": "Client-facing endpoints with restricted data visibility (Black Box principle)"
+            "description": "Client-facing endpoints with restricted data visibility (Black Box)"
+        },
+        {
+            "name": "Admin Stats",
+            "description": "Admin dashboard statistics and reporting (profitability, quality, performance)"
+        },
+        {
+            "name": "Admin Roles",
+            "description": "Role and permission management endpoints"
+        },
+        {
+            "name": "Admin User Management",
+            "description": "User management including internal cost updates"
+        },
+        {
+            "name": "Admin Audit Logs",
+            "description": "System audit logs for security and compliance"
         }
     ]
 }

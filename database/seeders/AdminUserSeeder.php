@@ -73,6 +73,14 @@ class AdminUserSeeder extends Seeder
             'view_reports',
             'view_profitability',
             'view_cost',
+            
+            // Admin Statistics & Financial Data
+            'view_admin_stats',
+            'view_internal_costs',
+            'manage_internal_costs',
+            
+            // Security & Audit
+            'view_audit_logs',
         ];
 
         foreach ($permissions as $permission) {

@@ -1,0 +1,665 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Helpers\ApiResponse;
+use App\Http\Controllers\Controller;
+use App\Services\Reporting\ProfitabilityService;
+use App\Services\Reporting\QualityService;
+use App\Services\Reporting\UserPerformanceService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use OpenApi\Annotations as OA;
+
+class AdminStatsController extends Controller
+{
+    public function __construct(
+        private ProfitabilityService $profitabilityService,
+        private QualityService $qualityService,
+        private UserPerformanceService $userPerformanceService
+    ) {
+        // Apply middleware using Laravel 12 approach
+        $this->middleware(['auth:sanctum', 'locale']);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/admin/stats/overview",
+     *     operationId="getAdminStatsOverview",
+     *     tags={"Admin Stats"},
+     *     summary="Get admin dashboard overview statistics",
+     *     description="Retrieve comprehensive dashboard statistics including profitability, quality metrics, and performance overview. Requires view_admin_stats permission.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Admin overview statistics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Admin overview statistics retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="profitability",
+     *                     type="object",
+     *                     @OA\Property(property="totalRevenue", type="string", example="125000.00"),
+     *                     @OA\Property(property="totalProfit", type="string", example="45000.00"),
+     *                     @OA\Property(property="overallMargin", type="string", example="36.00"),
+     *                     @OA\Property(property="activeProjects", type="integer", example=8),
+     *                     @OA\Property(property="completedProjects", type="integer", example=15)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="quality",
+     *                     type="object",
+     *                     @OA\Property(property="overallBounceRate", type="string", example="0.15"),
+     *                     @OA\Property(property="qualityScore", type="string", example="85.00"),
+     *                     @OA\Property(property="totalBounces", type="integer", example=23),
+     *                     @OA\Property(property="tasksWithBounces", type="integer", example=18)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="attendance",
+     *                     type="object",
+     *                     @OA\Property(property="totalLateMinutes", type="integer", example=120),
+     *                     @OA\Property(property="averageIdleTime", type="string", example="45.50"),
+     *                     @OA\Property(
+     *                         property="usersWithExcessiveIdle",
+     *                         type="array",
+     *                         @OA\Items(
+     *                             @OA\Property(property="userId", type="integer", example=3),
+     *                             @OA\Property(property="userName", type="string", example="John Doe"),
+     *                             @OA\Property(property="totalExcessiveIdleMinutes", type="integer", example=180),
+     *                             @OA\Property(property="daysWithExcessiveIdle", type="integer", example=3),
+     *                             @OA\Property(property="averageExcessiveIdlePerDay", type="string", example="60.00")
+     *                         )
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - User lacks view_admin_stats permission",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You do not have permission to view admin statistics")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function overview(): JsonResponse
+    {
+        // Check permission
+        if (!auth()->user()->can('view_admin_stats')) {
+            return ApiResponse::forbidden('You do not have permission to view admin statistics');
+        }
+
+        try {
+            // Get profitability overview
+            $profitabilityStats = $this->profitabilityService->getOverviewStats();
+
+            // Get quality overview
+            $qualityStats = $this->qualityService->getQualityOverview();
+
+            // Get attendance analytics
+            $attendanceStats = $this->userPerformanceService->getAttendanceAnalytics();
+
+            $overviewData = [
+                'profitability' => $profitabilityStats,
+                'quality' => $qualityStats,
+                'attendance' => $attendanceStats,
+            ];
+
+            return ApiResponse::success(
+                $overviewData,
+                'Admin overview statistics retrieved successfully'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve admin overview statistics: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/admin/stats/profitability",
+     *     operationId="getAdminStatsProfitability",
+     *     tags={"Admin Stats"},
+     *     summary="Get project profitability report",
+     *     description="Retrieve detailed profitability report for all projects with filtering and pagination. Requires both view_admin_stats AND view_internal_costs permissions.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         description="Filter projects by status",
+     *         @OA\Schema(type="string", enum={"active", "completed", "on_hold", "cancelled"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateFrom",
+     *         in="query",
+     *         description="Filter projects created from this date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateTo",
+     *         in="query",
+     *         description="Filter projects created up to this date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-12-31")
+     *     ),
+     *     @OA\Parameter(
+     *         name="sortBy",
+     *         in="query",
+     *         description="Sort results by field",
+     *         @OA\Schema(type="string", enum={"profit", "margin", "budget"}, example="profit")
+     *     ),
+     *     @OA\Parameter(
+     *         name="sortDirection",
+     *         in="query",
+     *         description="Sort direction",
+     *         @OA\Schema(type="string", enum={"asc", "desc"}, example="desc")
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number for pagination",
+     *         @OA\Schema(type="integer", minimum=1, example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="perPage",
+     *         in="query",
+     *         description="Number of items per page",
+     *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Profitability report retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Profitability report retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="projects",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="projectId", type="integer", example=1),
+     *                         @OA\Property(property="title", type="string", example="E-commerce Website"),
+     *                         @OA\Property(property="budget", type="string", example="50000.00"),
+     *                         @OA\Property(property="totalCost", type="string", example="35000.00"),
+     *                         @OA\Property(property="profit", type="string", example="15000.00"),
+     *                         @OA\Property(property="profitMargin", type="string", example="30.00")
+     *                     )
+     *                 ),
+     *                 @OA\Property(
+     *                     property="pagination",
+     *                     type="object",
+     *                     @OA\Property(property="total", type="integer", example=25),
+     *                     @OA\Property(property="count", type="integer", example=15),
+     *                     @OA\Property(property="perPage", type="integer", example=15),
+     *                     @OA\Property(property="currentPage", type="integer", example=1),
+     *                     @OA\Property(property="totalPages", type="integer", example=2)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - User lacks required permissions",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You do not have permission to view profitability data")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Invalid filter parameters"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="sortBy",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="Invalid sort field. Allowed: profit, margin, budget")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function profitability(Request $request): JsonResponse
+    {
+        // Check both required permissions
+        if (!auth()->user()->can('view_admin_stats') || !auth()->user()->can('view_internal_costs')) {
+            return ApiResponse::forbidden('You do not have permission to view profitability data');
+        }
+
+        try {
+            // Extract and validate filters
+            $filters = [];
+            if ($request->has('status')) {
+                $filters['status'] = $request->get('status');
+            }
+            if ($request->has('dateFrom')) {
+                $filters['dateFrom'] = $request->get('dateFrom');
+            }
+            if ($request->has('dateTo')) {
+                $filters['dateTo'] = $request->get('dateTo');
+            }
+
+            // Extract sorting parameters
+            $sortBy = $request->get('sortBy', 'profit');
+            $sortDirection = $request->get('sortDirection', 'desc');
+            $perPage = (int) $request->get('perPage', 15);
+
+            // Get profitability report
+            $profitabilityReport = $this->profitabilityService->getProfitabilityReport(
+                $filters,
+                $sortBy,
+                $sortDirection,
+                $perPage
+            );
+
+            // Format response data
+            $responseData = [
+                'projects' => $profitabilityReport->items(),
+                'pagination' => [
+                    'total' => $profitabilityReport->total(),
+                    'count' => $profitabilityReport->count(),
+                    'perPage' => $profitabilityReport->perPage(),
+                    'currentPage' => $profitabilityReport->currentPage(),
+                    'totalPages' => $profitabilityReport->lastPage(),
+                ],
+            ];
+
+            return ApiResponse::success(
+                $responseData,
+                'Profitability report retrieved successfully'
+            );
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::validationError(
+                ['sortBy' => [$e->getMessage()]],
+                'Invalid filter parameters'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve profitability report: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/admin/stats/quality",
+     *     operationId="getAdminStatsQuality",
+     *     tags={"Admin Stats"},
+     *     summary="Get quality metrics including bounce rates",
+     *     description="Retrieve comprehensive quality metrics including bounce rates by developer and top bouncing tasks. Requires view_admin_stats permission.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateFrom",
+     *         in="query",
+     *         description="Filter data from this date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateTo",
+     *         in="query",
+     *         description="Filter data up to this date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-12-31")
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Limit for top bouncing tasks",
+     *         @OA\Schema(type="integer", minimum=1, maximum=50, example=10)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Quality metrics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Quality metrics retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="overview",
+     *                     type="object",
+     *                     @OA\Property(property="overallBounceRate", type="string", example="0.15"),
+     *                     @OA\Property(property="qualityScore", type="string", example="85.00"),
+     *                     @OA\Property(property="totalBounces", type="integer", example=23),
+     *                     @OA\Property(property="tasksWithBounces", type="integer", example=18)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="bounceRateByDeveloper",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="userId", type="integer", example=1),
+     *                         @OA\Property(property="userName", type="string", example="John Doe"),
+     *                         @OA\Property(property="totalBounces", type="integer", example=5),
+     *                         @OA\Property(property="totalTasks", type="integer", example=20),
+     *                         @OA\Property(property="averageBounceRate", type="string", example="0.25")
+     *                     )
+     *                 ),
+     *                 @OA\Property(
+     *                     property="topBouncingTasks",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="taskId", type="integer", example=15),
+     *                         @OA\Property(property="title", type="string", example="Fix login bug"),
+     *                         @OA\Property(property="projectTitle", type="string", example="E-commerce Website"),
+     *                         @OA\Property(property="assigneeName", type="string", example="Jane Smith"),
+     *                         @OA\Property(property="reopenCount", type="integer", example=3),
+     *                         @OA\Property(property="status", type="string", example="completed")
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - User lacks view_admin_stats permission",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You do not have permission to view admin statistics")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function quality(Request $request): JsonResponse
+    {
+        // Check permission
+        if (!auth()->user()->can('view_admin_stats')) {
+            return ApiResponse::forbidden('You do not have permission to view admin statistics');
+        }
+
+        try {
+            // Extract filters
+            $filters = [];
+            if ($request->has('dateFrom')) {
+                $filters['dateFrom'] = $request->get('dateFrom');
+            }
+            if ($request->has('dateTo')) {
+                $filters['dateTo'] = $request->get('dateTo');
+            }
+
+            $limit = (int) $request->get('limit', 10);
+
+            // Get quality overview
+            $qualityOverview = $this->qualityService->getQualityOverview();
+
+            // Get bounce rate by developer
+            $bounceRateByDeveloper = $this->qualityService->getBounceRateByDeveloper($filters);
+
+            // Get top bouncing tasks
+            $topBouncingTasks = $this->qualityService->getTopBouncingTasks($limit, $filters);
+
+            $qualityData = [
+                'overview' => $qualityOverview,
+                'bounceRateByDeveloper' => $bounceRateByDeveloper,
+                'topBouncingTasks' => $topBouncingTasks,
+            ];
+
+            return ApiResponse::success(
+                $qualityData,
+                'Quality metrics retrieved successfully'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve quality metrics: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/admin/stats/user-performance",
+     *     operationId="getAdminStatsUserPerformance",
+     *     tags={"Admin Stats"},
+     *     summary="Get user performance metrics",
+     *     description="Retrieve comprehensive user performance metrics including tracked time, idle time, task completion rates, and bounce rates. Requires view_admin_stats permission.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateFrom",
+     *         in="query",
+     *         description="Filter data from this date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateTo",
+     *         in="query",
+     *         description="Filter data up to this date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-12-31")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="User performance metrics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="User performance metrics retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="userId", type="integer", example=1),
+     *                     @OA\Property(property="name", type="string", example="John Doe"),
+     *                     @OA\Property(property="totalTrackedMinutes", type="integer", example=2400),
+     *                     @OA\Property(property="totalIdleMinutes", type="integer", example=120),
+     *                     @OA\Property(property="taskCompletionRate", type="string", example="85.50"),
+     *                     @OA\Property(property="averageBounceRate", type="string", example="0.15"),
+     *                     @OA\Property(property="attendanceDays", type="integer", example=22)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - User lacks view_admin_stats permission",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You do not have permission to view admin statistics")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function userPerformance(Request $request): JsonResponse
+    {
+        // Check permission
+        if (!auth()->user()->can('view_admin_stats')) {
+            return ApiResponse::forbidden('You do not have permission to view admin statistics');
+        }
+
+        try {
+            // Extract filters
+            $filters = [];
+            if ($request->has('dateFrom')) {
+                $filters['dateFrom'] = $request->get('dateFrom');
+            }
+            if ($request->has('dateTo')) {
+                $filters['dateTo'] = $request->get('dateTo');
+            }
+
+            // Get all user performance metrics
+            $userPerformanceData = $this->userPerformanceService->getAllUserPerformance($filters);
+
+            return ApiResponse::success(
+                $userPerformanceData,
+                'User performance metrics retrieved successfully'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve user performance metrics: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/admin/stats/attendance",
+     *     operationId="getAdminStatsAttendance",
+     *     tags={"Admin Stats"},
+     *     summary="Get attendance analytics",
+     *     description="Retrieve comprehensive attendance analytics including late arrivals, idle time statistics, and users with excessive idle time. Requires view_admin_stats permission.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateFrom",
+     *         in="query",
+     *         description="Filter data from this date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateTo",
+     *         in="query",
+     *         description="Filter data up to this date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-12-31")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Attendance analytics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Attendance analytics retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="totalLateMinutes", type="integer", example=120),
+     *                 @OA\Property(property="averageIdleTime", type="string", example="45.50"),
+     *                 @OA\Property(
+     *                     property="usersWithExcessiveIdle",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="userId", type="integer", example=3),
+     *                         @OA\Property(property="userName", type="string", example="John Doe"),
+     *                         @OA\Property(property="totalExcessiveIdleMinutes", type="integer", example=180),
+     *                         @OA\Property(property="daysWithExcessiveIdle", type="integer", example=3),
+     *                         @OA\Property(property="averageExcessiveIdlePerDay", type="string", example="60.00")
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - User lacks view_admin_stats permission",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You do not have permission to view admin statistics")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function attendance(Request $request): JsonResponse
+    {
+        // Check permission
+        if (!auth()->user()->can('view_admin_stats')) {
+            return ApiResponse::forbidden('You do not have permission to view admin statistics');
+        }
+
+        try {
+            // Extract filters
+            $filters = [];
+            if ($request->has('dateFrom')) {
+                $filters['dateFrom'] = $request->get('dateFrom');
+            }
+            if ($request->has('dateTo')) {
+                $filters['dateTo'] = $request->get('dateTo');
+            }
+
+            // Get attendance analytics
+            $attendanceData = $this->userPerformanceService->getAttendanceAnalytics($filters);
+
+            return ApiResponse::success(
+                $attendanceData,
+                'Attendance analytics retrieved successfully'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve attendance analytics: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+}
