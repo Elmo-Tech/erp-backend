@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
 use App\Http\Controllers\Api\V1\Client\ClientProjectController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectHistoryController;
 use App\Http\Controllers\Api\V1\ProjectWikiController;
 use App\Http\Controllers\Api\V1\QuotationController;
+use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use Illuminate\Support\Facades\Route;
 
@@ -52,6 +54,11 @@ Route::prefix('v1')->group(function () {
     Route::get('time-entries', [TimeEntryController::class, 'index'])->name('time-entries.index');
     Route::get('time-entries/active', [TimeEntryController::class, 'active'])->name('time-entries.active');
 
+    // Attendance Routes
+    // All routes have auth:sanctum and locale middleware applied in controller
+    Route::get('attendance/today', [AttendanceController::class, 'today'])->name('attendance.today');
+    Route::post('attendance/clock-out', [AttendanceController::class, 'clockOut'])->name('attendance.clock-out');
+
     // Project Management Routes
     // All routes have auth:sanctum and locale middleware applied in controllers
     
@@ -69,6 +76,18 @@ Route::prefix('v1')->group(function () {
     
     // Project Wiki Routes (nested resource)
     Route::apiResource('projects.wikis', ProjectWikiController::class);
+
+    // Task Management Routes
+    // All routes have auth:sanctum and locale middleware applied in controller
+    
+    // Task CRUD Routes
+    Route::apiResource('tasks', TaskController::class);
+    
+    // Task Children Route (for lazy loading hierarchy)
+    Route::get('tasks/{task}/children', [TaskController::class, 'children'])->name('tasks.children');
+    
+    // Project Tasks Route (get tasks for a specific project with hierarchy)
+    Route::get('projects/{projectId}/tasks', [TaskController::class, 'projectTasks'])->name('projects.tasks');
 
     // Client Portal Routes
     // All routes have auth:sanctum, locale, and role:client middleware applied in controllers

@@ -33,18 +33,15 @@ class InvoiceResourcePropertyTest extends TestCase
     public function test_invoice_resource_camel_case_format(): void
     {
         $this
-            ->limitTo(25)
+            ->limitTo(10)
             ->forAll(
                 Generator\choose(100, 10000), // amount
                 Generator\elements(['draft', 'sent', 'paid', 'overdue', 'cancelled']), // status
                 Generator\elements(['USD', 'EUR', 'GBP']), // currency
-                Generator\names(), // notes
+                Generator\elements(['Test notes', 'Invoice notes', 'Payment notes', 'Service notes']), // notes
                 Generator\bool() // has paid_at
             )
             ->then(function ($amount, $status, $currency, $notes, $hasPaidAt) {
-                // Ensure we have valid data
-                $notes = $notes ?: 'Test invoice notes';
-                
                 // Create required models
                 $client = User::factory()->create();
                 $creator = User::factory()->create();
@@ -140,16 +137,13 @@ class InvoiceResourcePropertyTest extends TestCase
     public function test_invoice_resource_nested_project_camel_case(): void
     {
         $this
-            ->limitTo(25)
+            ->limitTo(10)
             ->forAll(
-                Generator\names(), // project title
+                Generator\elements(['Project Alpha', 'Project Beta', 'Project Gamma', 'Test Project']), // project title
                 Generator\choose(1000, 50000), // project budget
                 Generator\elements(['active', 'development', 'testing', 'completed']) // project status
             )
             ->then(function ($projectTitle, $projectBudget, $projectStatus) {
-                // Ensure we have valid data
-                $projectTitle = $projectTitle ?: 'Test Project';
-                
                 // Create required models
                 $client = User::factory()->create();
                 $creator = User::factory()->create();

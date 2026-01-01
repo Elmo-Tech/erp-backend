@@ -3,7 +3,11 @@
 namespace App\Providers;
 
 use App\Models\Project;
+use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Observers\ProjectObserver;
+use App\Observers\TaskObserver;
+use App\Observers\TimeEntryObserver;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
 
@@ -29,5 +33,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Register model observers
         Project::observe(ProjectObserver::class);
+        Task::observe(TaskObserver::class);
+        TimeEntry::observe(TimeEntryObserver::class);
     }
 }
