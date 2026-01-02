@@ -97,8 +97,13 @@ class AdminUserSeeder extends Seeder
         // Assign all permissions to super-admin
         $superAdminRole->syncPermissions(Permission::all());
 
-        // Assign permissions to admin (all except cost/profitability)
-        $adminPermissions = Permission::whereNotIn('name', ['view_profitability', 'view_cost'])->get();
+        // Assign permissions to admin (all except cost/profitability and internal costs)
+        $adminPermissions = Permission::whereNotIn('name', [
+            'view_profitability', 
+            'view_cost',
+            'view_internal_costs',
+            'manage_internal_costs',
+        ])->get();
         $adminRole->syncPermissions($adminPermissions);
 
         // Assign permissions to manager

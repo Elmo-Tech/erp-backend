@@ -10,27 +10,40 @@ class ClientRoleSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     * 
+     * Note: This seeder adds additional client-specific permissions
+     * that are not included in AdminUserSeeder.
      */
     public function run(): void
     {
-        // Create permissions for client role
-        $permissions = [
+        // Additional permissions specific to client portal functionality
+        $clientSpecificPermissions = [
             'view_own_projects',
             'view_own_invoices',
             'approve_ui_deliverables',
             'pay_invoices',
         ];
 
-        foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+        foreach ($clientSpecificPermissions as $permission) {
+            Permission::firstOrCreate([
+                'name' => $permission,
+                'guard_name' => 'web',
+            ]);
         }
 
-        // Create client role
-        $clientRole = Role::firstOrCreate(['name' => 'client']);
+        // Get or create client role (may already exist from AdminUserSeeder)
+        $clientRole = Role::firstOrCreate([
+            'name' => 'client',
+            'guard_name' => 'web',
+        ]);
 
-        // Assign permissions to client role
-        $clientRole->syncPermissions($permissions);
+        // Get current permissions and add the new ones
+        $currentPermissions = $clientRole->permissions->pluck('name')->toArray();
+        $allClientPermissions = array_unique(array_merge($currentPermissions, $clientSpecificPermissions));
+        
+        // Sync all permissions to client role
+        $clientRole->syncPermissions($allClientPermissions);
 
-        $this->command->info('Client role and permissions created successfully.');
+        $this->command->info('Client role additional permissions created successfully.');
     }
 }
