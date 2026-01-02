@@ -25,6 +25,7 @@ class User extends Authenticatable
         'password',
         'internal_hourly_cost',
         'skills',
+        'is_active',
     ];
 
     /**

@@ -3743,6 +3743,351 @@
                 }
             }
         },
+        "/admin/users/manage": {
+            "get": {
+                "tags": ["User Management"],
+                "summary": "Get paginated list of users",
+                "description": "Retrieve all users with pagination, filtering, and sorting. Requires manage_users permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "filter[search]",
+                        "in": "query",
+                        "description": "Search by name",
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "filter[role]",
+                        "in": "query",
+                        "description": "Filter by role name",
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "filter[isActive]",
+                        "in": "query",
+                        "description": "Filter by active status",
+                        "schema": { "type": "boolean" }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "Sort field (name, email, created_at). Prefix with - for descending",
+                        "schema": { "type": "string", "example": "-created_at" }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 1 }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 15 }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Users retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "post": {
+                "tags": ["User Management"],
+                "summary": "Create a new user",
+                "description": "Create a new user with optional role assignment. Requires manage_users permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateUserRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/users/manage/{id}": {
+            "get": {
+                "tags": ["User Management"],
+                "summary": "Get a specific user",
+                "description": "Retrieve detailed information about a specific user. Requires manage_users permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "put": {
+                "tags": ["User Management"],
+                "summary": "Update a user",
+                "description": "Update user information. Requires manage_users permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateUserRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "delete": {
+                "tags": ["User Management"],
+                "summary": "Delete a user",
+                "description": "Delete a user. Cannot delete yourself. Requires manage_users permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Cannot delete yourself",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/users/manage/{id}/toggle-status": {
+            "post": {
+                "tags": ["User Management"],
+                "summary": "Toggle user active status",
+                "description": "Activate or deactivate a user. Requires manage_users permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User status toggled successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/admin/users/manage/{id}/roles": {
+            "put": {
+                "tags": ["User Management"],
+                "summary": "Assign roles to user",
+                "description": "Replace all user roles with the provided roles. Requires manage_users permission.",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["roles"],
+                                "properties": {
+                                    "roles": {
+                                        "type": "array",
+                                        "items": { "type": "string" },
+                                        "example": ["developer", "admin"]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Roles assigned successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": { "$ref": "#/components/responses/Forbidden" },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
         "/admin/audit-logs": {
             "get": {
                 "tags": ["Admin Audit Logs"],
@@ -5131,6 +5476,163 @@
                             ]
                         }
                     }
+                }
+            },
+            "UserResource": {
+                "type": "object",
+                "properties": {
+                    "userId": { "type": "integer", "example": 1 },
+                    "name": { "type": "string", "example": "John Doe" },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john@example.com"
+                    },
+                    "emailVerifiedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "skills": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "example": ["PHP", "Laravel", "JavaScript"]
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "example": ["developer"]
+                    },
+                    "isActive": { "type": "boolean", "example": true },
+                    "createdAt": { "type": "string", "format": "date-time" },
+                    "updatedAt": { "type": "string", "format": "date-time" }
+                }
+            },
+            "UserCollectionResponse": {
+                "type": "object",
+                "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                        "type": "string",
+                        "example": "Users retrieved successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "users": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/UserResource"
+                                }
+                            },
+                            "pagination": {
+                                "type": "object",
+                                "properties": {
+                                    "total": {
+                                        "type": "integer",
+                                        "example": 50
+                                    },
+                                    "count": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "perPage": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "currentPage": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "totalPages": {
+                                        "type": "integer",
+                                        "example": 4
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "UserResponse": {
+                "type": "object",
+                "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                        "type": "string",
+                        "example": "User retrieved successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "user": {
+                                "$ref": "#/components/schemas/UserResource"
+                            }
+                        }
+                    }
+                }
+            },
+            "CreateUserRequest": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "email",
+                    "password",
+                    "password_confirmation"
+                ],
+                "properties": {
+                    "name": { "type": "string", "example": "John Doe" },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john@example.com"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "password123"
+                    },
+                    "password_confirmation": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "password123"
+                    },
+                    "skills": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "example": ["PHP", "Laravel"]
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "example": ["developer"]
+                    },
+                    "isActive": { "type": "boolean", "example": true }
+                }
+            },
+            "UpdateUserRequest": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "example": "John Doe" },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john@example.com"
+                    },
+                    "password": { "type": "string", "format": "password" },
+                    "password_confirmation": {
+                        "type": "string",
+                        "format": "password"
+                    },
+                    "skills": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                    },
+                    "isActive": { "type": "boolean" }
                 }
             }
         },

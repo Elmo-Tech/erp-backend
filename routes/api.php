@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\ProjectWikiController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
+use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -128,10 +129,15 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('roles', AdminRoleController::class);
         Route::get('permissions', [AdminRoleController::class, 'permissions'])->name('admin.permissions');
 
-        // Admin User Management Routes
+        // Admin User Management Routes (Internal Costs)
         Route::get('users', [AdminUserController::class, 'index'])->name('admin.users.index');
         Route::put('users/{id}/internal-cost', [AdminUserController::class, 'updateInternalCost'])->name('admin.users.update-internal-cost');
         Route::put('users/internal-costs', [AdminUserController::class, 'bulkUpdateInternalCosts'])->name('admin.users.bulk-update-internal-costs');
+
+        // User Management Routes (CRUD)
+        Route::apiResource('users/manage', UserController::class)->parameters(['manage' => 'user']);
+        Route::post('users/manage/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
+        Route::put('users/manage/{user}/roles', [UserController::class, 'assignRoles'])->name('admin.users.assign-roles');
 
         // Admin Audit Log Routes
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
