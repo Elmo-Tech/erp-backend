@@ -25,7 +25,7 @@ class AuthController extends Controller
         $this->middleware('locale');
         
         // Apply auth middleware only to logout
-        $this->middleware('auth:sanctum')->only(['logout', 'profile']);
+        $this->middleware('auth:sanctum')->only(['logout', 'profile', 'updateProfile', 'updateAvatar']);
     }
 
     #[OA\Post(
@@ -329,5 +329,110 @@ class AuthController extends Controller
             'role' => $user->roles->first()->name ?? 'guest',
             'permissions' => $this->userPermissionService->getUserPermissions($user) ?? [],
         ], 'Profile retrieved successfully');
+    }
+
+    #[OA\Put(
+        path: '/api/v1/auth/profile',
+        summary: 'Update user profile',
+        description: 'Update authenticated user profile information',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
+                ]
+            )
+        ),
+        tags: ['Authentication'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Profile updated successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Profile updated successfully'),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $user->update([
+            'name' => $request->name,
+        ]);
+
+        return ApiResponse::success([
+            'profile' => new LoginProfileResource($user),
+        ], 'Profile updated successfully');
+    }
+
+    #[OA\Post(
+        path: '/api/v1/auth/profile/avatar',
+        summary: 'Update user avatar',
+        description: 'Upload a new avatar image for the authenticated user',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    properties: [
+                        new OA\Property(property: 'avatar', type: 'string', format: 'binary'),
+                    ]
+                )
+            )
+        ),
+        tags: ['Authentication'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Avatar updated successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Avatar updated successfully'),
+                        new OA\Property(
+                            property: 'data',
+                            properties: [
+                                new OA\Property(property: 'avatar', type: 'string', example: '/storage/avatars/user-1.jpg'),
+                            ],
+                            type: 'object'
+                        ),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function updateAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        $user = $request->user();
+
+        // Delete old avatar if exists
+        if ($user->avatar && \Storage::disk('public')->exists($user->avatar)) {
+            \Storage::disk('public')->delete($user->avatar);
+        }
+
+        // Store new avatar
+        $path = $request->file('avatar')->store('avatars', 'public');
+        
+        $user->update([
+            'avatar' => $path,
+        ]);
+
+        return ApiResponse::success([
+            'avatar' => \Storage::disk('public')->url($path),
+        ], 'Avatar updated successfully');
     }
 }

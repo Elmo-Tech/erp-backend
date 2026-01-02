@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -41,6 +42,8 @@ Route::prefix('v1')->group(function () {
         Route::post('register', [AuthController::class, 'register'])->name('auth.register');
         Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('profile', [AuthController::class, 'profile'])->name('auth.profile');
+        Route::put('profile', [AuthController::class, 'updateProfile'])->name('auth.profile.update');
+        Route::post('profile/avatar', [AuthController::class, 'updateAvatar'])->name('auth.profile.avatar');
     });
 
     // Sales & Pricing Engine Routes
@@ -112,6 +115,9 @@ Route::prefix('v1')->group(function () {
     // Admin Invoice Management Routes
     // All routes have auth:sanctum and locale middleware applied at route level
     Route::apiResource('invoices', InvoiceController::class)->middleware(['auth:sanctum', 'locale']);
+
+    // Dashboard Routes
+    Route::get('dashboard/overview', [DashboardController::class, 'overview'])->name('dashboard.overview');
 
     // Admin Routes
     // All routes have auth:sanctum and locale middleware applied in controllers

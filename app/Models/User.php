@@ -23,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'avatar',
         'internal_hourly_cost',
         'skills',
         'is_active',
