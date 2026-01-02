@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Elmo Business OS API",
-        "description": "ERP/CRM API for Business OS - Complete API Documentation including Authentication, Sales, Projects, Tasks, Client Portal, Admin Management, and Reporting",
+        "description": "ERP/CRM API for Elmo Business OS - Complete API Documentation including Authentication, Sales, Projects, Tasks, Client Portal, Admin Management, and Reporting",
         "version": "1.0.0"
     },
     "servers": [
