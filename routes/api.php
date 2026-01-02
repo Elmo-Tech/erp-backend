@@ -129,6 +129,7 @@ Route::prefix('v1')->group(function () {
         Route::get('permissions', [AdminRoleController::class, 'permissions'])->name('admin.permissions');
 
         // Admin User Management Routes
+        Route::get('users', [AdminUserController::class, 'index'])->name('admin.users.index');
         Route::put('users/{id}/internal-cost', [AdminUserController::class, 'updateInternalCost'])->name('admin.users.update-internal-cost');
         Route::put('users/internal-costs', [AdminUserController::class, 'bulkUpdateInternalCosts'])->name('admin.users.bulk-update-internal-costs');
 

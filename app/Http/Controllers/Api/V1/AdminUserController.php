@@ -22,6 +22,82 @@ class AdminUserController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/v1/admin/users",
+     *     operationId="getAdminUsers",
+     *     tags={"Admin User Management"},
+     *     summary="Get all users with internal cost information",
+     *     description="Retrieve all users with their internal cost information. Internal costs are only visible to users with view_internal_costs permission. This endpoint requires manage_internal_costs permission.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Users retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Users retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="users",
+     *                     type="array",
+     *                     @OA\Items(ref="#/components/schemas/AdminUserResource")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - User lacks manage_internal_costs permission",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You do not have permission to manage internal costs")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function index(Request $request): JsonResponse
+    {
+        // Check permission
+        if (!auth()->user()->can('manage_internal_costs')) {
+            return ApiResponse::forbidden('You do not have permission to manage internal costs');
+        }
+
+        try {
+            // Get all users with their roles
+            $users = User::with('roles')->get();
+
+            // Transform using AdminUserResource
+            $usersData = \App\Http\Resources\V1\Admin\AdminUserResource::collection($users);
+
+            return ApiResponse::success([
+                'users' => $usersData
+            ], 'Users retrieved successfully');
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve users: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
      * @OA\Put(
      *     path="/api/v1/admin/users/{id}/internal-cost",
      *     operationId="updateUserInternalCost",
