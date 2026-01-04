@@ -2,12 +2,105 @@
 
 namespace App\Services\Sales;
 
+use App\Enums\CommissionType;
 use InvalidArgumentException;
 
 class PricingService
 {
     /**
-     * Calculate quotation pricing from estimations.
+     * Calculate quotation pricing from items.
+     *
+     * @param array $items Quotation items [{resourceType, estimatedHours, hourlyRate, internalHourlyCost}]
+     * @param float $discountPercentage Discount percentage (0-100)
+     * @param string|null $commissionType Commission type (markup/margin)
+     * @param float $commissionPercentage Commission percentage
+     * @return array Pricing breakdown
+     */
+    public function calculateFromItems(
+        array $items,
+        float $discountPercentage = 0,
+        ?string $commissionType = null,
+        float $commissionPercentage = 0
+    ): array {
+        $this->validateDiscount($discountPercentage);
+        $this->validateCommission($commissionPercentage);
+
+        $subtotal = 0;
+        $internalCost = 0;
+        $totalHours = 0;
+        $processedItems = [];
+
+        foreach ($items as $item) {
+            $hours = (float) ($item['estimatedHours'] ?? 0);
+            $rate = (float) ($item['hourlyRate'] ?? 0);
+            $internalRate = (float) ($item['internalHourlyCost'] ?? 0);
+
+            if ($hours < 0 || $rate < 0) {
+                throw new InvalidArgumentException('Hours and rate must be non-negative.');
+            }
+
+            $itemSubtotal = $hours * $rate;
+            $itemInternalCost = $hours * $internalRate;
+
+            $subtotal += $itemSubtotal;
+            $internalCost += $itemInternalCost;
+            $totalHours += $hours;
+
+            $processedItems[] = [
+                'resourceType' => $item['resourceType'] ?? 'other',
+                'description' => $item['description'] ?? '',
+                'estimatedHours' => $hours,
+                'hourlyRate' => round($rate, 2),
+                'internalHourlyCost' => round($internalRate, 2),
+                'subtotal' => round($itemSubtotal, 2),
+            ];
+        }
+
+        // Calculate discount
+        $discountAmount = $subtotal * ($discountPercentage / 100);
+        $afterDiscount = $subtotal - $discountAmount;
+
+        // Calculate commission
+        $commissionAmount = 0;
+        $finalPrice = $afterDiscount;
+
+        if ($commissionType && $commissionPercentage > 0) {
+            if ($commissionType === CommissionType::MARKUP->value) {
+                // Markup: add to price (client pays)
+                $commissionAmount = $afterDiscount * ($commissionPercentage / 100);
+                $finalPrice = $afterDiscount + $commissionAmount;
+            } else {
+                // Margin: deduct from profit (company pays)
+                $commissionAmount = $afterDiscount * ($commissionPercentage / 100);
+                // Final price stays the same, commission is internal
+            }
+        }
+
+        // Calculate profit margin
+        $profitMargin = $finalPrice - $internalCost;
+        if ($commissionType === CommissionType::MARGIN->value) {
+            $profitMargin -= $commissionAmount;
+        }
+
+        return [
+            'items' => $processedItems,
+            'totalHours' => round($totalHours, 2),
+            'subtotal' => round($subtotal, 2),
+            'discountPercentage' => round($discountPercentage, 2),
+            'discountAmount' => round($discountAmount, 2),
+            'afterDiscount' => round($afterDiscount, 2),
+            'commissionType' => $commissionType,
+            'commissionPercentage' => round($commissionPercentage, 2),
+            'commissionAmount' => round($commissionAmount, 2),
+            'finalPrice' => round($finalPrice, 2),
+            'internalCost' => round($internalCost, 2),
+            'profitMargin' => round($profitMargin, 2),
+            'profitPercentage' => $finalPrice > 0 ? round(($profitMargin / $finalPrice) * 100, 2) : 0,
+        ];
+    }
+
+    /**
+     * Calculate quotation pricing from estimations (legacy support).
      *
      * @param array $estimations Hour estimations in camelCase (frontendHours, backendHours, etc.)
      * @param float $hourlyRate Rate per hour
@@ -17,26 +110,15 @@ class PricingService
      */
     public function calculateQuote(array $estimations, float $hourlyRate, float $discountPercentage): array
     {
-        // Validate hourly rate
         if ($hourlyRate <= 0) {
             throw new InvalidArgumentException('Hourly rate must be greater than zero.');
         }
 
-        // Validate discount percentage
-        if ($discountPercentage < 0 || $discountPercentage > 100) {
-            throw new InvalidArgumentException('Discount percentage must be between 0 and 100.');
-        }
+        $this->validateDiscount($discountPercentage);
 
-        // Calculate total hours from estimations
         $totalHours = $this->calculateTotalHours($estimations);
-
-        // Calculate gross price
         $grossPrice = $totalHours * $hourlyRate;
-
-        // Calculate discount amount
         $discountAmount = $grossPrice * ($discountPercentage / 100);
-
-        // Calculate final price
         $finalPrice = $grossPrice - $discountAmount;
 
         return [
@@ -49,10 +131,6 @@ class PricingService
 
     /**
      * Calculate total hours from estimations array.
-     *
-     * @param array $estimations
-     * @return float
-     * @throws InvalidArgumentException
      */
     private function calculateTotalHours(array $estimations): float
     {
@@ -74,10 +152,27 @@ class PricingService
     }
 
     /**
+     * Validate discount percentage
+     */
+    private function validateDiscount(float $discountPercentage): void
+    {
+        if ($discountPercentage < 0 || $discountPercentage > 100) {
+            throw new InvalidArgumentException('Discount percentage must be between 0 and 100.');
+        }
+    }
+
+    /**
+     * Validate commission percentage
+     */
+    private function validateCommission(float $commissionPercentage): void
+    {
+        if ($commissionPercentage < 0 || $commissionPercentage > 100) {
+            throw new InvalidArgumentException('Commission percentage must be between 0 and 100.');
+        }
+    }
+
+    /**
      * Convert camelCase estimations to snake_case for database storage.
-     *
-     * @param array $estimations
-     * @return array
      */
     public function convertEstimationsToSnakeCase(array $estimations): array
     {
@@ -91,9 +186,6 @@ class PricingService
 
     /**
      * Convert snake_case estimations to camelCase for API response.
-     *
-     * @param array $estimations
-     * @return array
      */
     public function convertEstimationsToCamelCase(array $estimations): array
     {

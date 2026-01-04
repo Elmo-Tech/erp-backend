@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\V1\Quotations;
 
+use App\Enums\CommissionType;
 use App\Enums\QuotationStatus;
+use App\Enums\ResourceType;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -11,73 +13,73 @@ use Illuminate\Validation\Rule;
 
 class StoreQuotationRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
             'leadId' => ['required', 'integer', 'exists:leads,id'],
-            'estimations' => ['required', 'array'],
-            'estimations.*' => ['required', 'numeric', 'min:0'],
-            'hourlyRate' => ['required', 'numeric', 'gt:0'],
-            'discountPercentage' => ['required', 'numeric', 'between:0,100'],
+            'templateId' => ['nullable', 'integer', 'exists:proposal_templates,id'],
+            
+            // Items-based pricing (new)
+            'items' => ['required_without:estimations', 'array'],
+            'items.*.resourceType' => ['required_with:items', Rule::enum(ResourceType::class)],
+            'items.*.description' => ['required_with:items', 'string', 'max:255'],
+            'items.*.estimatedHours' => ['required_with:items', 'numeric', 'min:0'],
+            'items.*.hourlyRate' => ['required_with:items', 'numeric', 'min:0'],
+            'items.*.internalHourlyCost' => ['nullable', 'numeric', 'min:0'],
+            
+            // Legacy estimations support
+            'estimations' => ['required_without:items', 'array'],
+            'estimations.*' => ['required_with:estimations', 'numeric', 'min:0'],
+            'hourlyRate' => ['required_with:estimations', 'numeric', 'gt:0'],
+            
+            // Pricing
+            'discountPercentage' => ['nullable', 'numeric', 'between:0,100'],
             'currency' => ['required', 'string', 'size:3'],
+            
+            // Commission
+            'commissionType' => ['nullable', Rule::enum(CommissionType::class)],
+            'commissionPercentage' => ['nullable', 'numeric', 'between:0,100'],
+            'commissionUserId' => ['nullable', 'integer', 'exists:users,id'],
+            
+            // Override
+            'overridePrice' => ['nullable', 'numeric', 'min:0'],
+            'overrideReason' => ['nullable', 'required_with:overridePrice', 'string'],
+            
+            // Dates
+            'expiryDate' => ['nullable', 'date', 'after:today'],
+            
+            // Notes
+            'notes' => ['nullable', 'string'],
+            'termsConditions' => ['nullable', 'string'],
+            
             'status' => ['nullable', Rule::enum(QuotationStatus::class)],
         ];
     }
 
-    /**
-     * Get custom messages for validator errors.
-     *
-     * @return array<string, string>
-     */
     public function messages(): array
     {
         return [
-            'leadId.required' => 'The leadId field is required.',
-            'leadId.integer' => 'The leadId must be an integer.',
-            'leadId.exists' => 'The selected leadId does not exist.',
-            'estimations.required' => 'The estimations field is required.',
-            'estimations.array' => 'The estimations must be an array.',
-            'estimations.*.required' => 'Each estimation value is required.',
-            'estimations.*.numeric' => 'Each estimation value must be numeric.',
-            'estimations.*.min' => 'Each estimation value must be at least 0.',
-            'hourlyRate.required' => 'The hourlyRate field is required.',
-            'hourlyRate.numeric' => 'The hourlyRate must be numeric.',
-            'hourlyRate.gt' => 'The hourlyRate must be greater than 0.',
-            'discountPercentage.required' => 'The discountPercentage field is required.',
-            'discountPercentage.numeric' => 'The discountPercentage must be numeric.',
-            'discountPercentage.between' => 'The discountPercentage must be between 0 and 100.',
-            'currency.required' => 'The currency field is required.',
-            'currency.string' => 'The currency must be a string.',
-            'currency.size' => 'The currency must be exactly 3 characters.',
-            'status.enum' => 'The selected status is invalid. Valid values are: draft, sent, accepted, rejected, expired.',
+            'leadId.required' => __('validation.required', ['attribute' => 'leadId']),
+            'leadId.exists' => __('validation.exists', ['attribute' => 'leadId']),
+            'items.required_without' => __('quotations.items_or_estimations_required'),
+            'items.*.resourceType.required_with' => __('validation.required', ['attribute' => 'resourceType']),
+            'items.*.estimatedHours.required_with' => __('validation.required', ['attribute' => 'estimatedHours']),
+            'overrideReason.required_with' => __('quotations.override_reason_required'),
+            'expiryDate.after' => __('quotations.expiry_must_be_future'),
         ];
     }
 
-    /**
-     * Handle a failed validation attempt.
-     *
-     * @param Validator $validator
-     * @throws HttpResponseException
-     */
     protected function failedValidation(Validator $validator): void
     {
         throw new HttpResponseException(
             ApiResponse::validationError(
                 $validator->errors()->toArray(),
-                'Validation failed for quotation creation'
+                __('quotations.validation_failed')
             )
         );
     }

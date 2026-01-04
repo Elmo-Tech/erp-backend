@@ -6,10 +6,13 @@ use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ChangeRequestController;
 use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
 use App\Http\Controllers\Api\V1\Client\ClientProjectController;
 use App\Http\Controllers\Api\V1\ClientController;
+use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\EmployeeController;
+use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LeadController;
@@ -20,7 +23,9 @@ use App\Http\Controllers\Api\V1\ProjectHistoryController;
 use App\Http\Controllers\Api\V1\ProjectMemberController;
 use App\Http\Controllers\Api\V1\ProjectWikiController;
 use App\Http\Controllers\Api\V1\QuotationController;
+use App\Http\Controllers\Api\V1\SalesAnalyticsController;
 use App\Http\Controllers\Api\V1\TaskController;
+use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\DashboardController;
@@ -60,6 +65,14 @@ Route::prefix('v1')->group(function () {
     
     // Lead Management Routes
     Route::apiResource('leads', LeadController::class);
+    Route::get('leads-kanban', [LeadController::class, 'kanban'])->name('leads.kanban');
+    Route::get('leads-follow-ups', [LeadController::class, 'followUps'])->name('leads.follow-ups');
+    Route::patch('leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
+    Route::get('leads/{lead}/activities', [LeadController::class, 'activities'])->name('leads.activities');
+    Route::post('leads/{lead}/activities', [LeadController::class, 'addActivity'])->name('leads.add-activity');
+    Route::get('leads/{lead}/meetings', [LeadController::class, 'meetings'])->name('leads.meetings');
+    Route::post('leads/{lead}/meetings', [LeadController::class, 'scheduleMeeting'])->name('leads.schedule-meeting');
+    Route::put('leads/{lead}/meetings/{meeting}', [LeadController::class, 'updateMeeting'])->name('leads.update-meeting');
     
     // Client Management Routes
     Route::apiResource('clients', ClientController::class);
@@ -67,7 +80,64 @@ Route::prefix('v1')->group(function () {
     // Quotation Management Routes
     Route::apiResource('quotations', QuotationController::class);
     Route::post('quotations/calculate', [QuotationController::class, 'calculate'])->name('quotations.calculate');
-    
+    Route::post('quotations/{quotation}/send', [QuotationController::class, 'send'])->name('quotations.send');
+    Route::patch('quotations/{quotation}/status', [QuotationController::class, 'updateStatus'])->name('quotations.update-status');
+    Route::get('quotations-expiring', [QuotationController::class, 'expiring'])->name('quotations.expiring');
+    Route::get('quotations-overdue', [QuotationController::class, 'overdue'])->name('quotations.overdue');
+
+    // Contract Management Routes
+    Route::apiResource('contracts', ContractController::class);
+    Route::post('contracts/from-quotation/{quotation}', [ContractController::class, 'createFromQuotation'])->name('contracts.from-quotation');
+    Route::post('contracts/{contract}/sign', [ContractController::class, 'sign'])->name('contracts.sign');
+    Route::post('contracts/{contract}/activate', [ContractController::class, 'activate'])->name('contracts.activate');
+    Route::get('contracts/milestones/due', [ContractController::class, 'dueMilestones'])->name('contracts.milestones.due');
+    Route::patch('contracts/milestones/{milestone}/paid', [ContractController::class, 'markMilestonePaid'])->name('contracts.milestones.paid');
+
+    // Change Request Routes
+    Route::get('projects/{project}/change-requests', [ChangeRequestController::class, 'index'])->name('change-requests.index');
+    Route::post('projects/{project}/change-requests', [ChangeRequestController::class, 'store'])->name('change-requests.store');
+    Route::get('projects/{project}/change-requests/summary', [ChangeRequestController::class, 'summary'])->name('change-requests.summary');
+    Route::get('change-requests/{changeRequest}', [ChangeRequestController::class, 'show'])->name('change-requests.show');
+    Route::put('change-requests/{changeRequest}', [ChangeRequestController::class, 'update'])->name('change-requests.update');
+    Route::post('change-requests/{changeRequest}/submit', [ChangeRequestController::class, 'submit'])->name('change-requests.submit');
+    Route::post('change-requests/{changeRequest}/approve', [ChangeRequestController::class, 'approve'])->name('change-requests.approve');
+    Route::post('change-requests/{changeRequest}/reject', [ChangeRequestController::class, 'reject'])->name('change-requests.reject');
+    Route::post('change-requests/{changeRequest}/implement', [ChangeRequestController::class, 'implement'])->name('change-requests.implement');
+
+    // Project Handover Routes
+    Route::get('handovers', [HandoverController::class, 'index'])->name('handovers.index');
+    Route::get('handovers/pending', [HandoverController::class, 'pending'])->name('handovers.pending');
+    Route::post('projects/{project}/handover', [HandoverController::class, 'store'])->name('handovers.store');
+    Route::get('handovers/{handover}', [HandoverController::class, 'show'])->name('handovers.show');
+    Route::put('handovers/{handover}', [HandoverController::class, 'update'])->name('handovers.update');
+    Route::post('handovers/{handover}/complete', [HandoverController::class, 'complete'])->name('handovers.complete');
+    Route::post('handovers/{handover}/dispute', [HandoverController::class, 'dispute'])->name('handovers.dispute');
+
+    // Template Routes
+    Route::prefix('templates')->group(function () {
+        Route::get('proposals', [TemplateController::class, 'proposalTemplates'])->name('templates.proposals.index');
+        Route::post('proposals', [TemplateController::class, 'storeProposalTemplate'])->name('templates.proposals.store');
+        Route::put('proposals/{template}', [TemplateController::class, 'updateProposalTemplate'])->name('templates.proposals.update');
+        Route::delete('proposals/{template}', [TemplateController::class, 'destroyProposalTemplate'])->name('templates.proposals.destroy');
+        Route::post('proposals/{template}/generate', [TemplateController::class, 'generateProposal'])->name('templates.proposals.generate');
+        
+        Route::get('contracts', [TemplateController::class, 'contractTemplates'])->name('templates.contracts.index');
+        Route::post('contracts', [TemplateController::class, 'storeContractTemplate'])->name('templates.contracts.store');
+        Route::put('contracts/{template}', [TemplateController::class, 'updateContractTemplate'])->name('templates.contracts.update');
+        Route::delete('contracts/{template}', [TemplateController::class, 'destroyContractTemplate'])->name('templates.contracts.destroy');
+        Route::post('contracts/{template}/generate', [TemplateController::class, 'generateContract'])->name('templates.contracts.generate');
+    });
+
+    // Sales Analytics Routes
+    Route::prefix('analytics')->group(function () {
+        Route::get('sales/performance', [SalesAnalyticsController::class, 'performance'])->name('analytics.sales.performance');
+        Route::get('sales/sources', [SalesAnalyticsController::class, 'sources'])->name('analytics.sales.sources');
+        Route::get('sales/pipeline', [SalesAnalyticsController::class, 'pipeline'])->name('analytics.sales.pipeline');
+        Route::get('revenue/forecast', [SalesAnalyticsController::class, 'forecast'])->name('analytics.revenue.forecast');
+        Route::get('quotations/stats', [SalesAnalyticsController::class, 'quotationStats'])->name('analytics.quotations.stats');
+        Route::get('projects/types', [SalesAnalyticsController::class, 'projectTypes'])->name('analytics.projects.types');
+    });
+
     // Time Entry Routes
     Route::post('time-entries/start', [TimeEntryController::class, 'start'])->name('time-entries.start');
     Route::post('time-entries/stop', [TimeEntryController::class, 'stop'])->name('time-entries.stop');

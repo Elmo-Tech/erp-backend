@@ -3,42 +3,72 @@
 namespace App\Models;
 
 use App\Contracts\Trackable;
+use App\Enums\LeadPriority;
+use App\Enums\LeadSource;
 use App\Enums\LeadStatus;
+use App\Enums\ReferenceType;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Lead extends Model implements Trackable
 {
     use HasFactory, HasCreatedUpdatedBy;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'company',
+        'country',
         'source',
+        'reference_type',
+        'reference_id',
         'status',
+        'priority',
+        'expected_budget',
+        'expected_close_date',
+        'last_contact_at',
+        'next_follow_up_at',
+        'notes',
+        'loss_reason',
         'created_by',
         'updated_by',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
+            'source' => LeadSource::class,
+            'reference_type' => ReferenceType::class,
             'status' => LeadStatus::class,
+            'priority' => LeadPriority::class,
+            'expected_budget' => 'decimal:2',
+            'expected_close_date' => 'date',
+            'last_contact_at' => 'datetime',
+            'next_follow_up_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the reference entity (User or Client)
+     */
+    public function reference(): MorphTo
+    {
+        return $this->morphTo('reference', 'reference_type', 'reference_id');
+    }
+
+    /**
+     * Get the sales rep if reference_type is sales_rep
+     */
+    public function salesRep(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reference_id')
+            ->where('reference_type', ReferenceType::SALES_REP->value);
     }
 
     /**
@@ -47,6 +77,22 @@ class Lead extends Model implements Trackable
     public function quotations(): HasMany
     {
         return $this->hasMany(Quotation::class);
+    }
+
+    /**
+     * Get the activities for this lead.
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(LeadActivity::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get the meetings for this lead.
+     */
+    public function meetings(): HasMany
+    {
+        return $this->hasMany(LeadMeeting::class)->orderBy('scheduled_at', 'desc');
     }
 
     /**
@@ -63,5 +109,23 @@ class Lead extends Model implements Trackable
     public function getTrackableDisplayName(): string
     {
         return $this->name . ($this->company ? ' (' . $this->company . ')' : '');
+    }
+
+    /**
+     * Scope for leads needing follow-up
+     */
+    public function scopeNeedsFollowUp($query)
+    {
+        return $query->whereNotNull('next_follow_up_at')
+            ->where('next_follow_up_at', '<=', now())
+            ->whereNotIn('status', [LeadStatus::WON, LeadStatus::LOST]);
+    }
+
+    /**
+     * Scope for active leads (not won or lost)
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereNotIn('status', [LeadStatus::WON, LeadStatus::LOST]);
     }
 }

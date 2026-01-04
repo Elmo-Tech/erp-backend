@@ -717,4 +717,114 @@ class QuotationController extends Controller
             );
         }
     }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/quotations/{id}/send",
+     *     operationId="sendQuotation",
+     *     tags={"Quotations"},
+     *     summary="Send quotation to client",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Quotation sent successfully")
+     * )
+     */
+    public function send(Quotation $quotation): JsonResponse
+    {
+        $quotation->update([
+            'status' => 'sent',
+            'sent_at' => now(),
+        ]);
+
+        return ApiResponse::success(
+            new QuotationResource($quotation->fresh()->load('lead')),
+            __('quotations.sent')
+        );
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/v1/quotations/{id}/status",
+     *     operationId="updateQuotationStatus",
+     *     tags={"Quotations"},
+     *     summary="Update quotation status",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Status updated successfully")
+     * )
+     */
+    public function updateStatus(Request $request, Quotation $quotation): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:draft,sent,viewed,expired,negotiation,approved,rejected',
+            'rejectionReason' => 'nullable|required_if:status,rejected|string',
+            'rejectionNotes' => 'nullable|string',
+        ]);
+
+        $updateData = ['status' => $validated['status']];
+
+        if ($validated['status'] === 'rejected') {
+            $updateData['rejection_reason'] = $validated['rejectionReason'] ?? null;
+            $updateData['rejection_notes'] = $validated['rejectionNotes'] ?? null;
+        }
+
+        $quotation->update($updateData);
+
+        return ApiResponse::success(
+            new QuotationResource($quotation->fresh()->load('lead')),
+            __('quotations.status_updated')
+        );
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/quotations-expiring",
+     *     operationId="getExpiringQuotations",
+     *     tags={"Quotations"},
+     *     summary="Get quotations expiring soon",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="days", in="query", @OA\Schema(type="integer", default=3)),
+     *     @OA\Response(response=200, description="Expiring quotations retrieved")
+     * )
+     */
+    public function expiring(Request $request): JsonResponse
+    {
+        $days = $request->input('days', 3);
+
+        $quotations = Quotation::whereNotNull('expiry_date')
+            ->whereIn('status', ['sent', 'viewed', 'negotiation'])
+            ->where('expiry_date', '>=', now())
+            ->where('expiry_date', '<=', now()->addDays($days))
+            ->with('lead')
+            ->orderBy('expiry_date')
+            ->paginate(10);
+
+        return ApiResponse::success(
+            new QuotationCollection($quotations),
+            __('quotations.expiring_retrieved')
+        );
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/quotations-overdue",
+     *     operationId="getOverdueQuotations",
+     *     tags={"Quotations"},
+     *     summary="Get overdue quotations",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Overdue quotations retrieved")
+     * )
+     */
+    public function overdue(): JsonResponse
+    {
+        $quotations = Quotation::whereNotNull('expiry_date')
+            ->whereIn('status', ['sent', 'viewed', 'negotiation'])
+            ->where('expiry_date', '<', now())
+            ->with('lead')
+            ->orderBy('expiry_date', 'desc')
+            ->paginate(10);
+
+        return ApiResponse::success(
+            new QuotationCollection($quotations),
+            __('quotations.overdue_retrieved')
+        );
+    }
 }

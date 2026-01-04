@@ -6,20 +6,25 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Leads\StoreLeadRequest;
 use App\Http\Requests\V1\Leads\UpdateLeadRequest;
+use App\Http\Requests\V1\Leads\StoreLeadActivityRequest;
+use App\Http\Requests\V1\Leads\StoreLeadMeetingRequest;
+use App\Http\Requests\V1\Leads\UpdateLeadStatusRequest;
 use App\Http\Resources\V1\Leads\LeadCollection;
 use App\Http\Resources\V1\Leads\LeadResource;
+use App\Http\Resources\V1\Leads\LeadActivityResource;
+use App\Http\Resources\V1\Leads\LeadMeetingResource;
 use App\Models\Lead;
+use App\Models\LeadMeeting;
+use App\Services\Sales\LeadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
-use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class LeadController extends Controller
 {
-    public function __construct()
-    {
-        // Apply middleware using Laravel 12 approach
+    public function __construct(
+        private LeadService $leadService
+    ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
 
@@ -29,105 +34,27 @@ class LeadController extends Controller
      *     operationId="getLeads",
      *     tags={"Leads"},
      *     summary="Get all leads with pagination and filtering",
-     *     description="Retrieve a paginated list of leads with optional filtering by status and search",
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="Accept-Language",
-     *         in="header",
-     *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
-     *     ),
-     *     @OA\Parameter(
-     *         name="filter[status]",
-     *         in="query",
-     *         description="Filter leads by status",
-     *         @OA\Schema(type="string", enum={"new", "contacted", "qualified", "proposal", "negotiation", "won", "lost"})
-     *     ),
-     *     @OA\Parameter(
-     *         name="filter[search]",
-     *         in="query",
-     *         description="Search leads by name, email, or company",
-     *         @OA\Schema(type="string")
-     *     ),
-     *     @OA\Parameter(
-     *         name="page",
-     *         in="query",
-     *         description="Page number for pagination",
-     *         @OA\Schema(type="integer", minimum=1, example=1)
-     *     ),
-     *     @OA\Parameter(
-     *         name="perPage",
-     *         in="query",
-     *         description="Number of items per page",
-     *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Leads retrieved successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Leads retrieved successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(
-     *                     property="leads",
-     *                     type="array",
-     *                     @OA\Items(
-     *                         @OA\Property(property="leadId", type="integer", example=1),
-     *                         @OA\Property(property="name", type="string", example="John Doe"),
-     *                         @OA\Property(property="email", type="string", example="john@example.com"),
-     *                         @OA\Property(property="company", type="string", example="Acme Corp"),
-     *                         @OA\Property(property="source", type="string", example="Website"),
-     *                         @OA\Property(property="status", type="string", example="new"),
-     *                         @OA\Property(property="createdAt", type="string", format="date-time"),
-     *                         @OA\Property(property="updatedAt", type="string", format="date-time"),
-     *                         @OA\Property(property="createdBy", type="integer", example=1),
-     *                         @OA\Property(property="updatedBy", type="integer", example=1)
-     *                     )
-     *                 ),
-     *                 @OA\Property(
-     *                     property="pagination",
-     *                     type="object",
-     *                     @OA\Property(property="total", type="integer", example=50),
-     *                     @OA\Property(property="count", type="integer", example=15),
-     *                     @OA\Property(property="perPage", type="integer", example=15),
-     *                     @OA\Property(property="currentPage", type="integer", example=1),
-     *                     @OA\Property(property="totalPages", type="integer", example=4)
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     )
+     *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
+     *     @OA\Parameter(name="filter[status]", in="query", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="filter[source]", in="query", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="filter[priority]", in="query", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="filter[search]", in="query", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="include", in="query", description="activities,meetings,quotations", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="sort", in="query", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Leads retrieved successfully"),
+     *     @OA\Response(response=401, description="Unauthorized")
      * )
      */
     public function index(Request $request): JsonResponse
     {
-        $leads = QueryBuilder::for(Lead::class)
-            ->allowedFilters([
-                'status',
-                AllowedFilter::callback('search', function ($query, $value) {
-                    $query->where(function ($q) use ($value) {
-                        $q->where('name', 'like', "%{$value}%")
-                          ->orWhere('email', 'like', "%{$value}%")
-                          ->orWhere('company', 'like', "%{$value}%");
-                    });
-                })
-            ])
-            ->defaultSort('-created_at')
-            ->paginate($request->get('perPage', 15));
+        $leads = $this->leadService->getLeads($request->all());
 
         return ApiResponse::success(
             new LeadCollection($leads),
-            'Leads retrieved successfully'
+            __('leads.retrieved')
         );
     }
 
@@ -137,87 +64,40 @@ class LeadController extends Controller
      *     operationId="createLead",
      *     tags={"Leads"},
      *     summary="Create a new lead",
-     *     description="Create a new lead with the provided information",
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="Accept-Language",
-     *         in="header",
-     *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
-     *     ),
+     *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
      *             required={"name", "email"},
-     *             @OA\Property(property="name", type="string", example="John Doe"),
-     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
-     *             @OA\Property(property="company", type="string", example="Acme Corp"),
-     *             @OA\Property(property="source", type="string", example="Website"),
-     *             @OA\Property(property="status", type="string", enum={"new", "contacted", "qualified", "proposal", "negotiation", "won", "lost"}, example="new")
+     *             @OA\Property(property="name", type="string"),
+     *             @OA\Property(property="email", type="string"),
+     *             @OA\Property(property="phone", type="string"),
+     *             @OA\Property(property="company", type="string"),
+     *             @OA\Property(property="country", type="string"),
+     *             @OA\Property(property="source", type="string"),
+     *             @OA\Property(property="referenceType", type="string", enum={"sales_rep", "client_referral", "employee"}),
+     *             @OA\Property(property="referenceId", type="integer"),
+     *             @OA\Property(property="priority", type="string", enum={"low", "medium", "high", "urgent"}),
+     *             @OA\Property(property="expectedBudget", type="number"),
+     *             @OA\Property(property="expectedCloseDate", type="string", format="date"),
+     *             @OA\Property(property="notes", type="string")
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Lead created successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Lead created successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="leadId", type="integer", example=1),
-     *                 @OA\Property(property="name", type="string", example="John Doe"),
-     *                 @OA\Property(property="email", type="string", example="john@example.com"),
-     *                 @OA\Property(property="company", type="string", example="Acme Corp"),
-     *                 @OA\Property(property="source", type="string", example="Website"),
-     *                 @OA\Property(property="status", type="string", example="new"),
-     *                 @OA\Property(property="createdAt", type="string", format="date-time"),
-     *                 @OA\Property(property="updatedAt", type="string", format="date-time"),
-     *                 @OA\Property(property="createdBy", type="integer", example=1),
-     *                 @OA\Property(property="updatedBy", type="integer", example=1)
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Validation failed for lead creation"),
-     *             @OA\Property(
-     *                 property="errors",
-     *                 type="object",
-     *                 @OA\Property(
-     *                     property="name",
-     *                     type="array",
-     *                     @OA\Items(type="string", example="The name field is required.")
-     *                 ),
-     *                 @OA\Property(
-     *                     property="email",
-     *                     type="array",
-     *                     @OA\Items(type="string", example="The email field is required.")
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     )
+     *     @OA\Response(response=201, description="Lead created successfully"),
+     *     @OA\Response(response=422, description="Validation error")
      * )
      */
     public function store(StoreLeadRequest $request): JsonResponse
     {
-        $lead = Lead::create($request->validated());
+        $lead = $this->leadService->createLead(
+            $request->validated(),
+            $request->user()
+        );
 
         return ApiResponse::success(
             new LeadResource($lead),
-            'Lead created successfully',
+            __('leads.created'),
             201
         );
     }
@@ -228,67 +108,20 @@ class LeadController extends Controller
      *     operationId="getLead",
      *     tags={"Leads"},
      *     summary="Get a single lead",
-     *     description="Retrieve a specific lead by ID",
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="Accept-Language",
-     *         in="header",
-     *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
-     *     ),
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="Lead ID",
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Lead retrieved successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Lead retrieved successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="leadId", type="integer", example=1),
-     *                 @OA\Property(property="name", type="string", example="John Doe"),
-     *                 @OA\Property(property="email", type="string", example="john@example.com"),
-     *                 @OA\Property(property="company", type="string", example="Acme Corp"),
-     *                 @OA\Property(property="source", type="string", example="Website"),
-     *                 @OA\Property(property="status", type="string", example="new"),
-     *                 @OA\Property(property="createdAt", type="string", format="date-time"),
-     *                 @OA\Property(property="updatedAt", type="string", format="date-time"),
-     *                 @OA\Property(property="createdBy", type="integer", example=1),
-     *                 @OA\Property(property="updatedBy", type="integer", example=1)
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Lead not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Lead not found")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     )
+     *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Lead retrieved successfully"),
+     *     @OA\Response(response=404, description="Lead not found")
      * )
      */
     public function show(Lead $lead): JsonResponse
     {
+        $lead->load(['activities', 'meetings', 'quotations']);
+
         return ApiResponse::success(
             new LeadResource($lead),
-            'Lead retrieved successfully'
+            __('leads.retrieved')
         );
     }
 
@@ -298,96 +131,25 @@ class LeadController extends Controller
      *     operationId="updateLead",
      *     tags={"Leads"},
      *     summary="Update an existing lead",
-     *     description="Update a lead with the provided information",
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="Accept-Language",
-     *         in="header",
-     *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
-     *     ),
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="Lead ID",
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="name", type="string", example="John Doe"),
-     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
-     *             @OA\Property(property="company", type="string", example="Acme Corp"),
-     *             @OA\Property(property="source", type="string", example="Website"),
-     *             @OA\Property(property="status", type="string", enum={"new", "contacted", "qualified", "proposal", "negotiation", "won", "lost"}, example="contacted")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Lead updated successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Lead updated successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="leadId", type="integer", example=1),
-     *                 @OA\Property(property="name", type="string", example="John Doe"),
-     *                 @OA\Property(property="email", type="string", example="john@example.com"),
-     *                 @OA\Property(property="company", type="string", example="Acme Corp"),
-     *                 @OA\Property(property="source", type="string", example="Website"),
-     *                 @OA\Property(property="status", type="string", example="contacted"),
-     *                 @OA\Property(property="createdAt", type="string", format="date-time"),
-     *                 @OA\Property(property="updatedAt", type="string", format="date-time"),
-     *                 @OA\Property(property="createdBy", type="integer", example=1),
-     *                 @OA\Property(property="updatedBy", type="integer", example=1)
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Validation failed for lead update"),
-     *             @OA\Property(
-     *                 property="errors",
-     *                 type="object",
-     *                 @OA\Property(
-     *                     property="email",
-     *                     type="array",
-     *                     @OA\Items(type="string", example="The email must be a valid email address.")
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Lead not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Lead not found")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     )
+     *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(required=true, @OA\JsonContent()),
+     *     @OA\Response(response=200, description="Lead updated successfully"),
+     *     @OA\Response(response=422, description="Validation error")
      * )
      */
     public function update(UpdateLeadRequest $request, Lead $lead): JsonResponse
     {
-        $lead->update($request->validated());
+        $lead = $this->leadService->updateLead(
+            $lead,
+            $request->validated(),
+            $request->user()
+        );
 
         return ApiResponse::success(
-            new LeadResource($lead->fresh()),
-            'Lead updated successfully'
+            new LeadResource($lead),
+            __('leads.updated')
         );
     }
 
@@ -397,56 +159,230 @@ class LeadController extends Controller
      *     operationId="deleteLead",
      *     tags={"Leads"},
      *     summary="Delete a lead",
-     *     description="Delete a specific lead by ID",
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="Accept-Language",
-     *         in="header",
-     *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
-     *     ),
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="Lead ID",
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Lead deleted successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Lead deleted successfully"),
-     *             @OA\Property(property="data", type="null")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Lead not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Lead not found")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     )
+     *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Lead deleted successfully"),
+     *     @OA\Response(response=404, description="Lead not found")
      * )
      */
     public function destroy(Lead $lead): JsonResponse
     {
         $lead->delete();
 
+        return ApiResponse::success(null, __('leads.deleted'));
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/v1/leads/{id}/status",
+     *     operationId="updateLeadStatus",
+     *     tags={"Leads"},
+     *     summary="Update lead status",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"status"},
+     *             @OA\Property(property="status", type="string"),
+     *             @OA\Property(property="lossReason", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Status updated successfully")
+     * )
+     */
+    public function updateStatus(UpdateLeadStatusRequest $request, Lead $lead): JsonResponse
+    {
+        $lead = $this->leadService->updateStatus(
+            $lead,
+            $request->validated()['status'],
+            $request->user(),
+            $request->validated()['lossReason'] ?? null
+        );
+
         return ApiResponse::success(
-            null,
-            'Lead deleted successfully'
+            new LeadResource($lead),
+            __('leads.status_updated')
+        );
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/leads/kanban",
+     *     operationId="getLeadsKanban",
+     *     tags={"Leads"},
+     *     summary="Get leads grouped by status for Kanban view",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Kanban data retrieved successfully")
+     * )
+     */
+    public function kanban(): JsonResponse
+    {
+        $data = $this->leadService->getLeadsByStatus();
+
+        return ApiResponse::success($data, __('leads.kanban_retrieved'));
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/leads/follow-ups",
+     *     operationId="getLeadsNeedingFollowUp",
+     *     tags={"Leads"},
+     *     summary="Get leads needing follow-up",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Follow-ups retrieved successfully")
+     * )
+     */
+    public function followUps(): JsonResponse
+    {
+        $leads = $this->leadService->getLeadsNeedingFollowUp();
+
+        return ApiResponse::success(
+            new LeadCollection($leads),
+            __('leads.follow_ups_retrieved')
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/leads/{id}/activities",
+     *     operationId="addLeadActivity",
+     *     tags={"Leads"},
+     *     summary="Add activity to lead",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"type", "title"},
+     *             @OA\Property(property="type", type="string", enum={"call", "email", "meeting", "note", "status_change"}),
+     *             @OA\Property(property="title", type="string"),
+     *             @OA\Property(property="description", type="string"),
+     *             @OA\Property(property="outcome", type="string"),
+     *             @OA\Property(property="scheduledAt", type="string", format="date-time"),
+     *             @OA\Property(property="completedAt", type="string", format="date-time")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Activity added successfully")
+     * )
+     */
+    public function addActivity(StoreLeadActivityRequest $request, Lead $lead): JsonResponse
+    {
+        $activity = $this->leadService->addActivity(
+            $lead,
+            $request->validated(),
+            $request->user()
+        );
+
+        return ApiResponse::success(
+            new LeadActivityResource($activity),
+            __('leads.activity_added'),
+            201
+        );
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/leads/{id}/activities",
+     *     operationId="getLeadActivities",
+     *     tags={"Leads"},
+     *     summary="Get lead activities",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Activities retrieved successfully")
+     * )
+     */
+    public function activities(Lead $lead): JsonResponse
+    {
+        $activities = $lead->activities()->with('user')->paginate(20);
+
+        return ApiResponse::success(
+            LeadActivityResource::collection($activities),
+            __('leads.activities_retrieved')
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/leads/{id}/meetings",
+     *     operationId="scheduleLeadMeeting",
+     *     tags={"Leads"},
+     *     summary="Schedule a meeting for lead",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title", "location", "scheduledAt"},
+     *             @OA\Property(property="title", type="string"),
+     *             @OA\Property(property="location", type="string", enum={"online", "office", "client_site"}),
+     *             @OA\Property(property="meetingLink", type="string"),
+     *             @OA\Property(property="scheduledAt", type="string", format="date-time"),
+     *             @OA\Property(property="durationMinutes", type="integer"),
+     *             @OA\Property(property="attendees", type="array", @OA\Items(type="object"))
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Meeting scheduled successfully")
+     * )
+     */
+    public function scheduleMeeting(StoreLeadMeetingRequest $request, Lead $lead): JsonResponse
+    {
+        $meeting = $this->leadService->scheduleMeeting(
+            $lead,
+            $request->validated(),
+            $request->user()
+        );
+
+        return ApiResponse::success(
+            new LeadMeetingResource($meeting),
+            __('leads.meeting_scheduled'),
+            201
+        );
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/leads/{id}/meetings",
+     *     operationId="getLeadMeetings",
+     *     tags={"Leads"},
+     *     summary="Get lead meetings",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Meetings retrieved successfully")
+     * )
+     */
+    public function meetings(Lead $lead): JsonResponse
+    {
+        $meetings = $lead->meetings()->paginate(20);
+
+        return ApiResponse::success(
+            LeadMeetingResource::collection($meetings),
+            __('leads.meetings_retrieved')
+        );
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/api/v1/leads/{leadId}/meetings/{meetingId}",
+     *     operationId="updateLeadMeeting",
+     *     tags={"Leads"},
+     *     summary="Update a meeting",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Meeting updated successfully")
+     * )
+     */
+    public function updateMeeting(Request $request, Lead $lead, LeadMeeting $meeting): JsonResponse
+    {
+        $meeting = $this->leadService->updateMeeting(
+            $meeting,
+            $request->all(),
+            $request->user()
+        );
+
+        return ApiResponse::success(
+            new LeadMeetingResource($meeting),
+            __('leads.meeting_updated')
         );
     }
 }
