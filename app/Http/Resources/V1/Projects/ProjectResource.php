@@ -27,6 +27,8 @@ class ProjectResource extends JsonResource
             'deadline' => $this->deadline?->toDateString() ?? '',
             'uiApprovedAt' => $this->ui_approved_at?->toISOString() ?? '',
             'autoApprovalJobId' => $this->auto_approval_job_id ?? '',
+            'progress' => (float) ($this->progress ?? 0),
+            'totalTimeSpent' => (int) ($this->total_time_spent ?? 0),
             'client' => $this->whenLoaded('client', function () {
                 return [
                     'userId' => $this->client->id,
@@ -36,6 +38,42 @@ class ProjectResource extends JsonResource
             }),
             'quotation' => $this->whenLoaded('quotation', function () {
                 return new QuotationResource($this->quotation);
+            }),
+            'members' => $this->whenLoaded('members', function () {
+                return $this->members->map(function ($member) {
+                    return [
+                        'memberId' => $member->id,
+                        'projectId' => $member->project_id,
+                        'userId' => $member->user_id,
+                        'role' => $member->role ?? '',
+                        'user' => $member->user ? [
+                            'userId' => $member->user->id,
+                            'name' => $member->user->name ?? '',
+                            'email' => $member->user->email ?? '',
+                            'avatar' => $member->user->avatar ?? '',
+                        ] : null,
+                        'createdAt' => $member->created_at?->toISOString() ?? '',
+                    ];
+                });
+            }),
+            'files' => $this->whenLoaded('files', function () {
+                return $this->files->map(function ($file) {
+                    return [
+                        'fileId' => $file->id,
+                        'projectId' => $file->project_id,
+                        'name' => $file->name ?? '',
+                        'type' => $file->type ?? 'file',
+                        'fileUrl' => $file->file_url ?? '',
+                        'mimeType' => $file->mime_type ?? '',
+                        'size' => (int) ($file->size ?? 0),
+                        'description' => $file->description ?? '',
+                        'category' => $file->category ?? '',
+                        'isClientVisible' => (bool) $file->is_client_visible,
+                        'isDownloadable' => (bool) $file->is_downloadable,
+                        'visibleToRoles' => $file->visible_to_roles ?? [],
+                        'createdAt' => $file->created_at?->toISOString() ?? '',
+                    ];
+                });
             }),
             'createdAt' => $this->created_at?->toISOString() ?? '',
             'updatedAt' => $this->updated_at?->toISOString() ?? '',

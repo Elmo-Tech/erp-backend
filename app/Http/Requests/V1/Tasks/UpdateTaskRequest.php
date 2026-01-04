@@ -3,6 +3,8 @@
 namespace App\Http\Requests\V1\Tasks;
 
 use App\Enums\TaskStatus;
+use App\Enums\TaskType;
+use App\Enums\TaskPriority;
 use App\Helpers\ApiResponse;
 use App\Models\Task;
 use Illuminate\Contracts\Validation\Validator;
@@ -34,9 +36,17 @@ class UpdateTaskRequest extends FormRequest
             'assignedTo' => ['nullable', 'integer', 'exists:users,id'],
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'acceptanceCriteria' => ['nullable', 'string'],
             'status' => ['nullable', Rule::enum(TaskStatus::class)],
+            'type' => ['nullable', Rule::enum(TaskType::class)],
+            'priority' => ['nullable', Rule::enum(TaskPriority::class)],
+            'dueDate' => ['nullable', 'date'],
+            'startDate' => ['nullable', 'date'],
+            'sprintNumber' => ['nullable', 'integer', 'min:1'],
             'estimatedHours' => ['nullable', 'numeric', 'min:0'],
             'internalReviewerNotes' => ['nullable', 'string'],
+            'tagIds' => ['nullable', 'array'],
+            'tagIds.*' => ['integer', 'exists:tags,id'],
         ];
     }
 
@@ -51,6 +61,7 @@ class UpdateTaskRequest extends FormRequest
             $this->validateParentBelongsToSameProject($validator);
             $this->validateStatusTransition($validator);
             $this->validateNoCircularReference($validator);
+            $this->validateTaskTypeHierarchy($validator);
         });
     }
 
@@ -75,6 +86,67 @@ class UpdateTaskRequest extends FormRequest
                 'parentId',
                 'The parent task must belong to the same project.'
             );
+        }
+    }
+
+    /**
+     * Validate task type hierarchy when changing type or parent.
+     */
+    private function validateTaskTypeHierarchy(Validator $validator): void
+    {
+        $task = $this->route('task');
+        if (!$task instanceof Task) {
+            return;
+        }
+
+        // Get the type (either from request or existing)
+        $type = $this->filled('type') ? $this->input('type') : $task->type?->value;
+        $parentId = $this->filled('parentId') ? $this->input('parentId') : $task->parent_id;
+
+        if (!$type) {
+            return;
+        }
+
+        $taskType = TaskType::tryFrom($type);
+        if (!$taskType) {
+            return;
+        }
+
+        // MAIN tasks cannot have a parent
+        if ($taskType === TaskType::MAIN && $parentId) {
+            $validator->errors()->add(
+                'type',
+                'Main tasks cannot have a parent task.'
+            );
+            return;
+        }
+
+        // WEEKLY and SUBTASK must have a parent
+        if (in_array($taskType, [TaskType::WEEKLY, TaskType::SUBTASK]) && !$parentId) {
+            $validator->errors()->add(
+                'parentId',
+                $taskType->label() . ' must have a parent task.'
+            );
+            return;
+        }
+
+        // Validate parent type matches expected hierarchy
+        if ($parentId) {
+            $parentTask = Task::find($parentId);
+            if (!$parentTask) {
+                return;
+            }
+
+            $allowedChildTypes = $parentTask->type->allowedChildTypes();
+            
+            if (!in_array($taskType, $allowedChildTypes)) {
+                $expectedTypes = array_map(fn($t) => $t->label(), $allowedChildTypes);
+                $validator->errors()->add(
+                    'type',
+                    'A ' . $parentTask->type->label() . ' can only have ' . 
+                    (empty($expectedTypes) ? 'no children' : implode(' or ', $expectedTypes)) . ' as children.'
+                );
+            }
         }
     }
 
@@ -191,10 +263,20 @@ class UpdateTaskRequest extends FormRequest
             'title.string' => 'The title must be a string.',
             'title.max' => 'The title may not be greater than 255 characters.',
             'description.string' => 'The description must be a string.',
+            'acceptanceCriteria.string' => 'The acceptanceCriteria must be a string.',
             'status.enum' => 'The selected status is invalid. Valid values are: todo, in_progress, review, testing, completed.',
+            'type.enum' => 'The selected type is invalid. Valid values are: main, weekly, subtask.',
+            'priority.enum' => 'The selected priority is invalid. Valid values are: low, medium, high, urgent.',
+            'dueDate.date' => 'The dueDate must be a valid date.',
+            'startDate.date' => 'The startDate must be a valid date.',
+            'sprintNumber.integer' => 'The sprintNumber must be an integer.',
+            'sprintNumber.min' => 'The sprintNumber must be at least 1.',
             'estimatedHours.numeric' => 'The estimatedHours must be a number.',
             'estimatedHours.min' => 'The estimatedHours must be at least 0.',
             'internalReviewerNotes.string' => 'The internalReviewerNotes must be a string.',
+            'tagIds.array' => 'The tagIds must be an array.',
+            'tagIds.*.integer' => 'Each tag ID must be an integer.',
+            'tagIds.*.exists' => 'One or more selected tags do not exist.',
         ];
     }
 

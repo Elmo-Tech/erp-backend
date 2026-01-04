@@ -30,12 +30,35 @@ class AdminUserSeeder extends Seeder
             'edit_roles',
             'delete_roles',
             
+            // Client management
+            'manage_clients',
+            'view_clients',
+            'create_clients',
+            'edit_clients',
+            'delete_clients',
+            
             // Project management
             'manage_projects',
             'view_projects',
             'create_projects',
             'edit_projects',
             'delete_projects',
+            'approve_project_ui',
+            
+            // Project members
+            'manage_project_members',
+            'view_project_members',
+            'add_project_members',
+            'remove_project_members',
+            
+            // Project files
+            'manage_project_files',
+            'view_project_files',
+            'upload_project_files',
+            'delete_project_files',
+            
+            // Project history
+            'view_project_history',
             
             // Task management
             'manage_tasks',
@@ -44,17 +67,35 @@ class AdminUserSeeder extends Seeder
             'edit_tasks',
             'delete_tasks',
             'view_internal_notes',
+            'assign_tasks',
             
-            // Sales management
+            // Task test scenarios
+            'manage_test_scenarios',
+            'view_test_scenarios',
+            'create_test_scenarios',
+            'complete_test_scenarios',
+            'verify_test_scenarios',
+            
+            // Sales management - Leads
             'manage_sales',
             'view_leads',
             'create_leads',
             'edit_leads',
             'delete_leads',
+            
+            // Sales management - Quotations
             'view_quotations',
             'create_quotations',
             'edit_quotations',
             'delete_quotations',
+            'calculate_quotations',
+            
+            // Invoice management
+            'manage_invoices',
+            'view_invoices',
+            'create_invoices',
+            'edit_invoices',
+            'delete_invoices',
             
             // Wiki management
             'manage_wiki',
@@ -64,15 +105,30 @@ class AdminUserSeeder extends Seeder
             'delete_wiki',
             'view_encrypted_content',
             
+            // Time tracking
+            'manage_time_entries',
+            'view_time_entries',
+            'start_timer',
+            'stop_timer',
+            'view_all_time_entries',
+            
             // Attendance
             'manage_attendance',
             'view_attendance',
             'view_all_attendance',
+            'clock_out',
+            
+            // Dashboard
+            'view_dashboard',
+            'view_dashboard_overview',
             
             // Reports & Analytics
             'view_reports',
             'view_profitability',
             'view_cost',
+            'view_quality_metrics',
+            'view_user_performance',
+            'view_attendance_analytics',
             
             // Admin Statistics & Financial Data
             'view_admin_stats',
@@ -81,6 +137,10 @@ class AdminUserSeeder extends Seeder
             
             // Security & Audit
             'view_audit_logs',
+            
+            // Tags
+            'manage_tags',
+            'view_tags',
         ];
 
         foreach ($permissions as $permission) {
@@ -108,29 +168,84 @@ class AdminUserSeeder extends Seeder
 
         // Assign permissions to manager
         $managerPermissions = [
+            // Users (view only)
             'view_users',
+            
+            // Clients
+            'view_clients', 'create_clients', 'edit_clients',
+            
+            // Projects
             'manage_projects', 'view_projects', 'create_projects', 'edit_projects',
-            'manage_tasks', 'view_tasks', 'create_tasks', 'edit_tasks', 'delete_tasks', 'view_internal_notes',
+            'approve_project_ui',
+            'manage_project_members', 'view_project_members', 'add_project_members', 'remove_project_members',
+            'manage_project_files', 'view_project_files', 'upload_project_files', 'delete_project_files',
+            'view_project_history',
+            
+            // Tasks
+            'manage_tasks', 'view_tasks', 'create_tasks', 'edit_tasks', 'delete_tasks',
+            'view_internal_notes', 'assign_tasks',
+            'manage_test_scenarios', 'view_test_scenarios', 'create_test_scenarios',
+            'complete_test_scenarios', 'verify_test_scenarios',
+            
+            // Sales
             'view_leads', 'create_leads', 'edit_leads',
-            'view_quotations', 'create_quotations', 'edit_quotations',
+            'view_quotations', 'create_quotations', 'edit_quotations', 'calculate_quotations',
+            
+            // Invoices
+            'view_invoices', 'create_invoices', 'edit_invoices',
+            
+            // Wiki
             'view_wiki', 'create_wiki', 'edit_wiki',
-            'view_attendance', 'view_all_attendance',
-            'view_reports',
+            
+            // Time tracking
+            'view_time_entries', 'start_timer', 'stop_timer', 'view_all_time_entries',
+            
+            // Attendance
+            'view_attendance', 'view_all_attendance', 'clock_out',
+            
+            // Dashboard & Reports
+            'view_dashboard', 'view_dashboard_overview',
+            'view_reports', 'view_quality_metrics', 'view_user_performance', 'view_attendance_analytics',
+            
+            // Tags
+            'view_tags',
         ];
         $managerRole->syncPermissions($managerPermissions);
 
         // Assign permissions to developer
         $developerPermissions = [
+            // Projects (view only)
             'view_projects',
+            'view_project_members',
+            'view_project_files',
+            'view_project_history',
+            
+            // Tasks
             'view_tasks', 'create_tasks', 'edit_tasks',
+            'view_test_scenarios', 'complete_test_scenarios',
+            
+            // Wiki
             'view_wiki', 'create_wiki', 'edit_wiki',
-            'view_attendance',
+            
+            // Time tracking
+            'view_time_entries', 'start_timer', 'stop_timer',
+            
+            // Attendance
+            'view_attendance', 'clock_out',
+            
+            // Dashboard
+            'view_dashboard', 'view_dashboard_overview',
+            
+            // Tags
+            'view_tags',
         ];
         $developerRole->syncPermissions($developerPermissions);
 
         // Client has minimal permissions (handled by policies)
         $clientPermissions = [
             'view_projects',
+            'view_invoices',
+            'view_dashboard',
         ];
         $clientRole->syncPermissions($clientPermissions);
 

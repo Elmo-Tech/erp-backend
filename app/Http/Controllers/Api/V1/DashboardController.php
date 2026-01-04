@@ -190,9 +190,12 @@ class DashboardController extends Controller
     /**
      * Format status for display
      */
-    private function formatStatus(string $status): string
+    private function formatStatus($status): string
     {
-        return match ($status) {
+        // Handle both enum and string values
+        $statusValue = $status instanceof \BackedEnum ? $status->value : $status;
+        
+        return match ($statusValue) {
             'planning' => 'Planning',
             'in_progress' => 'In Progress',
             'ui_ux' => 'UI/UX',
@@ -200,7 +203,7 @@ class DashboardController extends Controller
             'completed' => 'Completed',
             'on_hold' => 'On Hold',
             'cancelled' => 'Cancelled',
-            default => ucfirst(str_replace('_', ' ', $status)),
+            default => ucfirst(str_replace('_', ' ', $statusValue)),
         };
     }
 

@@ -8,11 +8,14 @@ use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
 use App\Http\Controllers\Api\V1\Client\ClientProjectController;
+use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\ProjectFileController;
 use App\Http\Controllers\Api\V1\ProjectHistoryController;
+use App\Http\Controllers\Api\V1\ProjectMemberController;
 use App\Http\Controllers\Api\V1\ProjectWikiController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\TaskController;
@@ -52,6 +55,9 @@ Route::prefix('v1')->group(function () {
     // Lead Management Routes
     Route::apiResource('leads', LeadController::class);
     
+    // Client Management Routes
+    Route::apiResource('clients', ClientController::class);
+    
     // Quotation Management Routes
     Route::apiResource('quotations', QuotationController::class);
     Route::post('quotations/calculate', [QuotationController::class, 'calculate'])->name('quotations.calculate');
@@ -65,6 +71,7 @@ Route::prefix('v1')->group(function () {
     // Attendance Routes
     // All routes have auth:sanctum and locale middleware applied in controller
     Route::get('attendance/today', [AttendanceController::class, 'today'])->name('attendance.today');
+    Route::get('attendance/history', [AttendanceController::class, 'history'])->name('attendance.history');
     Route::post('attendance/clock-out', [AttendanceController::class, 'clockOut'])->name('attendance.clock-out');
 
     // Project Management Routes
@@ -76,6 +83,9 @@ Route::prefix('v1')->group(function () {
     // Project Conversion Route (convert quotation to project)
     Route::post('projects/convert', [ProjectController::class, 'convert'])->name('projects.convert');
     
+    // Direct Project Creation Route (create project for client without quotation)
+    Route::post('projects/direct', [ProjectController::class, 'storeDirect'])->name('projects.store-direct');
+    
     // Project UI Approval Route (manual approval of UI/UX deliverables)
     Route::post('projects/{project}/approve-ui', [ProjectController::class, 'approveUI'])->name('projects.approve-ui');
     
@@ -84,6 +94,12 @@ Route::prefix('v1')->group(function () {
     
     // Project Wiki Routes (nested resource)
     Route::apiResource('projects.wikis', ProjectWikiController::class);
+    
+    // Project Files Routes
+    Route::apiResource('projects.files', ProjectFileController::class);
+    
+    // Project Members Routes
+    Route::apiResource('projects.members', ProjectMemberController::class)->except(['show']);
 
     // Task Management Routes
     // All routes have auth:sanctum and locale middleware applied in controller
@@ -94,8 +110,28 @@ Route::prefix('v1')->group(function () {
     // Task Children Route (for lazy loading hierarchy)
     Route::get('tasks/{task}/children', [TaskController::class, 'children'])->name('tasks.children');
     
+    // Task Assignees Routes
+    Route::post('tasks/{task}/assignees', [TaskController::class, 'addAssignee'])->name('tasks.assignees.add');
+    Route::delete('tasks/{task}/assignees/{userId}', [TaskController::class, 'removeAssignee'])->name('tasks.assignees.remove');
+    
+    // Task Test Scenarios Routes
+    Route::get('tasks/{task}/test-scenarios', [TaskController::class, 'testScenarios'])->name('tasks.test-scenarios.index');
+    Route::post('tasks/{task}/test-scenarios', [TaskController::class, 'addTestScenario'])->name('tasks.test-scenarios.add');
+    Route::post('test-scenarios/{scenario}/complete', [TaskController::class, 'completeTestScenario'])->name('test-scenarios.complete');
+    Route::post('test-scenarios/{scenario}/verify', [TaskController::class, 'verifyTestScenario'])->name('test-scenarios.verify');
+    
+    // Task Activities & Comments Routes
+    Route::get('tasks/{task}/activities', [TaskController::class, 'activities'])->name('tasks.activities');
+    Route::post('tasks/{task}/comments', [TaskController::class, 'addComment'])->name('tasks.comments.add');
+    
+    // Tags Route
+    Route::get('tags', [TaskController::class, 'tags'])->name('tags.index');
+    
     // Project Tasks Route (get tasks for a specific project with hierarchy)
     Route::get('projects/{projectId}/tasks', [TaskController::class, 'projectTasks'])->name('projects.tasks');
+    
+    // Project Points Summary Route
+    Route::get('projects/{projectId}/points-summary', [TaskController::class, 'pointsSummary'])->name('projects.points-summary');
 
     // Client Portal Routes
     // All routes have auth:sanctum, locale, and role:client middleware applied in controllers

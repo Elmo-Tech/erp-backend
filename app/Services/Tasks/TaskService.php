@@ -3,7 +3,13 @@
 namespace App\Services\Tasks;
 
 use App\Enums\TaskStatus;
+use App\Enums\TaskType;
+use App\Enums\TaskPriority;
 use App\Models\Task;
+use App\Models\TaskActivity;
+use App\Models\TaskAssignee;
+use App\Models\TaskTestScenario;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -12,36 +18,39 @@ class TaskService
 {
     /**
      * Get all tasks with optional filtering and pagination.
-     *
-     * @param array<string, mixed> $filters
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getAllTasks(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Task::query()->with(['assignee', 'project']);
+        $query = Task::query()->with(['assignee', 'project', 'tags', 'assignees.user']);
 
-        // Filter by project
         if (!empty($filters['projectId'])) {
             $query->where('project_id', $filters['projectId']);
         }
 
-        // Filter by status
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        // Filter by assignee
+        if (!empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        if (!empty($filters['priority'])) {
+            $query->where('priority', $filters['priority']);
+        }
+
         if (!empty($filters['assignedTo'])) {
             $query->where('assigned_to', $filters['assignedTo']);
         }
 
-        // Filter by parent (null for root tasks)
         if (array_key_exists('parentId', $filters)) {
             $query->where('parent_id', $filters['parentId']);
         }
 
-        // Search by title
+        if (!empty($filters['tagId'])) {
+            $query->whereHas('tags', fn($q) => $q->where('tags.id', $filters['tagId']));
+        }
+
         if (!empty($filters['search'])) {
             $query->where('title', 'like', '%' . $filters['search'] . '%');
         }
@@ -51,59 +60,49 @@ class TaskService
 
     /**
      * Get tasks for a specific project with hierarchy support.
-     * Returns only root-level tasks (parent_id = null) with children loaded.
-     *
-     * Requirements: 1.3, 1.4
-     *
-     * @param int $projectId
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getTasksForProject(int $projectId, int $perPage = 15): LengthAwarePaginator
     {
         return Task::query()
             ->where('project_id', $projectId)
             ->whereNull('parent_id')
-            ->with(['assignee', 'children.assignee'])
+            ->with(['assignee', 'tags', 'assignees.user', 'children.assignee', 'children.tags'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     /**
      * Get children of a specific task for lazy loading.
-     *
-     * Requirements: 1.3, 1.4
-     *
-     * @param int $taskId
-     * @return Collection<int, Task>
      */
     public function getTaskChildren(int $taskId): Collection
     {
         return Task::query()
             ->where('parent_id', $taskId)
-            ->with(['assignee'])
+            ->with(['assignee', 'tags', 'assignees.user'])
             ->orderBy('created_at', 'desc')
             ->get();
     }
 
     /**
-     * Get a single task by ID with relationships.
-     *
-     * @param int $taskId
-     * @return Task|null
+     * Get a single task by ID with all relationships.
      */
     public function getTask(int $taskId): ?Task
     {
-        return Task::with(['assignee', 'project', 'parent', 'children.assignee'])
-            ->find($taskId);
+        return Task::with([
+            'assignee',
+            'project',
+            'parent',
+            'children.assignee',
+            'children.tags',
+            'tags',
+            'assignees.user',
+            'testScenarios.completedBy',
+            'testScenarios.verifiedBy',
+        ])->find($taskId);
     }
 
     /**
      * Create a new task.
-     *
-     * @param array<string, mixed> $data
-     * @param User $user
-     * @return Task
      */
     public function createTask(array $data, User $user): Task
     {
@@ -113,7 +112,13 @@ class TaskService
             'assigned_to' => $data['assignedTo'] ?? null,
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
+            'acceptance_criteria' => $data['acceptanceCriteria'] ?? null,
             'status' => $data['status'] ?? TaskStatus::TODO->value,
+            'type' => $data['type'] ?? TaskType::MAIN->value,
+            'priority' => $data['priority'] ?? TaskPriority::MEDIUM->value,
+            'due_date' => $data['dueDate'] ?? null,
+            'start_date' => $data['startDate'] ?? null,
+            'sprint_number' => $data['sprintNumber'] ?? null,
             'estimated_hours' => $data['estimatedHours'] ?? null,
             'internal_reviewer_notes' => $data['internalReviewerNotes'] ?? null,
             'total_time_spent' => 0,
@@ -124,62 +129,89 @@ class TaskService
 
         $task = Task::create($taskData);
 
-        return $task->load(['assignee', 'project', 'parent', 'children']);
+        // Attach tags
+        if (!empty($data['tagIds'])) {
+            $task->tags()->attach($data['tagIds']);
+        }
+
+        // Add assignees
+        if (!empty($data['assignees'])) {
+            foreach ($data['assignees'] as $assignee) {
+                TaskAssignee::create([
+                    'task_id' => $task->id,
+                    'user_id' => $assignee['userId'],
+                    'role' => $assignee['role'] ?? 'developer',
+                    'is_primary' => $assignee['isPrimary'] ?? false,
+                    'created_by' => $user->id,
+                    'updated_by' => $user->id,
+                ]);
+            }
+        }
+
+        // Log activity
+        TaskActivity::create([
+            'task_id' => $task->id,
+            'user_id' => $user->id,
+            'type' => TaskActivity::TYPE_CREATED,
+            'description' => 'Created task',
+        ]);
+
+        return $task->load(['assignee', 'project', 'parent', 'children', 'tags', 'assignees.user']);
     }
 
     /**
      * Update an existing task.
-     *
-     * @param Task $task
-     * @param array<string, mixed> $data
-     * @param User $user
-     * @return Task
      */
     public function updateTask(Task $task, array $data, User $user): Task
     {
-        $updateData = [
-            'updated_by' => $user->id,
-        ];
+        $oldStatus = $task->status?->value;
+        $updateData = ['updated_by' => $user->id];
 
         // Map camelCase to snake_case
-        if (array_key_exists('parentId', $data)) {
-            $updateData['parent_id'] = $data['parentId'];
-        }
+        $fieldMap = [
+            'parentId' => 'parent_id',
+            'assignedTo' => 'assigned_to',
+            'title' => 'title',
+            'description' => 'description',
+            'acceptanceCriteria' => 'acceptance_criteria',
+            'status' => 'status',
+            'type' => 'type',
+            'priority' => 'priority',
+            'dueDate' => 'due_date',
+            'startDate' => 'start_date',
+            'sprintNumber' => 'sprint_number',
+            'estimatedHours' => 'estimated_hours',
+            'internalReviewerNotes' => 'internal_reviewer_notes',
+        ];
 
-        if (array_key_exists('assignedTo', $data)) {
-            $updateData['assigned_to'] = $data['assignedTo'];
-        }
-
-        if (isset($data['title'])) {
-            $updateData['title'] = $data['title'];
-        }
-
-        if (array_key_exists('description', $data)) {
-            $updateData['description'] = $data['description'];
-        }
-
-        if (isset($data['status'])) {
-            $updateData['status'] = $data['status'];
-        }
-
-        if (array_key_exists('estimatedHours', $data)) {
-            $updateData['estimated_hours'] = $data['estimatedHours'];
-        }
-
-        if (array_key_exists('internalReviewerNotes', $data)) {
-            $updateData['internal_reviewer_notes'] = $data['internalReviewerNotes'];
+        foreach ($fieldMap as $camel => $snake) {
+            if (array_key_exists($camel, $data)) {
+                $updateData[$snake] = $data[$camel];
+            }
         }
 
         $task->update($updateData);
 
-        return $task->fresh()->load(['assignee', 'project', 'parent', 'children']);
+        // Log status change
+        if (isset($data['status']) && $oldStatus !== $data['status']) {
+            TaskActivity::logStatusChange($task, $user, $oldStatus ?? 'none', $data['status']);
+            
+            // Check for reopen (testing -> in_progress)
+            if ($oldStatus === TaskStatus::TESTING->value && $data['status'] === TaskStatus::IN_PROGRESS->value) {
+                $task->increment('reopen_count');
+            }
+        }
+
+        // Update tags
+        if (array_key_exists('tagIds', $data)) {
+            $task->tags()->sync($data['tagIds'] ?? []);
+        }
+
+        return $task->fresh()->load(['assignee', 'project', 'parent', 'children', 'tags', 'assignees.user']);
     }
 
     /**
      * Delete a task.
-     *
-     * @param Task $task
-     * @return bool
      */
     public function deleteTask(Task $task): bool
     {
@@ -187,31 +219,166 @@ class TaskService
     }
 
     /**
-     * Get all tasks assigned to a specific user.
-     *
-     * @param int $userId
-     * @param int $perPage
-     * @return LengthAwarePaginator
+     * Add an assignee to a task.
+     */
+    public function addAssignee(Task $task, int $userId, string $role, bool $isPrimary, User $performer): TaskAssignee
+    {
+        $assignee = TaskAssignee::create([
+            'task_id' => $task->id,
+            'user_id' => $userId,
+            'role' => $role,
+            'is_primary' => $isPrimary,
+            'created_by' => $performer->id,
+            'updated_by' => $performer->id,
+        ]);
+
+        $user = User::find($userId);
+        TaskActivity::logAssigneeAdded($task, $performer, $user, $role);
+
+        return $assignee->load('user');
+    }
+
+    /**
+     * Remove an assignee from a task.
+     */
+    public function removeAssignee(Task $task, int $userId, User $performer): bool
+    {
+        $assignee = $task->assignees()->where('user_id', $userId)->first();
+        if (!$assignee) {
+            return false;
+        }
+
+        $user = User::find($userId);
+        TaskActivity::create([
+            'task_id' => $task->id,
+            'user_id' => $performer->id,
+            'type' => TaskActivity::TYPE_ASSIGNEE_REMOVED,
+            'description' => "Removed {$user->name} from task",
+            'metadata' => ['assignee_id' => $userId, 'assignee_name' => $user->name],
+        ]);
+
+        return $assignee->delete();
+    }
+
+    /**
+     * Add a test scenario to a task.
+     */
+    public function addTestScenario(Task $task, array $data, User $user): TaskTestScenario
+    {
+        $maxOrder = $task->testScenarios()->max('order') ?? 0;
+
+        return TaskTestScenario::create([
+            'task_id' => $task->id,
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'expected_result' => $data['expectedResult'] ?? null,
+            'order' => $maxOrder + 1,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+    }
+
+    /**
+     * Mark a test scenario as completed by developer.
+     */
+    public function completeTestScenario(TaskTestScenario $scenario, User $user): TaskTestScenario
+    {
+        $scenario->markAsCompleted($user);
+
+        TaskActivity::create([
+            'task_id' => $scenario->task_id,
+            'user_id' => $user->id,
+            'type' => TaskActivity::TYPE_TEST_COMPLETED,
+            'description' => "Completed test: {$scenario->title}",
+            'metadata' => ['scenario_id' => $scenario->id],
+        ]);
+
+        return $scenario->fresh();
+    }
+
+    /**
+     * Verify a test scenario by reviewer.
+     */
+    public function verifyTestScenario(TaskTestScenario $scenario, User $reviewer, bool $passed, ?string $notes = null): TaskTestScenario
+    {
+        $scenario->verify($reviewer, $passed, $notes);
+
+        $type = $passed ? TaskActivity::TYPE_TEST_VERIFIED : TaskActivity::TYPE_TEST_FAILED;
+        $status = $passed ? 'passed' : 'failed';
+
+        TaskActivity::create([
+            'task_id' => $scenario->task_id,
+            'user_id' => $reviewer->id,
+            'type' => $type,
+            'description' => "Test {$status}: {$scenario->title}",
+            'metadata' => ['scenario_id' => $scenario->id, 'passed' => $passed],
+        ]);
+
+        // Award/deduct points
+        $developer = $scenario->completedBy;
+        if ($developer) {
+            $assignee = TaskAssignee::where('task_id', $scenario->task_id)
+                ->where('user_id', $developer->id)
+                ->first();
+            
+            if ($assignee) {
+                $passed ? $assignee->addPoints(1) : $assignee->deductPoints(1);
+            }
+        }
+
+        return $scenario->fresh();
+    }
+
+    /**
+     * Add a comment to a task.
+     */
+    public function addComment(Task $task, User $user, string $comment, bool $isInternal = false): TaskActivity
+    {
+        return TaskActivity::logComment($task, $user, $comment, $isInternal);
+    }
+
+    /**
+     * Get task activities.
+     */
+    public function getActivities(Task $task, bool $includeInternal = false, int $limit = 50): Collection
+    {
+        $query = $task->activities();
+        
+        if (!$includeInternal) {
+            $query->where('is_internal', false);
+        }
+
+        return $query->with('user')->limit($limit)->get();
+    }
+
+    /**
+     * Get all available tags.
+     */
+    public function getAllTags(): Collection
+    {
+        return Tag::ofType('task')->orderBy('name')->get();
+    }
+
+
+    /**
+     * Get tasks assigned to a user (via task_assignees).
      */
     public function getTasksForUser(int $userId, int $perPage = 15): LengthAwarePaginator
     {
         return Task::query()
-            ->where('assigned_to', $userId)
-            ->with(['project', 'parent'])
+            ->whereHas('assignees', fn($q) => $q->where('user_id', $userId))
+            ->with(['project', 'parent', 'tags', 'assignees.user'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     /**
      * Get task hierarchy (all ancestors and descendants).
-     *
-     * @param Task $task
-     * @return array<string, mixed>
      */
     public function getTaskHierarchy(Task $task): array
     {
         return [
-            'task' => $task->load(['assignee', 'project']),
+            'task' => $task->load(['assignee', 'project', 'tags', 'assignees.user']),
             'ancestors' => $task->getAllAncestors()->load('assignee'),
             'children' => $this->loadAllDescendants($task),
         ];
@@ -219,18 +386,52 @@ class TaskService
 
     /**
      * Recursively load all descendants of a task.
-     *
-     * @param Task $task
-     * @return Collection<int, Task>
      */
     private function loadAllDescendants(Task $task): Collection
     {
-        $children = $task->children()->with('assignee')->get();
+        $children = $task->children()->with(['assignee', 'tags', 'assignees.user'])->get();
 
         foreach ($children as $child) {
             $child->setRelation('children', $this->loadAllDescendants($child));
         }
 
         return $children;
+    }
+
+    /**
+     * Create a weekly task under a main task.
+     */
+    public function createWeeklyTask(Task $mainTask, array $data, User $user): Task
+    {
+        $data['parentId'] = $mainTask->id;
+        $data['projectId'] = $mainTask->project_id;
+        $data['type'] = TaskType::WEEKLY->value;
+
+        return $this->createTask($data, $user);
+    }
+
+    /**
+     * Create a subtask under a weekly task.
+     */
+    public function createSubtask(Task $weeklyTask, array $data, User $user): Task
+    {
+        $data['parentId'] = $weeklyTask->id;
+        $data['projectId'] = $weeklyTask->project_id;
+        $data['type'] = TaskType::SUBTASK->value;
+
+        return $this->createTask($data, $user);
+    }
+
+    /**
+     * Get user points summary for a project.
+     */
+    public function getUserPointsSummary(int $projectId): Collection
+    {
+        return TaskAssignee::query()
+            ->whereHas('task', fn($q) => $q->where('project_id', $projectId))
+            ->selectRaw('user_id, SUM(points_earned) as total_points')
+            ->groupBy('user_id')
+            ->with('user:id,name,email')
+            ->get();
     }
 }

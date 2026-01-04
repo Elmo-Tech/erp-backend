@@ -6,9 +6,18 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Tasks\StoreTaskRequest;
 use App\Http\Requests\V1\Tasks\UpdateTaskRequest;
+use App\Http\Requests\V1\Tasks\AddAssigneeRequest;
+use App\Http\Requests\V1\Tasks\StoreTestScenarioRequest;
+use App\Http\Requests\V1\Tasks\VerifyTestScenarioRequest;
+use App\Http\Requests\V1\Tasks\AddCommentRequest;
 use App\Http\Resources\V1\Tasks\TaskCollection;
 use App\Http\Resources\V1\Tasks\TaskResource;
+use App\Http\Resources\V1\Tasks\TaskAssigneeResource;
+use App\Http\Resources\V1\Tasks\TaskTestScenarioResource;
+use App\Http\Resources\V1\Tasks\TaskActivityResource;
+use App\Http\Resources\V1\Tasks\TagResource;
 use App\Models\Task;
+use App\Models\TaskTestScenario;
 use App\Services\Tasks\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -572,6 +581,291 @@ class TaskController extends Controller
         return ApiResponse::success(
             new TaskCollection($tasks),
             'Project tasks retrieved successfully'
+        );
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/tags",
+     *     operationId="getTags",
+     *     tags={"Tasks"},
+     *     summary="Get all available tags",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Tags retrieved successfully")
+     * )
+     */
+    public function tags(): JsonResponse
+    {
+        $tags = $this->taskService->getAllTags();
+
+        return ApiResponse::success(
+            TagResource::collection($tags),
+            'Tags retrieved successfully'
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/tasks/{task}/assignees",
+     *     operationId="addTaskAssignee",
+     *     tags={"Tasks"},
+     *     summary="Add an assignee to a task",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"userId", "role"},
+     *             @OA\Property(property="userId", type="integer"),
+     *             @OA\Property(property="role", type="string", enum={"developer", "reviewer", "lead"}),
+     *             @OA\Property(property="isPrimary", type="boolean")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Assignee added successfully")
+     * )
+     */
+    public function addAssignee(AddAssigneeRequest $request, Task $task): JsonResponse
+    {
+        return DB::transaction(function () use ($request, $task) {
+            $data = $request->validated();
+            $user = $request->user();
+
+            $assignee = $this->taskService->addAssignee(
+                $task,
+                $data['userId'],
+                $data['role'],
+                $data['isPrimary'] ?? false,
+                $user
+            );
+
+            return ApiResponse::success(
+                new TaskAssigneeResource($assignee),
+                'Assignee added successfully',
+                201
+            );
+        });
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/tasks/{task}/assignees/{userId}",
+     *     operationId="removeTaskAssignee",
+     *     tags={"Tasks"},
+     *     summary="Remove an assignee from a task",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Assignee removed successfully")
+     * )
+     */
+    public function removeAssignee(Request $request, Task $task, int $userId): JsonResponse
+    {
+        $user = $request->user();
+        $removed = $this->taskService->removeAssignee($task, $userId, $user);
+
+        if (!$removed) {
+            return ApiResponse::error('Assignee not found', 404);
+        }
+
+        return ApiResponse::success(null, 'Assignee removed successfully');
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/tasks/{task}/test-scenarios",
+     *     operationId="getTaskTestScenarios",
+     *     tags={"Tasks"},
+     *     summary="Get test scenarios for a task",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Test scenarios retrieved successfully")
+     * )
+     */
+    public function testScenarios(Task $task): JsonResponse
+    {
+        $task->load(['testScenarios.completedBy', 'testScenarios.verifiedBy']);
+
+        return ApiResponse::success(
+            TaskTestScenarioResource::collection($task->testScenarios),
+            'Test scenarios retrieved successfully'
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/tasks/{task}/test-scenarios",
+     *     operationId="addTaskTestScenario",
+     *     tags={"Tasks"},
+     *     summary="Add a test scenario to a task",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title"},
+     *             @OA\Property(property="title", type="string"),
+     *             @OA\Property(property="description", type="string"),
+     *             @OA\Property(property="expectedResult", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Test scenario added successfully")
+     * )
+     */
+    public function addTestScenario(StoreTestScenarioRequest $request, Task $task): JsonResponse
+    {
+        return DB::transaction(function () use ($request, $task) {
+            $data = $request->validated();
+            $user = $request->user();
+
+            $scenario = $this->taskService->addTestScenario($task, $data, $user);
+
+            return ApiResponse::success(
+                new TaskTestScenarioResource($scenario->load(['completedBy', 'verifiedBy'])),
+                'Test scenario added successfully',
+                201
+            );
+        });
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/test-scenarios/{scenario}/complete",
+     *     operationId="completeTestScenario",
+     *     tags={"Tasks"},
+     *     summary="Mark a test scenario as completed by developer",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Test scenario completed successfully")
+     * )
+     */
+    public function completeTestScenario(Request $request, TaskTestScenario $scenario): JsonResponse
+    {
+        return DB::transaction(function () use ($request, $scenario) {
+            $user = $request->user();
+            $scenario = $this->taskService->completeTestScenario($scenario, $user);
+
+            return ApiResponse::success(
+                new TaskTestScenarioResource($scenario->load(['completedBy', 'verifiedBy'])),
+                'Test scenario completed successfully'
+            );
+        });
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/test-scenarios/{scenario}/verify",
+     *     operationId="verifyTestScenario",
+     *     tags={"Tasks"},
+     *     summary="Verify a test scenario by reviewer",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"passed"},
+     *             @OA\Property(property="passed", type="boolean"),
+     *             @OA\Property(property="notes", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Test scenario verified successfully")
+     * )
+     */
+    public function verifyTestScenario(VerifyTestScenarioRequest $request, TaskTestScenario $scenario): JsonResponse
+    {
+        return DB::transaction(function () use ($request, $scenario) {
+            $data = $request->validated();
+            $user = $request->user();
+
+            $scenario = $this->taskService->verifyTestScenario(
+                $scenario,
+                $user,
+                $data['passed'],
+                $data['notes'] ?? null
+            );
+
+            return ApiResponse::success(
+                new TaskTestScenarioResource($scenario->load(['completedBy', 'verifiedBy'])),
+                'Test scenario verified successfully'
+            );
+        });
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/tasks/{task}/activities",
+     *     operationId="getTaskActivities",
+     *     tags={"Tasks"},
+     *     summary="Get activity log for a task",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Activities retrieved successfully")
+     * )
+     */
+    public function activities(Request $request, Task $task): JsonResponse
+    {
+        $user = $request->user();
+        $includeInternal = $user && $user->can('view_internal_notes');
+        
+        $activities = $this->taskService->getActivities($task, $includeInternal);
+
+        return ApiResponse::success(
+            TaskActivityResource::collection($activities),
+            'Activities retrieved successfully'
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/tasks/{task}/comments",
+     *     operationId="addTaskComment",
+     *     tags={"Tasks"},
+     *     summary="Add a comment to a task",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"comment"},
+     *             @OA\Property(property="comment", type="string"),
+     *             @OA\Property(property="isInternal", type="boolean")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Comment added successfully")
+     * )
+     */
+    public function addComment(AddCommentRequest $request, Task $task): JsonResponse
+    {
+        return DB::transaction(function () use ($request, $task) {
+            $data = $request->validated();
+            $user = $request->user();
+
+            $activity = $this->taskService->addComment(
+                $task,
+                $user,
+                $data['comment'],
+                $data['isInternal'] ?? false
+            );
+
+            return ApiResponse::success(
+                new TaskActivityResource($activity->load('user')),
+                'Comment added successfully',
+                201
+            );
+        });
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/projects/{projectId}/points-summary",
+     *     operationId="getProjectPointsSummary",
+     *     tags={"Tasks"},
+     *     summary="Get user points summary for a project",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Points summary retrieved successfully")
+     * )
+     */
+    public function pointsSummary(int $projectId): JsonResponse
+    {
+        $summary = $this->taskService->getUserPointsSummary($projectId);
+
+        return ApiResponse::success(
+            $summary->map(fn($item) => [
+                'userId' => $item->user_id,
+                'userName' => $item->user?->name ?? 'Unknown',
+                'totalPoints' => (int) $item->total_points,
+            ]),
+            'Points summary retrieved successfully'
         );
     }
 }

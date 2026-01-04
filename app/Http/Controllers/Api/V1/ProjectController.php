@@ -6,6 +6,7 @@ use App\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Projects\ConvertQuotationRequest;
+use App\Http\Requests\V1\Projects\StoreDirectProjectRequest;
 use App\Http\Requests\V1\Projects\StoreProjectRequest;
 use App\Http\Requests\V1\Projects\UpdateProjectRequest;
 use App\Http\Resources\V1\Projects\ProjectCollection;
@@ -278,7 +279,7 @@ class ProjectController extends Controller
     public function show(Project $project): JsonResponse
     {
         return ApiResponse::success(
-            new ProjectResource($project->load(['client', 'quotation'])),
+            new ProjectResource($project->load(['client', 'quotation', 'members.user', 'files'])),
             'Project retrieved successfully'
         );
     }
@@ -477,6 +478,84 @@ class ProjectController extends Controller
         );
     }
 
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/projects/direct",
+     *     operationId="createDirectProject",
+     *     tags={"Projects"},
+     *     summary="Create a project directly for a client",
+     *     description="Create a new project directly for a client without a quotation",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"clientId", "title", "budget"},
+     *             @OA\Property(property="clientId", type="integer", example=1),
+     *             @OA\Property(property="title", type="string", example="Website Development"),
+     *             @OA\Property(property="description", type="string", example="Full website development project"),
+     *             @OA\Property(property="budget", type="number", example=10000.00),
+     *             @OA\Property(property="deadline", type="string", format="date", example="2025-06-30"),
+     *             @OA\Property(property="status", type="string", enum={"draft", "active", "ui_ux", "development", "testing", "completed", "on_hold", "cancelled"}, example="draft")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Project created successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Project created successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Validation failed for project creation"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function storeDirect(StoreDirectProjectRequest $request): JsonResponse
+    {
+        return DB::transaction(function () use ($request) {
+            $data = $request->validated();
+
+            $project = Project::create([
+                'client_id' => $data['clientId'],
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'budget' => $data['budget'],
+                'deadline' => $data['deadline'] ?? null,
+                'status' => $data['status'] ?? 'draft',
+                'quotation_id' => null,
+            ]);
+
+            return ApiResponse::success(
+                new ProjectResource($project->load(['client'])),
+                'Project created successfully',
+                201
+            );
+        });
+    }
 
     /**
      * @OA\Post(

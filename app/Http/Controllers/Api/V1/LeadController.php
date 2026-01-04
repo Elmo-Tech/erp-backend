@@ -12,6 +12,7 @@ use App\Models\Lead;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class LeadController extends Controller
@@ -113,13 +114,13 @@ class LeadController extends Controller
         $leads = QueryBuilder::for(Lead::class)
             ->allowedFilters([
                 'status',
-                'search' => function ($query, $value) {
+                AllowedFilter::callback('search', function ($query, $value) {
                     $query->where(function ($q) use ($value) {
                         $q->where('name', 'like', "%{$value}%")
                           ->orWhere('email', 'like', "%{$value}%")
                           ->orWhere('company', 'like', "%{$value}%");
                     });
-                }
+                })
             ])
             ->defaultSort('-created_at')
             ->paginate($request->get('perPage', 15));

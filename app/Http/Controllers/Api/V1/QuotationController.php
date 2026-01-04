@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use OpenApi\Annotations as OA;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class QuotationController extends Controller
@@ -128,7 +129,7 @@ class QuotationController extends Controller
             ->with('lead')
             ->allowedFilters([
                 'status',
-                'lead_id' => 'leadId'
+                AllowedFilter::exact('lead_id')
             ])
             ->defaultSort('-created_at')
             ->paginate($request->get('perPage', 15));

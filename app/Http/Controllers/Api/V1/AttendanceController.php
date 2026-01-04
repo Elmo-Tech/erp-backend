@@ -171,4 +171,126 @@ class AttendanceController extends Controller
             );
         }
     }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/attendance/history",
+     *     operationId="getAttendanceHistory",
+     *     tags={"Attendance"},
+     *     summary="Get attendance history for current user",
+     *     description="Retrieve paginated attendance history for the authenticated user with optional date filtering",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         required=false,
+     *         description="Page number for pagination",
+     *         @OA\Schema(type="integer", minimum=1, example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="perPage",
+     *         in="query",
+     *         required=false,
+     *         description="Number of records per page",
+     *         @OA\Schema(type="integer", minimum=1, maximum=100, example=10)
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateFrom",
+     *         in="query",
+     *         required=false,
+     *         description="Start date for filtering (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateTo",
+     *         in="query",
+     *         required=false,
+     *         description="End date for filtering (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-12-31")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Attendance history retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Attendance history retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="attendances",
+     *                     type="array",
+     *                     @OA\Items(ref="#/components/schemas/AttendanceResource")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="pagination",
+     *                     type="object",
+     *                     @OA\Property(property="total", type="integer", example=50),
+     *                     @OA\Property(property="count", type="integer", example=10),
+     *                     @OA\Property(property="perPage", type="integer", example=10),
+     *                     @OA\Property(property="currentPage", type="integer", example=1),
+     *                     @OA\Property(property="totalPages", type="integer", example=5)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function history(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        // Validate query parameters
+        $request->validate([
+            'page' => 'integer|min:1',
+            'perPage' => 'integer|min:1|max:100',
+            'dateFrom' => 'date_format:Y-m-d',
+            'dateTo' => 'date_format:Y-m-d|after_or_equal:dateFrom',
+        ]);
+
+        $perPage = $request->get('perPage', 10);
+        $page = $request->get('page', 1);
+
+        // Build query
+        $query = Attendance::where('user_id', $user->id)
+            ->orderBy('date', 'desc');
+
+        // Apply date filters if provided
+        if ($request->has('dateFrom')) {
+            $query->whereDate('date', '>=', $request->get('dateFrom'));
+        }
+
+        if ($request->has('dateTo')) {
+            $query->whereDate('date', '<=', $request->get('dateTo'));
+        }
+
+        // Paginate results
+        $attendances = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return ApiResponse::success([
+            'attendances' => AttendanceResource::collection($attendances->items()),
+            'pagination' => [
+                'total' => $attendances->total(),
+                'count' => $attendances->count(),
+                'perPage' => $attendances->perPage(),
+                'currentPage' => $attendances->currentPage(),
+                'totalPages' => $attendances->lastPage(),
+            ],
+        ], 'Attendance history retrieved successfully');
+    }
 }

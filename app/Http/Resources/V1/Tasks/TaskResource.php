@@ -5,67 +5,101 @@ namespace App\Http\Resources\V1\Tasks;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @OA\Schema(
+ *     schema="TaskResource",
+ *     type="object",
+ *     @OA\Property(property="taskId", type="integer", example=1),
+ *     @OA\Property(property="projectId", type="integer", example=1),
+ *     @OA\Property(property="parentId", type="integer", nullable=true, example=null),
+ *     @OA\Property(property="title", type="string", example="Implement user authentication"),
+ *     @OA\Property(property="description", type="string", nullable=true),
+ *     @OA\Property(property="acceptanceCriteria", type="string", nullable=true),
+ *     @OA\Property(property="status", type="string", enum={"todo", "in_progress", "review", "testing", "completed"}),
+ *     @OA\Property(property="type", type="string", enum={"main", "weekly", "subtask"}),
+ *     @OA\Property(property="priority", type="string", enum={"low", "medium", "high", "urgent"}),
+ *     @OA\Property(property="dueDate", type="string", format="date", nullable=true),
+ *     @OA\Property(property="startDate", type="string", format="date", nullable=true),
+ *     @OA\Property(property="sprintNumber", type="integer", nullable=true),
+ *     @OA\Property(property="estimatedHours", type="number", format="float", example=8.5),
+ *     @OA\Property(property="totalTimeSpent", type="integer", example=120),
+ *     @OA\Property(property="reopenCount", type="integer", example=0),
+ *     @OA\Property(property="testCompletionPercentage", type="number", format="float", example=75.5),
+ *     @OA\Property(property="assignee", type="object", nullable=true),
+ *     @OA\Property(property="assignees", type="array", @OA\Items(ref="#/components/schemas/TaskAssigneeResource")),
+ *     @OA\Property(property="tags", type="array", @OA\Items(ref="#/components/schemas/TagResource")),
+ *     @OA\Property(property="children", type="array", @OA\Items(ref="#/components/schemas/TaskResource")),
+ *     @OA\Property(property="createdAt", type="string", format="date-time"),
+ *     @OA\Property(property="updatedAt", type="string", format="date-time")
+ * )
+ */
 class TaskResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     * 
-     * Transforms all fields to camelCase format.
-     * Conditionally includes internalReviewerNotes based on view_internal_notes permission.
-     * 
-     * Requirements: 4.2, 4.3, 4.4, 8.4
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
-        $data = [
-            'taskId' => $this->id ?? 0,
-            'projectId' => $this->project_id ?? 0,
+        $user = $request->user();
+        $canViewInternal = $user && $user->can('view_internal_notes');
+
+        return [
+            'taskId' => $this->id,
+            'projectId' => $this->project_id,
             'parentId' => $this->parent_id,
             'assignedTo' => $this->assigned_to,
-            'title' => $this->title ?? '',
+            'title' => $this->title,
             'description' => $this->description ?? '',
-            'status' => $this->status?->value ?? '',
-            'statusLabel' => $this->status?->label() ?? '',
-            'estimatedHours' => (float) ($this->estimated_hours ?? 0.0),
-            'totalTimeSpent' => $this->total_time_spent ?? 0,
-            'reopenCount' => $this->reopen_count ?? 0,
-            'createdBy' => $this->created_by ?? 0,
-            'updatedBy' => $this->updated_by ?? 0,
+            'acceptanceCriteria' => $this->acceptance_criteria ?? '',
+            'status' => $this->status?->value ?? 'todo',
+            'type' => $this->type?->value ?? 'main',
+            'priority' => $this->priority?->value ?? 'medium',
+            'dueDate' => $this->due_date?->format('Y-m-d'),
+            'startDate' => $this->start_date?->format('Y-m-d'),
+            'sprintNumber' => $this->sprint_number,
+            'estimatedHours' => (float) ($this->estimated_hours ?? 0),
+            'totalTimeSpent' => (int) $this->total_time_spent,
+            'reopenCount' => (int) $this->reopen_count,
+            'testCompletionPercentage' => $this->getTestCompletionPercentage(),
+            
+            // Internal notes - only for authorized users
+            'internalReviewerNotes' => $canViewInternal ? ($this->internal_reviewer_notes ?? '') : null,
+            
+            // Relationships
+            'assignee' => $this->whenLoaded('assignee', fn() => $this->assignee ? [
+                'userId' => $this->assignee->id,
+                'name' => $this->assignee->name,
+                'email' => $this->assignee->email,
+                'avatar' => $this->assignee->avatar ?? '',
+            ] : null),
+            
+            'assignees' => $this->whenLoaded('assignees', fn() => 
+                TaskAssigneeResource::collection($this->assignees)
+            ),
+            
+            'tags' => $this->whenLoaded('tags', fn() => 
+                TagResource::collection($this->tags)
+            ),
+            
+            'testScenarios' => $this->whenLoaded('testScenarios', fn() => 
+                TaskTestScenarioResource::collection($this->testScenarios)
+            ),
+            
+            'children' => $this->whenLoaded('children', fn() => 
+                TaskResource::collection($this->children)
+            ),
+            
+            'project' => $this->whenLoaded('project', fn() => [
+                'projectId' => $this->project->id,
+                'title' => $this->project->title,
+            ]),
+            
+            'parent' => $this->whenLoaded('parent', fn() => $this->parent ? [
+                'taskId' => $this->parent->id,
+                'title' => $this->parent->title,
+            ] : null),
+            
             'createdAt' => $this->created_at?->toISOString() ?? '',
             'updatedAt' => $this->updated_at?->toISOString() ?? '',
-            // Include assignee relationship when loaded
-            'assignee' => $this->whenLoaded('assignee', function () {
-                return [
-                    'userId' => $this->assignee->id ?? 0,
-                    'name' => $this->assignee->name ?? '',
-                    'email' => $this->assignee->email ?? '',
-                ];
-            }),
-            // Include children relationship when loaded (for recursive hierarchy)
-            'children' => $this->whenLoaded('children', function () {
-                return TaskResource::collection($this->children);
-            }),
-            // Include parent relationship when loaded
-            'parent' => $this->whenLoaded('parent', function () {
-                return new TaskResource($this->parent);
-            }),
-            // Include project relationship when loaded
-            'project' => $this->whenLoaded('project', function () {
-                return [
-                    'projectId' => $this->project->id ?? 0,
-                    'title' => $this->project->title ?? '',
-                ];
-            }),
+            'createdBy' => $this->created_by,
+            'updatedBy' => $this->updated_by,
         ];
-
-        // Conditionally include internal notes based on permission
-        // Requirements: 4.2, 4.3 - Only include if user has view_internal_notes permission
-        if ($request->user()?->can('view_internal_notes')) {
-            $data['internalReviewerNotes'] = $this->internal_reviewer_notes ?? '';
-        }
-
-        return $data;
     }
 }

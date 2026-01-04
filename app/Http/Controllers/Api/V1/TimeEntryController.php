@@ -16,6 +16,7 @@ use App\Services\Sales\TimeTrackingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class TimeEntryController extends Controller
@@ -131,14 +132,14 @@ class TimeEntryController extends Controller
         $timeEntries = QueryBuilder::for(TimeEntry::class)
             ->with(['trackable', 'user'])
             ->allowedFilters([
-                'trackable_type' => 'trackableType',
-                'trackable_id' => 'trackableId',
-                'start_date' => function ($query, $value) {
+                AllowedFilter::exact('trackable_type'),
+                AllowedFilter::exact('trackable_id'),
+                AllowedFilter::callback('start_date', function ($query, $value) {
                     $query->whereDate('start_time', '>=', $value);
-                },
-                'end_date' => function ($query, $value) {
+                }),
+                AllowedFilter::callback('end_date', function ($query, $value) {
                     $query->whereDate('start_time', '<=', $value);
-                }
+                })
             ])
             ->defaultSort('-start_time')
             ->paginate($request->get('perPage', 15));

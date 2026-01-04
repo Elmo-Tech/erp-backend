@@ -99,11 +99,57 @@ class Project extends Model implements Trackable
     }
 
     /**
+     * Get all tasks for this project.
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    /**
+     * Get all files for this project.
+     */
+    public function files(): HasMany
+    {
+        return $this->hasMany(ProjectFile::class);
+    }
+
+    /**
+     * Get all members for this project.
+     */
+    public function members(): HasMany
+    {
+        return $this->hasMany(ProjectMember::class);
+    }
+
+    /**
      * Get all time entries for this trackable entity.
      */
     public function timeEntries(): MorphMany
     {
         return $this->morphMany(TimeEntry::class, 'trackable');
+    }
+
+    /**
+     * Calculate project progress based on completed tasks
+     */
+    public function getProgressAttribute(): float
+    {
+        $totalTasks = $this->tasks()->count();
+        if ($totalTasks === 0) {
+            return 0;
+        }
+        
+        $completedTasks = $this->tasks()->where('status', 'completed')->count();
+        return round(($completedTasks / $totalTasks) * 100, 1);
+    }
+
+    /**
+     * Get total time spent on project in minutes
+     */
+    public function getTotalTimeSpentAttribute(): int
+    {
+        return $this->tasks()->sum('total_time_spent') ?? 0;
     }
 
     /**
