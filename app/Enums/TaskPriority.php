@@ -2,6 +2,7 @@
 
 namespace App\Enums;
 
+// erp-backend/app/Enums/TaskPriority.php
 enum TaskPriority: string
 {
     case LOW = 'low';
