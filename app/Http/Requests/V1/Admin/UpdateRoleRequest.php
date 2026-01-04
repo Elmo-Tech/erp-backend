@@ -31,7 +31,7 @@ class UpdateRoleRequest extends FormRequest
 
         return [
             'name' => [
-                'required',
+                'sometimes', // Make name optional - only validate if provided
                 'string',
                 'max:255',
                 Rule::unique('roles', 'name')->ignore($roleId),
@@ -56,7 +56,6 @@ class UpdateRoleRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'The role name is required.',
             'name.string' => 'The role name must be a string.',
             'name.max' => 'The role name may not be greater than 255 characters.',
             'name.unique' => 'A role with this name already exists.',
@@ -151,12 +150,15 @@ class UpdateRoleRequest extends FormRequest
                 }
 
                 // Prevent renaming to protected role names (unless it's already that name)
-                $protectedNames = ['admin', 'client', 'super-admin'];
-                if (in_array($this->name, $protectedNames) && $role->name !== $this->name) {
-                    $validator->errors()->add(
-                        'name',
-                        'Cannot rename role to a protected name. Protected names: ' . implode(', ', $protectedNames)
-                    );
+                // Only check if name is provided
+                if ($this->has('name') && $this->name) {
+                    $protectedNames = ['admin', 'client', 'super-admin'];
+                    if (in_array($this->name, $protectedNames) && $role->name !== $this->name) {
+                        $validator->errors()->add(
+                            'name',
+                            'Cannot rename role to a protected name. Protected names: ' . implode(', ', $protectedNames)
+                        );
+                    }
                 }
             } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
                 $validator->errors()->add(

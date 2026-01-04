@@ -490,9 +490,11 @@ class AdminRoleController extends Controller
             ];
 
             // Update the role
-            $roleModel->update([
-                'name' => $validatedData['name'],
-            ]);
+            if (isset($validatedData['name'])) {
+                $roleModel->update([
+                    'name' => $validatedData['name'],
+                ]);
+            }
 
             // Update permissions
             if (isset($validatedData['permissions'])) {
