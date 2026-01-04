@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\V1\Attendance\AttendanceResource;
+use App\Http\Resources\V1\HR\AttendanceResource;
+use App\Http\Resources\V1\HR\AttendanceCollection;
 use App\Models\Attendance;
+use App\Services\HR\AttendanceService;
 use App\Services\Sales\TimeTrackingService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -22,7 +24,8 @@ use OpenApi\Annotations as OA;
 class AttendanceController extends Controller
 {
     public function __construct(
-        private TimeTrackingService $timeTrackingService
+        private TimeTrackingService $timeTrackingService,
+        private AttendanceService $attendanceService
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -33,38 +36,8 @@ class AttendanceController extends Controller
      *     operationId="getTodayAttendance",
      *     tags={"Attendance"},
      *     summary="Get current user's attendance for today",
-     *     description="Retrieve the authenticated user's attendance record for the current date, including active timer status and total worked minutes",
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="Accept-Language",
-     *         in="header",
-     *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Today's attendance retrieved successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Today's attendance retrieved successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="attendance", ref="#/components/schemas/AttendanceResource", nullable=true),
-     *                 @OA\Property(property="hasActiveTimer", type="boolean", example=false),
-     *                 @OA\Property(property="totalWorkedMinutes", type="integer", example=240)
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     )
+     *     @OA\Response(response=200, description="Success")
      * )
      */
     public function today(Request $request): JsonResponse
@@ -72,15 +45,9 @@ class AttendanceController extends Controller
         $user = $request->user();
         $today = Carbon::today();
 
-        // Get today's attendance record
-        $attendance = Attendance::where('user_id', $user->id)
-            ->whereDate('date', $today)
-            ->first();
-
-        // Check if user has an active timer
+        $attendance = $this->attendanceService->getTodayAttendance($user);
         $activeTimer = $this->timeTrackingService->getActiveTimer($user);
 
-        // Calculate total worked minutes for today
         $totalWorkedMinutes = \App\Models\TimeEntry::where('user_id', $user->id)
             ->whereDate('start_time', $today)
             ->whereNotNull('end_time')
@@ -90,7 +57,9 @@ class AttendanceController extends Controller
             'attendance' => $attendance ? new AttendanceResource($attendance) : null,
             'hasActiveTimer' => $activeTimer !== null,
             'totalWorkedMinutes' => (int) $totalWorkedMinutes,
-        ], "Today's attendance retrieved successfully");
+            'expectedClockOut' => $user->expected_clock_out,
+            'graceDaysRemaining' => max(0, $user->grace_days_allowed - $user->grace_days_used),
+        ]);
     }
 
     /**
@@ -99,77 +68,24 @@ class AttendanceController extends Controller
      *     operationId="clockOut",
      *     tags={"Attendance"},
      *     summary="Clock out for the day",
-     *     description="Set clock_out time for today's attendance record and calculate idle minutes. Requires an existing attendance record for today.",
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="Accept-Language",
-     *         in="header",
-     *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Clocked out successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Clocked out successfully"),
-     *             @OA\Property(property="data", ref="#/components/schemas/AttendanceResource")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="No attendance record found for today",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="No attendance record found for today. Start a timer first to clock in.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Already clocked out",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Already clocked out for today")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     )
+     *     @OA\Response(response=200, description="Success")
      * )
      */
     public function clockOut(Request $request): JsonResponse
     {
         $user = $request->user();
 
-        try {
-            // Check if already clocked out
-            $today = Carbon::today();
-            $existingAttendance = Attendance::where('user_id', $user->id)
-                ->whereDate('date', $today)
-                ->first();
+        $attendance = $this->attendanceService->clockOut($user);
 
-            if ($existingAttendance && $existingAttendance->clock_out !== null) {
-                return ApiResponse::error('Already clocked out for today', 400);
-            }
-
-            $attendance = $this->timeTrackingService->clockOut($user);
-
-            return ApiResponse::success(
-                new AttendanceResource($attendance),
-                'Clocked out successfully'
-            );
-        } catch (ModelNotFoundException $e) {
-            return ApiResponse::error(
-                'No attendance record found for today. Start a timer first to clock in.',
-                404
-            );
+        if (!$attendance) {
+            return ApiResponse::error(__('messages.no_attendance_record'), 404);
         }
+
+        return ApiResponse::success(
+            new AttendanceResource($attendance),
+            __('messages.clocked_out')
+        );
     }
 
     /**
@@ -178,119 +94,108 @@ class AttendanceController extends Controller
      *     operationId="getAttendanceHistory",
      *     tags={"Attendance"},
      *     summary="Get attendance history for current user",
-     *     description="Retrieve paginated attendance history for the authenticated user with optional date filtering",
      *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="Accept-Language",
-     *         in="header",
-     *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
-     *     ),
-     *     @OA\Parameter(
-     *         name="page",
-     *         in="query",
-     *         required=false,
-     *         description="Page number for pagination",
-     *         @OA\Schema(type="integer", minimum=1, example=1)
-     *     ),
-     *     @OA\Parameter(
-     *         name="perPage",
-     *         in="query",
-     *         required=false,
-     *         description="Number of records per page",
-     *         @OA\Schema(type="integer", minimum=1, maximum=100, example=10)
-     *     ),
-     *     @OA\Parameter(
-     *         name="dateFrom",
-     *         in="query",
-     *         required=false,
-     *         description="Start date for filtering (YYYY-MM-DD)",
-     *         @OA\Schema(type="string", format="date", example="2024-01-01")
-     *     ),
-     *     @OA\Parameter(
-     *         name="dateTo",
-     *         in="query",
-     *         required=false,
-     *         description="End date for filtering (YYYY-MM-DD)",
-     *         @OA\Schema(type="string", format="date", example="2024-12-31")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Attendance history retrieved successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Attendance history retrieved successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(
-     *                     property="attendances",
-     *                     type="array",
-     *                     @OA\Items(ref="#/components/schemas/AttendanceResource")
-     *                 ),
-     *                 @OA\Property(
-     *                     property="pagination",
-     *                     type="object",
-     *                     @OA\Property(property="total", type="integer", example=50),
-     *                     @OA\Property(property="count", type="integer", example=10),
-     *                     @OA\Property(property="perPage", type="integer", example=10),
-     *                     @OA\Property(property="currentPage", type="integer", example=1),
-     *                     @OA\Property(property="totalPages", type="integer", example=5)
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     )
+     *     @OA\Response(response=200, description="Success")
      * )
      */
     public function history(Request $request): JsonResponse
     {
         $user = $request->user();
-        
-        // Validate query parameters
-        $request->validate([
-            'page' => 'integer|min:1',
-            'perPage' => 'integer|min:1|max:100',
-            'dateFrom' => 'date_format:Y-m-d',
-            'dateTo' => 'date_format:Y-m-d|after_or_equal:dateFrom',
-        ]);
+        $perPage = (int) $request->query('perPage', 15);
 
-        $perPage = $request->get('perPage', 10);
-        $page = $request->get('page', 1);
+        $attendances = $this->attendanceService->getUserAttendance(
+            $user,
+            $request->query('dateFrom'),
+            $request->query('dateTo'),
+            $perPage
+        );
 
-        // Build query
-        $query = Attendance::where('user_id', $user->id)
-            ->orderBy('date', 'desc');
+        return ApiResponse::success(new AttendanceCollection($attendances));
+    }
 
-        // Apply date filters if provided
-        if ($request->has('dateFrom')) {
-            $query->whereDate('date', '>=', $request->get('dateFrom'));
+    /**
+     * @OA\Get(
+     *     path="/api/v1/attendance/summary",
+     *     operationId="getAttendanceSummary",
+     *     tags={"Attendance"},
+     *     summary="Get monthly attendance summary",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="year", in="query", @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="month", in="query", @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Success")
+     * )
+     */
+    public function summary(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $year = (int) $request->query('year', date('Y'));
+        $month = (int) $request->query('month', date('m'));
+
+        $summary = $this->attendanceService->getMonthlySummary($user, $year, $month);
+
+        return ApiResponse::success($summary);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/attendance/all",
+     *     operationId="getAllAttendance",
+     *     tags={"Attendance"},
+     *     summary="Get all employees attendance (admin)",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Success")
+     * )
+     */
+    public function all(Request $request): JsonResponse
+    {
+        if (!$request->user()->can('view_all_attendance')) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
-        if ($request->has('dateTo')) {
-            $query->whereDate('date', '<=', $request->get('dateTo'));
+        $filters = [
+            'userId' => $request->query('filter.userId'),
+            'startDate' => $request->query('filter.startDate'),
+            'endDate' => $request->query('filter.endDate'),
+            'date' => $request->query('filter.date'),
+        ];
+
+        $perPage = (int) $request->query('perPage', 15);
+        $attendances = $this->attendanceService->getAllAttendance($filters, $perPage);
+
+        return ApiResponse::success(new AttendanceCollection($attendances));
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/api/v1/attendance/{id}",
+     *     operationId="updateAttendance",
+     *     tags={"Attendance"},
+     *     summary="Update attendance record (admin)",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Success")
+     * )
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        if (!$request->user()->can('manage_attendance')) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
-        // Paginate results
-        $attendances = $query->paginate($perPage, ['*'], 'page', $page);
+        $attendance = Attendance::find($id);
 
-        return ApiResponse::success([
-            'attendances' => AttendanceResource::collection($attendances->items()),
-            'pagination' => [
-                'total' => $attendances->total(),
-                'count' => $attendances->count(),
-                'perPage' => $attendances->perPage(),
-                'currentPage' => $attendances->currentPage(),
-                'totalPages' => $attendances->lastPage(),
-            ],
-        ], 'Attendance history retrieved successfully');
+        if (!$attendance) {
+            return ApiResponse::error(__('messages.attendance_not_found'), 404);
+        }
+
+        $attendance = $this->attendanceService->updateAttendance(
+            $attendance,
+            $request->all(),
+            $request->user()
+        );
+
+        return ApiResponse::success(
+            new AttendanceResource($attendance),
+            __('messages.attendance_updated')
+        );
     }
 }

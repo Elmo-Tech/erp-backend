@@ -9,9 +9,11 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
 use App\Http\Controllers\Api\V1\Client\ClientProjectController;
 use App\Http\Controllers\Api\V1\ClientController;
+use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LeadController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectFileController;
 use App\Http\Controllers\Api\V1\ProjectHistoryController;
@@ -22,6 +24,7 @@ use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -34,6 +37,9 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group.
 |
 */
+
+// Broadcasting Auth Route (for WebSocket authentication)
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 Route::prefix('v1')->group(function () {
     // Health check endpoint
@@ -72,7 +78,16 @@ Route::prefix('v1')->group(function () {
     // All routes have auth:sanctum and locale middleware applied in controller
     Route::get('attendance/today', [AttendanceController::class, 'today'])->name('attendance.today');
     Route::get('attendance/history', [AttendanceController::class, 'history'])->name('attendance.history');
+    Route::get('attendance/summary', [AttendanceController::class, 'summary'])->name('attendance.summary');
     Route::post('attendance/clock-out', [AttendanceController::class, 'clockOut'])->name('attendance.clock-out');
+    Route::get('attendance/all', [AttendanceController::class, 'all'])->name('attendance.all');
+    Route::put('attendance/{id}', [AttendanceController::class, 'update'])->name('attendance.update');
+
+    // Employee Management Routes
+    Route::apiResource('employees', EmployeeController::class)->except(['destroy']);
+    Route::get('employees/{id}/performance', [EmployeeController::class, 'performance'])->name('employees.performance');
+    Route::post('employees/{id}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
+    Route::post('employees/{id}/activate', [EmployeeController::class, 'activate'])->name('employees.activate');
 
     // Project Management Routes
     // All routes have auth:sanctum and locale middleware applied in controllers
@@ -154,6 +169,14 @@ Route::prefix('v1')->group(function () {
 
     // Dashboard Routes
     Route::get('dashboard/overview', [DashboardController::class, 'overview'])->name('dashboard.overview');
+
+    // Notification Routes
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+        Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+    });
 
     // Admin Routes
     // All routes have auth:sanctum and locale middleware applied in controllers

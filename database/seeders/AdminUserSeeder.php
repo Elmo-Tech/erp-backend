@@ -118,6 +118,14 @@ class AdminUserSeeder extends Seeder
             'view_all_attendance',
             'clock_out',
             
+            // Employee management
+            'manage_employees',
+            'view_employees',
+            'create_employees',
+            'edit_employees',
+            'view_employee_salary',
+            'view_employee_performance',
+            
             // Dashboard
             'view_dashboard',
             'view_dashboard_overview',
@@ -256,6 +264,12 @@ class AdminUserSeeder extends Seeder
                 'name' => 'Mahmoud Saber',
                 'password' => 'Mahmoud_2091.',
                 'email_verified_at' => now(),
+                'is_active' => true,
+                'is_employee' => true,
+                'work_hours_per_day' => 8,
+                'work_start_time' => '10:00:00',
+                'grace_days_allowed' => 5,
+                'grace_days_used' => 0,
             ]
         );
 

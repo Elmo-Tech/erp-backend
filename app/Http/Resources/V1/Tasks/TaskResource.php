@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V1\Tasks;
 
+use App\Enums\TaskType;
+use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -27,6 +29,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *     @OA\Property(property="testCompletionPercentage", type="number", format="float", example=75.5),
  *     @OA\Property(property="assignee", type="object", nullable=true),
  *     @OA\Property(property="assignees", type="array", @OA\Items(ref="#/components/schemas/TaskAssigneeResource")),
+ *     @OA\Property(property="teamAssignees", type="array", @OA\Items(ref="#/components/schemas/TaskAssigneeResource"), description="Available team members from Main Task (for Weekly/Subtasks only)"),
  *     @OA\Property(property="tags", type="array", @OA\Items(ref="#/components/schemas/TagResource")),
  *     @OA\Property(property="children", type="array", @OA\Items(ref="#/components/schemas/TaskResource")),
  *     @OA\Property(property="createdAt", type="string", format="date-time"),
@@ -58,6 +61,8 @@ class TaskResource extends JsonResource
             'totalTimeSpent' => (int) $this->total_time_spent,
             'reopenCount' => (int) $this->reopen_count,
             'testCompletionPercentage' => $this->getTestCompletionPercentage(),
+            'canStartTimer' => $this->canStartTimer(),
+            'hasChildren' => $this->hasChildren(),
             
             // Internal notes - only for authorized users
             'internalReviewerNotes' => $canViewInternal ? ($this->internal_reviewer_notes ?? '') : null,
@@ -73,6 +78,9 @@ class TaskResource extends JsonResource
             'assignees' => $this->whenLoaded('assignees', fn() => 
                 TaskAssigneeResource::collection($this->assignees)
             ),
+            
+            // Team assignees from Main Task (for Weekly/Subtasks to know available team members)
+            'teamAssignees' => $this->getTeamAssignees(),
             
             'tags' => $this->whenLoaded('tags', fn() => 
                 TagResource::collection($this->tags)
@@ -101,5 +109,61 @@ class TaskResource extends JsonResource
             'createdBy' => $this->created_by,
             'updatedBy' => $this->updated_by,
         ];
+    }
+
+    /**
+     * Get team assignees from the Main Task for Weekly/Subtasks.
+     * Returns null for Main Tasks (they define the team themselves).
+     */
+    private function getTeamAssignees(): ?array
+    {
+        // Main Tasks don't need teamAssignees - they ARE the team source
+        if ($this->type === TaskType::MAIN) {
+            return null;
+        }
+
+        // Find the Main Task (root ancestor)
+        $mainTask = $this->findMainTask();
+        
+        if (!$mainTask) {
+            return [];
+        }
+
+        // Load assignees if not already loaded
+        if (!$mainTask->relationLoaded('assignees')) {
+            $mainTask->load('assignees.user');
+        }
+
+        return TaskAssigneeResource::collection($mainTask->assignees)->resolve();
+    }
+
+    /**
+     * Find the Main Task (root ancestor) for this task.
+     */
+    private function findMainTask(): ?Task
+    {
+        $current = $this->resource;
+        
+        // Walk up the parent chain until we find a Main Task or reach the root
+        while ($current->parent_id !== null) {
+            $parent = Task::find($current->parent_id);
+            
+            if (!$parent) {
+                break;
+            }
+            
+            if ($parent->type === TaskType::MAIN) {
+                return $parent;
+            }
+            
+            $current = $parent;
+        }
+        
+        // If current task's parent is null and it's a Main Task, return it
+        if ($current->type === TaskType::MAIN) {
+            return $current;
+        }
+        
+        return null;
     }
 }

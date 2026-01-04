@@ -277,6 +277,8 @@ class TimeEntryController extends Controller
                 'Timer started successfully',
                 201
             );
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 422);
         } catch (\RuntimeException $e) {
             return ApiResponse::error($e->getMessage(), 400);
         }

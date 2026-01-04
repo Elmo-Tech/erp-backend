@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -27,6 +28,15 @@ class User extends Authenticatable
         'internal_hourly_cost',
         'skills',
         'is_active',
+        'is_employee',
+        'salary',
+        'work_hours_per_day',
+        'work_start_time',
+        'grace_days_allowed',
+        'grace_days_used',
+        'grace_days_reset_date',
+        'total_points',
+        'total_deductions',
     ];
 
     /**
@@ -38,6 +48,8 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'internal_hourly_cost',
+        'salary',
+        'total_deductions',
     ];
 
     /**
@@ -51,8 +63,110 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'internal_hourly_cost' => 'decimal:2',
+            'salary' => 'decimal:2',
+            'total_deductions' => 'decimal:2',
             'skills' => 'array',
+            'is_active' => 'boolean',
+            'is_employee' => 'boolean',
+            'work_hours_per_day' => 'integer',
+            'grace_days_allowed' => 'integer',
+            'grace_days_used' => 'integer',
+            'grace_days_reset_date' => 'date',
         ];
+    }
+
+    /**
+     * Scope for employees only
+     */
+    public function scopeEmployees($query)
+    {
+        return $query->where('is_employee', true);
+    }
+
+    /**
+     * Scope for non-employees (client accounts)
+     */
+    public function scopeNonEmployees($query)
+    {
+        return $query->where('is_employee', false);
+    }
+
+    /**
+     * Calculate expected clock-out time based on work hours
+     */
+    public function getExpectedClockOutAttribute(): ?string
+    {
+        if (!$this->work_start_time) {
+            return null;
+        }
+        
+        return Carbon::parse($this->work_start_time)
+            ->addHours($this->work_hours_per_day ?? 8)
+            ->format('H:i:s');
+    }
+
+    /**
+     * Check if user has remaining grace days this month
+     */
+    public function hasGraceDaysRemaining(): bool
+    {
+        $this->resetGraceDaysIfNewMonth();
+        return $this->grace_days_used < $this->grace_days_allowed;
+    }
+
+    /**
+     * Use a grace day
+     */
+    public function useGraceDay(): bool
+    {
+        $this->resetGraceDaysIfNewMonth();
+        
+        if ($this->grace_days_used >= $this->grace_days_allowed) {
+            return false;
+        }
+        
+        $this->increment('grace_days_used');
+        return true;
+    }
+
+    /**
+     * Reset grace days if it's a new month
+     */
+    public function resetGraceDaysIfNewMonth(): void
+    {
+        $now = Carbon::now();
+        $resetDate = $this->grace_days_reset_date;
+        
+        if (!$resetDate || $resetDate->month !== $now->month || $resetDate->year !== $now->year) {
+            $this->update([
+                'grace_days_used' => 0,
+                'grace_days_reset_date' => $now->startOfMonth(),
+            ]);
+        }
+    }
+
+    /**
+     * Add points to user
+     */
+    public function addPoints(int $points): void
+    {
+        $this->increment('total_points', $points);
+    }
+
+    /**
+     * Deduct points from user
+     */
+    public function deductPoints(int $points): void
+    {
+        $this->decrement('total_points', $points);
+    }
+
+    /**
+     * Add deduction amount
+     */
+    public function addDeduction(float $amount): void
+    {
+        $this->increment('total_deductions', $amount);
     }
 
     /**

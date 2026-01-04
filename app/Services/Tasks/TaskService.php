@@ -44,7 +44,11 @@ class TaskService
         }
 
         if (array_key_exists('parentId', $filters)) {
-            $query->where('parent_id', $filters['parentId']);
+            if ($filters['parentId'] === null) {
+                $query->whereNull('parent_id');
+            } else {
+                $query->where('parent_id', $filters['parentId']);
+            }
         }
 
         if (!empty($filters['tagId'])) {
@@ -103,6 +107,7 @@ class TaskService
 
     /**
      * Create a new task.
+     * For Weekly Tasks and Subtasks, assignees are inherited from the Main Task.
      */
     public function createTask(array $data, User $user): Task
     {
@@ -134,17 +139,59 @@ class TaskService
             $task->tags()->attach($data['tagIds']);
         }
 
-        // Add assignees
-        if (!empty($data['assignees'])) {
-            foreach ($data['assignees'] as $assignee) {
-                TaskAssignee::create([
-                    'task_id' => $task->id,
-                    'user_id' => $assignee['userId'],
-                    'role' => $assignee['role'] ?? 'developer',
-                    'is_primary' => $assignee['isPrimary'] ?? false,
-                    'created_by' => $user->id,
-                    'updated_by' => $user->id,
-                ]);
+        // Handle assignees based on task type
+        $taskType = $data['type'] ?? TaskType::MAIN->value;
+        
+        if ($taskType === TaskType::MAIN->value) {
+            // Main Tasks: Add assignees directly (builds the team)
+            if (!empty($data['assignees'])) {
+                foreach ($data['assignees'] as $assignee) {
+                    TaskAssignee::create([
+                        'task_id' => $task->id,
+                        'user_id' => $assignee['userId'],
+                        'role' => $assignee['role'] ?? 'developer',
+                        'is_primary' => $assignee['isPrimary'] ?? false,
+                        'created_by' => $user->id,
+                        'updated_by' => $user->id,
+                    ]);
+                }
+            }
+        } else {
+            // Weekly Tasks and Subtasks: Can have specific assignees from the Main Task's team
+            // If assignees provided, validate they're in the team and add them
+            if (!empty($data['assignees'])) {
+                $mainTask = $this->findMainTask($task);
+                $teamUserIds = $mainTask ? $mainTask->assignees()->pluck('user_id')->toArray() : [];
+                
+                foreach ($data['assignees'] as $assignee) {
+                    // Only add if user is in the Main Task's team
+                    if (in_array($assignee['userId'], $teamUserIds)) {
+                        TaskAssignee::create([
+                            'task_id' => $task->id,
+                            'user_id' => $assignee['userId'],
+                            'role' => $assignee['role'] ?? 'developer',
+                            'is_primary' => $assignee['isPrimary'] ?? false,
+                            'created_by' => $user->id,
+                            'updated_by' => $user->id,
+                        ]);
+                    }
+                }
+            }
+            // If no assignees provided but assignedTo is set, use that
+            elseif (!empty($data['assignedTo'])) {
+                $mainTask = $this->findMainTask($task);
+                $teamUserIds = $mainTask ? $mainTask->assignees()->pluck('user_id')->toArray() : [];
+                
+                if (in_array($data['assignedTo'], $teamUserIds)) {
+                    TaskAssignee::create([
+                        'task_id' => $task->id,
+                        'user_id' => $data['assignedTo'],
+                        'role' => 'developer',
+                        'is_primary' => true,
+                        'created_by' => $user->id,
+                        'updated_by' => $user->id,
+                    ]);
+                }
             }
         }
 
@@ -157,6 +204,63 @@ class TaskService
         ]);
 
         return $task->load(['assignee', 'project', 'parent', 'children', 'tags', 'assignees.user']);
+    }
+
+    /**
+     * Inherit assignees from the Main Task (root ancestor).
+     */
+    private function inheritAssigneesFromMainTask(Task $task, User $user): void
+    {
+        // Find the Main Task (root ancestor)
+        $mainTask = $this->findMainTask($task);
+        
+        if (!$mainTask) {
+            return;
+        }
+
+        // Copy all assignees from Main Task
+        $mainTaskAssignees = $mainTask->assignees()->get();
+        
+        foreach ($mainTaskAssignees as $assignee) {
+            TaskAssignee::create([
+                'task_id' => $task->id,
+                'user_id' => $assignee->user_id,
+                'role' => $assignee->role,
+                'is_primary' => $assignee->is_primary,
+                'created_by' => $user->id,
+                'updated_by' => $user->id,
+            ]);
+        }
+    }
+
+    /**
+     * Find the Main Task (root ancestor) for a given task.
+     */
+    private function findMainTask(Task $task): ?Task
+    {
+        $current = $task;
+        
+        // Walk up the parent chain until we find a Main Task or reach the root
+        while ($current->parent_id !== null) {
+            $parent = Task::find($current->parent_id);
+            
+            if (!$parent) {
+                break;
+            }
+            
+            if ($parent->type === TaskType::MAIN) {
+                return $parent;
+            }
+            
+            $current = $parent;
+        }
+        
+        // If current task's parent is null and it's a Main Task, return it
+        if ($current->type === TaskType::MAIN) {
+            return $current;
+        }
+        
+        return null;
     }
 
     /**
@@ -220,9 +324,34 @@ class TaskService
 
     /**
      * Add an assignee to a task.
+     * - Main Tasks: Can add any user as assignee (builds the team)
+     * - Weekly/Subtasks: Can only assign users who are already in the Main Task's team
+     *
+     * @throws \InvalidArgumentException
      */
     public function addAssignee(Task $task, int $userId, string $role, bool $isPrimary, User $performer): TaskAssignee
     {
+        // For Weekly/Subtasks, verify user is part of the Main Task's team
+        if ($task->type !== TaskType::MAIN) {
+            $mainTask = $this->findMainTask($task);
+            if ($mainTask) {
+                $isInTeam = $mainTask->assignees()->where('user_id', $userId)->exists();
+                if (!$isInTeam) {
+                    throw new \InvalidArgumentException(
+                        'This user is not part of the project team. Add them to the Main Task first.'
+                    );
+                }
+            }
+        }
+
+        // Check if user is already assigned to this task
+        $existingAssignee = $task->assignees()->where('user_id', $userId)->first();
+        if ($existingAssignee) {
+            throw new \InvalidArgumentException(
+                'This user is already assigned to this task.'
+            );
+        }
+
         $assignee = TaskAssignee::create([
             'task_id' => $task->id,
             'user_id' => $userId,
@@ -235,15 +364,48 @@ class TaskService
         $user = User::find($userId);
         TaskActivity::logAssigneeAdded($task, $performer, $user, $role);
 
+        // Propagate assignee to all child tasks (Weekly and Subtasks)
+        $this->propagateAssigneeToChildren($task, $userId, $role, $isPrimary, $performer);
+
         return $assignee->load('user');
     }
 
     /**
+     * Propagate an assignee to all child tasks recursively.
+     */
+    private function propagateAssigneeToChildren(Task $task, int $userId, string $role, bool $isPrimary, User $performer): void
+    {
+        $children = $task->children()->get();
+
+        foreach ($children as $child) {
+            // Check if assignee already exists on child
+            $existingAssignee = $child->assignees()->where('user_id', $userId)->first();
+            
+            if (!$existingAssignee) {
+                TaskAssignee::create([
+                    'task_id' => $child->id,
+                    'user_id' => $userId,
+                    'role' => $role,
+                    'is_primary' => $isPrimary,
+                    'created_by' => $performer->id,
+                    'updated_by' => $performer->id,
+                ]);
+            }
+
+            // Recursively propagate to grandchildren
+            $this->propagateAssigneeToChildren($child, $userId, $role, $isPrimary, $performer);
+        }
+    }
+
+    /**
      * Remove an assignee from a task.
+     * - Main Tasks: Removes from task and all children
+     * - Weekly/Subtasks: Only removes from this specific task
+     *
+     * @throws \InvalidArgumentException
      */
     public function removeAssignee(Task $task, int $userId, User $performer): bool
-    {
-        $assignee = $task->assignees()->where('user_id', $userId)->first();
+    {        $assignee = $task->assignees()->where('user_id', $userId)->first();
         if (!$assignee) {
             return false;
         }
@@ -257,14 +419,43 @@ class TaskService
             'metadata' => ['assignee_id' => $userId, 'assignee_name' => $user->name],
         ]);
 
+        // For Main Tasks, also remove from all children
+        if ($task->type === TaskType::MAIN) {
+            $this->removeAssigneeFromChildren($task, $userId);
+        }
+
         return $assignee->delete();
     }
 
     /**
+     * Remove an assignee from all child tasks recursively.
+     */
+    private function removeAssigneeFromChildren(Task $task, int $userId): void
+    {
+        $children = $task->children()->get();
+
+        foreach ($children as $child) {
+            $child->assignees()->where('user_id', $userId)->delete();
+            $this->removeAssigneeFromChildren($child, $userId);
+        }
+    }
+
+    /**
      * Add a test scenario to a task.
+     * Test scenarios can only be added to Weekly Tasks or Subtasks.
+     * Main Tasks cannot have test scenarios.
+     *
+     * @throws \InvalidArgumentException
      */
     public function addTestScenario(Task $task, array $data, User $user): TaskTestScenario
     {
+        // Main Tasks cannot have test scenarios
+        if ($task->type === TaskType::MAIN) {
+            throw new \InvalidArgumentException(
+                'Test scenarios can only be added to Weekly Tasks or Subtasks. Main Tasks organize the overall work structure.'
+            );
+        }
+
         $maxOrder = $task->testScenarios()->max('order') ?? 0;
 
         return TaskTestScenario::create([

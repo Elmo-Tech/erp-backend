@@ -231,4 +231,25 @@ class Task extends Model implements Trackable
     {
         return $query->whereNull('parent_id');
     }
+
+    /**
+     * Check if timer can be started on this task.
+     * Timer is only allowed on leaf tasks (tasks with no children).
+     *
+     * @return bool
+     */
+    public function canStartTimer(): bool
+    {
+        return !$this->children()->exists();
+    }
+
+    /**
+     * Check if this task has any children.
+     *
+     * @return bool
+     */
+    public function hasChildren(): bool
+    {
+        return $this->children()->exists();
+    }
 }

@@ -148,7 +148,9 @@ class TaskController extends Controller
         }
 
         if ($request->has('filter.parentId')) {
-            $filters['parentId'] = $request->input('filter.parentId');
+            $parentId = $request->input('filter.parentId');
+            // Convert string "null" to actual null for root tasks query
+            $filters['parentId'] = ($parentId === 'null' || $parentId === '') ? null : $parentId;
         }
 
         if ($request->has('filter.search')) {
@@ -288,7 +290,7 @@ class TaskController extends Controller
      */
     public function show(Task $task): JsonResponse
     {
-        $task->load(['assignee', 'project', 'parent', 'children.assignee']);
+        $task->load(['assignee', 'project', 'parent', 'children.assignee', 'assignees.user', 'tags']);
 
         return ApiResponse::success(
             new TaskResource($task),
@@ -610,6 +612,7 @@ class TaskController extends Controller
      *     operationId="addTaskAssignee",
      *     tags={"Tasks"},
      *     summary="Add an assignee to a task",
+     *     description="Add an assignee to any task. For Weekly/Subtasks, user must be part of the Main Task's team.",
      *     security={{"sanctum":{}}},
      *     @OA\RequestBody(
      *         required=true,
@@ -620,29 +623,34 @@ class TaskController extends Controller
      *             @OA\Property(property="isPrimary", type="boolean")
      *         )
      *     ),
-     *     @OA\Response(response=201, description="Assignee added successfully")
+     *     @OA\Response(response=201, description="Assignee added successfully"),
+     *     @OA\Response(response=400, description="User not in team or already assigned")
      * )
      */
     public function addAssignee(AddAssigneeRequest $request, Task $task): JsonResponse
     {
-        return DB::transaction(function () use ($request, $task) {
-            $data = $request->validated();
-            $user = $request->user();
+        try {
+            return DB::transaction(function () use ($request, $task) {
+                $data = $request->validated();
+                $user = $request->user();
 
-            $assignee = $this->taskService->addAssignee(
-                $task,
-                $data['userId'],
-                $data['role'],
-                $data['isPrimary'] ?? false,
-                $user
-            );
+                $assignee = $this->taskService->addAssignee(
+                    $task,
+                    $data['userId'],
+                    $data['role'],
+                    $data['isPrimary'] ?? false,
+                    $user
+                );
 
-            return ApiResponse::success(
-                new TaskAssigneeResource($assignee),
-                'Assignee added successfully',
-                201
-            );
-        });
+                return ApiResponse::success(
+                    new TaskAssigneeResource($assignee),
+                    'Assignee added successfully',
+                    201
+                );
+            });
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
     }
 
     /**
@@ -651,20 +659,26 @@ class TaskController extends Controller
      *     operationId="removeTaskAssignee",
      *     tags={"Tasks"},
      *     summary="Remove an assignee from a task",
+     *     description="Remove an assignee from any task type. For Main Tasks, also removes from all children.",
      *     security={{"sanctum":{}}},
-     *     @OA\Response(response=200, description="Assignee removed successfully")
+     *     @OA\Response(response=200, description="Assignee removed successfully"),
+     *     @OA\Response(response=404, description="Assignee not found")
      * )
      */
     public function removeAssignee(Request $request, Task $task, int $userId): JsonResponse
     {
-        $user = $request->user();
-        $removed = $this->taskService->removeAssignee($task, $userId, $user);
+        try {
+            $user = $request->user();
+            $removed = $this->taskService->removeAssignee($task, $userId, $user);
 
-        if (!$removed) {
-            return ApiResponse::error('Assignee not found', 404);
+            if (!$removed) {
+                return ApiResponse::error('Assignee not found', 404);
+            }
+
+            return ApiResponse::success(null, 'Assignee removed successfully');
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
         }
-
-        return ApiResponse::success(null, 'Assignee removed successfully');
     }
 
     /**
@@ -693,6 +707,7 @@ class TaskController extends Controller
      *     operationId="addTaskTestScenario",
      *     tags={"Tasks"},
      *     summary="Add a test scenario to a task",
+     *     description="Add a test scenario to a Weekly Task or Subtask. Main Tasks cannot have test scenarios.",
      *     security={{"sanctum":{}}},
      *     @OA\RequestBody(
      *         required=true,
@@ -703,23 +718,28 @@ class TaskController extends Controller
      *             @OA\Property(property="expectedResult", type="string")
      *         )
      *     ),
-     *     @OA\Response(response=201, description="Test scenario added successfully")
+     *     @OA\Response(response=201, description="Test scenario added successfully"),
+     *     @OA\Response(response=400, description="Cannot add test scenario to Main Task")
      * )
      */
     public function addTestScenario(StoreTestScenarioRequest $request, Task $task): JsonResponse
     {
-        return DB::transaction(function () use ($request, $task) {
-            $data = $request->validated();
-            $user = $request->user();
+        try {
+            return DB::transaction(function () use ($request, $task) {
+                $data = $request->validated();
+                $user = $request->user();
 
-            $scenario = $this->taskService->addTestScenario($task, $data, $user);
+                $scenario = $this->taskService->addTestScenario($task, $data, $user);
 
-            return ApiResponse::success(
-                new TaskTestScenarioResource($scenario->load(['completedBy', 'verifiedBy'])),
-                'Test scenario added successfully',
-                201
-            );
-        });
+                return ApiResponse::success(
+                    new TaskTestScenarioResource($scenario->load(['completedBy', 'verifiedBy'])),
+                    'Test scenario added successfully',
+                    201
+                );
+            });
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
     }
 
     /**
