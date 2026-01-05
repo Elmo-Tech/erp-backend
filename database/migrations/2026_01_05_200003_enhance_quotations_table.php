@@ -15,8 +15,8 @@ return new class extends Migration
             // Quotation number
             $table->string('quotation_number', 50)->nullable()->unique()->after('id');
             
-            // Template reference
-            $table->foreignId('template_id')->nullable()->after('lead_id')->constrained('proposal_templates')->nullOnDelete();
+            // Template reference (foreign key will be added later)
+            $table->unsignedBigInteger('template_id')->nullable()->after('lead_id');
             
             // Lifecycle tracking
             $table->date('expiry_date')->nullable()->after('status');
@@ -54,7 +54,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('quotations', function (Blueprint $table) {
-            $table->dropForeign(['template_id']);
             $table->dropForeign(['commission_user_id']);
             
             $table->dropIndex(['expiry_date']);
