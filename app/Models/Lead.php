@@ -36,6 +36,9 @@ class Lead extends Model implements Trackable
         'next_follow_up_at',
         'notes',
         'loss_reason',
+        'client_id',
+        'converted_at',
+        'converted_by',
         'created_by',
         'updated_by',
     ];
@@ -51,6 +54,7 @@ class Lead extends Model implements Trackable
             'expected_close_date' => 'date',
             'last_contact_at' => 'datetime',
             'next_follow_up_at' => 'datetime',
+            'converted_at' => 'datetime',
         ];
     }
 
@@ -69,6 +73,30 @@ class Lead extends Model implements Trackable
     {
         return $this->belongsTo(User::class, 'reference_id')
             ->where('reference_type', ReferenceType::SALES_REP->value);
+    }
+
+    /**
+     * Get the client this lead was converted to
+     */
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    /**
+     * Get the user who converted this lead
+     */
+    public function convertedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'converted_by');
+    }
+
+    /**
+     * Check if lead is converted
+     */
+    public function isConverted(): bool
+    {
+        return $this->client_id !== null;
     }
 
     /**

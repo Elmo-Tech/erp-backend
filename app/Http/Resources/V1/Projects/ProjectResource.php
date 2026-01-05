@@ -31,9 +31,11 @@ class ProjectResource extends JsonResource
             'totalTimeSpent' => (int) ($this->total_time_spent ?? 0),
             'client' => $this->whenLoaded('client', function () {
                 return [
-                    'userId' => $this->client->id,
+                    'clientId' => $this->client->id,
                     'name' => $this->client->name ?? '',
                     'email' => $this->client->email ?? '',
+                    'company' => $this->client->company ?? '',
+                    'phone' => $this->client->phone ?? '',
                 ];
             }),
             'quotation' => $this->whenLoaded('quotation', function () {

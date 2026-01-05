@@ -59,11 +59,11 @@ class Project extends Model implements Trackable
     }
 
     /**
-     * Get the client (user) that owns this project.
+     * Get the client that owns this project.
      */
     public function client(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'client_id');
+        return $this->belongsTo(Client::class);
     }
 
     /**

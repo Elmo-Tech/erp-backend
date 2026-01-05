@@ -256,4 +256,28 @@ class User extends Authenticatable
     {
         return $this->hasMany(CodeReview::class, 'reviewer_id');
     }
+
+    /**
+     * Get the point transactions for this user
+     */
+    public function pointTransactions()
+    {
+        return $this->hasMany(PointTransaction::class);
+    }
+
+    /**
+     * Get the client profile linked to this user (for portal access)
+     */
+    public function clientProfile()
+    {
+        return $this->hasOne(Client::class);
+    }
+
+    /**
+     * Check if user is a client with portal access
+     */
+    public function isClientPortalUser(): bool
+    {
+        return !$this->is_employee && $this->clientProfile !== null;
+    }
 }
