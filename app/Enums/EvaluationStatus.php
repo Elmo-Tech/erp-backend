@@ -12,10 +12,10 @@ enum EvaluationStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::PENDING => 'قيد الانتظار',
-            self::IN_PROGRESS => 'جاري التقييم',
-            self::COMPLETED => 'مكتمل',
-            self::APPROVED => 'معتمد',
+            self::PENDING => 'Pending',
+            self::IN_PROGRESS => 'In Progress',
+            self::COMPLETED => 'Completed',
+            self::APPROVED => 'Approved',
         };
     }
 }

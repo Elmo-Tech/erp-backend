@@ -12,10 +12,10 @@ enum CodeReviewStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::PENDING => 'قيد المراجعة',
-            self::APPROVED => 'موافق عليه',
-            self::NEEDS_REVISION => 'يحتاج تعديل',
-            self::REJECTED => 'مرفوض',
+            self::PENDING => 'Pending',
+            self::APPROVED => 'Approved',
+            self::NEEDS_REVISION => 'Needs Revision',
+            self::REJECTED => 'Rejected',
         };
     }
 }

@@ -12,10 +12,10 @@ enum InnovationCategory: string
     public function label(): string
     {
         return match ($this) {
-            self::AI_TOOL => 'أداة ذكاء اصطناعي',
-            self::AUTOMATION => 'أتمتة',
-            self::NEW_TECH => 'تقنية جديدة',
-            self::PROCESS_IMPROVEMENT => 'تحسين عملية',
+            self::AI_TOOL => 'AI Tool',
+            self::AUTOMATION => 'Automation',
+            self::NEW_TECH => 'New Technology',
+            self::PROCESS_IMPROVEMENT => 'Process Improvement',
         };
     }
 

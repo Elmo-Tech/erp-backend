@@ -12,10 +12,10 @@ enum BonusTier: string
     public function label(): string
     {
         return match ($this) {
-            self::EXCELLENT => 'ممتاز',
-            self::GOOD => 'جيد جداً',
-            self::AVERAGE => 'متوسط',
-            self::POOR => 'ضعيف',
+            self::EXCELLENT => 'Excellent',
+            self::GOOD => 'Good',
+            self::AVERAGE => 'Average',
+            self::POOR => 'Poor',
         };
     }
 
