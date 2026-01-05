@@ -90,6 +90,13 @@ class AdminUserSeeder extends Seeder
             'delete_quotations',
             'calculate_quotations',
             
+            // Sales management - Contracts
+            'view_contracts',
+            'create_contracts',
+            'edit_contracts',
+            'delete_contracts',
+            'sign_contracts',
+            
             // Invoice management
             'manage_invoices',
             'view_invoices',
@@ -198,6 +205,7 @@ class AdminUserSeeder extends Seeder
             // Sales
             'view_leads', 'create_leads', 'edit_leads',
             'view_quotations', 'create_quotations', 'edit_quotations', 'calculate_quotations',
+            'view_contracts', 'create_contracts', 'edit_contracts', 'sign_contracts',
             
             // Invoices
             'view_invoices', 'create_invoices', 'edit_invoices',
