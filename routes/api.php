@@ -238,7 +238,7 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('invoices', InvoiceController::class)->middleware(['auth:sanctum', 'locale']);
 
     // Dashboard Routes
-    Route::get('dashboard/overview', [DashboardController::class, 'overview'])->name('dashboard.overview');
+    Route::get('dashboard/overview', [DashboardController::class, 'overview'])->middleware(['auth:sanctum', 'locale'])->name('dashboard.overview');
 
     // Notification Routes
     Route::prefix('notifications')->group(function () {
