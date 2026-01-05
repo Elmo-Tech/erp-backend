@@ -720,6 +720,463 @@
                 }
             }
         },
+        "/contracts": {
+            "get": {
+                "tags": ["Contracts"],
+                "summary": "List all contracts with pagination and filtering",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "filter[status]",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "draft",
+                                "pending_signature",
+                                "signed",
+                                "active",
+                                "completed",
+                                "terminated"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[quotation_id]",
+                        "in": "query",
+                        "schema": { "type": "integer" }
+                    },
+                    {
+                        "name": "filter[search]",
+                        "in": "query",
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 1 }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": { "type": "integer", "default": 15 }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contracts retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "post": {
+                "tags": ["Contracts"],
+                "summary": "Create a new contract",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateContractRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Contract created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/contracts/from-quotation/{quotation}": {
+            "post": {
+                "tags": ["Contracts"],
+                "summary": "Create contract from quotation",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "quotation",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateContractRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Contract created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/contracts/{contract}": {
+            "get": {
+                "tags": ["Contracts"],
+                "summary": "Get contract details",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "contract",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contract details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "put": {
+                "tags": ["Contracts"],
+                "summary": "Update contract",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "contract",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateContractRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contract updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            },
+            "delete": {
+                "tags": ["Contracts"],
+                "summary": "Delete contract",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "contract",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contract deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/contracts/{contract}/sign": {
+            "post": {
+                "tags": ["Contracts"],
+                "summary": "Sign a contract",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "contract",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SignContractRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contract signed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": { "$ref": "#/components/responses/ValidationError" },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/contracts/{contract}/activate": {
+            "post": {
+                "tags": ["Contracts"],
+                "summary": "Activate a signed contract",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "contract",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contract activated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Contract cannot be activated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/contracts/milestones/due": {
+            "get": {
+                "tags": ["Contracts"],
+                "summary": "Get milestones due for payment",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Due milestones retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MilestoneCollectionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
+        "/contracts/milestones/{milestone}/paid": {
+            "patch": {
+                "tags": ["Contracts"],
+                "summary": "Mark milestone as paid",
+                "parameters": [
+                    {
+                        "name": "Accept-Language",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["ar", "en"],
+                            "default": "en"
+                        }
+                    },
+                    {
+                        "name": "milestone",
+                        "in": "path",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "invoiceId": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Milestone marked as paid successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MilestoneResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": { "$ref": "#/components/responses/NotFound" },
+                    "401": { "$ref": "#/components/responses/Unauthenticated" }
+                }
+            }
+        },
         "/time-entries": {
             "get": {
                 "tags": ["Time Entries"],
@@ -4708,6 +5165,446 @@
                     }
                 }
             },
+            "Contract": {
+                "type": "object",
+                "properties": {
+                    "contractId": { "type": "integer", "example": 1 },
+                    "quotationId": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "projectId": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "templateId": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Website Development Contract"
+                    },
+                    "content": {
+                        "type": "string",
+                        "example": "Contract content in markdown format"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "pending_signature",
+                            "signed",
+                            "active",
+                            "completed",
+                            "terminated"
+                        ],
+                        "example": "draft"
+                    },
+                    "totalValue": { "type": "string", "example": "50000.00" },
+                    "currency": { "type": "string", "example": "USD" },
+                    "startDate": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-01-15"
+                    },
+                    "endDate": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "example": "2024-06-15"
+                    },
+                    "signedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "signedByClient": { "type": "boolean", "example": false },
+                    "signedByCompany": { "type": "boolean", "example": false },
+                    "activatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "parties": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "enum": ["client", "company"],
+                                    "example": "client"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "John Doe"
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "example": "john@example.com"
+                                },
+                                "address": {
+                                    "type": "string",
+                                    "example": "123 Main St, City, Country"
+                                },
+                                "phone": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "example": "+1234567890"
+                                }
+                            }
+                        }
+                    },
+                    "milestones": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ContractMilestone"
+                        }
+                    },
+                    "createdAt": { "type": "string", "format": "date-time" },
+                    "updatedAt": { "type": "string", "format": "date-time" }
+                }
+            },
+            "ContractMilestone": {
+                "type": "object",
+                "properties": {
+                    "milestoneId": { "type": "integer", "example": 1 },
+                    "contractId": { "type": "integer", "example": 1 },
+                    "title": {
+                        "type": "string",
+                        "example": "Initial Design Phase"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Complete UI/UX design mockups"
+                    },
+                    "amount": { "type": "string", "example": "10000.00" },
+                    "dueDate": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-02-15"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["pending", "completed", "paid", "overdue"],
+                        "example": "pending"
+                    },
+                    "triggerType": {
+                        "type": "string",
+                        "enum": ["manual", "project_status", "date_based"],
+                        "example": "project_status"
+                    },
+                    "triggerCondition": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "ui_ux"
+                    },
+                    "completedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "paidAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "invoiceId": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "createdAt": { "type": "string", "format": "date-time" },
+                    "updatedAt": { "type": "string", "format": "date-time" }
+                }
+            },
+            "ContractResponse": {
+                "type": "object",
+                "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                        "type": "string",
+                        "example": "Contract retrieved successfully"
+                    },
+                    "data": { "$ref": "#/components/schemas/Contract" }
+                }
+            },
+            "ContractCollectionResponse": {
+                "type": "object",
+                "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                        "type": "string",
+                        "example": "Contracts retrieved successfully"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "contracts": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Contract"
+                                }
+                            },
+                            "pagination": {
+                                "$ref": "#/components/schemas/Pagination"
+                            }
+                        }
+                    }
+                }
+            },
+            "CreateContractRequest": {
+                "type": "object",
+                "required": [
+                    "title",
+                    "content",
+                    "totalValue",
+                    "currency",
+                    "startDate",
+                    "parties",
+                    "milestones"
+                ],
+                "properties": {
+                    "quotationId": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "templateId": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Website Development Contract"
+                    },
+                    "content": {
+                        "type": "string",
+                        "example": "Contract content in markdown format"
+                    },
+                    "totalValue": { "type": "number", "example": 50000.0 },
+                    "currency": { "type": "string", "example": "USD" },
+                    "startDate": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-01-15"
+                    },
+                    "endDate": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "example": "2024-06-15"
+                    },
+                    "parties": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": ["type", "name", "email", "address"],
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "enum": ["client", "company"],
+                                    "example": "client"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "John Doe"
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "format": "email",
+                                    "example": "john@example.com"
+                                },
+                                "address": {
+                                    "type": "string",
+                                    "example": "123 Main St, City, Country"
+                                },
+                                "phone": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "example": "+1234567890"
+                                }
+                            }
+                        }
+                    },
+                    "milestones": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "title",
+                                "amount",
+                                "dueDate",
+                                "triggerType"
+                            ],
+                            "properties": {
+                                "title": {
+                                    "type": "string",
+                                    "example": "Initial Design Phase"
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "example": "Complete UI/UX design mockups"
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "example": 10000.0
+                                },
+                                "dueDate": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "example": "2024-02-15"
+                                },
+                                "triggerType": {
+                                    "type": "string",
+                                    "enum": [
+                                        "manual",
+                                        "project_status",
+                                        "date_based"
+                                    ],
+                                    "example": "project_status"
+                                },
+                                "triggerCondition": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "example": "ui_ux"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "UpdateContractRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "example": "Website Development Contract"
+                    },
+                    "content": {
+                        "type": "string",
+                        "example": "Updated contract content"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "pending_signature",
+                            "signed",
+                            "active",
+                            "completed",
+                            "terminated"
+                        ]
+                    },
+                    "totalValue": { "type": "number", "example": 55000.0 },
+                    "currency": { "type": "string", "example": "USD" },
+                    "startDate": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-01-15"
+                    },
+                    "endDate": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "example": "2024-07-15"
+                    },
+                    "parties": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "enum": ["client", "company"]
+                                },
+                                "name": { "type": "string" },
+                                "email": {
+                                    "type": "string",
+                                    "format": "email"
+                                },
+                                "address": { "type": "string" },
+                                "phone": { "type": "string", "nullable": true }
+                            }
+                        }
+                    },
+                    "milestones": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "milestoneId": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "title": { "type": "string" },
+                                "description": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "amount": { "type": "number" },
+                                "dueDate": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "triggerType": {
+                                    "type": "string",
+                                    "enum": [
+                                        "manual",
+                                        "project_status",
+                                        "date_based"
+                                    ]
+                                },
+                                "triggerCondition": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "SignContractRequest": {
+                "type": "object",
+                "required": ["signedByClient"],
+                "properties": {
+                    "signedByClient": { "type": "boolean", "example": true }
+                }
+            },
+            "MilestoneResponse": {
+                "type": "object",
+                "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                        "type": "string",
+                        "example": "Milestone updated successfully"
+                    },
+                    "data": { "$ref": "#/components/schemas/ContractMilestone" }
+                }
+            },
+            "MilestoneCollectionResponse": {
+                "type": "object",
+                "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                        "type": "string",
+                        "example": "Milestones retrieved successfully"
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ContractMilestone"
+                        }
+                    }
+                }
+            },
             "TimeEntry": {
                 "type": "object",
                 "properties": {
@@ -5722,6 +6619,10 @@
         {
             "name": "Quotations",
             "description": "Quotation management and pricing calculation endpoints"
+        },
+        {
+            "name": "Contracts",
+            "description": "Contract management endpoints including signing, activation, and milestone tracking"
         },
         {
             "name": "Time Entries",
