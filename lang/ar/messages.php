@@ -3,7 +3,9 @@
 return [
     // General
     'validation_failed' => 'فشل التحقق من البيانات',
+    'validation_error' => 'خطأ في التحقق من البيانات',
     'no_permission' => 'ليس لديك صلاحية لتنفيذ هذا الإجراء',
+    'unauthorized' => 'غير مصرح بالوصول',
     
     // Users
     'users_retrieved' => 'تم جلب المستخدمين بنجاح',
@@ -16,4 +18,25 @@ return [
     'user_deactivated' => 'تم إلغاء تفعيل المستخدم بنجاح',
     'cannot_delete_self' => 'لا يمكنك حذف حسابك الخاص',
     'roles_assigned' => 'تم تعيين الأدوار بنجاح',
+
+    // Performance Evaluation
+    'evaluation_period_created' => 'تم إنشاء فترة التقييم بنجاح',
+    'period_activated' => 'تم تفعيل فترة التقييم وإنشاء تقييمات لجميع الموظفين',
+    'period_already_activated' => 'تم تفعيل هذه الفترة مسبقاً',
+    'evaluation_calculated' => 'تم حساب درجات التقييم بنجاح',
+    'evaluation_updated' => 'تم تحديث التقييم بنجاح',
+    'evaluation_approved' => 'تم اعتماد التقييم بنجاح',
+
+    // Code Reviews
+    'code_review_created' => 'تم إنشاء مراجعة الكود بنجاح',
+    'code_review_updated' => 'تم تحديث مراجعة الكود بنجاح',
+    'code_review_approved' => 'تم الموافقة على مراجعة الكود بنجاح',
+    'revision_requested' => 'تم طلب التعديل بنجاح',
+
+    // Innovation Logs
+    'innovation_logged' => 'تم تسجيل الابتكار بنجاح',
+    'innovation_verified' => 'تم التحقق من الابتكار بنجاح',
+    'innovation_rejected' => 'تم رفض الابتكار بنجاح',
+    'innovation_deleted' => 'تم حذف سجل الابتكار بنجاح',
+    'cannot_delete_verified' => 'لا يمكن حذف سجل ابتكار تم التحقق منه',
 ];

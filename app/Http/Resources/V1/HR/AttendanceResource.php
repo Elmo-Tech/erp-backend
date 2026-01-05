@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * @OA\Schema(
- *     schema="AttendanceResource",
+ *     schema="HRAttendanceResource",
  *     type="object",
  *     @OA\Property(property="attendanceId", type="integer", example=1),
  *     @OA\Property(property="userId", type="integer", example=1),

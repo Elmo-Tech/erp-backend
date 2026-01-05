@@ -37,6 +37,7 @@ class User extends Authenticatable
         'grace_days_reset_date',
         'total_points',
         'total_deductions',
+        'bonus_base_amount',
     ];
 
     /**
@@ -50,6 +51,7 @@ class User extends Authenticatable
         'internal_hourly_cost',
         'salary',
         'total_deductions',
+        'bonus_base_amount',
     ];
 
     /**
@@ -221,5 +223,37 @@ class User extends Authenticatable
     public function attendances()
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    /**
+     * Get the performance evaluations for this user
+     */
+    public function performanceEvaluations()
+    {
+        return $this->hasMany(PerformanceEvaluation::class);
+    }
+
+    /**
+     * Get the innovation logs for this user
+     */
+    public function innovationLogs()
+    {
+        return $this->hasMany(InnovationLog::class);
+    }
+
+    /**
+     * Get the code reviews where this user is the developer
+     */
+    public function codeReviewsAsDeveloper()
+    {
+        return $this->hasMany(CodeReview::class, 'developer_id');
+    }
+
+    /**
+     * Get the code reviews where this user is the reviewer
+     */
+    public function codeReviewsAsReviewer()
+    {
+        return $this->hasMany(CodeReview::class, 'reviewer_id');
     }
 }

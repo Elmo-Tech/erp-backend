@@ -29,6 +29,9 @@ use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\PerformanceEvaluationController;
+use App\Http\Controllers\Api\V1\CodeReviewController;
+use App\Http\Controllers\Api\V1\InnovationLogController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -276,5 +279,46 @@ Route::prefix('v1')->group(function () {
 
         // Admin Audit Log Routes
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
+    });
+
+    // Performance Evaluation Routes
+    Route::prefix('performance')->group(function () {
+        // Evaluation Periods
+        Route::get('periods', [PerformanceEvaluationController::class, 'periods'])->name('performance.periods.index');
+        Route::post('periods', [PerformanceEvaluationController::class, 'createPeriod'])->name('performance.periods.store');
+        Route::post('periods/{periodId}/activate', [PerformanceEvaluationController::class, 'activatePeriod'])->name('performance.periods.activate');
+        Route::get('periods/{periodId}/bonuses', [PerformanceEvaluationController::class, 'periodBonuses'])->name('performance.periods.bonuses');
+        
+        // Evaluations
+        Route::get('evaluations', [PerformanceEvaluationController::class, 'index'])->name('performance.evaluations.index');
+        Route::get('evaluations/{id}', [PerformanceEvaluationController::class, 'show'])->name('performance.evaluations.show');
+        Route::put('evaluations/{id}', [PerformanceEvaluationController::class, 'update'])->name('performance.evaluations.update');
+        Route::post('evaluations/{id}/calculate', [PerformanceEvaluationController::class, 'calculate'])->name('performance.evaluations.calculate');
+        Route::post('evaluations/{id}/approve', [PerformanceEvaluationController::class, 'approve'])->name('performance.evaluations.approve');
+        Route::get('my-evaluations', [PerformanceEvaluationController::class, 'myEvaluations'])->name('performance.my-evaluations');
+    });
+
+    // Code Review Routes
+    Route::prefix('code-reviews')->group(function () {
+        Route::get('/', [CodeReviewController::class, 'index'])->name('code-reviews.index');
+        Route::post('/', [CodeReviewController::class, 'store'])->name('code-reviews.store');
+        Route::get('/my-pending', [CodeReviewController::class, 'myPending'])->name('code-reviews.my-pending');
+        Route::get('/my-stats', [CodeReviewController::class, 'myStats'])->name('code-reviews.my-stats');
+        Route::get('/{id}', [CodeReviewController::class, 'show'])->name('code-reviews.show');
+        Route::put('/{id}', [CodeReviewController::class, 'update'])->name('code-reviews.update');
+        Route::post('/{id}/approve', [CodeReviewController::class, 'approve'])->name('code-reviews.approve');
+        Route::post('/{id}/request-revision', [CodeReviewController::class, 'requestRevision'])->name('code-reviews.request-revision');
+    });
+
+    // Innovation Log Routes
+    Route::prefix('innovation-logs')->group(function () {
+        Route::get('/', [InnovationLogController::class, 'index'])->name('innovation-logs.index');
+        Route::post('/', [InnovationLogController::class, 'store'])->name('innovation-logs.store');
+        Route::get('/pending', [InnovationLogController::class, 'pending'])->name('innovation-logs.pending');
+        Route::get('/my-summary', [InnovationLogController::class, 'mySummary'])->name('innovation-logs.my-summary');
+        Route::get('/{id}', [InnovationLogController::class, 'show'])->name('innovation-logs.show');
+        Route::post('/{id}/verify', [InnovationLogController::class, 'verify'])->name('innovation-logs.verify');
+        Route::post('/{id}/reject', [InnovationLogController::class, 'reject'])->name('innovation-logs.reject');
+        Route::delete('/{id}', [InnovationLogController::class, 'destroy'])->name('innovation-logs.destroy');
     });
 });

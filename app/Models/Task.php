@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\CodeReview;
 use App\Contracts\Trackable;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
@@ -133,6 +134,11 @@ class Task extends Model implements Trackable
     public function timeEntries(): MorphMany
     {
         return $this->morphMany(TimeEntry::class, 'trackable');
+    }
+
+    public function codeReviews(): HasMany
+    {
+        return $this->hasMany(CodeReview::class);
     }
 
     public function getTrackableDisplayName(): string
