@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Models\Attendance;
 use App\Models\Lead;
 use App\Models\Project;
 use App\Models\Quotation;
@@ -105,11 +106,11 @@ class DashboardController extends Controller
             ? round((($projectsThisMonth - $projectsLastMonth) / $projectsLastMonth) * 100, 1)
             : ($projectsThisMonth > 0 ? 100 : 0);
 
-        // Sales Stats (from quotations with status 'accepted' or 'converted')
-        $salesThisMonth = Quotation::whereIn('status', ['accepted', 'converted'])
+        // Sales Stats (from quotations with status 'approved')
+        $salesThisMonth = Quotation::where('status', 'approved')
             ->where('created_at', '>=', $startOfMonth)
             ->sum('final_price');
-        $salesLastMonth = Quotation::whereIn('status', ['accepted', 'converted'])
+        $salesLastMonth = Quotation::where('status', 'approved')
             ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
             ->sum('final_price');
         $salesChange = $salesLastMonth > 0 
@@ -130,25 +131,25 @@ class DashboardController extends Controller
         // Active Clients Stats
         $activeClients = User::role('client')
             ->whereHas('projects', function ($query) {
-                $query->whereIn('status', ['planning', 'in_progress', 'ui_ux', 'review']);
+                $query->whereIn('status', ['active', 'ui_ux', 'development', 'testing']);
             })
             ->count();
         
         // If no client role relation, count from projects
         if ($activeClients === 0) {
-            $activeClients = Project::whereIn('status', ['planning', 'in_progress', 'ui_ux', 'review'])
+            $activeClients = Project::whereIn('status', ['active', 'ui_ux', 'development', 'testing'])
                 ->distinct('client_id')
                 ->count('client_id');
         }
         
-        $clientsLastMonth = Project::whereIn('status', ['planning', 'in_progress', 'ui_ux', 'review'])
+        $clientsLastMonth = Project::whereIn('status', ['active', 'ui_ux', 'development', 'testing'])
             ->where('created_at', '<', $startOfMonth)
             ->distinct('client_id')
             ->count('client_id');
         $clientsChange = $activeClients - $clientsLastMonth;
 
         // Recent Projects (last 4)
-        $recentProjects = Project::select('id', 'name', 'status')
+        $recentProjects = Project::select('id', 'title', 'status')
             ->orderBy('updated_at', 'desc')
             ->limit(4)
             ->get()
@@ -162,7 +163,7 @@ class DashboardController extends Controller
 
                 return [
                     'projectId' => $project->id,
-                    'name' => $project->name,
+                    'name' => $project->title,
                     'status' => $this->formatStatus($project->status),
                     'progress' => $progress,
                 ];
@@ -196,10 +197,11 @@ class DashboardController extends Controller
         $statusValue = $status instanceof \BackedEnum ? $status->value : $status;
         
         return match ($statusValue) {
-            'planning' => 'Planning',
-            'in_progress' => 'In Progress',
-            'ui_ux' => 'UI/UX',
-            'review' => 'Review',
+            'draft' => 'Draft',
+            'active' => 'Active',
+            'ui_ux' => 'UI/UX Phase',
+            'development' => 'Development',
+            'testing' => 'Testing',
             'completed' => 'Completed',
             'on_hold' => 'On Hold',
             'cancelled' => 'Cancelled',
@@ -238,7 +240,7 @@ class DashboardController extends Controller
             ->map(function ($project) {
                 return [
                     'activityId' => $project->id + 1000,
-                    'action' => 'Project updated: ' . $project->name,
+                    'action' => 'Project updated: ' . $project->title,
                     'user' => 'System',
                     'time' => $project->updated_at->diffForHumans(),
                     'type' => 'project',
