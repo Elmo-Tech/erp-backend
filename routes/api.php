@@ -102,6 +102,7 @@ Route::prefix('v1')->group(function () {
     Route::post('contracts/from-quotation/{quotation}', [ContractController::class, 'createFromQuotation'])->name('contracts.from-quotation');
     Route::post('contracts/{contract}/sign', [ContractController::class, 'sign'])->name('contracts.sign');
     Route::post('contracts/{contract}/activate', [ContractController::class, 'activate'])->name('contracts.activate');
+    Route::patch('contracts/{contract}/status', [ContractController::class, 'updateStatus'])->name('contracts.update-status');
     Route::get('contracts/milestones/due', [ContractController::class, 'dueMilestones'])->name('contracts.milestones.due');
     Route::patch('contracts/milestones/{milestone}/paid', [ContractController::class, 'markMilestonePaid'])->name('contracts.milestones.paid');
 

@@ -186,6 +186,41 @@ class ContractController extends Controller
     }
 
     /**
+     * @OA\Patch(
+     *     path="/api/v1/contracts/{id}/status",
+     *     operationId="updateContractStatus",
+     *     tags={"Contracts"},
+     *     summary="Update contract status",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"status"},
+     *             @OA\Property(property="status", type="string", enum={"draft", "pending_signature", "signed", "active", "completed", "terminated"})
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Contract status updated successfully")
+     * )
+     */
+    public function updateStatus(Request $request, Contract $contract): JsonResponse
+    {
+        $request->validate([
+            'status' => 'required|string|in:draft,pending_signature,signed,active,completed,terminated',
+        ]);
+
+        $contract = $this->contractService->updateContractStatus(
+            $contract,
+            $request->input('status'),
+            $request->user()
+        );
+
+        return ApiResponse::success(
+            new ContractResource($contract),
+            __('contracts.status_updated')
+        );
+    }
+
+    /**
      * @OA\Get(
      *     path="/api/v1/contracts/milestones/due",
      *     operationId="getDueMilestones",

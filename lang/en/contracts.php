@@ -7,6 +7,7 @@ return [
     'deleted' => 'Contract deleted successfully',
     'signed' => 'Contract signed successfully',
     'activated' => 'Contract activated successfully',
+    'status_updated' => 'Contract status updated successfully',
     'milestones_retrieved' => 'Milestones retrieved successfully',
     'milestone_paid' => 'Milestone marked as paid',
     'not_found' => 'Contract not found',

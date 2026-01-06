@@ -194,6 +194,27 @@ class ContractService
     }
 
     /**
+     * Update contract status
+     */
+    public function updateContractStatus(Contract $contract, string $status, User $user): Contract
+    {
+        $contract->update([
+            'status' => ContractStatus::from($status),
+            'updated_by' => $user->id,
+        ]);
+
+        // If status is active, mark immediate milestones as due
+        if ($status === ContractStatus::ACTIVE->value) {
+            $contract->milestones()
+                ->where('trigger_type', MilestoneTriggerType::IMMEDIATE)
+                ->where('status', MilestoneStatus::PENDING)
+                ->update(['status' => MilestoneStatus::DUE]);
+        }
+
+        return $contract->fresh(['milestones']);
+    }
+
+    /**
      * Update milestone status based on project status
      */
     public function checkMilestoneTriggers(Contract $contract, string $projectStatus): void
