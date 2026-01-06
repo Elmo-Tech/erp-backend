@@ -62,4 +62,12 @@ return [
     'clocked_out' => 'تم تسجيل الخروج بنجاح',
     'attendance_not_found' => 'سجل الحضور غير موجود',
     'attendance_updated' => 'تم تحديث سجل الحضور بنجاح',
+
+    // Task Permissions
+    'no_permission_manage_team' => 'ليس لديك صلاحية لإدارة أعضاء الفريق في هذا النوع من المهام.',
+    'no_permission_manage_test_scenarios' => 'ليس لديك صلاحية لإدارة سيناريوهات الاختبار في هذا النوع من المهام.',
+
+    // Project Permissions
+    'no_permission_view_budget' => 'ليس لديك صلاحية لعرض معلومات ميزانية المشروع.',
+    'no_permission_view_history' => 'ليس لديك صلاحية لعرض سجل تغييرات المشروع.',
 ];

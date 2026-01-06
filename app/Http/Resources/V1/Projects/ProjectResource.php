@@ -10,11 +10,16 @@ class ProjectResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
+     * 
+     * Budget fields are hidden from users without 'view_project_budget' permission.
      *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
+        $user = $request->user();
+        $canViewBudget = $user && $user->can('view_project_budget');
+
         return [
             'projectId' => $this->id,
             'clientId' => $this->client_id ?? 0,
@@ -23,7 +28,9 @@ class ProjectResource extends JsonResource
             'description' => $this->description ?? '',
             'status' => $this->status?->value ?? '',
             'previousStatus' => $this->previous_status?->value ?? '',
-            'budget' => (float) ($this->budget ?? 0.0),
+            // Budget is only visible to users with permission
+            'budget' => $canViewBudget ? (float) ($this->budget ?? 0.0) : null,
+            'canViewBudget' => $canViewBudget,
             'deadline' => $this->deadline?->toDateString() ?? '',
             'uiApprovedAt' => $this->ui_approved_at?->toISOString() ?? '',
             'autoApprovalJobId' => $this->auto_approval_job_id ?? '',
@@ -38,8 +45,11 @@ class ProjectResource extends JsonResource
                     'phone' => $this->client->phone ?? '',
                 ];
             }),
-            'quotation' => $this->whenLoaded('quotation', function () {
-                return new QuotationResource($this->quotation);
+            // Quotation contains pricing info, hide from non-budget viewers
+            'quotation' => $this->when($canViewBudget, function () {
+                return $this->whenLoaded('quotation', function () {
+                    return new QuotationResource($this->quotation);
+                });
             }),
             'members' => $this->whenLoaded('members', function () {
                 return $this->members->map(function ($member) {

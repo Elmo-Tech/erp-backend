@@ -612,7 +612,7 @@ class TaskController extends Controller
      *     operationId="addTaskAssignee",
      *     tags={"Tasks"},
      *     summary="Add an assignee to a task",
-     *     description="Add an assignee to any task. For Weekly/Subtasks, user must be part of the Main Task's team.",
+     *     description="Add an assignee to any task. For Main/Weekly tasks, requires manage_task_team permission. For Subtasks, team is inherited from Main Task (view-only).",
      *     security={{"sanctum":{}}},
      *     @OA\RequestBody(
      *         required=true,
@@ -624,11 +624,21 @@ class TaskController extends Controller
      *         )
      *     ),
      *     @OA\Response(response=201, description="Assignee added successfully"),
-     *     @OA\Response(response=400, description="User not in team or already assigned")
+     *     @OA\Response(response=400, description="User not in team or already assigned"),
+     *     @OA\Response(response=403, description="Unauthorized to manage team on this task type")
      * )
      */
     public function addAssignee(AddAssigneeRequest $request, Task $task): JsonResponse
     {
+        // Check authorization using policy
+        $user = $request->user();
+        if (!$user->can('manageTeam', $task)) {
+            return ApiResponse::error(
+                __('messages.no_permission_manage_team'),
+                403
+            );
+        }
+
         try {
             return DB::transaction(function () use ($request, $task) {
                 $data = $request->validated();
@@ -659,16 +669,25 @@ class TaskController extends Controller
      *     operationId="removeTaskAssignee",
      *     tags={"Tasks"},
      *     summary="Remove an assignee from a task",
-     *     description="Remove an assignee from any task type. For Main Tasks, also removes from all children.",
+     *     description="Remove an assignee from Main/Weekly tasks. Requires manage_task_team permission. Subtasks inherit team from Main Task (view-only).",
      *     security={{"sanctum":{}}},
      *     @OA\Response(response=200, description="Assignee removed successfully"),
+     *     @OA\Response(response=403, description="Unauthorized to manage team on this task type"),
      *     @OA\Response(response=404, description="Assignee not found")
      * )
      */
     public function removeAssignee(Request $request, Task $task, int $userId): JsonResponse
     {
+        // Check authorization using policy
+        $user = $request->user();
+        if (!$user->can('manageTeam', $task)) {
+            return ApiResponse::error(
+                __('messages.no_permission_manage_team'),
+                403
+            );
+        }
+
         try {
-            $user = $request->user();
             $removed = $this->taskService->removeAssignee($task, $userId, $user);
 
             if (!$removed) {
@@ -707,7 +726,7 @@ class TaskController extends Controller
      *     operationId="addTaskTestScenario",
      *     tags={"Tasks"},
      *     summary="Add a test scenario to a task",
-     *     description="Add a test scenario to a Weekly Task or Subtask. Main Tasks cannot have test scenarios.",
+     *     description="Add a test scenario to a Weekly Task or Subtask. Main Tasks cannot have test scenarios. Weekly tasks require manage_task_test_scenarios permission. Subtasks allow assigned users to manage.",
      *     security={{"sanctum":{}}},
      *     @OA\RequestBody(
      *         required=true,
@@ -719,11 +738,21 @@ class TaskController extends Controller
      *         )
      *     ),
      *     @OA\Response(response=201, description="Test scenario added successfully"),
-     *     @OA\Response(response=400, description="Cannot add test scenario to Main Task")
+     *     @OA\Response(response=400, description="Cannot add test scenario to Main Task"),
+     *     @OA\Response(response=403, description="Unauthorized to manage test scenarios on this task type")
      * )
      */
     public function addTestScenario(StoreTestScenarioRequest $request, Task $task): JsonResponse
     {
+        // Check authorization using policy
+        $user = $request->user();
+        if (!$user->can('manageTestScenarios', $task)) {
+            return ApiResponse::error(
+                __('messages.no_permission_manage_test_scenarios'),
+                403
+            );
+        }
+
         try {
             return DB::transaction(function () use ($request, $task) {
                 $data = $request->validated();

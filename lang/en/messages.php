@@ -62,4 +62,12 @@ return [
     'clocked_out' => 'Clocked out successfully',
     'attendance_not_found' => 'Attendance record not found',
     'attendance_updated' => 'Attendance record updated successfully',
+
+    // Task Permissions
+    'no_permission_manage_team' => 'You do not have permission to manage team members on this task type.',
+    'no_permission_manage_test_scenarios' => 'You do not have permission to manage test scenarios on this task type.',
+
+    // Project Permissions
+    'no_permission_view_budget' => 'You do not have permission to view project budget information.',
+    'no_permission_view_history' => 'You do not have permission to view project history.',
 ];

@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\TaskType;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
@@ -10,6 +11,10 @@ use Illuminate\Auth\Access\HandlesAuthorization;
  * TaskPolicy handles authorization for task operations.
  *
  * Requirements: 4.2
+ * 
+ * Team & Test Scenario Permissions:
+ * - Main/Weekly Tasks: Only users with manage_task_team/manage_task_test_scenarios permission
+ * - Subtasks: Any assigned user can manage team (view only) and test scenarios
  */
 class TaskPolicy
 {
@@ -189,5 +194,93 @@ class TaskPolicy
         }
 
         return false;
+    }
+
+    /**
+     * Determine whether the user can manage team members (assignees) on a task.
+     * 
+     * Rules:
+     * - Main/Weekly Tasks: Only Admin/Super Admin or users with manage_task_team permission
+     * - Subtasks: Any user can manage (but team is view-only inherited from Main Task)
+     */
+    public function manageTeam(User $user, Task $task): bool
+    {
+        // Clients cannot manage team
+        if ($user->hasRole('client')) {
+            return false;
+        }
+
+        // Admins and super-admins can always manage team
+        if ($user->hasAnyRole(['admin', 'super-admin'])) {
+            return true;
+        }
+
+        // For Main and Weekly tasks, require specific permission
+        if ($task->type === TaskType::MAIN || $task->type === TaskType::WEEKLY) {
+            return $user->can('manage_task_team');
+        }
+
+        // For Subtasks, team is inherited and view-only
+        // No one can add/remove team members on subtasks (they inherit from Main Task)
+        return false;
+    }
+
+    /**
+     * Determine whether the user can view team members on a task.
+     * Everyone who can view the task can view the team.
+     */
+    public function viewTeam(User $user, Task $task): bool
+    {
+        return $this->view($user, $task);
+    }
+
+    /**
+     * Determine whether the user can manage test scenarios on a task.
+     * 
+     * Rules:
+     * - Main Tasks: Cannot have test scenarios (business rule)
+     * - Weekly Tasks: Only Admin/Super Admin or users with manage_task_test_scenarios permission
+     * - Subtasks: Any assigned user or creator can manage test scenarios
+     */
+    public function manageTestScenarios(User $user, Task $task): bool
+    {
+        // Clients cannot manage test scenarios
+        if ($user->hasRole('client')) {
+            return false;
+        }
+
+        // Main Tasks cannot have test scenarios
+        if ($task->type === TaskType::MAIN) {
+            return false;
+        }
+
+        // Admins and super-admins can always manage test scenarios
+        if ($user->hasAnyRole(['admin', 'super-admin'])) {
+            return true;
+        }
+
+        // For Weekly tasks, require specific permission
+        if ($task->type === TaskType::WEEKLY) {
+            return $user->can('manage_task_test_scenarios');
+        }
+
+        // For Subtasks, assigned users or creator can manage test scenarios
+        if ($task->type === TaskType::SUBTASK) {
+            // Check if user is assigned to this task
+            $isAssigned = $task->assignees()->where('user_id', $user->id)->exists();
+            
+            return $isAssigned || $task->assigned_to === $user->id || $task->created_by === $user->id;
+        }
+
+        return false;
+    }
+
+    /**
+     * Determine whether the user can view test scenarios on a task.
+     * Everyone who can view the task can view test scenarios.
+     */
+    public function viewTestScenarios(User $user, Task $task): bool
+    {
+        return $this->view($user, $task);
     }
 }

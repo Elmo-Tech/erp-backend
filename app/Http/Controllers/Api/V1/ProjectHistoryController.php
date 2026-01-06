@@ -25,7 +25,7 @@ class ProjectHistoryController extends Controller
      *     operationId="getProjectHistory",
      *     tags={"Project History"},
      *     summary="Get project change history",
-     *     description="Retrieve the audit trail of changes for a specific project with optional field filtering",
+     *     description="Retrieve the audit trail of changes for a specific project with optional field filtering. Requires view_project_history permission.",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="Accept-Language",
@@ -82,6 +82,14 @@ class ProjectHistoryController extends Controller
      *         )
      *     ),
      *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - No permission to view history",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You do not have permission to view project history.")
+     *         )
+     *     ),
+     *     @OA\Response(
      *         response=404,
      *         description="Project not found",
      *         @OA\JsonContent(
@@ -101,6 +109,15 @@ class ProjectHistoryController extends Controller
      */
     public function index(Request $request, Project $project): JsonResponse
     {
+        // Check permission to view project history
+        $user = $request->user();
+        if (!$user->can('view_project_history')) {
+            return ApiResponse::error(
+                __('messages.no_permission_view_history'),
+                403
+            );
+        }
+
         // Get optional field filter from query parameters
         $fieldFilter = $request->input('filter.fieldName');
 
