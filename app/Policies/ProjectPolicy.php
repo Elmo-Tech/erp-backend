@@ -16,7 +16,7 @@ class ProjectPolicy
     public function viewAny(User $user): bool
     {
         // Clients can view their own projects (filtered by ClientScope)
-        // Admins/employees can view all
+        // Admins/employees can view projects they're members of (or all if they have permission)
         return true;
     }
 
@@ -25,11 +25,31 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
+        // Clients can only view their own projects
         if ($user->hasRole('client')) {
             return $project->client_id === $user->id;
         }
 
-        return $user->hasAnyRole(['admin', 'super-admin', 'employee']);
+        // Super Admin and Admin can view all projects
+        if ($user->hasAnyRole(['admin', 'super-admin'])) {
+            return true;
+        }
+
+        // Users with view_all_projects permission can view all
+        if ($user->can('view_all_projects')) {
+            return true;
+        }
+
+        // Employees can only view projects they are members of
+        return $this->isProjectMember($user, $project);
+    }
+
+    /**
+     * Check if user is a member of the project
+     */
+    protected function isProjectMember(User $user, Project $project): bool
+    {
+        return $project->members()->where('user_id', $user->id)->exists();
     }
 
     /**
@@ -47,7 +67,22 @@ class ProjectPolicy
     public function update(User $user, Project $project): bool
     {
         // Clients cannot update projects
-        return !$user->hasRole('client');
+        if ($user->hasRole('client')) {
+            return false;
+        }
+
+        // Super Admin and Admin can update all projects
+        if ($user->hasAnyRole(['admin', 'super-admin'])) {
+            return true;
+        }
+
+        // Users with manage_all_projects permission can update all
+        if ($user->can('manage_all_projects')) {
+            return true;
+        }
+
+        // Employees can only update projects they are members of
+        return $this->isProjectMember($user, $project);
     }
 
     /**
@@ -55,8 +90,8 @@ class ProjectPolicy
      */
     public function delete(User $user, Project $project): bool
     {
-        // Clients cannot delete projects
-        return !$user->hasRole('client');
+        // Only admins can delete projects
+        return $user->hasAnyRole(['admin', 'super-admin']);
     }
 
     /**

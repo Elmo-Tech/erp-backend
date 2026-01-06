@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Contracts\Trackable;
 use App\Enums\ProjectStatus;
 use App\Scopes\ClientScope;
+use App\Scopes\TeamMemberScope;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -56,6 +57,9 @@ class Project extends Model implements Trackable
     {
         // Apply ClientScope when authenticated user is a client
         static::addGlobalScope(new ClientScope());
+        
+        // Apply TeamMemberScope for employees to only see their projects
+        static::addGlobalScope(new TeamMemberScope());
     }
 
     /**
