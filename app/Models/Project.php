@@ -150,10 +150,17 @@ class Project extends Model implements Trackable
 
     /**
      * Get total time spent on project in minutes
+     * Only counts leaf tasks (subtasks) to avoid duplication
+     * since parent tasks inherit time from children
      */
     public function getTotalTimeSpentAttribute(): int
     {
-        return $this->tasks()->sum('total_time_spent') ?? 0;
+        // Get time from leaf tasks only (tasks without children)
+        // This avoids counting the same time multiple times
+        // since parent tasks aggregate time from their children
+        return $this->tasks()
+            ->whereDoesntHave('children')
+            ->sum('total_time_spent') ?? 0;
     }
 
     /**
