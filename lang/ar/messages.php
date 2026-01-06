@@ -6,6 +6,7 @@ return [
     'validation_error' => 'خطأ في التحقق من البيانات',
     'no_permission' => 'ليس لديك صلاحية لتنفيذ هذا الإجراء',
     'unauthorized' => 'غير مصرح بالوصول',
+    'unauthorized_send_invoice' => 'ليس لديك صلاحية لإرسال الفواتير',
     
     // Users
     'users_retrieved' => 'تم جلب المستخدمين بنجاح',
@@ -39,4 +40,16 @@ return [
     'innovation_rejected' => 'تم رفض الابتكار بنجاح',
     'innovation_deleted' => 'تم حذف سجل الابتكار بنجاح',
     'cannot_delete_verified' => 'لا يمكن حذف سجل ابتكار تم التحقق منه',
+
+    // Milestones & Invoices
+    'milestone_retrieved' => 'تم جلب المرحلة بنجاح',
+    'milestone_marked_paid' => 'تم تحديد المرحلة كمدفوعة بنجاح',
+    'invoice_created_from_milestone' => 'تم إنشاء الفاتورة من المرحلة بنجاح',
+    'invoice_linked_to_milestone' => 'تم ربط الفاتورة بالمرحلة بنجاح',
+    'milestone_already_has_invoice' => 'المرحلة مرتبطة بفاتورة بالفعل',
+    'cannot_create_invoice_for_paid_milestone' => 'لا يمكن إنشاء فاتورة لمرحلة مدفوعة',
+    'contract_must_have_project' => 'يجب أن يكون العقد مرتبطاً بمشروع لإنشاء فاتورة',
+    'invoice_sent' => 'تم إرسال الفاتورة بنجاح',
+    'invoice_cancelled' => 'تم إلغاء الفاتورة بنجاح',
+    'cannot_cancel_paid_invoice' => 'لا يمكن إلغاء فاتورة مدفوعة',
 ];

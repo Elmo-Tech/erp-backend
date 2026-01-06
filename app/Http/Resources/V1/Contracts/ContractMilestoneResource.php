@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1\Contracts;
 
+use App\Http\Resources\V1\Invoices\InvoiceResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -27,6 +28,9 @@ class ContractMilestoneResource extends JsonResource
             'paidAt' => $this->paid_at?->toISOString() ?? '',
             'sortOrder' => $this->sort_order ?? 0,
             'isOverdue' => $this->isOverdue(),
+            'invoice' => $this->whenLoaded('invoice', function () {
+                return $this->invoice ? new InvoiceResource($this->invoice) : null;
+            }),
         ];
     }
 }

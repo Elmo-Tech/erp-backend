@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\PerformanceEvaluationController;
 use App\Http\Controllers\Api\V1\CodeReviewController;
+use App\Http\Controllers\Api\V1\MilestoneController;
 use App\Http\Controllers\Api\V1\InnovationLogController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -249,6 +250,14 @@ Route::prefix('v1')->group(function () {
     // Admin Invoice Management Routes
     // All routes have auth:sanctum and locale middleware applied at route level
     Route::apiResource('invoices', InvoiceController::class)->middleware(['auth:sanctum', 'locale']);
+
+    // Milestone Management Routes
+    Route::prefix('milestones')->middleware(['auth:sanctum', 'locale'])->group(function () {
+        Route::get('{id}', [MilestoneController::class, 'show'])->name('milestones.show');
+        Route::post('{id}/create-invoice', [MilestoneController::class, 'createInvoice'])->name('milestones.create-invoice');
+        Route::post('{id}/link-invoice', [MilestoneController::class, 'linkInvoice'])->name('milestones.link-invoice');
+        Route::patch('{id}/mark-paid', [MilestoneController::class, 'markPaid'])->name('milestones.mark-paid');
+    });
 
     // Dashboard Routes
     Route::get('dashboard/overview', [DashboardController::class, 'overview'])->middleware(['auth:sanctum', 'locale'])->name('dashboard.overview');

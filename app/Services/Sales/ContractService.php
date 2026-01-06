@@ -228,16 +228,34 @@ class ContractService
 
     /**
      * Mark milestone as paid
+     * If no invoice is linked, optionally create one
      */
-    public function markMilestonePaid(ContractMilestone $milestone, ?int $invoiceId = null): ContractMilestone
+    public function markMilestonePaid(ContractMilestone $milestone, ?int $invoiceId = null, bool $createInvoice = false): ContractMilestone
     {
-        $milestone->update([
-            'status' => MilestoneStatus::PAID,
-            'invoice_id' => $invoiceId,
-            'paid_at' => now(),
-        ]);
+        return DB::transaction(function () use ($milestone, $invoiceId, $createInvoice) {
+            $updateData = [
+                'status' => MilestoneStatus::PAID,
+                'paid_at' => now(),
+            ];
 
-        return $milestone->fresh();
+            // Link to existing invoice if provided
+            if ($invoiceId) {
+                $updateData['invoice_id'] = $invoiceId;
+            }
+
+            $milestone->update($updateData);
+
+            return $milestone->fresh(['invoice']);
+        });
+    }
+
+    /**
+     * Get milestone with invoice details
+     */
+    public function getMilestoneWithInvoice(int $milestoneId): ?ContractMilestone
+    {
+        return ContractMilestone::with(['contract.project', 'invoice'])
+            ->find($milestoneId);
     }
 
     /**

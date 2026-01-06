@@ -6,6 +6,7 @@ return [
     'validation_error' => 'Validation error',
     'no_permission' => 'You do not have permission to perform this action',
     'unauthorized' => 'Unauthorized access',
+    'unauthorized_send_invoice' => 'You do not have permission to send invoices',
     
     // Users
     'users_retrieved' => 'Users retrieved successfully',
@@ -39,4 +40,16 @@ return [
     'innovation_rejected' => 'Innovation rejected successfully',
     'innovation_deleted' => 'Innovation log deleted successfully',
     'cannot_delete_verified' => 'Cannot delete a verified innovation log',
+
+    // Milestones & Invoices
+    'milestone_retrieved' => 'Milestone retrieved successfully',
+    'milestone_marked_paid' => 'Milestone marked as paid successfully',
+    'invoice_created_from_milestone' => 'Invoice created from milestone successfully',
+    'invoice_linked_to_milestone' => 'Invoice linked to milestone successfully',
+    'milestone_already_has_invoice' => 'Milestone already has an invoice linked',
+    'cannot_create_invoice_for_paid_milestone' => 'Cannot create invoice for paid milestone',
+    'contract_must_have_project' => 'Contract must be linked to a project to create invoice',
+    'invoice_sent' => 'Invoice sent successfully',
+    'invoice_cancelled' => 'Invoice cancelled successfully',
+    'cannot_cancel_paid_invoice' => 'Cannot cancel a paid invoice',
 ];

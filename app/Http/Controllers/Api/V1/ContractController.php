@@ -106,7 +106,7 @@ class ContractController extends Controller
      */
     public function show(Contract $contract): JsonResponse
     {
-        $contract->load(['milestones', 'quotation', 'project', 'template']);
+        $contract->load(['milestones.invoice', 'quotation', 'project', 'template']);
 
         return ApiResponse::success(
             new ContractResource($contract),

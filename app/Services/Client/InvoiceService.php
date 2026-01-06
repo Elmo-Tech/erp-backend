@@ -3,10 +3,13 @@
 namespace App\Services\Client;
 
 use App\Enums\InvoiceStatus;
+use App\Enums\MilestoneStatus;
+use App\Models\ContractMilestone;
 use App\Models\Invoice;
 use App\Models\Project;
 use Carbon\Carbon;
 use InvalidArgumentException;
+use Illuminate\Support\Facades\DB;
 
 class InvoiceService
 {
@@ -37,7 +40,57 @@ class InvoiceService
     }
 
     /**
+     * Create invoice from contract milestone.
+     * Links the invoice to the milestone and updates milestone status.
+     */
+    public function createFromMilestone(ContractMilestone $milestone, array $data = []): Invoice
+    {
+        // Validate milestone can have invoice created
+        if ($milestone->invoice_id) {
+            throw new InvalidArgumentException('Milestone already has an invoice linked.');
+        }
+
+        if ($milestone->status === MilestoneStatus::PAID) {
+            throw new InvalidArgumentException('Cannot create invoice for paid milestone.');
+        }
+
+        // Get project from contract
+        $contract = $milestone->contract;
+        if (!$contract->project_id) {
+            throw new InvalidArgumentException('Contract must be linked to a project to create invoice.');
+        }
+
+        return DB::transaction(function () use ($milestone, $contract, $data) {
+            // Create the invoice
+            $invoice = Invoice::create([
+                'project_id' => $contract->project_id,
+                'invoice_number' => Invoice::generateInvoiceNumber(),
+                'amount' => $milestone->amount,
+                'currency' => $contract->currency,
+                'status' => InvoiceStatus::DRAFT,
+                'due_date' => $data['dueDate'] ?? $milestone->due_date ?? now()->addDays(14),
+                'notes' => $data['notes'] ?? "Payment for milestone: {$milestone->title}",
+            ]);
+
+            // Link invoice to milestone and update status
+            $milestone->update([
+                'invoice_id' => $invoice->id,
+                'status' => MilestoneStatus::INVOICED,
+            ]);
+
+            $this->auditLogService->log('invoice_created_from_milestone', $invoice, [
+                'milestone_id' => $milestone->id,
+                'milestone_title' => $milestone->title,
+                'contract_id' => $contract->id,
+            ]);
+
+            return $invoice->load('project');
+        });
+    }
+
+    /**
      * Mark an invoice as paid.
+     * If linked to a milestone, updates milestone status too.
      * 
      * Requirements: 8.3
      */
@@ -47,12 +100,104 @@ class InvoiceService
             throw new InvalidArgumentException('Invoice cannot be paid in current status.');
         }
 
+        return DB::transaction(function () use ($invoice) {
+            $invoice->update([
+                'status' => InvoiceStatus::PAID,
+                'paid_at' => Carbon::now(),
+            ]);
+
+            // Update linked milestone if exists
+            $milestone = ContractMilestone::where('invoice_id', $invoice->id)->first();
+            if ($milestone) {
+                $milestone->update([
+                    'status' => MilestoneStatus::PAID,
+                    'paid_at' => Carbon::now(),
+                ]);
+
+                $this->auditLogService->log('milestone_paid_via_invoice', $invoice, [
+                    'milestone_id' => $milestone->id,
+                    'milestone_title' => $milestone->title,
+                ]);
+            }
+
+            $this->auditLogService->log('invoice_paid', $invoice);
+
+            return $invoice->fresh();
+        });
+    }
+
+    /**
+     * Send invoice to client.
+     */
+    public function sendInvoice(Invoice $invoice): Invoice
+    {
+        if ($invoice->status !== InvoiceStatus::DRAFT) {
+            throw new InvalidArgumentException('Only draft invoices can be sent.');
+        }
+
         $invoice->update([
-            'status' => InvoiceStatus::PAID,
-            'paid_at' => Carbon::now(),
+            'status' => InvoiceStatus::SENT,
         ]);
 
-        $this->auditLogService->log('invoice_paid', $invoice);
+        $this->auditLogService->log('invoice_sent', $invoice);
+
+        return $invoice->fresh();
+    }
+
+    /**
+     * Cancel an invoice.
+     * If linked to a milestone, unlinks it and reverts milestone status.
+     */
+    public function cancelInvoice(Invoice $invoice): Invoice
+    {
+        if ($invoice->status === InvoiceStatus::PAID) {
+            throw new InvalidArgumentException('Cannot cancel a paid invoice.');
+        }
+
+        return DB::transaction(function () use ($invoice) {
+            // Unlink from milestone if exists
+            $milestone = ContractMilestone::where('invoice_id', $invoice->id)->first();
+            if ($milestone) {
+                $milestone->update([
+                    'invoice_id' => null,
+                    'status' => MilestoneStatus::DUE,
+                ]);
+            }
+
+            $invoice->update([
+                'status' => InvoiceStatus::CANCELLED,
+            ]);
+
+            $this->auditLogService->log('invoice_cancelled', $invoice);
+
+            return $invoice->fresh();
+        });
+    }
+
+    /**
+     * Link existing invoice to milestone.
+     */
+    public function linkToMilestone(Invoice $invoice, ContractMilestone $milestone): Invoice
+    {
+        if ($milestone->invoice_id) {
+            throw new InvalidArgumentException('Milestone already has an invoice linked.');
+        }
+
+        if ($invoice->status === InvoiceStatus::CANCELLED) {
+            throw new InvalidArgumentException('Cannot link cancelled invoice to milestone.');
+        }
+
+        $milestone->update([
+            'invoice_id' => $invoice->id,
+            'status' => $invoice->status === InvoiceStatus::PAID 
+                ? MilestoneStatus::PAID 
+                : MilestoneStatus::INVOICED,
+            'paid_at' => $invoice->paid_at,
+        ]);
+
+        $this->auditLogService->log('invoice_linked_to_milestone', $invoice, [
+            'milestone_id' => $milestone->id,
+        ]);
 
         return $invoice->fresh();
     }
