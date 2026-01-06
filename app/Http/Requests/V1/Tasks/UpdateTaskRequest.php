@@ -16,10 +16,32 @@ class UpdateTaskRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     * 
+     * Authorization rules:
+     * - Admin/Super Admin: Can edit any task type (main, weekly, subtask)
+     * - Other users: Can only edit subtasks
      */
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+        $task = $this->route('task');
+        
+        if (!$task instanceof Task) {
+            return false;
+        }
+        
+        // Admin and Super Admin can edit any task type
+        if ($user->hasRole(['admin', 'super-admin'])) {
+            return true;
+        }
+        
+        // Other users can only edit subtasks
+        if ($task->type === TaskType::SUBTASK) {
+            return true;
+        }
+        
+        // Non-admin trying to edit main or weekly task
+        return false;
     }
 
     /**
@@ -292,6 +314,21 @@ class UpdateTaskRequest extends FormRequest
             ApiResponse::validationError(
                 $validator->errors()->toArray(),
                 'Validation failed for task update'
+            )
+        );
+    }
+
+    /**
+     * Handle a failed authorization attempt.
+     *
+     * @throws HttpResponseException
+     */
+    protected function failedAuthorization(): void
+    {
+        throw new HttpResponseException(
+            ApiResponse::error(
+                'Only administrators can edit main tasks and weekly tasks. You can only edit subtasks.',
+                403
             )
         );
     }

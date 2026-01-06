@@ -25,6 +25,11 @@ class NewPermissionsSeeder extends Seeder
             'create_weekly_tasks',
             'create_subtasks',
             
+            // Task Edit Permissions
+            'edit_main_tasks',
+            'edit_weekly_tasks',
+            'edit_subtasks',
+            
             // Time Entry Permissions
             'edit_time_entries',
             
@@ -52,9 +57,12 @@ class NewPermissionsSeeder extends Seeder
             $admin->givePermissionTo($newPermissions);
         }
 
-        // Developer can only create subtasks
+        // Developer can only create and edit subtasks
         if ($developer) {
-            $developer->givePermissionTo('create_subtasks');
+            $developer->givePermissionTo([
+                'create_subtasks',
+                'edit_subtasks',
+            ]);
         }
     }
 }
