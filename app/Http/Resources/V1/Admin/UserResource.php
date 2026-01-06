@@ -17,6 +17,9 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'skills', type: 'array', items: new OA\Items(type: 'string'), example: ['PHP', 'Laravel']),
         new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['developer']),
         new OA\Property(property: 'isActive', type: 'boolean', example: true),
+        new OA\Property(property: 'graceDaysAllowed', type: 'integer', example: 2),
+        new OA\Property(property: 'graceDaysUsed', type: 'integer', example: 0),
+        new OA\Property(property: 'graceDaysRemaining', type: 'integer', example: 2),
         new OA\Property(property: 'createdAt', type: 'string', format: 'date-time'),
         new OA\Property(property: 'updatedAt', type: 'string', format: 'date-time'),
     ]
@@ -33,6 +36,9 @@ class UserResource extends JsonResource
             'skills' => $this->skills ?? [],
             'roles' => $this->roles->pluck('name')->toArray(),
             'isActive' => (bool) ($this->is_active ?? true),
+            'graceDaysAllowed' => (int) ($this->grace_days_allowed ?? 2),
+            'graceDaysUsed' => (int) ($this->grace_days_used ?? 0),
+            'graceDaysRemaining' => max(0, ($this->grace_days_allowed ?? 2) - ($this->grace_days_used ?? 0)),
             'createdAt' => $this->created_at?->toISOString() ?? "",
             'updatedAt' => $this->updated_at?->toISOString() ?? "",
         ];

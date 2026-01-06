@@ -132,6 +132,19 @@ class User extends Authenticatable
     }
 
     /**
+     * Restore a grace day (when attendance is updated to not late)
+     */
+    public function restoreGraceDay(): bool
+    {
+        if ($this->grace_days_used <= 0) {
+            return false;
+        }
+        
+        $this->decrement('grace_days_used');
+        return true;
+    }
+
+    /**
      * Reset grace days if it's a new month
      */
     public function resetGraceDaysIfNewMonth(): void

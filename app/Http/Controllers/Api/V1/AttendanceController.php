@@ -181,6 +181,7 @@ class AttendanceController extends Controller
      *             @OA\Property(property="clockIn", type="string", format="date-time", example="2026-01-06T10:00:00"),
      *             @OA\Property(property="clockOut", type="string", format="date-time", example="2026-01-06T18:00:00", nullable=true),
      *             @OA\Property(property="lateMinutes", type="integer", example=0),
+     *             @OA\Property(property="isLate", type="boolean", example=false),
      *             @OA\Property(property="deductionMinutes", type="integer", example=0),
      *             @OA\Property(property="notes", type="string", nullable=true)
      *         )
@@ -202,6 +203,8 @@ class AttendanceController extends Controller
             'clockIn' => 'required|date',
             'clockOut' => 'nullable|date|after:clockIn',
             'lateMinutes' => 'nullable|integer|min:0',
+            'isLate' => 'nullable|boolean',
+            'usedGraceDay' => 'nullable|boolean',
             'deductionMinutes' => 'nullable|integer|min:0',
             'notes' => 'nullable|string|max:500',
         ]);

@@ -17,6 +17,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *     @OA\Property(property="expectedClockIn", type="string", example="10:00:00"),
  *     @OA\Property(property="expectedClockOut", type="string", example="18:00:00"),
  *     @OA\Property(property="lateMinutes", type="integer", example=15),
+ *     @OA\Property(property="isLate", type="boolean", example=false),
  *     @OA\Property(property="idleMinutes", type="integer", example=30),
  *     @OA\Property(property="deductionMinutes", type="integer", example=0),
  *     @OA\Property(property="usedGraceDay", type="boolean", example=false),
@@ -39,6 +40,7 @@ class AttendanceResource extends JsonResource
             'expectedClockIn' => $this->expected_clock_in,
             'expectedClockOut' => $this->expected_clock_out,
             'lateMinutes' => (int) $this->late_minutes,
+            'isLate' => (bool) $this->is_late,
             'idleMinutes' => (int) $this->idle_minutes,
             'deductionMinutes' => (int) $this->deduction_minutes,
             'usedGraceDay' => (bool) $this->used_grace_day,
@@ -51,6 +53,7 @@ class AttendanceResource extends JsonResource
                 'name' => $this->user->name,
                 'email' => $this->user->email,
                 'avatar' => $this->user->avatar ?? '',
+                'graceDaysRemaining' => max(0, $this->user->grace_days_allowed - $this->user->grace_days_used),
             ]),
         ];
     }
