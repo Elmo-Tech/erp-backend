@@ -166,6 +166,65 @@ class AttendanceController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/v1/attendance",
+     *     operationId="storeAttendance",
+     *     tags={"Attendance"},
+     *     summary="Create attendance record (admin)",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"userId", "date", "clockIn"},
+     *             @OA\Property(property="userId", type="integer", example=1),
+     *             @OA\Property(property="date", type="string", format="date", example="2026-01-06"),
+     *             @OA\Property(property="clockIn", type="string", format="date-time", example="2026-01-06T10:00:00"),
+     *             @OA\Property(property="clockOut", type="string", format="date-time", example="2026-01-06T18:00:00", nullable=true),
+     *             @OA\Property(property="lateMinutes", type="integer", example=0),
+     *             @OA\Property(property="deductionMinutes", type="integer", example=0),
+     *             @OA\Property(property="notes", type="string", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Created"),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
+    public function store(Request $request): JsonResponse
+    {
+        if (!$request->user()->can('manage_attendance')) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+
+        $validated = $request->validate([
+            'userId' => 'required|integer|exists:users,id',
+            'date' => 'required|date',
+            'clockIn' => 'required|date',
+            'clockOut' => 'nullable|date|after:clockIn',
+            'lateMinutes' => 'nullable|integer|min:0',
+            'deductionMinutes' => 'nullable|integer|min:0',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        // Check if attendance already exists for this user on this date
+        $existing = Attendance::where('user_id', $validated['userId'])
+            ->where('date', $validated['date'])
+            ->first();
+
+        if ($existing) {
+            return ApiResponse::error(__('messages.attendance_already_exists'), 422);
+        }
+
+        $attendance = $this->attendanceService->createAttendance($validated, $request->user());
+
+        return ApiResponse::success(
+            new AttendanceResource($attendance),
+            __('messages.attendance_created'),
+            201
+        );
+    }
+
+    /**
      * @OA\Put(
      *     path="/api/v1/attendance/{id}",
      *     operationId="updateAttendance",

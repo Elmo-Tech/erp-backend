@@ -62,6 +62,8 @@ return [
     'clocked_out' => 'Clocked out successfully',
     'attendance_not_found' => 'Attendance record not found',
     'attendance_updated' => 'Attendance record updated successfully',
+    'attendance_created' => 'Attendance record created successfully',
+    'attendance_already_exists' => 'Attendance record already exists for this employee on this date',
 
     // Task Permissions
     'no_permission_manage_team' => 'You do not have permission to manage team members on this task type.',

@@ -62,6 +62,8 @@ return [
     'clocked_out' => 'تم تسجيل الخروج بنجاح',
     'attendance_not_found' => 'سجل الحضور غير موجود',
     'attendance_updated' => 'تم تحديث سجل الحضور بنجاح',
+    'attendance_created' => 'تم إنشاء سجل الحضور بنجاح',
+    'attendance_already_exists' => 'يوجد سجل حضور لهذا الموظف في هذا التاريخ',
 
     // Task Permissions
     'no_permission_manage_team' => 'ليس لديك صلاحية لإدارة أعضاء الفريق في هذا النوع من المهام.',

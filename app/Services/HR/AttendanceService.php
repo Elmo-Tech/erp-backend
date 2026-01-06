@@ -216,6 +216,36 @@ class AttendanceService
     }
 
     /**
+     * Create attendance record manually (admin only).
+     */
+    public function createAttendance(array $data, User $admin): Attendance
+    {
+        $user = User::findOrFail($data['userId']);
+
+        $attendance = Attendance::create([
+            'user_id' => $data['userId'],
+            'date' => $data['date'],
+            'clock_in' => $data['clockIn'],
+            'clock_out' => $data['clockOut'] ?? null,
+            'expected_clock_in' => $user->work_start_time ?? '10:00:00',
+            'expected_clock_out' => $user->expected_clock_out,
+            'late_minutes' => $data['lateMinutes'] ?? 0,
+            'idle_minutes' => 0,
+            'deduction_minutes' => $data['deductionMinutes'] ?? 0,
+            'used_grace_day' => false,
+            'notes' => $data['notes'] ?? null,
+        ]);
+
+        // Calculate idle minutes if clock_out is set
+        if ($attendance->clock_out) {
+            $attendance->idle_minutes = $attendance->calculateIdleMinutes();
+            $attendance->save();
+        }
+
+        return $attendance->load('user');
+    }
+
+    /**
      * Update attendance record manually (admin only).
      */
     public function updateAttendance(Attendance $attendance, array $data, User $admin): Attendance

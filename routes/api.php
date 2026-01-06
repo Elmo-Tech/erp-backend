@@ -167,6 +167,7 @@ Route::prefix('v1')->group(function () {
     Route::get('attendance/summary', [AttendanceController::class, 'summary'])->name('attendance.summary');
     Route::post('attendance/clock-out', [AttendanceController::class, 'clockOut'])->name('attendance.clock-out');
     Route::get('attendance/all', [AttendanceController::class, 'all'])->name('attendance.all');
+    Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
     Route::put('attendance/{id}', [AttendanceController::class, 'update'])->name('attendance.update');
 
     // Employee Management Routes
