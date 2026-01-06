@@ -216,11 +216,11 @@ class DashboardController extends Controller
             ->count();
 
         // Team Tasks Stats
-        $totalTasks = Task::whereIn('assignee_id', $teamMemberIds)->count();
-        $completedTasks = Task::whereIn('assignee_id', $teamMemberIds)
+        $totalTasks = Task::whereIn('assigned_to', $teamMemberIds)->count();
+        $completedTasks = Task::whereIn('assigned_to', $teamMemberIds)
             ->where('status', 'completed')
             ->count();
-        $pendingTasks = Task::whereIn('assignee_id', $teamMemberIds)
+        $pendingTasks = Task::whereIn('assigned_to', $teamMemberIds)
             ->whereIn('status', ['todo', 'in_progress'])
             ->count();
 
@@ -240,7 +240,7 @@ class DashboardController extends Controller
 
         // Recent Team Tasks
         $recentTasks = Task::with(['assignee', 'project'])
-            ->whereIn('assignee_id', $teamMemberIds)
+            ->whereIn('assigned_to', $teamMemberIds)
             ->orderBy('updated_at', 'desc')
             ->limit(4)
             ->get()
@@ -280,14 +280,14 @@ class DashboardController extends Controller
         $userId = $user->id;
 
         // My Tasks Stats
-        $myTotalTasks = Task::where('assignee_id', $userId)->count();
-        $myCompletedTasks = Task::where('assignee_id', $userId)
+        $myTotalTasks = Task::where('assigned_to', $userId)->count();
+        $myCompletedTasks = Task::where('assigned_to', $userId)
             ->where('status', 'completed')
             ->count();
-        $myInProgressTasks = Task::where('assignee_id', $userId)
+        $myInProgressTasks = Task::where('assigned_to', $userId)
             ->where('status', 'in_progress')
             ->count();
-        $myTodoTasks = Task::where('assignee_id', $userId)
+        $myTodoTasks = Task::where('assigned_to', $userId)
             ->where('status', 'todo')
             ->count();
 
@@ -303,7 +303,7 @@ class DashboardController extends Controller
         $myHoursChange = $this->calculateChange($myHoursThisMonth, $myHoursLastMonth);
 
         // My Projects (projects I have tasks in)
-        $myProjectIds = Task::where('assignee_id', $userId)
+        $myProjectIds = Task::where('assigned_to', $userId)
             ->distinct('project_id')
             ->pluck('project_id');
         $myActiveProjects = Project::withoutGlobalScopes()
@@ -331,7 +331,7 @@ class DashboardController extends Controller
 
         // My Recent Tasks
         $myRecentTasks = Task::with('project')
-            ->where('assignee_id', $userId)
+            ->where('assigned_to', $userId)
             ->orderBy('updated_at', 'desc')
             ->limit(4)
             ->get()
@@ -413,7 +413,7 @@ class DashboardController extends Controller
 
         try {
             $recentTasks = Task::with('assignee')
-                ->whereIn('assignee_id', $teamMemberIds)
+                ->whereIn('assigned_to', $teamMemberIds)
                 ->orderBy('updated_at', 'desc')
                 ->limit(5)
                 ->get()
@@ -452,7 +452,7 @@ class DashboardController extends Controller
 
         try {
             // My recent tasks
-            $recentTasks = Task::where('assignee_id', $userId)
+            $recentTasks = Task::where('assigned_to', $userId)
                 ->orderBy('updated_at', 'desc')
                 ->limit(5)
                 ->get()
