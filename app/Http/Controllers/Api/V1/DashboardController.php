@@ -131,10 +131,10 @@ class DashboardController extends Controller
             // Work Hours Stats (from time entries)
             $workHoursThisMonth = (TimeEntry::where('start_time', '>=', $startOfMonth)
                 ->whereNotNull('end_time')
-                ->sum('duration') ?? 0) / 60;
+                ->sum('duration_minutes') ?? 0) / 60;
             $workHoursLastMonth = (TimeEntry::whereBetween('start_time', [$startOfLastMonth, $endOfLastMonth])
                 ->whereNotNull('end_time')
-                ->sum('duration') ?? 0) / 60;
+                ->sum('duration_minutes') ?? 0) / 60;
             $workHoursChange = $workHoursLastMonth > 0 
                 ? round((($workHoursThisMonth - $workHoursLastMonth) / $workHoursLastMonth) * 100, 1)
                 : ($workHoursThisMonth > 0 ? 100 : 0);
