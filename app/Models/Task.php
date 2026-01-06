@@ -240,12 +240,18 @@ class Task extends Model implements Trackable
 
     /**
      * Check if timer can be started on this task.
-     * Timer is only allowed on leaf tasks (tasks with no children).
+     * Timer is only allowed on leaf tasks (tasks with no children) and not completed tasks.
      *
      * @return bool
      */
     public function canStartTimer(): bool
     {
+        // Cannot start timer on completed tasks
+        if ($this->status === TaskStatus::COMPLETED) {
+            return false;
+        }
+        
+        // Timer only allowed on leaf tasks (no children)
         return !$this->children()->exists();
     }
 
