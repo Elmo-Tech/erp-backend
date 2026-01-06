@@ -432,4 +432,167 @@ class TimeEntryController extends Controller
             'Active timer retrieved successfully'
         );
     }
+
+    /**
+     * @OA\Put(
+     *     path="/api/v1/time-entries/{id}",
+     *     operationId="updateTimeEntry",
+     *     tags={"Time Entries"},
+     *     summary="Update a time entry (Admin/Super Admin only)",
+     *     description="Update time entry details. Only admins and super admins can modify time entries.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Time Entry ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="startTime", type="string", format="date-time", example="2025-01-06 09:00:00"),
+     *             @OA\Property(property="endTime", type="string", format="date-time", example="2025-01-06 17:00:00"),
+     *             @OA\Property(property="durationMinutes", type="integer", example=480),
+     *             @OA\Property(property="notes", type="string", example="Manual adjustment for missed timer")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Time entry updated successfully"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized - Admin access required"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Time entry not found"
+     *     )
+     * )
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        
+        // Only admin and super-admin can update time entries
+        if (!$user->hasRole(['admin', 'super-admin'])) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+        
+        $timeEntry = TimeEntry::find($id);
+        
+        if (!$timeEntry) {
+            return ApiResponse::notFound(__('messages.time_entry_not_found'));
+        }
+        
+        $updateData = [];
+        
+        if ($request->has('startTime')) {
+            $updateData['start_time'] = $request->input('startTime');
+        }
+        
+        if ($request->has('endTime')) {
+            $updateData['end_time'] = $request->input('endTime');
+        }
+        
+        if ($request->has('durationMinutes')) {
+            $updateData['duration_minutes'] = $request->input('durationMinutes');
+        }
+        
+        // If start and end time provided but no duration, calculate it
+        if (isset($updateData['start_time']) && isset($updateData['end_time']) && !isset($updateData['duration_minutes'])) {
+            $start = \Carbon\Carbon::parse($updateData['start_time']);
+            $end = \Carbon\Carbon::parse($updateData['end_time']);
+            $updateData['duration_minutes'] = (int) floor($start->diffInSeconds($end) / 60);
+        }
+        
+        $timeEntry->update($updateData);
+        
+        return ApiResponse::success(
+            new TimeEntryResource($timeEntry->fresh()->load('trackable')),
+            __('messages.time_entry_updated')
+        );
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/time-entries/all",
+     *     operationId="getAllTimeEntries",
+     *     tags={"Time Entries"},
+     *     summary="Get all time entries (Admin/Super Admin only)",
+     *     description="Retrieve all time entries with filtering. Only admins and super admins can access.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[userId]",
+     *         in="query",
+     *         description="Filter by user ID",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[startDate]",
+     *         in="query",
+     *         description="Filter by start date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[endDate]",
+     *         in="query",
+     *         description="Filter by end date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Time entries retrieved successfully"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized - Admin access required"
+     *     )
+     * )
+     */
+    public function all(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        // Only admin and super-admin can view all time entries
+        if (!$user->hasRole(['admin', 'super-admin'])) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+        
+        $timeEntries = QueryBuilder::for(TimeEntry::class)
+            ->with(['trackable', 'user'])
+            ->allowedFilters([
+                AllowedFilter::exact('user_id'),
+                AllowedFilter::exact('trackable_type'),
+                AllowedFilter::exact('trackable_id'),
+                AllowedFilter::callback('start_date', function ($query, $value) {
+                    $query->whereDate('start_time', '>=', $value);
+                }),
+                AllowedFilter::callback('end_date', function ($query, $value) {
+                    $query->whereDate('start_time', '<=', $value);
+                })
+            ])
+            ->defaultSort('-start_time')
+            ->paginate($request->get('perPage', 15));
+
+        return ApiResponse::success(
+            new TimeEntryCollection($timeEntries),
+            'Time entries retrieved successfully'
+        );
+    }
 }

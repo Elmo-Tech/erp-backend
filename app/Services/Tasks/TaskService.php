@@ -108,6 +108,9 @@ class TaskService
     /**
      * Create a new task.
      * For Weekly Tasks and Subtasks, assignees are inherited from the Main Task.
+     * 
+     * When assignedTo (primary assignee) is provided during creation,
+     * automatically adds them as a primary assignee in task_assignees table.
      */
     public function createTask(array $data, User $user): Task
     {
@@ -156,13 +159,28 @@ class TaskService
                     ]);
                 }
             }
+            
+            // Auto-add primary assignee if assignedTo is set and not already in assignees
+            if (!empty($data['assignedTo'])) {
+                $existingAssigneeIds = collect($data['assignees'] ?? [])->pluck('userId')->toArray();
+                if (!in_array($data['assignedTo'], $existingAssigneeIds)) {
+                    TaskAssignee::create([
+                        'task_id' => $task->id,
+                        'user_id' => $data['assignedTo'],
+                        'role' => 'developer',
+                        'is_primary' => true,
+                        'created_by' => $user->id,
+                        'updated_by' => $user->id,
+                    ]);
+                }
+            }
         } else {
             // Weekly Tasks and Subtasks: Can have specific assignees from the Main Task's team
+            $mainTask = $this->findMainTask($task);
+            $teamUserIds = $mainTask ? $mainTask->assignees()->pluck('user_id')->toArray() : [];
+            
             // If assignees provided, validate they're in the team and add them
             if (!empty($data['assignees'])) {
-                $mainTask = $this->findMainTask($task);
-                $teamUserIds = $mainTask ? $mainTask->assignees()->pluck('user_id')->toArray() : [];
-                
                 foreach ($data['assignees'] as $assignee) {
                     // Only add if user is in the Main Task's team
                     if (in_array($assignee['userId'], $teamUserIds)) {
@@ -177,20 +195,23 @@ class TaskService
                     }
                 }
             }
-            // If no assignees provided but assignedTo is set, use that
-            elseif (!empty($data['assignedTo'])) {
-                $mainTask = $this->findMainTask($task);
-                $teamUserIds = $mainTask ? $mainTask->assignees()->pluck('user_id')->toArray() : [];
+            
+            // Auto-add primary assignee if assignedTo is set
+            if (!empty($data['assignedTo'])) {
+                $existingAssigneeIds = $task->assignees()->pluck('user_id')->toArray();
                 
-                if (in_array($data['assignedTo'], $teamUserIds)) {
-                    TaskAssignee::create([
-                        'task_id' => $task->id,
-                        'user_id' => $data['assignedTo'],
-                        'role' => 'developer',
-                        'is_primary' => true,
-                        'created_by' => $user->id,
-                        'updated_by' => $user->id,
-                    ]);
+                // Only add if not already assigned and is in the team
+                if (!in_array($data['assignedTo'], $existingAssigneeIds)) {
+                    if (in_array($data['assignedTo'], $teamUserIds)) {
+                        TaskAssignee::create([
+                            'task_id' => $task->id,
+                            'user_id' => $data['assignedTo'],
+                            'role' => 'developer',
+                            'is_primary' => true,
+                            'created_by' => $user->id,
+                            'updated_by' => $user->id,
+                        ]);
+                    }
                 }
             }
         }

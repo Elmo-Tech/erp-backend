@@ -52,4 +52,14 @@ return [
     'invoice_sent' => 'Invoice sent successfully',
     'invoice_cancelled' => 'Invoice cancelled successfully',
     'cannot_cancel_paid_invoice' => 'Cannot cancel a paid invoice',
+
+    // Time Entries
+    'time_entry_not_found' => 'Time entry not found',
+    'time_entry_updated' => 'Time entry updated successfully',
+
+    // Attendance
+    'no_attendance_record' => 'No attendance record found for today',
+    'clocked_out' => 'Clocked out successfully',
+    'attendance_not_found' => 'Attendance record not found',
+    'attendance_updated' => 'Attendance record updated successfully',
 ];

@@ -157,6 +157,8 @@ Route::prefix('v1')->group(function () {
     Route::post('time-entries/stop', [TimeEntryController::class, 'stop'])->name('time-entries.stop');
     Route::get('time-entries', [TimeEntryController::class, 'index'])->name('time-entries.index');
     Route::get('time-entries/active', [TimeEntryController::class, 'active'])->name('time-entries.active');
+    Route::put('time-entries/{id}', [TimeEntryController::class, 'update'])->name('time-entries.update');
+    Route::get('time-entries/all', [TimeEntryController::class, 'all'])->name('time-entries.all');
 
     // Attendance Routes
     // All routes have auth:sanctum and locale middleware applied in controller

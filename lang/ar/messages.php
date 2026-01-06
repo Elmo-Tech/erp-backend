@@ -52,4 +52,14 @@ return [
     'invoice_sent' => 'تم إرسال الفاتورة بنجاح',
     'invoice_cancelled' => 'تم إلغاء الفاتورة بنجاح',
     'cannot_cancel_paid_invoice' => 'لا يمكن إلغاء فاتورة مدفوعة',
+
+    // Time Entries
+    'time_entry_not_found' => 'سجل الوقت غير موجود',
+    'time_entry_updated' => 'تم تحديث سجل الوقت بنجاح',
+
+    // Attendance
+    'no_attendance_record' => 'لا يوجد سجل حضور لليوم',
+    'clocked_out' => 'تم تسجيل الخروج بنجاح',
+    'attendance_not_found' => 'سجل الحضور غير موجود',
+    'attendance_updated' => 'تم تحديث سجل الحضور بنجاح',
 ];

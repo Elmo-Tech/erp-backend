@@ -96,103 +96,25 @@ class DashboardController extends Controller
     public function overview(Request $request): JsonResponse
     {
         try {
+            $user = $request->user();
             $now = Carbon::now();
             $startOfMonth = $now->copy()->startOfMonth();
             $startOfLastMonth = $now->copy()->subMonth()->startOfMonth();
             $endOfLastMonth = $now->copy()->subMonth()->endOfMonth();
 
-            // Active statuses for filtering
-            $activeStatuses = [
-                ProjectStatus::ACTIVE->value,
-                ProjectStatus::UI_UX->value,
-                ProjectStatus::DEVELOPMENT->value,
-                ProjectStatus::TESTING->value,
-            ];
+            // Determine user role for different stats
+            $isAdmin = $user->hasAnyRole(['super-admin', 'admin']);
+            $isManager = $user->hasRole('manager');
+            $isDeveloper = $user->hasRole('developer');
 
-            // Projects Stats
-            $totalProjects = Project::withoutGlobalScopes()->count();
-            $projectsThisMonth = Project::withoutGlobalScopes()->where('created_at', '>=', $startOfMonth)->count();
-            $projectsLastMonth = Project::withoutGlobalScopes()->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])->count();
-            $projectsChange = $projectsLastMonth > 0 
-                ? round((($projectsThisMonth - $projectsLastMonth) / $projectsLastMonth) * 100, 1)
-                : ($projectsThisMonth > 0 ? 100 : 0);
-
-            // Sales Stats (from quotations with status 'approved')
-            $salesThisMonth = Quotation::where('status', 'approved')
-                ->where('created_at', '>=', $startOfMonth)
-                ->sum('final_price') ?? 0;
-            $salesLastMonth = Quotation::where('status', 'approved')
-                ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
-                ->sum('final_price') ?? 0;
-            $salesChange = $salesLastMonth > 0 
-                ? round((($salesThisMonth - $salesLastMonth) / $salesLastMonth) * 100, 1)
-                : ($salesThisMonth > 0 ? 100 : 0);
-
-            // Work Hours Stats (from time entries)
-            $workHoursThisMonth = (TimeEntry::where('start_time', '>=', $startOfMonth)
-                ->whereNotNull('end_time')
-                ->sum('duration_minutes') ?? 0) / 60;
-            $workHoursLastMonth = (TimeEntry::whereBetween('start_time', [$startOfLastMonth, $endOfLastMonth])
-                ->whereNotNull('end_time')
-                ->sum('duration_minutes') ?? 0) / 60;
-            $workHoursChange = $workHoursLastMonth > 0 
-                ? round((($workHoursThisMonth - $workHoursLastMonth) / $workHoursLastMonth) * 100, 1)
-                : ($workHoursThisMonth > 0 ? 100 : 0);
-
-            // Active Clients Stats - count from projects directly
-            $activeClients = Project::withoutGlobalScopes()
-                ->whereIn('status', $activeStatuses)
-                ->whereNotNull('client_id')
-                ->distinct('client_id')
-                ->count('client_id');
-            
-            $clientsLastMonth = Project::withoutGlobalScopes()
-                ->whereIn('status', $activeStatuses)
-                ->where('created_at', '<', $startOfMonth)
-                ->whereNotNull('client_id')
-                ->distinct('client_id')
-                ->count('client_id');
-            $clientsChange = $activeClients - $clientsLastMonth;
-
-            // Recent Projects (last 4)
-            $recentProjects = Project::withoutGlobalScopes()
-                ->select('id', 'title', 'status')
-                ->orderBy('updated_at', 'desc')
-                ->limit(4)
-                ->get()
-                ->map(function ($project) {
-                    // Calculate progress based on completed tasks
-                    $totalTasks = Task::where('project_id', $project->id)->count();
-                    $completedTasks = Task::where('project_id', $project->id)
-                        ->where('status', 'completed')
-                        ->count();
-                    $progress = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0;
-
-                    return [
-                        'projectId' => $project->id,
-                        'name' => $project->title,
-                        'status' => $this->formatStatus($project->status),
-                        'progress' => $progress,
-                    ];
-                });
-
-            // Recent Activities (from various sources)
-            $recentActivities = $this->getRecentActivities();
-
-            return ApiResponse::success([
-                'stats' => [
-                    'totalProjects' => $totalProjects,
-                    'projectsChange' => $projectsChange,
-                    'monthlySales' => round($salesThisMonth, 2),
-                    'salesChange' => $salesChange,
-                    'workHours' => round($workHoursThisMonth),
-                    'workHoursChange' => $workHoursChange,
-                    'activeClients' => $activeClients,
-                    'clientsChange' => $clientsChange,
-                ],
-                'recentProjects' => $recentProjects,
-                'recentActivities' => $recentActivities,
-            ], 'Dashboard overview retrieved successfully');
+            if ($isAdmin) {
+                return $this->getAdminDashboard($startOfMonth, $startOfLastMonth, $endOfLastMonth);
+            } elseif ($isManager) {
+                return $this->getManagerDashboard($user, $startOfMonth, $startOfLastMonth, $endOfLastMonth);
+            } else {
+                // Developer or other roles
+                return $this->getDeveloperDashboard($user, $startOfMonth, $startOfLastMonth, $endOfLastMonth);
+            }
         } catch (\Exception $e) {
             Log::error('Dashboard overview error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
@@ -200,6 +122,383 @@ class DashboardController extends Controller
             
             return ApiResponse::error('Failed to load dashboard data: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Get Admin Dashboard - Full company overview
+     */
+    private function getAdminDashboard($startOfMonth, $startOfLastMonth, $endOfLastMonth): JsonResponse
+    {
+        $activeStatuses = [
+            ProjectStatus::ACTIVE->value,
+            ProjectStatus::UI_UX->value,
+            ProjectStatus::DEVELOPMENT->value,
+            ProjectStatus::TESTING->value,
+        ];
+
+        // Projects Stats
+        $totalProjects = Project::withoutGlobalScopes()->count();
+        $projectsThisMonth = Project::withoutGlobalScopes()->where('created_at', '>=', $startOfMonth)->count();
+        $projectsLastMonth = Project::withoutGlobalScopes()->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])->count();
+        $projectsChange = $this->calculateChange($projectsThisMonth, $projectsLastMonth);
+
+        // Sales Stats
+        $salesThisMonth = Quotation::where('status', 'approved')
+            ->where('created_at', '>=', $startOfMonth)
+            ->sum('final_price') ?? 0;
+        $salesLastMonth = Quotation::where('status', 'approved')
+            ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
+            ->sum('final_price') ?? 0;
+        $salesChange = $this->calculateChange($salesThisMonth, $salesLastMonth);
+
+        // Work Hours Stats (all team)
+        $workHoursThisMonth = (TimeEntry::where('start_time', '>=', $startOfMonth)
+            ->whereNotNull('end_time')
+            ->sum('duration_minutes') ?? 0) / 60;
+        $workHoursLastMonth = (TimeEntry::whereBetween('start_time', [$startOfLastMonth, $endOfLastMonth])
+            ->whereNotNull('end_time')
+            ->sum('duration_minutes') ?? 0) / 60;
+        $workHoursChange = $this->calculateChange($workHoursThisMonth, $workHoursLastMonth);
+
+        // Active Clients
+        $activeClients = Project::withoutGlobalScopes()
+            ->whereIn('status', $activeStatuses)
+            ->whereNotNull('client_id')
+            ->distinct('client_id')
+            ->count('client_id');
+        $clientsLastMonth = Project::withoutGlobalScopes()
+            ->whereIn('status', $activeStatuses)
+            ->where('created_at', '<', $startOfMonth)
+            ->whereNotNull('client_id')
+            ->distinct('client_id')
+            ->count('client_id');
+        $clientsChange = $activeClients - $clientsLastMonth;
+
+        // Recent Projects
+        $recentProjects = $this->getRecentProjects();
+        $recentActivities = $this->getRecentActivities();
+
+        return ApiResponse::success([
+            'role' => 'admin',
+            'stats' => [
+                'totalProjects' => $totalProjects,
+                'projectsChange' => $projectsChange,
+                'monthlySales' => round($salesThisMonth, 2),
+                'salesChange' => $salesChange,
+                'workHours' => round($workHoursThisMonth),
+                'workHoursChange' => $workHoursChange,
+                'activeClients' => $activeClients,
+                'clientsChange' => $clientsChange,
+            ],
+            'recentProjects' => $recentProjects,
+            'recentActivities' => $recentActivities,
+        ], 'Dashboard overview retrieved successfully');
+    }
+
+    /**
+     * Get Manager Dashboard - Team overview
+     */
+    private function getManagerDashboard($user, $startOfMonth, $startOfLastMonth, $endOfLastMonth): JsonResponse
+    {
+        $activeStatuses = [
+            ProjectStatus::ACTIVE->value,
+            ProjectStatus::UI_UX->value,
+            ProjectStatus::DEVELOPMENT->value,
+            ProjectStatus::TESTING->value,
+        ];
+
+        // Get team members (users managed by this manager or all developers if no specific team)
+        $teamMemberIds = User::role('developer')->pluck('id')->toArray();
+
+        // Active Projects (projects with active status)
+        $activeProjects = Project::withoutGlobalScopes()
+            ->whereIn('status', $activeStatuses)
+            ->count();
+
+        // Team Tasks Stats
+        $totalTasks = Task::whereIn('assignee_id', $teamMemberIds)->count();
+        $completedTasks = Task::whereIn('assignee_id', $teamMemberIds)
+            ->where('status', 'completed')
+            ->count();
+        $pendingTasks = Task::whereIn('assignee_id', $teamMemberIds)
+            ->whereIn('status', ['todo', 'in_progress'])
+            ->count();
+
+        // Team Work Hours
+        $teamHoursThisMonth = (TimeEntry::whereIn('user_id', $teamMemberIds)
+            ->where('start_time', '>=', $startOfMonth)
+            ->whereNotNull('end_time')
+            ->sum('duration_minutes') ?? 0) / 60;
+        $teamHoursLastMonth = (TimeEntry::whereIn('user_id', $teamMemberIds)
+            ->whereBetween('start_time', [$startOfLastMonth, $endOfLastMonth])
+            ->whereNotNull('end_time')
+            ->sum('duration_minutes') ?? 0) / 60;
+        $teamHoursChange = $this->calculateChange($teamHoursThisMonth, $teamHoursLastMonth);
+
+        // Team Members Count
+        $teamMembersCount = count($teamMemberIds);
+
+        // Recent Team Tasks
+        $recentTasks = Task::with(['assignee', 'project'])
+            ->whereIn('assignee_id', $teamMemberIds)
+            ->orderBy('updated_at', 'desc')
+            ->limit(4)
+            ->get()
+            ->map(function ($task) {
+                return [
+                    'taskId' => $task->id,
+                    'title' => $task->title,
+                    'status' => $task->status,
+                    'assignee' => $task->assignee?->name ?? 'Unassigned',
+                    'project' => $task->project?->title ?? 'No Project',
+                ];
+            });
+
+        $recentActivities = $this->getRecentActivitiesForTeam($teamMemberIds);
+
+        return ApiResponse::success([
+            'role' => 'manager',
+            'stats' => [
+                'activeProjects' => $activeProjects,
+                'totalTasks' => $totalTasks,
+                'completedTasks' => $completedTasks,
+                'pendingTasks' => $pendingTasks,
+                'teamHours' => round($teamHoursThisMonth),
+                'teamHoursChange' => $teamHoursChange,
+                'teamMembers' => $teamMembersCount,
+            ],
+            'recentTasks' => $recentTasks,
+            'recentActivities' => $recentActivities,
+        ], 'Dashboard overview retrieved successfully');
+    }
+
+    /**
+     * Get Developer Dashboard - Personal stats only
+     */
+    private function getDeveloperDashboard($user, $startOfMonth, $startOfLastMonth, $endOfLastMonth): JsonResponse
+    {
+        $userId = $user->id;
+
+        // My Tasks Stats
+        $myTotalTasks = Task::where('assignee_id', $userId)->count();
+        $myCompletedTasks = Task::where('assignee_id', $userId)
+            ->where('status', 'completed')
+            ->count();
+        $myInProgressTasks = Task::where('assignee_id', $userId)
+            ->where('status', 'in_progress')
+            ->count();
+        $myTodoTasks = Task::where('assignee_id', $userId)
+            ->where('status', 'todo')
+            ->count();
+
+        // My Work Hours
+        $myHoursThisMonth = (TimeEntry::where('user_id', $userId)
+            ->where('start_time', '>=', $startOfMonth)
+            ->whereNotNull('end_time')
+            ->sum('duration_minutes') ?? 0) / 60;
+        $myHoursLastMonth = (TimeEntry::where('user_id', $userId)
+            ->whereBetween('start_time', [$startOfLastMonth, $endOfLastMonth])
+            ->whereNotNull('end_time')
+            ->sum('duration_minutes') ?? 0) / 60;
+        $myHoursChange = $this->calculateChange($myHoursThisMonth, $myHoursLastMonth);
+
+        // My Projects (projects I have tasks in)
+        $myProjectIds = Task::where('assignee_id', $userId)
+            ->distinct('project_id')
+            ->pluck('project_id');
+        $myActiveProjects = Project::withoutGlobalScopes()
+            ->whereIn('id', $myProjectIds)
+            ->whereIn('status', [
+                ProjectStatus::ACTIVE->value,
+                ProjectStatus::UI_UX->value,
+                ProjectStatus::DEVELOPMENT->value,
+                ProjectStatus::TESTING->value,
+            ])
+            ->count();
+
+        // Today's attendance
+        $todayAttendance = Attendance::where('user_id', $userId)
+            ->whereDate('clock_in', Carbon::today())
+            ->first();
+        $clockedIn = $todayAttendance !== null;
+        $todayHours = 0;
+        if ($todayAttendance) {
+            $todayHours = (TimeEntry::where('user_id', $userId)
+                ->whereDate('start_time', Carbon::today())
+                ->whereNotNull('end_time')
+                ->sum('duration_minutes') ?? 0) / 60;
+        }
+
+        // My Recent Tasks
+        $myRecentTasks = Task::with('project')
+            ->where('assignee_id', $userId)
+            ->orderBy('updated_at', 'desc')
+            ->limit(4)
+            ->get()
+            ->map(function ($task) {
+                return [
+                    'taskId' => $task->id,
+                    'title' => $task->title,
+                    'status' => $task->status,
+                    'project' => $task->project?->title ?? 'No Project',
+                    'priority' => $task->priority ?? 'medium',
+                ];
+            });
+
+        // My Recent Activities
+        $myRecentActivities = $this->getRecentActivitiesForUser($userId);
+
+        return ApiResponse::success([
+            'role' => 'developer',
+            'stats' => [
+                'myTotalTasks' => $myTotalTasks,
+                'myCompletedTasks' => $myCompletedTasks,
+                'myInProgressTasks' => $myInProgressTasks,
+                'myTodoTasks' => $myTodoTasks,
+                'myHoursThisMonth' => round($myHoursThisMonth, 1),
+                'myHoursChange' => $myHoursChange,
+                'myActiveProjects' => $myActiveProjects,
+                'clockedIn' => $clockedIn,
+                'todayHours' => round($todayHours, 1),
+            ],
+            'recentTasks' => $myRecentTasks,
+            'recentActivities' => $myRecentActivities,
+        ], 'Dashboard overview retrieved successfully');
+    }
+
+    /**
+     * Calculate percentage change
+     */
+    private function calculateChange($current, $previous): float
+    {
+        if ($previous > 0) {
+            return round((($current - $previous) / $previous) * 100, 1);
+        }
+        return $current > 0 ? 100 : 0;
+    }
+
+    /**
+     * Get recent projects for admin
+     */
+    private function getRecentProjects(): array
+    {
+        return Project::withoutGlobalScopes()
+            ->select('id', 'title', 'status')
+            ->orderBy('updated_at', 'desc')
+            ->limit(4)
+            ->get()
+            ->map(function ($project) {
+                $totalTasks = Task::where('project_id', $project->id)->count();
+                $completedTasks = Task::where('project_id', $project->id)
+                    ->where('status', 'completed')
+                    ->count();
+                $progress = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0;
+
+                return [
+                    'projectId' => $project->id,
+                    'name' => $project->title,
+                    'status' => $this->formatStatus($project->status),
+                    'progress' => $progress,
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get recent activities for team members
+     */
+    private function getRecentActivitiesForTeam(array $teamMemberIds): array
+    {
+        $activities = collect();
+
+        try {
+            $recentTasks = Task::with('assignee')
+                ->whereIn('assignee_id', $teamMemberIds)
+                ->orderBy('updated_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(function ($task) {
+                    return [
+                        'activityId' => $task->id,
+                        'action' => 'Task updated: ' . $task->title,
+                        'user' => $task->assignee?->name ?? 'System',
+                        'time' => $task->updated_at->diffForHumans(),
+                        'type' => 'task',
+                        'timestamp' => $task->updated_at,
+                    ];
+                });
+            $activities = $activities->merge($recentTasks);
+        } catch (\Exception $e) {
+            Log::warning('Error fetching team activities: ' . $e->getMessage());
+        }
+
+        return $activities
+            ->sortByDesc('timestamp')
+            ->take(4)
+            ->map(function ($activity) {
+                unset($activity['timestamp']);
+                return $activity;
+            })
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Get recent activities for a specific user
+     */
+    private function getRecentActivitiesForUser(int $userId): array
+    {
+        $activities = collect();
+
+        try {
+            // My recent tasks
+            $recentTasks = Task::where('assignee_id', $userId)
+                ->orderBy('updated_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(function ($task) {
+                    return [
+                        'activityId' => $task->id,
+                        'action' => 'Task: ' . $task->title,
+                        'user' => 'You',
+                        'time' => $task->updated_at->diffForHumans(),
+                        'type' => 'task',
+                        'timestamp' => $task->updated_at,
+                    ];
+                });
+            $activities = $activities->merge($recentTasks);
+
+            // My recent time entries
+            $recentTimeEntries = TimeEntry::where('user_id', $userId)
+                ->whereNotNull('end_time')
+                ->orderBy('end_time', 'desc')
+                ->limit(3)
+                ->get()
+                ->map(function ($entry) {
+                    $duration = round($entry->duration_minutes / 60, 1);
+                    return [
+                        'activityId' => $entry->id + 5000,
+                        'action' => "Logged {$duration}h of work",
+                        'user' => 'You',
+                        'time' => $entry->end_time->diffForHumans(),
+                        'type' => 'time',
+                        'timestamp' => $entry->end_time,
+                    ];
+                });
+            $activities = $activities->merge($recentTimeEntries);
+        } catch (\Exception $e) {
+            Log::warning('Error fetching user activities: ' . $e->getMessage());
+        }
+
+        return $activities
+            ->sortByDesc('timestamp')
+            ->take(4)
+            ->map(function ($activity) {
+                unset($activity['timestamp']);
+                return $activity;
+            })
+            ->values()
+            ->toArray();
     }
 
     /**
