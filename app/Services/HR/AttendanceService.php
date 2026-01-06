@@ -217,6 +217,7 @@ class AttendanceService
 
     /**
      * Create attendance record manually (admin only).
+     * Auto-calculates late minutes, grace day usage, and deductions.
      */
     public function createAttendance(array $data, User $admin): Attendance
     {
@@ -226,35 +227,29 @@ class AttendanceService
         $clockIn = Carbon::parse($data['clockIn'])->shiftTimezone(config('app.timezone'));
         $clockOut = isset($data['clockOut']) ? Carbon::parse($data['clockOut'])->shiftTimezone(config('app.timezone')) : null;
 
-        // Determine if late (from request)
-        $isLate = $data['isLate'] ?? false;
-        $lateMinutes = $data['lateMinutes'] ?? 0;
+        // Get expected clock in time
+        $expectedClockIn = $user->work_start_time ?? '10:00:00';
+        
+        // Calculate late minutes automatically
+        $expectedTime = Carbon::parse($data['date'] . ' ' . $expectedClockIn);
+        $lateMinutes = 0;
+        
+        if ($clockIn->gt($expectedTime)) {
+            $lateMinutes = $expectedTime->diffInMinutes($clockIn);
+        }
 
-        // Handle grace day manually if provided, otherwise auto-calculate
+        // Auto-calculate grace day and deduction
         $usedGraceDay = false;
-        $deductionMinutes = $data['deductionMinutes'] ?? 0;
+        $deductionMinutes = 0;
 
-        if ($isLate && $lateMinutes > 30) {
-            // Check if admin manually set usedGraceDay
-            if (isset($data['usedGraceDay']) && $data['usedGraceDay']) {
-                // Admin wants to use grace day - check if available
-                if ($user->hasGraceDaysRemaining()) {
-                    $usedGraceDay = true;
-                    $deductionMinutes = 0;
-                    $user->useGraceDay();
-                }
-            } elseif (!isset($data['usedGraceDay'])) {
-                // Auto-calculate if not manually set
-                if ($user->hasGraceDaysRemaining()) {
-                    $usedGraceDay = true;
-                    $deductionMinutes = 0;
-                    $user->useGraceDay();
-                } else {
-                    // Calculate deduction in 30-minute increments
-                    $deductionMinutes = floor($lateMinutes / 30) * 30;
-                }
+        if ($lateMinutes > 30) {
+            // Check if user has grace days remaining
+            if ($user->hasGraceDaysRemaining()) {
+                $usedGraceDay = true;
+                $deductionMinutes = 0;
+                $user->useGraceDay();
             } else {
-                // Admin explicitly set usedGraceDay to false - calculate deduction
+                // No grace days - calculate deduction in 30-minute increments
                 $deductionMinutes = floor($lateMinutes / 30) * 30;
             }
         }
@@ -264,10 +259,10 @@ class AttendanceService
             'date' => $data['date'],
             'clock_in' => $clockIn,
             'clock_out' => $clockOut,
-            'expected_clock_in' => $user->work_start_time ?? '10:00:00',
+            'expected_clock_in' => $expectedClockIn,
             'expected_clock_out' => $user->expected_clock_out,
             'late_minutes' => $lateMinutes,
-            'is_late' => $isLate,
+            'is_late' => $lateMinutes > 0,
             'idle_minutes' => 0,
             'deduction_minutes' => (int) $deductionMinutes,
             'used_grace_day' => $usedGraceDay,
@@ -285,14 +280,17 @@ class AttendanceService
 
     /**
      * Update attendance record manually (admin only).
+     * Auto-recalculates late minutes, grace day usage, and deductions when clock times change.
      */
     public function updateAttendance(Attendance $attendance, array $data, User $admin): Attendance
     {
         $updateData = [];
         $user = $attendance->user;
+        $recalculateLate = false;
 
         if (isset($data['clockIn'])) {
             $updateData['clock_in'] = Carbon::parse($data['clockIn'])->shiftTimezone(config('app.timezone'));
+            $recalculateLate = true;
         }
 
         if (isset($data['clockOut'])) {
@@ -303,42 +301,50 @@ class AttendanceService
             $updateData['notes'] = $data['notes'];
         }
 
-        if (isset($data['lateMinutes'])) {
-            $updateData['late_minutes'] = $data['lateMinutes'];
-        }
+        // Recalculate late minutes and deductions if clock_in changed
+        if ($recalculateLate) {
+            $clockIn = $updateData['clock_in'];
+            $expectedClockIn = $attendance->expected_clock_in ?? $user->work_start_time ?? '10:00:00';
+            $expectedTime = Carbon::parse($attendance->date->format('Y-m-d') . ' ' . $expectedClockIn);
+            
+            $lateMinutes = 0;
+            if ($clockIn->gt($expectedTime)) {
+                $lateMinutes = $expectedTime->diffInMinutes($clockIn);
+            }
 
-        if (isset($data['isLate'])) {
-            $updateData['is_late'] = $data['isLate'];
-        }
+            $updateData['late_minutes'] = $lateMinutes;
+            $updateData['is_late'] = $lateMinutes > 0;
 
-        // Handle usedGraceDay manually
-        if (isset($data['usedGraceDay'])) {
-            $newUsedGraceDay = (bool) $data['usedGraceDay'];
+            // Handle grace day changes
             $oldUsedGraceDay = (bool) $attendance->used_grace_day;
+            $newUsedGraceDay = false;
+            $deductionMinutes = 0;
 
-            if ($newUsedGraceDay && !$oldUsedGraceDay) {
-                // Wants to use grace day now
-                if ($user->hasGraceDaysRemaining()) {
-                    $updateData['used_grace_day'] = true;
-                    $updateData['deduction_minutes'] = 0;
+            if ($lateMinutes > 30) {
+                // Need grace day or deduction
+                if ($oldUsedGraceDay) {
+                    // Already using grace day, keep it
+                    $newUsedGraceDay = true;
+                    $deductionMinutes = 0;
+                } elseif ($user->hasGraceDaysRemaining()) {
+                    // Use a new grace day
+                    $newUsedGraceDay = true;
+                    $deductionMinutes = 0;
                     $user->useGraceDay();
+                } else {
+                    // No grace days available
+                    $deductionMinutes = floor($lateMinutes / 30) * 30;
                 }
-            } elseif (!$newUsedGraceDay && $oldUsedGraceDay) {
-                // Wants to remove grace day usage
-                $updateData['used_grace_day'] = false;
-                $user->restoreGraceDay();
-                
-                // Recalculate deduction if late
-                $isLate = $data['isLate'] ?? $attendance->is_late;
-                $lateMinutes = $data['lateMinutes'] ?? $attendance->late_minutes;
-                if ($isLate && $lateMinutes > 30) {
-                    $updateData['deduction_minutes'] = floor($lateMinutes / 30) * 30;
+            } else {
+                // Not late enough for grace day/deduction
+                if ($oldUsedGraceDay) {
+                    // Restore the grace day
+                    $user->restoreGraceDay();
                 }
             }
-        }
 
-        if (isset($data['deductionMinutes']) && !isset($data['usedGraceDay'])) {
-            $updateData['deduction_minutes'] = $data['deductionMinutes'];
+            $updateData['used_grace_day'] = $newUsedGraceDay;
+            $updateData['deduction_minutes'] = (int) $deductionMinutes;
         }
 
         $attendance->update($updateData);
