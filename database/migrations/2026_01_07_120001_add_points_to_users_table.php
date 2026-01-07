@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->integer('total_points')->default(0)->after('internal_hourly_cost');
+            if (!Schema::hasColumn('users', 'total_points')) {
+                $table->integer('total_points')->default(0)->after('internal_hourly_cost');
+            }
         });
     }
 

@@ -25,7 +25,7 @@ return new class extends Migration
             $table->timestamps();
             
             // Add created_by and updated_by columns
-            $this->addCreatedUpdatedByColumns($table);
+            $this->addAuditColumns($table);
             
             // Indexes
             $table->index(['user_id', 'created_at']);
