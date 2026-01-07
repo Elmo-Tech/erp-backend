@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             LeadClientPermissionsSeeder::class,
             MilestoneInvoicePermissionsSeeder::class,
             TagSeeder::class,
+            NewPermissionsSeeder::class,
         ]);
     }
 }
