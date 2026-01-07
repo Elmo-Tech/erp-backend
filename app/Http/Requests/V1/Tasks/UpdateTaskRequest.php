@@ -5,6 +5,7 @@ namespace App\Http\Requests\V1\Tasks;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Enums\TaskPriority;
+use App\Enums\TaskCategory;
 use App\Helpers\ApiResponse;
 use App\Models\Task;
 use Illuminate\Contracts\Validation\Validator;
@@ -62,7 +63,7 @@ class UpdateTaskRequest extends FormRequest
             'status' => ['nullable', Rule::enum(TaskStatus::class)],
             'type' => ['nullable', Rule::enum(TaskType::class)],
             'priority' => ['nullable', Rule::enum(TaskPriority::class)],
-            'taskCategory' => ['nullable', 'string'],
+            'taskCategory' => ['nullable', Rule::enum(TaskCategory::class)],
             'dueDate' => ['nullable', 'date'],
             'startDate' => ['nullable', 'date'],
             'sprintNumber' => ['nullable', 'integer', 'min:1'],
@@ -290,7 +291,7 @@ class UpdateTaskRequest extends FormRequest
             'status.enum' => 'The selected status is invalid. Valid values are: todo, in_progress, review, testing, completed.',
             'type.enum' => 'The selected type is invalid. Valid values are: main, weekly, subtask.',
             'priority.enum' => 'The selected priority is invalid. Valid values are: low, medium, high, urgent.',
-            'taskCategory.string' => 'The taskCategory must be a string.',
+            'taskCategory.enum' => 'The selected taskCategory is invalid. Valid values are: backend, frontend, api, database, ui, ux, ui_ux, component, styling, design, prototype, wireframe, mobile, ios, android, react_native, deployment, infrastructure, ci_cd, monitoring, testing, automation, bug_fix, quality_assurance, server, general.',
             'dueDate.date' => 'The dueDate must be a valid date.',
             'startDate.date' => 'The startDate must be a valid date.',
             'sprintNumber.integer' => 'The sprintNumber must be an integer.',
