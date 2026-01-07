@@ -26,7 +26,7 @@ class AddPointsRequest extends FormRequest
     {
         return [
             'userId' => ['required', 'integer', 'exists:users,id'],
-            'points' => ['required', 'integer', 'min:1', 'max:1000'],
+            'points' => ['required', 'integer', 'min:-1000', 'max:1000', 'not_in:0'],
             'reason' => ['required', 'string', 'min:3', 'max:255'],
         ];
     }
@@ -40,8 +40,9 @@ class AddPointsRequest extends FormRequest
             'userId.required' => __('User selection is required'),
             'userId.exists' => __('Selected user does not exist'),
             'points.required' => __('Points amount is required'),
-            'points.min' => __('Points must be at least 1'),
+            'points.min' => __('Points cannot be less than -1000'),
             'points.max' => __('Points cannot exceed 1000 per transaction'),
+            'points.not_in' => __('Points cannot be zero'),
             'reason.required' => __('Reason for adding points is required'),
             'reason.min' => __('Reason must be at least 3 characters'),
             'reason.max' => __('Reason cannot exceed 255 characters'),

@@ -13,12 +13,13 @@ class UserPointsService
 {
     /**
      * Add points to a user with reason tracking.
+     * Supports both positive (add) and negative (deduct) values.
      */
     public function addPoints(User $user, int $points, string $reason, User $admin): UserPoint
     {
         return DB::transaction(function () use ($user, $points, $reason, $admin) {
             $pointsBefore = $user->total_points;
-            $pointsAfter = $pointsBefore + $points;
+            $pointsAfter = max(0, $pointsBefore + $points); // Don't allow negative total
 
             // Update user's total points
             $user->update(['total_points' => $pointsAfter]);
