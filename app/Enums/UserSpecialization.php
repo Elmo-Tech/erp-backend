@@ -47,7 +47,7 @@ enum UserSpecialization: string
             self::BACKEND => ['backend', 'api', 'database', 'server'],
             self::FRONTEND => ['frontend', 'ui', 'component', 'styling'],
             self::FULLSTACK => ['backend', 'frontend', 'api', 'database', 'ui', 'component'],
-            self::UI_UX => ['ui', 'design', 'prototype', 'wireframe'],
+            self::UI_UX => ['ui', 'ux', 'ui_ux', 'design', 'prototype', 'wireframe'],
             self::MOBILE => ['mobile', 'ios', 'android', 'react_native'],
             self::DEVOPS => ['deployment', 'infrastructure', 'ci_cd', 'monitoring'],
             self::QA => ['testing', 'automation', 'bug_fix', 'quality_assurance'],

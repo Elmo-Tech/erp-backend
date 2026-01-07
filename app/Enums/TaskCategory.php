@@ -9,6 +9,8 @@ enum TaskCategory: string
     case API = 'api';
     case DATABASE = 'database';
     case UI = 'ui';
+    case UX = 'ux';
+    case UI_UX = 'ui_ux';
     case COMPONENT = 'component';
     case STYLING = 'styling';
     case DESIGN = 'design';
@@ -37,6 +39,8 @@ enum TaskCategory: string
             self::API => 'API Development',
             self::DATABASE => 'Database Work',
             self::UI => 'User Interface',
+            self::UX => 'User Experience',
+            self::UI_UX => 'UI/UX Design',
             self::COMPONENT => 'Component Development',
             self::STYLING => 'Styling & CSS',
             self::DESIGN => 'Design Work',
@@ -64,7 +68,7 @@ enum TaskCategory: string
         return match($this) {
             self::BACKEND, self::API, self::DATABASE, self::SERVER => 'bg-blue-100 text-blue-800',
             self::FRONTEND, self::UI, self::COMPONENT, self::STYLING => 'bg-green-100 text-green-800',
-            self::DESIGN, self::PROTOTYPE, self::WIREFRAME => 'bg-pink-100 text-pink-800',
+            self::DESIGN, self::PROTOTYPE, self::WIREFRAME, self::UX, self::UI_UX => 'bg-pink-100 text-pink-800',
             self::MOBILE, self::IOS, self::ANDROID, self::REACT_NATIVE => 'bg-orange-100 text-orange-800',
             self::DEPLOYMENT, self::INFRASTRUCTURE, self::CI_CD, self::MONITORING => 'bg-gray-100 text-gray-800',
             self::TESTING, self::AUTOMATION, self::BUG_FIX, self::QUALITY_ASSURANCE => 'bg-yellow-100 text-yellow-800',
