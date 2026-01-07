@@ -22,7 +22,9 @@ return [
     'allowed_origins' => [
         env('FRONTEND_URL', 'https://elmo-erp.elmotechsoft.online'),
         'https://elmo-erp.elmotechsoft.online',
+        'https://elmo-erp-api.elmotechsoft.online', // API domain
         'http://localhost:3000', // For local development
+        'http://localhost:3001', // For local development alternative
     ],
 
     'allowed_origins_patterns' => [],
