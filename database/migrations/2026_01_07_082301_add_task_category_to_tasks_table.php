@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('tasks', function (Blueprint $table) {
             $table->enum('task_category', [
-                'backend', 'frontend', 'api', 'database', 'ui', 'component', 
+                'backend', 'frontend', 'api', 'database', 'ui', 'ux', 'ui_ux', 'component', 
                 'styling', 'design', 'prototype', 'wireframe', 'mobile', 
                 'ios', 'android', 'react_native', 'deployment', 'infrastructure', 
                 'ci_cd', 'monitoring', 'testing', 'automation', 'bug_fix', 
