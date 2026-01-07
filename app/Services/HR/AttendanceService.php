@@ -223,9 +223,10 @@ class AttendanceService
     {
         $user = User::findOrFail($data['userId']);
 
-        // Parse clock times without timezone conversion
-        $clockIn = Carbon::parse($data['clockIn'])->shiftTimezone(config('app.timezone'));
-        $clockOut = isset($data['clockOut']) ? Carbon::parse($data['clockOut'])->shiftTimezone(config('app.timezone')) : null;
+        // Parse clock times - keep the time as-is without timezone conversion
+        // The frontend sends local time, we store it as-is
+        $clockIn = Carbon::parse($data['clockIn']);
+        $clockOut = isset($data['clockOut']) ? Carbon::parse($data['clockOut']) : null;
 
         // Get expected clock in time
         $expectedClockIn = $user->work_start_time ?? '10:00:00';
@@ -289,12 +290,12 @@ class AttendanceService
         $recalculateLate = false;
 
         if (isset($data['clockIn'])) {
-            $updateData['clock_in'] = Carbon::parse($data['clockIn'])->shiftTimezone(config('app.timezone'));
+            $updateData['clock_in'] = Carbon::parse($data['clockIn']);
             $recalculateLate = true;
         }
 
         if (isset($data['clockOut'])) {
-            $updateData['clock_out'] = Carbon::parse($data['clockOut'])->shiftTimezone(config('app.timezone'));
+            $updateData['clock_out'] = Carbon::parse($data['clockOut']);
         }
 
         if (isset($data['notes'])) {
