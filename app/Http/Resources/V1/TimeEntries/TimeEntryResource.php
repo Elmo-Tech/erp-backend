@@ -26,12 +26,12 @@ class TimeEntryResource extends JsonResource
             'trackableId' => $this->trackable_id ?? 0,
             'trackableType' => $this->trackable_type ?? '',
             'trackableDisplayName' => $trackableDisplayName,
-            'startTime' => $this->start_time?->toISOString() ?? '',
-            'endTime' => $this->end_time?->toISOString() ?? '',
+            'startTime' => $this->start_time?->format('Y-m-d\TH:i:s') ?? '',
+            'endTime' => $this->end_time?->format('Y-m-d\TH:i:s') ?? '',
             'durationMinutes' => $this->duration_minutes ?? 0,
             'isActive' => $this->isActive(),
-            'createdAt' => $this->created_at?->toISOString() ?? '',
-            'updatedAt' => $this->updated_at?->toISOString() ?? '',
+            'createdAt' => $this->created_at?->format('Y-m-d\TH:i:s') ?? '',
+            'updatedAt' => $this->updated_at?->format('Y-m-d\TH:i:s') ?? '',
         ];
     }
 }

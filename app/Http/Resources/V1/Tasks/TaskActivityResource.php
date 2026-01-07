@@ -39,7 +39,7 @@ class TaskActivityResource extends JsonResource
                 'name' => $this->user->name,
                 'avatar' => $this->user->avatar ?? '',
             ]),
-            'createdAt' => $this->created_at?->toISOString() ?? '',
+            'createdAt' => $this->created_at?->format('Y-m-d\TH:i:s') ?? '',
         ];
     }
 }

@@ -104,8 +104,8 @@ class TaskResource extends JsonResource
                 'title' => $this->parent->title,
             ] : null),
             
-            'createdAt' => $this->created_at?->toISOString() ?? '',
-            'updatedAt' => $this->updated_at?->toISOString() ?? '',
+            'createdAt' => $this->created_at?->format('Y-m-d\TH:i:s') ?? '',
+            'updatedAt' => $this->updated_at?->format('Y-m-d\TH:i:s') ?? '',
             'createdBy' => $this->created_by,
             'updatedBy' => $this->updated_by,
         ];
