@@ -16,7 +16,7 @@ class AttendanceService
      */
     public function clockIn(User $user, ?Carbon $clockInTime = null): Attendance
     {
-        $now = $clockInTime ?? Carbon::now();
+        $now = $clockInTime ?? Carbon::now('Africa/Cairo');
         $today = $now->toDateString();
 
         // Check if already clocked in today
@@ -77,7 +77,7 @@ class AttendanceService
      */
     public function clockOut(User $user, ?Carbon $clockOutTime = null): ?Attendance
     {
-        $now = $clockOutTime ?? Carbon::now();
+        $now = $clockOutTime ?? Carbon::now('Africa/Cairo');
         $today = $now->toDateString();
 
         $attendance = Attendance::where('user_id', $user->id)
@@ -102,7 +102,7 @@ class AttendanceService
     public function getTodayAttendance(User $user): ?Attendance
     {
         return Attendance::where('user_id', $user->id)
-            ->where('date', Carbon::today()->toDateString())
+            ->where('date', Carbon::today('Africa/Cairo')->toDateString())
             ->first();
     }
 
@@ -367,7 +367,7 @@ class AttendanceService
         return User::employees()
             ->update([
                 'grace_days_used' => 0,
-                'grace_days_reset_date' => Carbon::now()->startOfMonth(),
+                'grace_days_reset_date' => Carbon::now('Africa/Cairo')->startOfMonth(),
             ]);
     }
 }

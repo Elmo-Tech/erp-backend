@@ -51,7 +51,7 @@ class TimeTrackingService
             'user_id' => $user->id,
             'trackable_id' => $trackable->getKey(),
             'trackable_type' => get_class($trackable),
-            'start_time' => Carbon::now(),
+            'start_time' => Carbon::now('Africa/Cairo'),
         ]);
 
         // Broadcast timer started event
@@ -96,7 +96,7 @@ class TimeTrackingService
             throw new RuntimeException('No active timer found for this user.');
         }
 
-        $endTime = Carbon::now();
+        $endTime = Carbon::now('Africa/Cairo');
         // Calculate duration in minutes, rounded down as per Requirements 5.4, 5.5
         $durationMinutes = (int) floor($activeTimer->start_time->diffInSeconds($endTime) / 60);
 
