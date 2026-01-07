@@ -77,6 +77,7 @@ class User extends Authenticatable
             'grace_days_allowed' => 'integer',
             'grace_days_used' => 'integer',
             'grace_days_reset_date' => 'date',
+            'total_points' => 'integer',
         ];
     }
 
@@ -279,6 +280,14 @@ class User extends Authenticatable
     public function pointTransactions()
     {
         return $this->hasMany(PointTransaction::class);
+    }
+
+    /**
+     * Get the user points history for this user
+     */
+    public function userPoints()
+    {
+        return $this->hasMany(UserPoint::class);
     }
 
     /**

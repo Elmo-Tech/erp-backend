@@ -345,6 +345,17 @@ Route::prefix('v1')->group(function () {
         Route::delete('/{id}', [InnovationLogController::class, 'destroy'])->name('innovation-logs.destroy');
     });
 
+    // User Points Management Routes
+    Route::prefix('user-points')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'index'])->name('user-points.index');
+        Route::post('/add', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'addPoints'])->name('user-points.add');
+        Route::post('/deduct', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'deductPoints'])->name('user-points.deduct');
+        Route::post('/set', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'setPoints'])->name('user-points.set');
+        Route::get('/history/{userId}', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'history'])->name('user-points.history');
+        Route::get('/leaderboard', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'leaderboard'])->name('user-points.leaderboard');
+        Route::get('/statistics', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'statistics'])->name('user-points.statistics');
+    });
+
     // Enum Routes
     Route::prefix('enums')->group(function () {
         Route::get('user-specializations', [EnumController::class, 'getUserSpecializations'])->name('enums.user-specializations');
