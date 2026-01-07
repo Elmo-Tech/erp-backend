@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\V1\HR;
 
+use App\Enums\UserSpecialization;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -15,6 +16,7 @@ use Illuminate\Validation\Rule;
  *     @OA\Property(property="email", type="string", format="email", example="john@example.com"),
  *     @OA\Property(property="password", type="string", minLength=8),
  *     @OA\Property(property="role", type="string", example="developer"),
+ *     @OA\Property(property="specialization", type="string", enum={"backend", "frontend", "fullstack", "ui_ux", "mobile", "devops", "qa"}, example="backend"),
  *     @OA\Property(property="isActive", type="boolean", example=true),
  *     @OA\Property(property="salary", type="number", format="float", example=5000.00),
  *     @OA\Property(property="workHoursPerDay", type="integer", example=8),
@@ -41,6 +43,7 @@ class UpdateEmployeeRequest extends FormRequest
             'email' => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($employeeId)],
             'password' => ['sometimes', 'string', 'min:8'],
             'role' => ['nullable', 'string', 'exists:roles,name'],
+            'specialization' => ['nullable', Rule::enum(UserSpecialization::class)],
             'isActive' => ['sometimes', 'boolean'],
             'salary' => ['nullable', 'numeric', 'min:0'],
             'workHoursPerDay' => ['sometimes', 'integer', 'min:1', 'max:24'],

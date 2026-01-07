@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserSpecialization;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -27,6 +28,7 @@ class User extends Authenticatable
         'avatar',
         'internal_hourly_cost',
         'skills',
+        'specialization',
         'is_active',
         'is_employee',
         'salary',
@@ -68,6 +70,7 @@ class User extends Authenticatable
             'salary' => 'decimal:2',
             'total_deductions' => 'decimal:2',
             'skills' => 'array',
+            'specialization' => UserSpecialization::class,
             'is_active' => 'boolean',
             'is_employee' => 'boolean',
             'work_hours_per_day' => 'integer',

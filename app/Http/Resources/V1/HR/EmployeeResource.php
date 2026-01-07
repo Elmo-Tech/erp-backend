@@ -15,6 +15,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *     @OA\Property(property="avatar", type="string", nullable=true),
  *     @OA\Property(property="isActive", type="boolean", example=true),
  *     @OA\Property(property="role", type="string", example="developer"),
+ *     @OA\Property(property="specialization", type="string", enum={"backend", "frontend", "fullstack", "ui_ux", "mobile", "devops", "qa"}, example="backend"),
  *     @OA\Property(property="workHoursPerDay", type="integer", example=8),
  *     @OA\Property(property="workStartTime", type="string", example="10:00:00"),
  *     @OA\Property(property="expectedClockOut", type="string", example="18:00:00"),
@@ -40,6 +41,7 @@ class EmployeeResource extends JsonResource
             'avatar' => $this->avatar ?? '',
             'isActive' => (bool) $this->is_active,
             'role' => $this->roles->first()?->name ?? '',
+            'specialization' => $this->specialization?->value ?? '',
             
             // Work schedule
             'workHoursPerDay' => (int) $this->work_hours_per_day,

@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\V1\PerformanceEvaluationController;
 use App\Http\Controllers\Api\V1\CodeReviewController;
 use App\Http\Controllers\Api\V1\MilestoneController;
 use App\Http\Controllers\Api\V1\InnovationLogController;
+use App\Http\Controllers\Api\V1\EnumController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -342,5 +343,12 @@ Route::prefix('v1')->group(function () {
         Route::post('/{id}/verify', [InnovationLogController::class, 'verify'])->name('innovation-logs.verify');
         Route::post('/{id}/reject', [InnovationLogController::class, 'reject'])->name('innovation-logs.reject');
         Route::delete('/{id}', [InnovationLogController::class, 'destroy'])->name('innovation-logs.destroy');
+    });
+
+    // Enum Routes
+    Route::prefix('enums')->group(function () {
+        Route::get('user-specializations', [EnumController::class, 'getUserSpecializations'])->name('enums.user-specializations');
+        Route::get('task-categories', [EnumController::class, 'getTaskCategories'])->name('enums.task-categories');
+        Route::get('compatible-task-categories/{specialization}', [EnumController::class, 'getCompatibleTaskCategories'])->name('enums.compatible-task-categories');
     });
 });

@@ -75,6 +75,7 @@ class EmployeeService
             'work_start_time' => $data['workStartTime'] ?? '10:00:00',
             'grace_days_allowed' => $data['graceDaysAllowed'] ?? 5,
             'internal_hourly_cost' => $data['internalHourlyCost'] ?? null,
+            'specialization' => $data['specialization'] ?? null,
             'skills' => $data['skills'] ?? [],
         ]);
 
@@ -102,6 +103,7 @@ class EmployeeService
             'workStartTime' => 'work_start_time',
             'graceDaysAllowed' => 'grace_days_allowed',
             'internalHourlyCost' => 'internal_hourly_cost',
+            'specialization' => 'specialization',
             'skills' => 'skills',
             'avatar' => 'avatar',
         ];

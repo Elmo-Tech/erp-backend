@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\CodeReview;
 use App\Contracts\Trackable;
+use App\Enums\TaskCategory;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Enums\TaskPriority;
@@ -30,6 +31,7 @@ class Task extends Model implements Trackable
         'status',
         'type',
         'priority',
+        'task_category',
         'due_date',
         'start_date',
         'sprint_number',
@@ -47,6 +49,7 @@ class Task extends Model implements Trackable
             'status' => TaskStatus::class,
             'type' => TaskType::class,
             'priority' => TaskPriority::class,
+            'task_category' => TaskCategory::class,
             'estimated_hours' => 'decimal:2',
             'total_time_spent' => 'integer',
             'reopen_count' => 'integer',
@@ -263,5 +266,50 @@ class Task extends Model implements Trackable
     public function hasChildren(): bool
     {
         return $this->children()->exists();
+    }
+
+    /**
+     * Scope to filter tasks by user specialization compatibility
+     */
+    public function scopeForUserSpecialization($query, User $user)
+    {
+        if (!$user->specialization) {
+            return $query; // No filtering if no specialization set
+        }
+
+        // Get compatible task categories for user's specialization
+        $compatibleCategories = TaskCategory::getCompatibleCategories($user->specialization);
+        $categoryValues = array_map(fn($category) => $category->value, $compatibleCategories);
+
+        return $query->whereIn('task_category', $categoryValues);
+    }
+
+    /**
+     * Scope to filter tasks that user can see (assigned to them or compatible with their specialization)
+     */
+    public function scopeVisibleToUser($query, User $user)
+    {
+        return $query->where(function ($q) use ($user) {
+            // Tasks assigned to the user
+            $q->whereHas('assignees', function ($assigneeQuery) use ($user) {
+                $assigneeQuery->where('user_id', $user->id);
+            })
+            // OR tasks compatible with user's specialization
+            ->orWhere(function ($compatibleQuery) use ($user) {
+                if ($user->specialization) {
+                    $compatibleCategories = TaskCategory::getCompatibleCategories($user->specialization);
+                    $categoryValues = array_map(fn($category) => $category->value, $compatibleCategories);
+                    $compatibleQuery->whereIn('task_category', $categoryValues);
+                }
+            });
+        });
+    }
+
+    /**
+     * Scope to get tasks by category
+     */
+    public function scopeByCategory($query, TaskCategory $category)
+    {
+        return $query->where('task_category', $category->value);
     }
 }

@@ -23,6 +23,12 @@ class TaskService
     {
         $query = Task::query()->with(['assignee', 'project', 'tags', 'assignees.user']);
 
+        // Apply user specialization filtering if user is authenticated
+        $user = auth()->user();
+        if ($user && $user->specialization) {
+            $query->visibleToUser($user);
+        }
+
         if (!empty($filters['projectId'])) {
             $query->where('project_id', $filters['projectId']);
         }
@@ -37,6 +43,10 @@ class TaskService
 
         if (!empty($filters['priority'])) {
             $query->where('priority', $filters['priority']);
+        }
+
+        if (!empty($filters['taskCategory'])) {
+            $query->where('task_category', $filters['taskCategory']);
         }
 
         if (!empty($filters['assignedTo'])) {
