@@ -207,6 +207,9 @@ Route::prefix('v1')->group(function () {
     // Task Management Routes
     // All routes have auth:sanctum and locale middleware applied in controller
     
+    // My Assigned Tasks Route (tasks where user is team member) - MUST be before apiResource
+    Route::get('tasks/my-assigned', [TaskController::class, 'myAssignedTasks'])->name('tasks.my-assigned');
+    
     // Task CRUD Routes
     Route::apiResource('tasks', TaskController::class);
     
@@ -354,6 +357,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/history/{userId}', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'history'])->name('user-points.history');
         Route::get('/leaderboard', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'leaderboard'])->name('user-points.leaderboard');
         Route::get('/statistics', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'statistics'])->name('user-points.statistics');
+        Route::get('/report', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'report'])->name('user-points.report');
     });
 
     // Enum Routes

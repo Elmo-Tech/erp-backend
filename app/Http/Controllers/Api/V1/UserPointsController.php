@@ -515,4 +515,77 @@ class UserPointsController extends Controller
             __('Statistics retrieved successfully')
         );
     }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/user-points/report",
+     *     summary="Get points activity report",
+     *     description="Get detailed report of points activities within a date range",
+     *     tags={"User Points"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateFrom",
+     *         in="query",
+     *         description="Start date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2026-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateTo",
+     *         in="query",
+     *         description="End date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2026-01-31")
+     *     ),
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="query",
+     *         description="Filter by specific user ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="type",
+     *         in="query",
+     *         description="Filter by activity type",
+     *         @OA\Schema(type="string", enum={"manual", "automatic"}, example="manual")
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="perPage",
+     *         in="query",
+     *         description="Items per page",
+     *         @OA\Schema(type="integer", example=20)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Points report retrieved successfully"
+     *     )
+     * )
+     */
+    public function report(Request $request): JsonResponse
+    {
+        $filters = [
+            'dateFrom' => $request->get('dateFrom'),
+            'dateTo' => $request->get('dateTo'),
+            'userId' => $request->get('userId'),
+            'type' => $request->get('type'),
+        ];
+
+        $perPage = min($request->get('perPage', 20), 100);
+        $report = $this->userPointsService->getPointsReport($filters, $perPage);
+
+        return ApiResponse::success(
+            $report,
+            __('Points report retrieved successfully')
+        );
+    }
 }

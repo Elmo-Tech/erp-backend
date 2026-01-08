@@ -917,4 +917,131 @@ class TaskController extends Controller
             'Points summary retrieved successfully'
         );
     }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/tasks/my-assigned",
+     *     operationId="getMyAssignedTasks",
+     *     tags={"Tasks"},
+     *     summary="Get tasks where current user is assigned as team member",
+     *     description="Retrieve tasks where the authenticated user is assigned as a team member (in task_assignees table)",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[projectId]",
+     *         in="query",
+     *         description="Filter tasks by project ID",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[status]",
+     *         in="query",
+     *         description="Filter tasks by status",
+     *         @OA\Schema(type="string", enum={"todo", "in_progress", "review", "testing", "completed"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[type]",
+     *         in="query",
+     *         description="Filter tasks by type",
+     *         @OA\Schema(type="string", enum={"main", "weekly", "subtask"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[priority]",
+     *         in="query",
+     *         description="Filter tasks by priority",
+     *         @OA\Schema(type="string", enum={"low", "medium", "high", "urgent"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[search]",
+     *         in="query",
+     *         description="Search tasks by title",
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number for pagination",
+     *         @OA\Schema(type="integer", minimum=1, example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="perPage",
+     *         in="query",
+     *         description="Number of items per page",
+     *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="My assigned tasks retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="My assigned tasks retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="tasks",
+     *                     type="array",
+     *                     @OA\Items(ref="#/components/schemas/TaskResource")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="pagination",
+     *                     type="object",
+     *                     @OA\Property(property="total", type="integer", example=25),
+     *                     @OA\Property(property="count", type="integer", example=15),
+     *                     @OA\Property(property="perPage", type="integer", example=15),
+     *                     @OA\Property(property="currentPage", type="integer", example=1),
+     *                     @OA\Property(property="totalPages", type="integer", example=2)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function myAssignedTasks(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $filters = [];
+
+        if ($request->has('filter.projectId')) {
+            $filters['projectId'] = $request->input('filter.projectId');
+        }
+
+        if ($request->has('filter.status')) {
+            $filters['status'] = $request->input('filter.status');
+        }
+
+        if ($request->has('filter.type')) {
+            $filters['type'] = $request->input('filter.type');
+        }
+
+        if ($request->has('filter.priority')) {
+            $filters['priority'] = $request->input('filter.priority');
+        }
+
+        if ($request->has('filter.search')) {
+            $filters['search'] = $request->input('filter.search');
+        }
+
+        $perPage = $request->get('perPage', 15);
+        $tasks = $this->taskService->getMyAssignedTasks($user, $filters, $perPage);
+
+        return ApiResponse::success(
+            new TaskCollection($tasks),
+            'My assigned tasks retrieved successfully'
+        );
+    }
 }

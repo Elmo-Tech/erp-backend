@@ -243,4 +243,77 @@ class UserPointsService
             ] : null,
         ];
     }
+
+    /**
+     * Get points activity report with date range and filters.
+     */
+    public function getPointsReport(array $filters = [], int $perPage = 20): array
+    {
+        $query = UserPoint::with(['user:id,name,email', 'createdBy:id,name'])
+            ->orderBy('created_at', 'desc');
+
+        // Apply date filters
+        if (!empty($filters['dateFrom'])) {
+            $query->whereDate('created_at', '>=', $filters['dateFrom']);
+        }
+
+        if (!empty($filters['dateTo'])) {
+            $query->whereDate('created_at', '<=', $filters['dateTo']);
+        }
+
+        // Apply user filter
+        if (!empty($filters['userId'])) {
+            $query->where('user_id', $filters['userId']);
+        }
+
+        // Apply type filter
+        if (!empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        // Get paginated results
+        $activities = $query->paginate($perPage);
+
+        // Calculate summary
+        $summaryQuery = UserPoint::query();
+        
+        // Apply same filters for summary
+        if (!empty($filters['dateFrom'])) {
+            $summaryQuery->whereDate('created_at', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $summaryQuery->whereDate('created_at', '<=', $filters['dateTo']);
+        }
+        if (!empty($filters['userId'])) {
+            $summaryQuery->where('user_id', $filters['userId']);
+        }
+        if (!empty($filters['type'])) {
+            $summaryQuery->where('type', $filters['type']);
+        }
+
+        $summaryData = $summaryQuery->get();
+        $totalPointsAdded = $summaryData->where('points_change', '>', 0)->sum('points_change');
+        $totalPointsDeducted = abs($summaryData->where('points_change', '<', 0)->sum('points_change'));
+
+        return [
+            'activities' => $activities->items(),
+            'summary' => [
+                'totalActivities' => $summaryData->count(),
+                'totalPointsAdded' => $totalPointsAdded,
+                'totalPointsDeducted' => $totalPointsDeducted,
+                'netChange' => $totalPointsAdded - $totalPointsDeducted,
+                'period' => [
+                    'from' => $filters['dateFrom'] ?? null,
+                    'to' => $filters['dateTo'] ?? null,
+                ],
+            ],
+            'pagination' => [
+                'total' => $activities->total(),
+                'count' => $activities->count(),
+                'perPage' => $activities->perPage(),
+                'currentPage' => $activities->currentPage(),
+                'totalPages' => $activities->lastPage(),
+            ],
+        ];
+    }
 }

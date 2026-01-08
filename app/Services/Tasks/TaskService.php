@@ -53,6 +53,13 @@ class TaskService
             $query->where('assigned_to', $filters['assignedTo']);
         }
 
+        // Filter by team member (user assigned in task_assignees table)
+        if (!empty($filters['teamMember'])) {
+            $query->whereHas('assignees', function ($q) use ($filters) {
+                $q->where('user_id', $filters['teamMember']);
+            });
+        }
+
         if (array_key_exists('parentId', $filters)) {
             if ($filters['parentId'] === null) {
                 $query->whereNull('parent_id');
@@ -63,6 +70,49 @@ class TaskService
 
         if (!empty($filters['tagId'])) {
             $query->whereHas('tags', fn($q) => $q->where('tags.id', $filters['tagId']));
+        }
+
+        if (!empty($filters['search'])) {
+            $query->where('title', 'like', '%' . $filters['search'] . '%');
+        }
+
+        return $query->orderBy('created_at', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * Get tasks where the user is assigned as a team member.
+     * Returns only top-level tasks (no parent) to avoid duplicates.
+     * Children are loaded via relationships.
+     */
+    public function getMyAssignedTasks(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = Task::query()
+            ->with(['assignee', 'project', 'tags', 'assignees.user', 'children.assignee', 'children.tags', 'children.assignees.user'])
+            ->whereHas('assignees', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->whereNull('parent_id'); // Only get top-level tasks to avoid duplicates
+
+        // Apply user specialization filtering
+        if ($user->specialization) {
+            $query->visibleToUser($user);
+        }
+
+        // Apply additional filters
+        if (!empty($filters['projectId'])) {
+            $query->where('project_id', $filters['projectId']);
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        if (!empty($filters['priority'])) {
+            $query->where('priority', $filters['priority']);
         }
 
         if (!empty($filters['search'])) {
