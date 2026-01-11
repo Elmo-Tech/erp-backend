@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
+use App\Models\Invoice;
 use App\Models\Lead;
 use App\Models\Project;
 use App\Models\Quotation;
@@ -142,13 +144,13 @@ class DashboardController extends Controller
         $projectsLastMonth = Project::withoutGlobalScopes()->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])->count();
         $projectsChange = $this->calculateChange($projectsThisMonth, $projectsLastMonth);
 
-        // Sales Stats
-        $salesThisMonth = Quotation::where('status', 'approved')
-            ->where('created_at', '>=', $startOfMonth)
-            ->sum('final_price') ?? 0;
-        $salesLastMonth = Quotation::where('status', 'approved')
-            ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
-            ->sum('final_price') ?? 0;
+        // Sales Stats - Calculate from PAID invoices
+        $salesThisMonth = Invoice::where('status', InvoiceStatus::PAID)
+            ->where('paid_at', '>=', $startOfMonth)
+            ->sum('amount') ?? 0;
+        $salesLastMonth = Invoice::where('status', InvoiceStatus::PAID)
+            ->whereBetween('paid_at', [$startOfLastMonth, $endOfLastMonth])
+            ->sum('amount') ?? 0;
         $salesChange = $this->calculateChange($salesThisMonth, $salesLastMonth);
 
         // Work Hours Stats (all team)

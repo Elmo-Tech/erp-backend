@@ -18,8 +18,8 @@ class UserPointsService
     public function addPoints(User $user, int $points, string $reason, User $admin): UserPoint
     {
         return DB::transaction(function () use ($user, $points, $reason, $admin) {
-            $pointsBefore = $user->total_points;
-            $pointsAfter = max(0, $pointsBefore + $points); // Don't allow negative total
+            $pointsBefore = $user->total_points ?? 0;
+            $pointsAfter = $pointsBefore + $points; // Allow negative total
 
             // Update user's total points
             $user->update(['total_points' => $pointsAfter]);
@@ -44,8 +44,8 @@ class UserPointsService
     public function deductPoints(User $user, int $points, string $reason, User $admin): UserPoint
     {
         return DB::transaction(function () use ($user, $points, $reason, $admin) {
-            $pointsBefore = $user->total_points;
-            $pointsAfter = max(0, $pointsBefore - $points); // Don't allow negative points
+            $pointsBefore = $user->total_points ?? 0;
+            $pointsAfter = $pointsBefore - $points; // Allow negative points
 
             // Update user's total points
             $user->update(['total_points' => $pointsAfter]);
@@ -195,7 +195,7 @@ class UserPointsService
     public function addTaskCompletionPoints(User $user, int $points, string $taskTitle): UserPoint
     {
         return DB::transaction(function () use ($user, $points, $taskTitle) {
-            $pointsBefore = $user->total_points;
+            $pointsBefore = $user->total_points ?? 0;
             $pointsAfter = $pointsBefore + $points;
 
             // Update user's total points
