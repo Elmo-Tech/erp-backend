@@ -305,4 +305,20 @@ class User extends Authenticatable
     {
         return !$this->is_employee && $this->clientProfile !== null;
     }
+
+    /**
+     * Get the leads created by this user (as sales rep)
+     */
+    public function leads()
+    {
+        return $this->hasMany(Lead::class, 'created_by');
+    }
+
+    /**
+     * Get the leads where this user is the tech lead
+     */
+    public function techLeadLeads()
+    {
+        return $this->hasMany(Lead::class, 'tech_lead_id');
+    }
 }

@@ -49,17 +49,25 @@ class LeadService
      */
     public function createLead(array $data, User $user): Lead
     {
+        // Check for duplicate email or phone
+        $this->checkDuplicates($data);
+        
         $lead = Lead::create([
             'name' => $data['name'],
+            'project_name' => $data['projectName'] ?? null,
             'email' => $data['email'],
             'phone' => $data['phone'] ?? null,
             'company' => $data['company'] ?? null,
             'country' => $data['country'] ?? null,
+            'timezone_offset' => $data['timezoneOffset'] ?? $this->getTimezoneOffset($data['country'] ?? null),
+            'industry_sector' => $data['industrySector'] ?? null,
             'source' => $data['source'] ?? null,
             'reference_type' => $data['referenceType'] ?? null,
             'reference_id' => $data['referenceId'] ?? null,
+            'tech_lead_id' => $data['techLeadId'] ?? null,
             'status' => $data['status'] ?? LeadStatus::NEW,
             'priority' => $data['priority'] ?? 'medium',
+            'lead_temperature' => $data['leadTemperature'] ?? 'warm',
             'expected_budget' => $data['expectedBudget'] ?? null,
             'expected_close_date' => $data['expectedCloseDate'] ?? null,
             'next_follow_up_at' => $data['nextFollowUpAt'] ?? null,
@@ -72,6 +80,64 @@ class LeadService
     }
 
     /**
+     * Check for duplicate email or phone
+     */
+    private function checkDuplicates(array $data, ?int $excludeId = null): void
+    {
+        $query = Lead::query();
+        
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+        
+        // Check email
+        if (!empty($data['email'])) {
+            $existingByEmail = (clone $query)->where('email', $data['email'])->first();
+            if ($existingByEmail) {
+                throw new \InvalidArgumentException(
+                    __('leads.duplicate_email', ['name' => $existingByEmail->name])
+                );
+            }
+        }
+        
+        // Check phone
+        if (!empty($data['phone'])) {
+            $existingByPhone = (clone $query)->where('phone', $data['phone'])->first();
+            if ($existingByPhone) {
+                throw new \InvalidArgumentException(
+                    __('leads.duplicate_phone', ['name' => $existingByPhone->name])
+                );
+            }
+        }
+    }
+
+    /**
+     * Get timezone offset from country code
+     */
+    private function getTimezoneOffset(?string $country): ?string
+    {
+        if (!$country) {
+            return null;
+        }
+        
+        $timezones = [
+            'AE' => '+4',
+            'SA' => '+3',
+            'EG' => '+2',
+            'US' => '-5',
+            'GB' => '+0',
+            'DE' => '+1',
+            'FR' => '+1',
+            'IN' => '+5:30',
+            'CN' => '+8',
+            'JP' => '+9',
+            'AU' => '+10',
+        ];
+        
+        return $timezones[strtoupper($country)] ?? null;
+    }
+
+    /**
      * Update a lead
      */
     public function updateLead(Lead $lead, array $data, User $user): Lead
@@ -80,15 +146,20 @@ class LeadService
 
         $lead->update([
             'name' => $data['name'] ?? $lead->name,
+            'project_name' => $data['projectName'] ?? $lead->project_name,
             'email' => $data['email'] ?? $lead->email,
             'phone' => $data['phone'] ?? $lead->phone,
             'company' => $data['company'] ?? $lead->company,
             'country' => $data['country'] ?? $lead->country,
+            'timezone_offset' => $data['timezoneOffset'] ?? $lead->timezone_offset,
+            'industry_sector' => $data['industrySector'] ?? $lead->industry_sector,
             'source' => $data['source'] ?? $lead->source,
             'reference_type' => $data['referenceType'] ?? $lead->reference_type,
             'reference_id' => $data['referenceId'] ?? $lead->reference_id,
+            'tech_lead_id' => $data['techLeadId'] ?? $lead->tech_lead_id,
             'status' => $data['status'] ?? $lead->status,
             'priority' => $data['priority'] ?? $lead->priority,
+            'lead_temperature' => $data['leadTemperature'] ?? $lead->lead_temperature,
             'expected_budget' => $data['expectedBudget'] ?? $lead->expected_budget,
             'expected_close_date' => $data['expectedCloseDate'] ?? $lead->expected_close_date,
             'next_follow_up_at' => $data['nextFollowUpAt'] ?? $lead->next_follow_up_at,

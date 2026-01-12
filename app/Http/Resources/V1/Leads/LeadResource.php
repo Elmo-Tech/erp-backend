@@ -12,19 +12,35 @@ class LeadResource extends JsonResource
         return [
             'leadId' => $this->id,
             'name' => $this->name ?? '',
+            'projectName' => $this->project_name ?? '',
             'email' => $this->email ?? '',
             'phone' => $this->phone ?? '',
             'company' => $this->company ?? '',
             'country' => $this->country ?? '',
+            'timezoneOffset' => $this->timezone_offset ?? '',
+            'industrySector' => $this->industry_sector?->value ?? '',
+            'industrySectorLabel' => $this->industry_sector?->label() ?? '',
+            'industrySectorIcon' => $this->industry_sector?->icon() ?? '',
             'source' => $this->source?->value ?? '',
             'sourceLabel' => $this->source?->label() ?? '',
             'referenceType' => $this->reference_type?->value ?? '',
             'referenceId' => $this->reference_id ?? 0,
+            'techLeadId' => $this->tech_lead_id ?? 0,
+            'techLead' => $this->whenLoaded('techLead', function () {
+                return [
+                    'userId' => $this->techLead->id,
+                    'name' => $this->techLead->name ?? '',
+                ];
+            }),
             'status' => $this->status?->value ?? '',
             'statusLabel' => $this->status?->label() ?? '',
             'priority' => $this->priority?->value ?? 'medium',
             'priorityLabel' => $this->priority?->label() ?? '',
             'priorityColor' => $this->priority?->color() ?? 'blue',
+            'leadTemperature' => $this->lead_temperature?->value ?? 'warm',
+            'leadTemperatureLabel' => $this->lead_temperature?->label() ?? '',
+            'leadTemperatureColor' => $this->lead_temperature?->color() ?? 'orange',
+            'leadTemperatureIcon' => $this->lead_temperature?->icon() ?? '',
             'expectedBudget' => (float) ($this->expected_budget ?? 0),
             'expectedCloseDate' => $this->expected_close_date?->format('Y-m-d') ?? '',
             'lastContactAt' => $this->last_contact_at?->toISOString() ?? '',
@@ -55,6 +71,7 @@ class LeadResource extends JsonResource
             'activities' => LeadActivityResource::collection($this->whenLoaded('activities')),
             'meetings' => LeadMeetingResource::collection($this->whenLoaded('meetings')),
             'quotationsCount' => $this->whenLoaded('quotations', fn() => $this->quotations->count()),
+            'proposalsCount' => $this->whenLoaded('proposals', fn() => $this->proposals->count()),
         ];
     }
 }

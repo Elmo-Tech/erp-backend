@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\AdminStatsController;
 use App\Http\Controllers\Api\V1\AdminRoleController;
 use App\Http\Controllers\Api\V1\AdminUserController;
@@ -16,12 +17,14 @@ use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LeadController;
+use App\Http\Controllers\Api\V1\LeadHistoryController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectFileController;
 use App\Http\Controllers\Api\V1\ProjectHistoryController;
 use App\Http\Controllers\Api\V1\ProjectMemberController;
 use App\Http\Controllers\Api\V1\ProjectWikiController;
+use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\SalesAnalyticsController;
 use App\Http\Controllers\Api\V1\TaskController;
@@ -34,6 +37,9 @@ use App\Http\Controllers\Api\V1\CodeReviewController;
 use App\Http\Controllers\Api\V1\MilestoneController;
 use App\Http\Controllers\Api\V1\InnovationLogController;
 use App\Http\Controllers\Api\V1\EnumController;
+use App\Http\Controllers\Api\V1\ExportController;
+use App\Http\Controllers\Api\V1\GlobalSearchController;
+use App\Http\Controllers\Api\V1\SalesDashboardController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -83,6 +89,29 @@ Route::prefix('v1')->group(function () {
     Route::get('leads/{lead}/can-convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'canConvert'])->name('leads.can-convert');
     Route::post('leads/{lead}/convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'convert'])->name('leads.convert');
     
+    // Activity Management Routes
+    Route::get('activities', [ActivityController::class, 'index'])->name('activities.index');
+    Route::post('activities/{activity}/complete', [ActivityController::class, 'complete'])->name('activities.complete');
+    Route::post('activities/{activity}/cancel', [ActivityController::class, 'cancel'])->name('activities.cancel');
+    
+    // Meeting Management Routes
+    Route::get('meetings', [ActivityController::class, 'meetings'])->name('meetings.index');
+    Route::post('meetings/{meeting}/complete', [ActivityController::class, 'completeMeeting'])->name('meetings.complete');
+    Route::post('meetings/{meeting}/cancel', [ActivityController::class, 'cancelMeeting'])->name('meetings.cancel');
+    
+    // Schedule Routes
+    Route::get('schedule/today', [ActivityController::class, 'todaySchedule'])->name('schedule.today');
+    Route::get('schedule/upcoming', [ActivityController::class, 'upcomingSchedule'])->name('schedule.upcoming');
+    
+    // Audit Trail Routes
+    Route::get('leads/{lead}/history', [LeadHistoryController::class, 'leadHistory'])->name('leads.history');
+    Route::get('leads/{lead}/full-history', [LeadHistoryController::class, 'leadFullHistory'])->name('leads.full-history');
+    Route::get('leads/{lead}/history-stats', [LeadHistoryController::class, 'leadHistoryStats'])->name('leads.history-stats');
+    Route::get('proposals/{proposal}/history', [LeadHistoryController::class, 'proposalHistory'])->name('proposals.history');
+    Route::get('quotations/{quotation}/history', [LeadHistoryController::class, 'quotationHistory'])->name('quotations.history');
+    Route::get('audit/recent', [LeadHistoryController::class, 'recentActivity'])->name('audit.recent');
+    Route::get('audit/user/{userId}', [LeadHistoryController::class, 'userActivity'])->name('audit.user');
+    
     // Client Management Routes
     Route::apiResource('clients', ClientController::class);
     
@@ -91,7 +120,16 @@ Route::prefix('v1')->group(function () {
     Route::delete('clients/{client}/portal-access', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'revoke'])->name('clients.portal-access.revoke');
     Route::post('clients/{client}/portal-access/reset-password', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'resetPassword'])->name('clients.portal-access.reset-password');
     
-    // Quotation Management Routes
+    // Proposal Management Routes (Technical Proposals)
+    Route::apiResource('proposals', ProposalController::class);
+    Route::post('proposals/fast-track', [ProposalController::class, 'fastTrack'])->name('proposals.fast-track');
+    Route::post('proposals/{proposal}/upload', [ProposalController::class, 'uploadFile'])->name('proposals.upload');
+    Route::post('proposals/{proposal}/send', [ProposalController::class, 'send'])->name('proposals.send');
+    Route::post('proposals/{proposal}/approve', [ProposalController::class, 'approve'])->name('proposals.approve');
+    Route::post('proposals/{proposal}/reject', [ProposalController::class, 'reject'])->name('proposals.reject');
+    Route::get('proposals-expiring', [ProposalController::class, 'expiring'])->name('proposals.expiring');
+    
+    // Quotation Management Routes (Price Quotes)
     Route::apiResource('quotations', QuotationController::class);
     Route::post('quotations/calculate', [QuotationController::class, 'calculate'])->name('quotations.calculate');
     Route::post('quotations/{quotation}/send', [QuotationController::class, 'send'])->name('quotations.send');
@@ -367,5 +405,25 @@ Route::prefix('v1')->group(function () {
         Route::get('user-specializations', [EnumController::class, 'getUserSpecializations'])->name('enums.user-specializations');
         Route::get('task-categories', [EnumController::class, 'getTaskCategories'])->name('enums.task-categories');
         Route::get('compatible-task-categories/{specialization}', [EnumController::class, 'getCompatibleTaskCategories'])->name('enums.compatible-task-categories');
+    });
+
+    // Sales Dashboard Routes (Manager Dashboard)
+    Route::prefix('sales-dashboard')->group(function () {
+        Route::get('summary', [SalesDashboardController::class, 'summary'])->name('sales-dashboard.summary');
+        Route::get('pipeline', [SalesDashboardController::class, 'pipeline'])->name('sales-dashboard.pipeline');
+        Route::get('team-performance', [SalesDashboardController::class, 'teamPerformance'])->name('sales-dashboard.team-performance');
+        Route::get('bottlenecks', [SalesDashboardController::class, 'bottlenecks'])->name('sales-dashboard.bottlenecks');
+        Route::get('alerts', [SalesDashboardController::class, 'alerts'])->name('sales-dashboard.alerts');
+    });
+
+    // Global Search Route
+    Route::get('search', [GlobalSearchController::class, 'search'])->name('search');
+
+    // Export Routes
+    Route::prefix('export')->group(function () {
+        Route::get('leads', [ExportController::class, 'exportLeads'])->name('export.leads');
+        Route::get('proposals', [ExportController::class, 'exportProposals'])->name('export.proposals');
+        Route::get('quotations', [ExportController::class, 'exportQuotations'])->name('export.quotations');
+        Route::get('sales-report', [ExportController::class, 'salesReport'])->name('export.sales-report');
     });
 });

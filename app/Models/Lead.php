@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use App\Contracts\Trackable;
+use App\Enums\IndustrySector;
 use App\Enums\LeadPriority;
 use App\Enums\LeadSource;
 use App\Enums\LeadStatus;
+use App\Enums\LeadTemperature;
 use App\Enums\ReferenceType;
+use App\Traits\HasAuditTrail;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,19 +20,24 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Lead extends Model implements Trackable
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasFactory, HasCreatedUpdatedBy, HasAuditTrail;
 
     protected $fillable = [
         'name',
+        'project_name',
         'email',
         'phone',
         'company',
         'country',
+        'timezone_offset',
+        'industry_sector',
         'source',
         'reference_type',
         'reference_id',
+        'tech_lead_id',
         'status',
         'priority',
+        'lead_temperature',
         'expected_budget',
         'expected_close_date',
         'last_contact_at',
@@ -50,6 +58,8 @@ class Lead extends Model implements Trackable
             'reference_type' => ReferenceType::class,
             'status' => LeadStatus::class,
             'priority' => LeadPriority::class,
+            'industry_sector' => IndustrySector::class,
+            'lead_temperature' => LeadTemperature::class,
             'expected_budget' => 'decimal:2',
             'expected_close_date' => 'date',
             'last_contact_at' => 'datetime',
@@ -105,6 +115,22 @@ class Lead extends Model implements Trackable
     public function quotations(): HasMany
     {
         return $this->hasMany(Quotation::class);
+    }
+
+    /**
+     * Get the proposals for this lead.
+     */
+    public function proposals(): HasMany
+    {
+        return $this->hasMany(Proposal::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get the tech lead assigned for evaluation.
+     */
+    public function techLead(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'tech_lead_id');
     }
 
     /**

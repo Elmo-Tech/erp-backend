@@ -6,6 +6,7 @@ use App\Contracts\Trackable;
 use App\Enums\CommissionType;
 use App\Enums\QuotationStatus;
 use App\Enums\RejectionReason;
+use App\Traits\HasAuditTrail;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,12 +17,14 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Quotation extends Model implements Trackable
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasFactory, HasCreatedUpdatedBy, HasAuditTrail;
 
     protected $fillable = [
         'quotation_number',
         'lead_id',
+        'proposal_id',
         'template_id',
+        'scope_description',
         'estimations',
         'hourly_rate',
         'discount_percentage',
@@ -36,6 +39,8 @@ class Quotation extends Model implements Trackable
         'commission_type',
         'commission_percentage',
         'commission_amount',
+        'sales_commission_percentage',
+        'sales_commission_amount',
         'commission_user_id',
         'internal_cost',
         'profit_margin',
@@ -71,6 +76,11 @@ class Quotation extends Model implements Trackable
     public function lead(): BelongsTo
     {
         return $this->belongsTo(Lead::class);
+    }
+
+    public function proposal(): BelongsTo
+    {
+        return $this->belongsTo(Proposal::class);
     }
 
     public function template(): BelongsTo
