@@ -12,13 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('tasks', function (Blueprint $table) {
-            $table->enum('task_category', [
-                'backend', 'frontend', 'api', 'database', 'ui', 'ux', 'ui_ux', 'component', 
-                'styling', 'design', 'prototype', 'wireframe', 'mobile', 
-                'ios', 'android', 'react_native', 'deployment', 'infrastructure', 
-                'ci_cd', 'monitoring', 'testing', 'automation', 'bug_fix', 
-                'quality_assurance', 'server', 'general'
-            ])->default('general')->after('priority');
+            $table->string('task_category')->nullable()->after('priority');
         });
     }
 

@@ -299,9 +299,14 @@ class Task extends Model implements Trackable
                 if ($user->specialization) {
                     $compatibleCategories = TaskCategory::getCompatibleCategories($user->specialization);
                     $categoryValues = array_map(fn($category) => $category->value, $compatibleCategories);
-                    $compatibleQuery->whereIn('task_category', $categoryValues);
+                    
+                    if (!empty($categoryValues)) {
+                        $compatibleQuery->whereIn('task_category', $categoryValues);
+                    }
                 }
-            });
+            })
+            // OR tasks without category (general tasks visible to all)
+            ->orWhereNull('task_category');
         });
     }
 

@@ -175,7 +175,7 @@ class TaskService
     public function createTask(array $data, User $user): Task
     {
         $taskData = [
-            'project_id' => $data['projectId'],
+            'project_id' => $data['projectId'] ?? null,
             'parent_id' => $data['parentId'] ?? null,
             'assigned_to' => $data['assignedTo'] ?? null,
             'title' => $data['title'],
