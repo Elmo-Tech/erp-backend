@@ -5,9 +5,13 @@ namespace App\Observers;
 use App\Enums\ProjectStatus;
 use App\Jobs\AutoApproveUIJob;
 use App\Models\Project;
+use App\Models\User;
+use App\Notifications\ProjectDeadlineApproachingNotification;
+use App\Notifications\ProjectStatusChangedNotification;
 use App\Services\Projects\ProjectHistoryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Observer for Project model to handle status changes and auto-approval scheduling.
@@ -17,6 +21,8 @@ use Illuminate\Support\Facades\Bus;
  * - Schedules AutoApproveUIJob when entering ui_ux status (21 days delay)
  * - Cancels scheduled job when leaving ui_ux status
  * - Records status changes in project history
+ * - Sends notifications to team members on status changes
+ * - Clears project caches when relevant data changes
  *
  * Requirements: 5.1, 5.5, 5.6
  */
@@ -85,6 +91,9 @@ class ProjectObserver
      */
     public function updated(Project $project): void
     {
+        // Clear caches when project is updated
+        $project->clearAllCaches();
+
         // Record status changes in history
         if ($project->wasChanged('status')) {
             $oldStatus = $project->getOriginal('status');
@@ -109,6 +118,93 @@ class ProjectObserver
                 $oldStatusValue,
                 $newStatusValue
             );
+
+            // Notify team members about status change
+            $this->notifyTeamAboutStatusChange($project, $oldStatusValue, $newStatusValue);
+        }
+
+        // Record deadline changes
+        if ($project->wasChanged('deadline')) {
+            $this->historyService->recordChange(
+                $project,
+                'deadline',
+                $project->getOriginal('deadline')?->format('Y-m-d'),
+                $project->deadline?->format('Y-m-d')
+            );
+
+            // Check if deadline is approaching (within 7 days)
+            $this->checkDeadlineApproaching($project);
+        }
+
+        // Record budget changes
+        if ($project->wasChanged('budget')) {
+            $this->historyService->recordChange(
+                $project,
+                'budget',
+                (string) $project->getOriginal('budget'),
+                (string) $project->budget
+            );
+        }
+    }
+
+    /**
+     * Notify team members about project status change.
+     *
+     * @param Project $project
+     * @param string|null $oldStatus
+     * @param string $newStatus
+     * @return void
+     */
+    private function notifyTeamAboutStatusChange(Project $project, ?string $oldStatus, string $newStatus): void
+    {
+        // Get all team members for this project
+        $teamMembers = $project->members()
+            ->with('user')
+            ->get()
+            ->pluck('user')
+            ->filter();
+
+        if ($teamMembers->isEmpty()) {
+            return;
+        }
+
+        // Check if notification class exists before sending
+        if (class_exists(ProjectStatusChangedNotification::class)) {
+            Notification::send(
+                $teamMembers,
+                new ProjectStatusChangedNotification($project, $oldStatus, $newStatus)
+            );
+        }
+    }
+
+    /**
+     * Check if project deadline is approaching and notify team.
+     *
+     * @param Project $project
+     * @return void
+     */
+    private function checkDeadlineApproaching(Project $project): void
+    {
+        if (!$project->deadline) {
+            return;
+        }
+
+        $daysUntilDeadline = Carbon::now()->diffInDays($project->deadline, false);
+
+        // Notify if deadline is within 7 days and in the future
+        if ($daysUntilDeadline > 0 && $daysUntilDeadline <= 7) {
+            $teamMembers = $project->members()
+                ->with('user')
+                ->get()
+                ->pluck('user')
+                ->filter();
+
+            if ($teamMembers->isNotEmpty() && class_exists(ProjectDeadlineApproachingNotification::class)) {
+                Notification::send(
+                    $teamMembers,
+                    new ProjectDeadlineApproachingNotification($project, $daysUntilDeadline)
+                );
+            }
         }
     }
 

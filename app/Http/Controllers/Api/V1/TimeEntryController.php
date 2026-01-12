@@ -482,8 +482,8 @@ class TimeEntryController extends Controller
     {
         $user = $request->user();
         
-        // Only admin and super-admin can update time entries
-        if (!$user->hasRole(['admin', 'super-admin'])) {
+        // Check permission to edit time entries
+        if (!$user->can('edit_time_entries')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
         
@@ -569,8 +569,8 @@ class TimeEntryController extends Controller
     {
         $user = $request->user();
         
-        // Only admin and super-admin can view all time entries
-        if (!$user->hasRole(['admin', 'super-admin'])) {
+        // Check permission to view all time entries
+        if (!$user->can('view_all_time_entries')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
         

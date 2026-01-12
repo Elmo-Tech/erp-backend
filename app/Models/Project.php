@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\Cache;
 
 class Project extends Model implements Trackable
 {
@@ -136,16 +137,53 @@ class Project extends Model implements Trackable
 
     /**
      * Calculate project progress based on completed tasks
+     * Cached for 5 minutes to improve performance
      */
     public function getProgressAttribute(): float
     {
-        $totalTasks = $this->tasks()->count();
-        if ($totalTasks === 0) {
-            return 0;
-        }
-        
-        $completedTasks = $this->tasks()->where('status', 'completed')->count();
-        return round(($completedTasks / $totalTasks) * 100, 1);
+        return Cache::remember(
+            "project_{$this->id}_progress",
+            now()->addMinutes(5),
+            function () {
+                $totalTasks = $this->tasks()->count();
+                if ($totalTasks === 0) {
+                    return 0.0;
+                }
+                
+                $completedTasks = $this->tasks()->where('status', 'completed')->count();
+                return round(($completedTasks / $totalTasks) * 100, 1);
+            }
+        );
+    }
+
+    /**
+     * Clear the cached progress value
+     * Call this when tasks are added, removed, or status changes
+     */
+    public function clearProgressCache(): void
+    {
+        Cache::forget("project_{$this->id}_progress");
+    }
+
+    /**
+     * Get cached total time spent or calculate and cache it
+     */
+    public function getCachedTotalTimeSpent(): int
+    {
+        return Cache::remember(
+            "project_{$this->id}_total_time",
+            now()->addMinutes(5),
+            fn () => $this->getTotalTimeSpentAttribute()
+        );
+    }
+
+    /**
+     * Clear all project-related caches
+     */
+    public function clearAllCaches(): void
+    {
+        Cache::forget("project_{$this->id}_progress");
+        Cache::forget("project_{$this->id}_total_time");
     }
 
     /**
