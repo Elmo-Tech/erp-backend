@@ -51,7 +51,7 @@ class StoreTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'projectId' => ['required', 'integer', 'exists:projects,id'],
+            'projectId' => ['nullable', 'integer', 'exists:projects,id'],
             'parentId' => ['nullable', 'integer', 'exists:tasks,id'],
             'assignedTo' => ['nullable', 'integer', 'exists:users,id'],
             'title' => ['required', 'string', 'max:255'],
@@ -89,13 +89,24 @@ class StoreTaskRequest extends FormRequest
      */
     private function validateParentBelongsToSameProject(Validator $validator): void
     {
-        if (!$this->filled('parentId') || !$this->filled('projectId')) {
+        if (!$this->filled('parentId')) {
             return;
         }
 
         $parentTask = Task::find($this->input('parentId'));
         
-        if ($parentTask && $parentTask->project_id !== (int) $this->input('projectId')) {
+        if (!$parentTask) {
+            return;
+        }
+
+        // If creating a task with a parent, inherit project from parent if not specified
+        if (!$this->filled('projectId') && $parentTask->project_id) {
+            $this->merge(['projectId' => $parentTask->project_id]);
+            return;
+        }
+
+        // If both projectId and parentId are specified, they must match
+        if ($this->filled('projectId') && $parentTask->project_id !== (int) $this->input('projectId')) {
             $validator->errors()->add(
                 'parentId',
                 'The parent task must belong to the same project.'
@@ -169,7 +180,6 @@ class StoreTaskRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'projectId.required' => 'The projectId field is required.',
             'projectId.integer' => 'The projectId must be an integer.',
             'projectId.exists' => 'The selected projectId does not exist.',
             'parentId.integer' => 'The parentId must be an integer.',
