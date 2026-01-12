@@ -19,7 +19,7 @@ class StoreTaskRequest extends FormRequest
      * Determine if the user is authorized to make this request.
      * 
      * Authorization rules:
-     * - Admin/Super Admin: Can create any task type (main, weekly, subtask)
+     * - Admin/Super Admin/Manager: Can create any task type (main, weekly, subtask)
      * - Other users: Can only create subtasks
      */
     public function authorize(): bool
@@ -27,8 +27,8 @@ class StoreTaskRequest extends FormRequest
         $user = $this->user();
         $taskType = $this->input('type', TaskType::MAIN->value);
         
-        // Admin and Super Admin can create any task type
-        if ($user->hasRole(['admin', 'super-admin'])) {
+        // Admin, Super Admin, and Manager can create any task type
+        if ($user->hasRole(['admin', 'super-admin', 'manager'])) {
             return true;
         }
         
@@ -37,7 +37,7 @@ class StoreTaskRequest extends FormRequest
             return true;
         }
         
-        // Non-admin trying to create main or weekly task
+        // Non-privileged user trying to create main or weekly task
         return false;
     }
 
@@ -233,7 +233,7 @@ class StoreTaskRequest extends FormRequest
     {
         throw new HttpResponseException(
             ApiResponse::error(
-                'Only administrators can create main tasks and weekly tasks. You can only create subtasks.',
+                'Only administrators and managers can create main tasks and weekly tasks. You can only create subtasks.',
                 403
             )
         );

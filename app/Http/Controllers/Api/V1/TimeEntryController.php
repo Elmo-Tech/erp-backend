@@ -595,4 +595,158 @@ class TimeEntryController extends Controller
             'Time entries retrieved successfully'
         );
     }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/time-entries/active-timers",
+     *     operationId="getActiveTimers",
+     *     tags={"Time Entries"},
+     *     summary="Get all active timers (Admin/Super Admin only)",
+     *     description="Retrieve all currently active timers with user and trackable details. Only admins and super admins can access.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Active timers retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Active timers retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="timeEntryId", type="integer", example=1),
+     *                     @OA\Property(property="userId", type="integer", example=1),
+     *                     @OA\Property(property="userName", type="string", example="John Doe"),
+     *                     @OA\Property(property="trackableId", type="integer", example=1),
+     *                     @OA\Property(property="trackableType", type="string", example="App\\Models\\Task"),
+     *                     @OA\Property(property="trackableDisplayName", type="string", example="Fix login bug"),
+     *                     @OA\Property(property="startTime", type="string", format="date-time"),
+     *                     @OA\Property(property="elapsedMinutes", type="integer", example=45),
+     *                     @OA\Property(property="createdAt", type="string", format="date-time")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized - Admin access required"
+     *     )
+     * )
+     */
+    public function activeTimers(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        // Check permission to view all time entries (admin/super admin only)
+        if (!$user->can('view_all_time_entries')) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+        
+        $activeTimers = TimeEntry::with(['user', 'trackable'])
+            ->whereNull('end_time')
+            ->orderBy('start_time', 'desc')
+            ->get();
+
+        $timersData = $activeTimers->map(function ($timer) {
+            $elapsedMinutes = $timer->start_time->diffInMinutes(now());
+            
+            return [
+                'timeEntryId' => $timer->id,
+                'userId' => $timer->user_id,
+                'userName' => $timer->user->name ?? 'Unknown User',
+                'trackableId' => $timer->trackable_id,
+                'trackableType' => $timer->trackable_type,
+                'trackableDisplayName' => $timer->trackable?->getTrackableDisplayName() ?? 'Unknown',
+                'startTime' => $timer->start_time->toISOString(),
+                'elapsedMinutes' => $elapsedMinutes,
+                'createdAt' => $timer->created_at->toISOString(),
+            ];
+        });
+
+        return ApiResponse::success(
+            $timersData,
+            'Active timers retrieved successfully'
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/time-entries/{id}/stop-admin",
+     *     operationId="stopTimerAdmin",
+     *     tags={"Time Entries"},
+     *     summary="Stop a timer as admin (Admin/Super Admin only)",
+     *     description="Stop any active timer as an admin. Only admins and super admins can access.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Time Entry ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Timer stopped successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Timer stopped successfully")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized - Admin access required"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Time entry not found or already stopped"
+     *     )
+     * )
+     */
+    public function stopTimerAdmin(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        
+        // Check permission to manage time entries (admin/super admin only)
+        if (!$user->can('edit_time_entries')) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+        
+        $timeEntry = TimeEntry::with(['user', 'trackable'])->find($id);
+        
+        if (!$timeEntry) {
+            return ApiResponse::notFound('Time entry not found');
+        }
+        
+        if ($timeEntry->end_time !== null) {
+            return ApiResponse::error('Timer is already stopped', 400);
+        }
+        
+        // Stop the timer using the service
+        $timerUser = $timeEntry->user;
+        $stoppedTimer = $this->timeTrackingService->stopTimer($timerUser);
+        
+        return ApiResponse::success(
+            [
+                'timeEntryId' => $stoppedTimer->id,
+                'userName' => $timerUser->name,
+                'trackableDisplayName' => $stoppedTimer->trackable?->getTrackableDisplayName() ?? 'Unknown',
+                'durationMinutes' => $stoppedTimer->duration_minutes,
+            ],
+            'Timer stopped successfully'
+        );
+    }
 }
