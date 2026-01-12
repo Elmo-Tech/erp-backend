@@ -3,6 +3,7 @@
 namespace App\Services\Sales;
 
 use App\Contracts\Trackable;
+use App\Enums\TaskStatus;
 use App\Events\TimerUpdated;
 use App\Models\Attendance;
 use App\Models\Task;
@@ -24,6 +25,7 @@ class TimeTrackingService
     /**
      * Start a timer for a trackable entity.
      * Creates attendance record if first timer of the day.
+     * Auto-updates task status from TODO to IN_PROGRESS and sets start_date.
      *
      * @param User $user
      * @param Trackable $trackable
@@ -42,6 +44,9 @@ class TimeTrackingService
         // Validate task hierarchy - timer only allowed on leaf tasks (no children)
         if ($trackable instanceof Task) {
             $this->validateTaskCanHaveTimer($trackable);
+            
+            // Auto-update task status and start_date
+            $this->updateTaskOnTimerStart($trackable);
         }
 
         // Smart Attendance: Create attendance if first timer of day
@@ -78,6 +83,33 @@ class TimeTrackingService
                 "Cannot start timer on {$taskType} that has child tasks. " .
                 "Please start the timer on a subtask instead."
             );
+        }
+    }
+
+    /**
+     * Update task status and start_date when timer starts.
+     * Changes status from TODO to IN_PROGRESS and sets start_date to today if not set.
+     *
+     * @param Task $task
+     * @return void
+     */
+    private function updateTaskOnTimerStart(Task $task): void
+    {
+        $updates = [];
+
+        // Auto-update status from TODO to IN_PROGRESS
+        if ($task->status === TaskStatus::TODO) {
+            $updates['status'] = TaskStatus::IN_PROGRESS;
+        }
+
+        // Set start_date to today if not already set
+        if (is_null($task->start_date)) {
+            $updates['start_date'] = Carbon::now('Africa/Cairo')->toDateString();
+        }
+
+        // Update task if there are changes
+        if (!empty($updates)) {
+            $task->update($updates);
         }
     }
 
