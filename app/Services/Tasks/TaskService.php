@@ -87,7 +87,19 @@ class TaskService
     public function getMyAssignedTasks(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = Task::query()
-            ->with(['assignee', 'project', 'tags', 'assignees.user', 'children.assignee', 'children.tags', 'children.assignees.user'])
+            ->with([
+                'assignee', 
+                'project', 
+                'tags', 
+                'assignees.user', 
+                // Load children (Weekly tasks) with their children (Subtasks)
+                'children.assignee', 
+                'children.tags', 
+                'children.assignees.user',
+                'children.children.assignee',
+                'children.children.tags',
+                'children.children.assignees.user',
+            ])
             ->whereHas('assignees', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
@@ -130,19 +142,38 @@ class TaskService
         return Task::query()
             ->where('project_id', $projectId)
             ->whereNull('parent_id')
-            ->with(['assignee', 'tags', 'assignees.user', 'children.assignee', 'children.tags'])
+            ->with([
+                'assignee', 
+                'tags', 
+                'assignees.user', 
+                // Load children (Weekly tasks) with their children (Subtasks)
+                'children.assignee', 
+                'children.tags',
+                'children.assignees.user',
+                'children.children.assignee',
+                'children.children.tags',
+                'children.children.assignees.user',
+            ])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     /**
      * Get children of a specific task for lazy loading.
+     * Also loads grandchildren (subtasks) for complete hierarchy.
      */
     public function getTaskChildren(int $taskId): Collection
     {
         return Task::query()
             ->where('parent_id', $taskId)
-            ->with(['assignee', 'tags', 'assignees.user'])
+            ->with([
+                'assignee', 
+                'tags', 
+                'assignees.user',
+                'children.assignee',
+                'children.tags',
+                'children.assignees.user',
+            ])
             ->orderBy('created_at', 'desc')
             ->get();
     }
