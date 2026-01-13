@@ -64,11 +64,11 @@ class GlobalSearchService
             ->map(fn($lead) => [
                 'id' => $lead->id,
                 'type' => 'lead',
-                'title' => $lead->name,
-                'subtitle' => $lead->company,
-                'status' => $lead->status?->value,
+                'title' => $lead->name ?? '',
+                'subtitle' => $lead->company ?? '',
+                'status' => $lead->status?->value ?? null,
                 'url' => "/dashboard/sales/leads/{$lead->id}",
-                'createdAt' => $lead->created_at->toISOString(),
+                'createdAt' => $lead->created_at?->toISOString() ?? '',
             ]);
     }
 
@@ -89,11 +89,11 @@ class GlobalSearchService
             ->map(fn($proposal) => [
                 'id' => $proposal->id,
                 'type' => 'proposal',
-                'title' => $proposal->title,
-                'subtitle' => $proposal->lead?->name,
-                'status' => $proposal->status?->value,
+                'title' => $proposal->title ?? '',
+                'subtitle' => $proposal->lead?->name ?? '',
+                'status' => $proposal->status?->value ?? null,
                 'url' => "/dashboard/sales/leads/{$proposal->lead_id}?tab=proposals",
-                'createdAt' => $proposal->created_at->toISOString(),
+                'createdAt' => $proposal->created_at?->toISOString() ?? '',
             ]);
     }
 
@@ -115,10 +115,10 @@ class GlobalSearchService
                 'id' => $quotation->id,
                 'type' => 'quotation',
                 'title' => $quotation->quotation_number ?? "Quotation #{$quotation->id}",
-                'subtitle' => $quotation->lead?->name . " - " . number_format($quotation->final_price, 2) . " " . $quotation->currency,
-                'status' => $quotation->status?->value,
+                'subtitle' => ($quotation->lead?->name ?? '') . " - " . number_format($quotation->final_price ?? 0, 2) . " " . ($quotation->currency ?? ''),
+                'status' => $quotation->status?->value ?? null,
                 'url' => "/dashboard/sales/leads/{$quotation->lead_id}?tab=quotations",
-                'createdAt' => $quotation->created_at->toISOString(),
+                'createdAt' => $quotation->created_at?->toISOString() ?? '',
             ]);
     }
 
@@ -139,11 +139,11 @@ class GlobalSearchService
             ->map(fn($client) => [
                 'id' => $client->id,
                 'type' => 'client',
-                'title' => $client->name,
-                'subtitle' => $client->company,
+                'title' => $client->name ?? '',
+                'subtitle' => $client->company ?? '',
                 'status' => null,
                 'url' => "/dashboard/clients/{$client->id}",
-                'createdAt' => $client->created_at->toISOString(),
+                'createdAt' => $client->created_at?->toISOString() ?? '',
             ]);
     }
 
@@ -164,11 +164,11 @@ class GlobalSearchService
             ->map(fn($project) => [
                 'id' => $project->id,
                 'type' => 'project',
-                'title' => $project->name,
-                'subtitle' => $project->client?->name,
-                'status' => $project->status?->value,
+                'title' => $project->name ?? '',
+                'subtitle' => $project->client?->name ?? '',
+                'status' => $project->status?->value ?? null,
                 'url' => "/dashboard/projects/{$project->id}",
-                'createdAt' => $project->created_at->toISOString(),
+                'createdAt' => $project->created_at?->toISOString() ?? '',
             ]);
     }
 }
