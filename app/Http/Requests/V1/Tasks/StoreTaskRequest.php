@@ -18,27 +18,29 @@ class StoreTaskRequest extends FormRequest
     /**
      * Determine if the user is authorized to make this request.
      * 
-     * Authorization rules:
-     * - Admin/Super Admin/Manager: Can create any task type (main, weekly, subtask)
-     * - Other users: Can only create subtasks
+     * Authorization rules based on permissions:
+     * - create_main_tasks: Can create main tasks
+     * - create_weekly_tasks: Can create weekly tasks
+     * - create_subtasks: Can create subtasks
+     * - Admin/Super Admin: Can create any task type (bypass permission check)
      */
     public function authorize(): bool
     {
         $user = $this->user();
         $taskType = $this->input('type', TaskType::MAIN->value);
         
-        // Admin, Super Admin, and Manager can create any task type
-        if ($user->hasRole(['admin', 'super-admin', 'manager'])) {
+        // Admin and Super Admin can create any task type
+        if ($user->hasRole(['admin', 'super-admin'])) {
             return true;
         }
         
-        // Other users can only create subtasks
-        if ($taskType === TaskType::SUBTASK->value) {
-            return true;
-        }
-        
-        // Non-privileged user trying to create main or weekly task
-        return false;
+        // Check specific permission based on task type
+        return match ($taskType) {
+            TaskType::MAIN->value => $user->can('create_main_tasks'),
+            TaskType::WEEKLY->value => $user->can('create_weekly_tasks'),
+            TaskType::SUBTASK->value => $user->can('create_subtasks'),
+            default => false,
+        };
     }
 
     /**
@@ -231,11 +233,17 @@ class StoreTaskRequest extends FormRequest
      */
     protected function failedAuthorization(): void
     {
+        $taskType = $this->input('type', TaskType::MAIN->value);
+        
+        $message = match ($taskType) {
+            TaskType::MAIN->value => 'You do not have permission to create main tasks.',
+            TaskType::WEEKLY->value => 'You do not have permission to create weekly tasks.',
+            TaskType::SUBTASK->value => 'You do not have permission to create subtasks.',
+            default => 'You do not have permission to create this task type.',
+        };
+        
         throw new HttpResponseException(
-            ApiResponse::error(
-                'Only administrators and managers can create main tasks and weekly tasks. You can only create subtasks.',
-                403
-            )
+            ApiResponse::error($message, 403)
         );
     }
 }

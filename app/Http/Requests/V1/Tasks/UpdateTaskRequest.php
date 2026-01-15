@@ -18,9 +18,11 @@ class UpdateTaskRequest extends FormRequest
     /**
      * Determine if the user is authorized to make this request.
      * 
-     * Authorization rules:
-     * - Admin/Super Admin: Can edit any task type (main, weekly, subtask)
-     * - Other users: Can only edit subtasks
+     * Authorization rules based on permissions:
+     * - edit_main_tasks: Can edit main tasks
+     * - edit_weekly_tasks: Can edit weekly tasks
+     * - edit_subtasks: Can edit subtasks
+     * - Admin/Super Admin: Can edit any task type (bypass permission check)
      */
     public function authorize(): bool
     {
@@ -36,13 +38,13 @@ class UpdateTaskRequest extends FormRequest
             return true;
         }
         
-        // Other users can only edit subtasks
-        if ($task->type === TaskType::SUBTASK) {
-            return true;
-        }
-        
-        // Non-admin trying to edit main or weekly task
-        return false;
+        // Check specific permission based on task type
+        return match ($task->type) {
+            TaskType::MAIN => $user->can('edit_main_tasks'),
+            TaskType::WEEKLY => $user->can('edit_weekly_tasks'),
+            TaskType::SUBTASK => $user->can('edit_subtasks'),
+            default => false,
+        };
     }
 
     /**
@@ -328,11 +330,21 @@ class UpdateTaskRequest extends FormRequest
      */
     protected function failedAuthorization(): void
     {
+        $task = $this->route('task');
+        
+        $message = 'You do not have permission to edit this task.';
+        
+        if ($task instanceof Task) {
+            $message = match ($task->type) {
+                TaskType::MAIN => 'You do not have permission to edit main tasks.',
+                TaskType::WEEKLY => 'You do not have permission to edit weekly tasks.',
+                TaskType::SUBTASK => 'You do not have permission to edit subtasks.',
+                default => 'You do not have permission to edit this task.',
+            };
+        }
+        
         throw new HttpResponseException(
-            ApiResponse::error(
-                'Only administrators can edit main tasks and weekly tasks. You can only edit subtasks.',
-                403
-            )
+            ApiResponse::error($message, 403)
         );
     }
 }
