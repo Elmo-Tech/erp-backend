@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Services\Reporting\EmployeeReviewService;
 use App\Services\Reporting\ProfitabilityService;
 use App\Services\Reporting\QualityService;
 use App\Services\Reporting\UserPerformanceService;
@@ -16,7 +17,8 @@ class AdminStatsController extends Controller
     public function __construct(
         private ProfitabilityService $profitabilityService,
         private QualityService $qualityService,
-        private UserPerformanceService $userPerformanceService
+        private UserPerformanceService $userPerformanceService,
+        private EmployeeReviewService $employeeReviewService
     ) {
         // Apply middleware using Laravel 12 approach
         $this->middleware(['auth:sanctum', 'locale']);
@@ -658,6 +660,181 @@ class AdminStatsController extends Controller
         } catch (\Exception $e) {
             return ApiResponse::error(
                 'Failed to retrieve attendance analytics: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/admin/stats/employee-review/{userId}",
+     *     operationId="getEmployeeReview",
+     *     tags={"Admin Stats"},
+     *     summary="Get comprehensive employee review",
+     *     description="Retrieve detailed employee performance review including time tracking, tasks, projects, attendance, and productivity metrics. Requires view_admin_stats permission.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         required=true,
+     *         description="User ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateFrom",
+     *         in="query",
+     *         description="Filter data from this date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateTo",
+     *         in="query",
+     *         description="Filter data up to this date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2024-12-31")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Employee review retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Employee review retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="employee",
+     *                     type="object",
+     *                     @OA\Property(property="userId", type="integer", example=1),
+     *                     @OA\Property(property="name", type="string", example="John Doe"),
+     *                     @OA\Property(property="email", type="string", example="john@example.com"),
+     *                     @OA\Property(property="avatar", type="string", example="https://example.com/avatar.jpg"),
+     *                     @OA\Property(property="specialization", type="string", example="frontend")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="period",
+     *                     type="object",
+     *                     @OA\Property(property="dateFrom", type="string", example="2024-01-01"),
+     *                     @OA\Property(property="dateTo", type="string", example="2024-12-31")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="overview",
+     *                     type="object",
+     *                     @OA\Property(property="totalTrackedHours", type="number", example=160.5),
+     *                     @OA\Property(property="totalIdleHours", type="number", example=12.3),
+     *                     @OA\Property(property="taskCompletionRate", type="string", example="85.50"),
+     *                     @OA\Property(property="averageBounceRate", type="string", example="0.15"),
+     *                     @OA\Property(property="attendanceDays", type="integer", example=22),
+     *                     @OA\Property(property="productivityScore", type="string", example="82.45")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="timeTracking",
+     *                     type="object",
+     *                     @OA\Property(property="totalEntries", type="integer", example=150),
+     *                     @OA\Property(property="totalMinutes", type="integer", example=9630),
+     *                     @OA\Property(property="totalHours", type="number", example=160.5)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="tasks",
+     *                     type="object",
+     *                     @OA\Property(property="total", type="integer", example=45),
+     *                     @OA\Property(property="completed", type="integer", example=38),
+     *                     @OA\Property(property="inProgress", type="integer", example=5),
+     *                     @OA\Property(property="totalBounces", type="integer", example=7)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="projects",
+     *                     type="object",
+     *                     @OA\Property(property="total", type="integer", example=5),
+     *                     @OA\Property(property="active", type="integer", example=2),
+     *                     @OA\Property(property="completed", type="integer", example=3)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="attendance",
+     *                     type="object",
+     *                     @OA\Property(property="totalDays", type="integer", example=22),
+     *                     @OA\Property(property="lateDays", type="integer", example=3),
+     *                     @OA\Property(property="totalLateMinutes", type="integer", example=45),
+     *                     @OA\Property(property="totalIdleMinutes", type="integer", example=738),
+     *                     @OA\Property(property="averageIdlePerDay", type="number", example=33.55)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="productivity",
+     *                     type="object",
+     *                     @OA\Property(property="efficiency", type="string", example="92.85"),
+     *                     @OA\Property(property="qualityScore", type="string", example="85.00"),
+     *                     @OA\Property(property="completionRate", type="string", example="85.50"),
+     *                     @OA\Property(property="productivityScore", type="string", example="82.45")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - User lacks view_admin_stats permission",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You do not have permission to view admin statistics")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="User not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function employeeReview(Request $request, int $userId): JsonResponse
+    {
+        // Check permission
+        if (!auth()->user()->can('view_admin_stats')) {
+            return ApiResponse::forbidden('You do not have permission to view admin statistics');
+        }
+
+        try {
+            // Extract filters
+            $filters = [];
+            if ($request->has('dateFrom')) {
+                $filters['dateFrom'] = $request->get('dateFrom');
+            }
+            if ($request->has('dateTo')) {
+                $filters['dateTo'] = $request->get('dateTo');
+            }
+
+            // Get employee review data
+            $reviewData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
+
+            return ApiResponse::success(
+                $reviewData,
+                'Employee review retrieved successfully'
+            );
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return ApiResponse::error('User not found', 404);
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::validationError(
+                ['dateRange' => [$e->getMessage()]],
+                'Invalid date range'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve employee review: ' . $e->getMessage(),
                 500
             );
         }

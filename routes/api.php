@@ -327,6 +327,7 @@ Route::prefix('v1')->group(function () {
             Route::get('quality', [AdminStatsController::class, 'quality'])->name('admin.stats.quality');
             Route::get('user-performance', [AdminStatsController::class, 'userPerformance'])->name('admin.stats.user-performance');
             Route::get('attendance', [AdminStatsController::class, 'attendance'])->name('admin.stats.attendance');
+            Route::get('employee-review/{userId}', [AdminStatsController::class, 'employeeReview'])->name('admin.stats.employee-review');
         });
 
         // Admin Role Management Routes
