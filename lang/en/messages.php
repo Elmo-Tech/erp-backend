@@ -48,6 +48,13 @@ return [
     'invoice_linked_to_milestone' => 'Invoice linked to milestone successfully',
     'milestone_already_has_invoice' => 'Milestone already has an invoice linked',
     'cannot_create_invoice_for_paid_milestone' => 'Cannot create invoice for paid milestone',
+
+    // Status Updates
+    'task_status_updated' => 'Task status updated successfully',
+    'project_status_updated' => 'Project status updated successfully',
+    'status_already_set' => 'Status is already set to :status',
+    'no_permission_manage_team' => 'You do not have permission to manage team on this task type',
+    'no_permission_manage_test_scenarios' => 'You do not have permission to manage test scenarios on this task type',
     'contract_must_have_project' => 'Contract must be linked to a project to create invoice',
     'invoice_sent' => 'Invoice sent successfully',
     'invoice_cancelled' => 'Invoice cancelled successfully',

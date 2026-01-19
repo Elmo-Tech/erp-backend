@@ -739,4 +739,67 @@ class TaskService
             ->with('user:id,name,email')
             ->get();
     }
+
+    /**
+     * Update task status with flexible transitions.
+     * Allows changing to any status without strict workflow validation.
+     */
+    public function updateTaskStatus(Task $task, string $status, User $user, ?string $reason = null): Task
+    {
+        $oldStatus = $task->status;
+        $newStatus = TaskStatus::from($status);
+
+        // Check if status is actually changing
+        if ($oldStatus === $newStatus) {
+            return $task;
+        }
+
+        // Update task status
+        $task->update([
+            'status' => $newStatus,
+            'updated_by' => $user->id,
+        ]);
+
+        // Log the status change activity
+        TaskActivity::logStatusChange(
+            $task,
+            $user,
+            $oldStatus->value,
+            $newStatus->value,
+            $reason
+        );
+
+        // Handle special status transitions
+        $this->handleStatusTransition($task, $oldStatus, $newStatus, $user);
+
+        return $task->fresh();
+    }
+
+    /**
+     * Handle special logic for status transitions.
+     */
+    private function handleStatusTransition(Task $task, TaskStatus $oldStatus, TaskStatus $newStatus, User $user): void
+    {
+        // If moving from Testing back to In Progress, increment reopen count (bug bounce)
+        if ($oldStatus === TaskStatus::TESTING && $newStatus === TaskStatus::IN_PROGRESS) {
+            $task->increment('reopen_count');
+            
+            TaskActivity::logComment(
+                $task,
+                $user,
+                'Task reopened from testing - bug bounce detected',
+                true // internal comment
+            );
+        }
+
+        // If moving to completed, set completion timestamp
+        if ($newStatus === TaskStatus::COMPLETED && $oldStatus !== TaskStatus::COMPLETED) {
+            $task->update(['completed_at' => now()]);
+        }
+
+        // If moving away from completed, clear completion timestamp
+        if ($oldStatus === TaskStatus::COMPLETED && $newStatus !== TaskStatus::COMPLETED) {
+            $task->update(['completed_at' => null]);
+        }
+    }
 }

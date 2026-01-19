@@ -9,6 +9,7 @@ use App\Http\Requests\V1\Tasks\UpdateTaskRequest;
 use App\Http\Requests\V1\Tasks\AddAssigneeRequest;
 use App\Http\Requests\V1\Tasks\StoreTestScenarioRequest;
 use App\Http\Requests\V1\Tasks\VerifyTestScenarioRequest;
+use App\Http\Requests\V1\Tasks\UpdateTaskStatusRequest;
 use App\Http\Requests\V1\Tasks\AddCommentRequest;
 use App\Http\Resources\V1\Tasks\TaskCollection;
 use App\Http\Resources\V1\Tasks\TaskResource;
@@ -1043,5 +1044,91 @@ class TaskController extends Controller
             new TaskCollection($tasks),
             'My assigned tasks retrieved successfully'
         );
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/v1/tasks/{id}/status",
+     *     operationId="updateTaskStatus",
+     *     tags={"Tasks"},
+     *     summary="Update task status",
+     *     description="Update task status with flexible transitions - allows changing to any status directly",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Task ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"status"},
+     *             @OA\Property(property="status", type="string", enum={"todo", "in_progress", "review", "testing", "completed"}, example="completed"),
+     *             @OA\Property(property="reason", type="string", example="Task completed ahead of schedule")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Task status updated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Task status updated successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/TaskResource")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Validation failed for task status update"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Task not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Task not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function updateStatus(UpdateTaskStatusRequest $request, Task $task): JsonResponse
+    {
+        return DB::transaction(function () use ($request, $task) {
+            $data = $request->validated();
+            $user = $request->user();
+
+            $task = $this->taskService->updateTaskStatus(
+                $task,
+                $data['status'],
+                $user,
+                $data['reason'] ?? null
+            );
+
+            return ApiResponse::success(
+                new TaskResource($task->load(['assignee', 'project', 'parent', 'children.assignee', 'assignees.user', 'tags'])),
+                __('messages.task_status_updated')
+            );
+        });
     }
 }

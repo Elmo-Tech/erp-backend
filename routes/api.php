@@ -223,6 +223,9 @@ Route::prefix('v1')->group(function () {
     // Project CRUD Routes
     Route::apiResource('projects', ProjectController::class);
     
+    // Project Status Update Route (flexible status transitions)
+    Route::patch('projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.update-status');
+    
     // Project Conversion Route (convert quotation to project)
     Route::post('projects/convert', [ProjectController::class, 'convert'])->name('projects.convert');
     
@@ -252,6 +255,9 @@ Route::prefix('v1')->group(function () {
     
     // Task CRUD Routes
     Route::apiResource('tasks', TaskController::class);
+    
+    // Task Status Update Route (flexible status transitions)
+    Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
     
     // Task Children Route (for lazy loading hierarchy)
     Route::get('tasks/{task}/children', [TaskController::class, 'children'])->name('tasks.children');

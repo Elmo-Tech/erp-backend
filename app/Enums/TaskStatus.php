@@ -26,22 +26,27 @@ enum TaskStatus: string
 
     /**
      * Get allowed transitions from this status.
+     * Now allows flexible transitions to any status except same status.
      *
      * @return array<TaskStatus>
      */
     public function allowedTransitions(): array
     {
-        return match ($this) {
-            self::TODO => [self::IN_PROGRESS],
-            self::IN_PROGRESS => [self::REVIEW, self::TODO],
-            self::REVIEW => [self::TESTING, self::IN_PROGRESS],
-            self::TESTING => [self::COMPLETED, self::IN_PROGRESS],
-            self::COMPLETED => [],
-        };
+        // Allow transition to any status except the current one
+        $allStatuses = [
+            self::TODO,
+            self::IN_PROGRESS,
+            self::REVIEW,
+            self::TESTING,
+            self::COMPLETED,
+        ];
+
+        return array_filter($allStatuses, fn($status) => $status !== $this);
     }
 
     /**
      * Check if transition to target status is allowed.
+     * Now allows flexible transitions - any status can transition to any other status.
      */
     public function canTransitionTo(TaskStatus $target): bool
     {
@@ -50,6 +55,23 @@ enum TaskStatus: string
             return false;
         }
 
-        return in_array($target, $this->allowedTransitions(), true);
+        // Allow transition to any other status
+        return true;
+    }
+
+    /**
+     * Get all available statuses for dropdown/selection.
+     *
+     * @return array<TaskStatus>
+     */
+    public static function getAllStatuses(): array
+    {
+        return [
+            self::TODO,
+            self::IN_PROGRESS,
+            self::REVIEW,
+            self::TESTING,
+            self::COMPLETED,
+        ];
     }
 }

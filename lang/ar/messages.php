@@ -48,6 +48,13 @@ return [
     'invoice_linked_to_milestone' => 'تم ربط الفاتورة بالمرحلة بنجاح',
     'milestone_already_has_invoice' => 'المرحلة مرتبطة بفاتورة بالفعل',
     'cannot_create_invoice_for_paid_milestone' => 'لا يمكن إنشاء فاتورة لمرحلة مدفوعة',
+
+    // Status Updates
+    'task_status_updated' => 'تم تحديث حالة المهمة بنجاح',
+    'project_status_updated' => 'تم تحديث حالة المشروع بنجاح',
+    'status_already_set' => 'الحالة مضبوطة بالفعل على :status',
+    'no_permission_manage_team' => 'ليس لديك صلاحية لإدارة الفريق في هذا النوع من المهام',
+    'no_permission_manage_test_scenarios' => 'ليس لديك صلاحية لإدارة سيناريوهات الاختبار في هذا النوع من المهام',
     'contract_must_have_project' => 'يجب أن يكون العقد مرتبطاً بمشروع لإنشاء فاتورة',
     'invoice_sent' => 'تم إرسال الفاتورة بنجاح',
     'invoice_cancelled' => 'تم إلغاء الفاتورة بنجاح',

@@ -9,6 +9,7 @@ use App\Http\Requests\V1\Projects\ConvertQuotationRequest;
 use App\Http\Requests\V1\Projects\StoreDirectProjectRequest;
 use App\Http\Requests\V1\Projects\StoreProjectRequest;
 use App\Http\Requests\V1\Projects\UpdateProjectRequest;
+use App\Http\Requests\V1\Projects\UpdateProjectStatusRequest;
 use App\Http\Resources\V1\Projects\ProjectCollection;
 use App\Http\Resources\V1\Projects\ProjectResource;
 use App\Models\Project;
@@ -745,6 +746,110 @@ class ProjectController extends Controller
             return ApiResponse::success(
                 new ProjectResource($project->fresh()->load(['client', 'quotation'])),
                 'UI/UX approved successfully'
+            );
+        });
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/v1/projects/{id}/status",
+     *     operationId="updateProjectStatus",
+     *     tags={"Projects"},
+     *     summary="Update project status",
+     *     description="Update project status with flexible transitions - allows changing to any status directly",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Project ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"status"},
+     *             @OA\Property(property="status", type="string", enum={"draft", "active", "ui_ux", "development", "testing", "completed", "on_hold", "cancelled"}, example="completed"),
+     *             @OA\Property(property="reason", type="string", example="Project completed successfully")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Project status updated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Project status updated successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Validation failed for project status update"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Project not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Project not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function updateStatus(UpdateProjectStatusRequest $request, Project $project): JsonResponse
+    {
+        return DB::transaction(function () use ($request, $project) {
+            $data = $request->validated();
+            $oldStatus = $project->status;
+            $newStatus = ProjectStatus::from($data['status']);
+            $reason = $data['reason'] ?? null;
+
+            // Check if status is actually changing
+            if ($oldStatus === $newStatus) {
+                return ApiResponse::success(
+                    new ProjectResource($project->load(['client', 'quotation'])),
+                    'Project status is already ' . $newStatus->label()
+                );
+            }
+
+            // Update project status
+            $project->update([
+                'status' => $newStatus,
+                'previous_status' => $oldStatus,
+            ]);
+
+            // Record history
+            $this->historyService->recordChange(
+                $project,
+                'status',
+                $oldStatus->value,
+                $newStatus->value,
+                $reason ?? 'Status updated via API'
+            );
+
+            return ApiResponse::success(
+                new ProjectResource($project->fresh()->load(['client', 'quotation'])),
+                __('messages.project_status_updated')
             );
         });
     }

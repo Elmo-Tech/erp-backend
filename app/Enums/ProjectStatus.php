@@ -32,25 +32,30 @@ enum ProjectStatus: string
 
     /**
      * Get allowed transitions from this status.
+     * Now allows flexible transitions to any status except same status.
      *
      * @return array<ProjectStatus>
      */
     public function allowedTransitions(): array
     {
-        return match ($this) {
-            self::DRAFT => [self::ACTIVE],
-            self::ACTIVE => [self::UI_UX, self::ON_HOLD, self::CANCELLED],
-            self::UI_UX => [self::DEVELOPMENT, self::ON_HOLD, self::CANCELLED],
-            self::DEVELOPMENT => [self::TESTING, self::ON_HOLD, self::CANCELLED],
-            self::TESTING => [self::COMPLETED, self::DEVELOPMENT, self::ON_HOLD, self::CANCELLED],
-            self::ON_HOLD => [], // Dynamic - returns to previous status
-            self::COMPLETED => [],
-            self::CANCELLED => [],
-        };
+        // Allow transition to any status except the current one
+        $allStatuses = [
+            self::DRAFT,
+            self::ACTIVE,
+            self::UI_UX,
+            self::DEVELOPMENT,
+            self::TESTING,
+            self::COMPLETED,
+            self::ON_HOLD,
+            self::CANCELLED,
+        ];
+
+        return array_filter($allStatuses, fn($status) => $status !== $this);
     }
 
     /**
      * Check if transition to target status is allowed.
+     * Now allows flexible transitions - any status can transition to any other status.
      */
     public function canTransitionTo(ProjectStatus $target): bool
     {
@@ -59,11 +64,26 @@ enum ProjectStatus: string
             return false;
         }
 
-        // Cancelled can be reached from any status except completed
-        if ($target === self::CANCELLED && $this !== self::COMPLETED) {
-            return true;
-        }
+        // Allow transition to any other status
+        return true;
+    }
 
-        return in_array($target, $this->allowedTransitions(), true);
+    /**
+     * Get all available statuses for dropdown/selection.
+     *
+     * @return array<ProjectStatus>
+     */
+    public static function getAllStatuses(): array
+    {
+        return [
+            self::DRAFT,
+            self::ACTIVE,
+            self::UI_UX,
+            self::DEVELOPMENT,
+            self::TESTING,
+            self::COMPLETED,
+            self::ON_HOLD,
+            self::CANCELLED,
+        ];
     }
 }
