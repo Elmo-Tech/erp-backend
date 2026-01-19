@@ -209,10 +209,23 @@ class InvoiceService
      */
     public function markOverdueInvoices(): int
     {
-        $count = Invoice::withoutGlobalScopes()
+        $overdueInvoices = Invoice::withoutGlobalScopes()
+            ->with(['project.client'])
             ->where('status', InvoiceStatus::SENT)
             ->where('due_date', '<', Carbon::today())
-            ->update(['status' => InvoiceStatus::OVERDUE]);
+            ->get();
+
+        $count = 0;
+        foreach ($overdueInvoices as $invoice) {
+            $invoice->update(['status' => InvoiceStatus::OVERDUE]);
+            
+            // Send overdue notification to client
+            if ($invoice->project && $invoice->project->client) {
+                $invoice->project->client->notify(new \App\Notifications\InvoiceOverdue($invoice));
+            }
+            
+            $count++;
+        }
 
         return $count;
     }
