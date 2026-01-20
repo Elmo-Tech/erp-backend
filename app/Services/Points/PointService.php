@@ -63,6 +63,8 @@ class PointService
             $user->refresh();
 
             // Create transaction record
+            $userId = auth()->id();
+
             $transaction = PointTransaction::create([
                 'user_id' => $user->id,
                 'points' => $points,
@@ -71,8 +73,8 @@ class PointService
                 'source_id' => $source?->id,
                 'reason' => $reason,
                 'balance_after' => $user->total_points,
-                'created_by' => auth()->id(),
-                'updated_by' => auth()->id(),
+                'created_by' => $userId,
+                'updated_by' => $userId,
             ]);
 
             // Send notification

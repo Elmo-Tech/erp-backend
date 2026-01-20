@@ -22,6 +22,7 @@ class UserPointResource extends JsonResource
             'pointsAfter' => $this->points_after ?? 0,
             'reason' => $this->reason ?? "",
             'type' => $this->type ?? "manual",
+            'transactionType' => $this->transaction_type?->value ?? $this->transaction_type ?? null,
             'createdBy' => $this->whenLoaded('createdBy', fn() => $this->createdBy->name ?? ""),
             'createdAt' => $this->created_at?->toISOString() ?? "",
             'updatedAt' => $this->updated_at?->toISOString() ?? "",

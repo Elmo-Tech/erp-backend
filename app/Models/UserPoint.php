@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Traits\HasCreatedUpdatedBy;
+use App\Enums\PointTransactionType;
 
 class UserPoint extends Model
 {
@@ -18,6 +19,7 @@ class UserPoint extends Model
         'points_after',
         'reason',
         'type',
+        'transaction_type',
     ];
 
     protected $casts = [
@@ -26,6 +28,7 @@ class UserPoint extends Model
         'points_after' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'transaction_type' => PointTransactionType::class,
     ];
 
     /**

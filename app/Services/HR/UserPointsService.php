@@ -4,6 +4,7 @@ namespace App\Services\HR;
 
 use App\Models\User;
 use App\Models\UserPoint;
+use App\Enums\PointTransactionType;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
@@ -15,9 +16,9 @@ class UserPointsService
      * Add points to a user with reason tracking.
      * Supports both positive (add) and negative (deduct) values.
      */
-    public function addPoints(User $user, int $points, string $reason, User $admin): UserPoint
+    public function addPoints(User $user, int $points, string $reason, User $admin, ?PointTransactionType $type = null): UserPoint
     {
-        return DB::transaction(function () use ($user, $points, $reason, $admin) {
+        return DB::transaction(function () use ($user, $points, $reason, $admin, $type) {
             $pointsBefore = $user->total_points ?? 0;
             $pointsAfter = $pointsBefore + $points; // Allow negative total
 
@@ -32,6 +33,7 @@ class UserPointsService
                 'points_after' => $pointsAfter,
                 'reason' => $reason,
                 'type' => 'manual',
+                'transaction_type' => $type?->value,
                 'created_by' => $admin->id,
                 'updated_by' => $admin->id,
             ]);
@@ -41,9 +43,9 @@ class UserPointsService
     /**
      * Deduct points from a user with reason tracking.
      */
-    public function deductPoints(User $user, int $points, string $reason, User $admin): UserPoint
+    public function deductPoints(User $user, int $points, string $reason, User $admin, ?PointTransactionType $type = null): UserPoint
     {
-        return DB::transaction(function () use ($user, $points, $reason, $admin) {
+        return DB::transaction(function () use ($user, $points, $reason, $admin, $type) {
             $pointsBefore = $user->total_points ?? 0;
             $pointsAfter = $pointsBefore - $points; // Allow negative points
 
@@ -58,6 +60,7 @@ class UserPointsService
                 'points_after' => $pointsAfter,
                 'reason' => $reason,
                 'type' => 'manual',
+                'transaction_type' => $type?->value,
                 'created_by' => $admin->id,
                 'updated_by' => $admin->id,
             ]);
@@ -67,9 +70,9 @@ class UserPointsService
     /**
      * Set user points to a specific value with reason tracking.
      */
-    public function setPoints(User $user, int $newPoints, string $reason, User $admin): UserPoint
+    public function setPoints(User $user, int $newPoints, string $reason, User $admin, ?PointTransactionType $type = null): UserPoint
     {
-        return DB::transaction(function () use ($user, $newPoints, $reason, $admin) {
+        return DB::transaction(function () use ($user, $newPoints, $reason, $admin, $type) {
             $pointsBefore = $user->total_points;
             $pointsChange = $newPoints - $pointsBefore;
 
@@ -84,6 +87,7 @@ class UserPointsService
                 'points_after' => $newPoints,
                 'reason' => $reason,
                 'type' => 'manual',
+                'transaction_type' => $type?->value,
                 'created_by' => $admin->id,
                 'updated_by' => $admin->id,
             ]);
@@ -249,49 +253,33 @@ class UserPointsService
      */
     public function getPointsReport(array $filters = [], int $perPage = 20): array
     {
-        $query = UserPoint::with(['user:id,name,email', 'createdBy:id,name'])
-            ->orderBy('created_at', 'desc');
+        $baseQuery = UserPoint::query();
 
         // Apply date filters
         if (!empty($filters['dateFrom'])) {
-            $query->whereDate('created_at', '>=', $filters['dateFrom']);
+            $baseQuery->whereDate('created_at', '>=', $filters['dateFrom']);
         }
 
         if (!empty($filters['dateTo'])) {
-            $query->whereDate('created_at', '<=', $filters['dateTo']);
+            $baseQuery->whereDate('created_at', '<=', $filters['dateTo']);
         }
 
         // Apply user filter
         if (!empty($filters['userId'])) {
-            $query->where('user_id', $filters['userId']);
+            $baseQuery->where('user_id', $filters['userId']);
         }
 
         // Apply type filter
         if (!empty($filters['type'])) {
-            $query->where('type', $filters['type']);
+            $baseQuery->where('type', $filters['type']);
         }
 
         // Get paginated results
-        $activities = $query->paginate($perPage);
+        $activities = (clone $baseQuery)->with(['user:id,name,email', 'createdBy:id,name'])->orderBy('created_at', 'desc')->paginate($perPage);
 
-        // Calculate summary
-        $summaryQuery = UserPoint::query();
-        
-        // Apply same filters for summary
-        if (!empty($filters['dateFrom'])) {
-            $summaryQuery->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $summaryQuery->whereDate('created_at', '<=', $filters['dateTo']);
-        }
-        if (!empty($filters['userId'])) {
-            $summaryQuery->where('user_id', $filters['userId']);
-        }
-        if (!empty($filters['type'])) {
-            $summaryQuery->where('type', $filters['type']);
-        }
+        // Get summary data
+        $summaryData = (clone $baseQuery)->get();
 
-        $summaryData = $summaryQuery->get();
         $totalPointsAdded = $summaryData->where('points_change', '>', 0)->sum('points_change');
         $totalPointsDeducted = abs($summaryData->where('points_change', '<', 0)->sum('points_change'));
 

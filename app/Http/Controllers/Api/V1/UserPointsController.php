@@ -13,6 +13,7 @@ use App\Http\Resources\V1\UserPoints\LeaderboardResource;
 use App\Models\User;
 use App\Services\HR\UserPointsService;
 use App\Helpers\ApiResponse;
+use App\Enums\PointTransactionType;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -150,6 +151,7 @@ class UserPointsController extends Controller
      *         required=true,
      *         @OA\JsonContent(
      *             @OA\Property(property="userId", type="integer", example=1),
+     *             @OA\Property(property="type", type="string", example="performance_bonus"),
      *             @OA\Property(property="points", type="integer", example=50),
      *             @OA\Property(property="reason", type="string", example="Excellent performance this month")
      *         )
@@ -170,6 +172,7 @@ class UserPointsController extends Controller
      *                 @OA\Property(property="pointsAfter", type="integer", example=150),
      *                 @OA\Property(property="reason", type="string", example="Excellent performance this month"),
      *                 @OA\Property(property="type", type="string", example="manual"),
+     *                 @OA\Property(property="transactionType", type="string", example="performance_bonus"),
      *                 @OA\Property(property="createdBy", type="string", example="Admin User"),
      *                 @OA\Property(property="createdAt", type="string", example="2026-01-07T10:00:00")
      *             )
@@ -201,7 +204,8 @@ class UserPointsController extends Controller
             $user,
             $request->points,
             $request->reason,
-            $admin
+            $admin,
+            PointTransactionType::tryFrom($request->type)
         );
 
         return ApiResponse::success(
@@ -228,6 +232,7 @@ class UserPointsController extends Controller
      *         required=true,
      *         @OA\JsonContent(
      *             @OA\Property(property="userId", type="integer", example=1),
+     *             @OA\Property(property="type", type="string", example="task_late"),
      *             @OA\Property(property="points", type="integer", example=25),
      *             @OA\Property(property="reason", type="string", example="Late submission of deliverables")
      *         )
@@ -248,6 +253,7 @@ class UserPointsController extends Controller
      *                 @OA\Property(property="pointsAfter", type="integer", example=125),
      *                 @OA\Property(property="reason", type="string", example="Late submission of deliverables"),
      *                 @OA\Property(property="type", type="string", example="manual"),
+     *                 @OA\Property(property="transactionType", type="string", example="task_late"),
      *                 @OA\Property(property="createdBy", type="string", example="Admin User"),
      *                 @OA\Property(property="createdAt", type="string", example="2026-01-07T10:00:00")
      *             )
@@ -264,7 +270,8 @@ class UserPointsController extends Controller
             $user,
             $request->points,
             $request->reason,
-            $admin
+            $admin,
+            PointTransactionType::tryFrom($request->type)
         );
 
         return ApiResponse::success(
@@ -583,9 +590,106 @@ class UserPointsController extends Controller
         $perPage = min($request->get('perPage', 20), 100);
         $report = $this->userPointsService->getPointsReport($filters, $perPage);
 
-        return ApiResponse::success(
-            $report,
-            __('Points report retrieved successfully')
-        );
-    }
-}
+                return ApiResponse::success(
+
+                    $report,
+
+                    __('Points report retrieved successfully')
+
+                );
+
+            }
+
+        
+
+            /**
+
+             * @OA\Get(
+
+             *     path="/api/v1/user-points/transaction-types",
+
+             *     summary="Get all point transaction types",
+
+             *     description="Retrieve a list of all available point transaction types for selection",
+
+             *     tags={"User Points"},
+
+             *     security={{"sanctum":{}}},
+
+             *     @OA\Response(
+
+             *         response=200,
+
+             *         description="Transaction types retrieved successfully",
+
+             *         @OA\JsonContent(
+
+             *             @OA\Property(property="success", type="boolean", example=true),
+
+             *             @OA\Property(property="message", type="string", example="Transaction types retrieved successfully"),
+
+             *             @OA\Property(
+
+             *                 property="data",
+
+             *                 type="array",
+
+             *                 @OA\Items(
+
+             *                     @OA\Property(property="name", type="string", example="TASK_COMPLETED"),
+
+             *                     @OA\Property(property="value", type="string", example="task_completed"),
+
+             *                     @OA\Property(property="label", type="string", example="Task Completed"),
+
+             *                     @OA\Property(property="points", type="integer", example=10)
+
+             *                 )
+
+             *             )
+
+             *         )
+
+             *     )
+
+             * )
+
+             */
+
+            public function getTransactionTypes(): JsonResponse
+
+            {
+
+                $types = collect(PointTransactionType::cases())->map(function ($type) {
+
+                    return [
+
+                        'name' => $type->name,
+
+                        'value' => $type->value,
+
+                        'label' => $type->label(),
+
+                        'points' => $type->defaultPoints(),
+
+                        'is_positive' => $type->isPositive(),
+
+                    ];
+
+                });
+
+        
+
+                return ApiResponse::success(
+
+                    $types,
+
+                    __('Transaction types retrieved successfully')
+
+                );
+
+            }
+
+        }
+
+        

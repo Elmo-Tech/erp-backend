@@ -4,8 +4,10 @@ namespace App\Http\Requests\V1\UserPoints;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Helpers\ApiResponse;
+use App\Enums\PointTransactionType;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class DeductPointsRequest extends FormRequest
 {
@@ -24,9 +26,28 @@ class DeductPointsRequest extends FormRequest
      */
     public function rules(): array
     {
+        $type = PointTransactionType::tryFrom($this->input('type'));
+
         return [
             'userId' => ['required', 'integer', 'exists:users,id'],
-            'points' => ['required', 'integer', 'min:1', 'max:1000'],
+            'type' => [
+                'required',
+                'string',
+                Rule::enum(PointTransactionType::class),
+                function ($attribute, $value, $fail) {
+                    $type = PointTransactionType::tryFrom($value);
+                    if ($type && !$type->isPositive()) {
+                        return; // Valid negative type
+                    }
+                    $fail(__('Only negative point categories can be used for deductions'));
+                },
+            ],
+            'points' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:1000'
+            ],
             'reason' => ['required', 'string', 'min:3', 'max:255'],
         ];
     }
@@ -39,7 +60,9 @@ class DeductPointsRequest extends FormRequest
         return [
             'userId.required' => __('User selection is required'),
             'userId.exists' => __('Selected user does not exist'),
-            'points.required' => __('Points amount is required'),
+            'type.required' => __('Category is required'),
+            'type.enum' => __('Invalid category selected'),
+            'points.required' => __('Points amount is required for this category'),
             'points.min' => __('Points must be at least 1'),
             'points.max' => __('Points cannot exceed 1000 per transaction'),
             'reason.required' => __('Reason for deducting points is required'),
