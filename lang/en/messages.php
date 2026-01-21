@@ -75,6 +75,7 @@ return [
     // Task Permissions
     'no_permission_manage_team' => 'You do not have permission to manage team members on this task type.',
     'no_permission_manage_test_scenarios' => 'You do not have permission to manage test scenarios on this task type.',
+    'no_permission_verify_test_scenarios' => 'You do not have permission to verify test scenarios. Only Admin and users assigned as Reviewer in the task team can verify.',
 
     // Project Permissions
     'no_permission_view_budget' => 'You do not have permission to view project budget information.',

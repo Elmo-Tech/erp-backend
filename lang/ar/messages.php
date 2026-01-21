@@ -75,6 +75,7 @@ return [
     // Task Permissions
     'no_permission_manage_team' => 'ليس لديك صلاحية لإدارة أعضاء الفريق في هذا النوع من المهام.',
     'no_permission_manage_test_scenarios' => 'ليس لديك صلاحية لإدارة سيناريوهات الاختبار في هذا النوع من المهام.',
+    'no_permission_verify_test_scenarios' => 'ليس لديك صلاحية للتحقق من سيناريوهات الاختبار. فقط الأدمن والأشخاص المعينين كمراجعين في فريق المهمة يمكنهم التحقق.',
 
     // Project Permissions
     'no_permission_view_budget' => 'ليس لديك صلاحية لعرض معلومات ميزانية المشروع.',

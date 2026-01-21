@@ -777,13 +777,15 @@ class TaskController extends Controller
      *     path="/api/v1/test-scenarios/{scenario}/complete",
      *     operationId="completeTestScenario",
      *     tags={"Tasks"},
-     *     summary="Mark a test scenario as completed by developer",
+     *     summary="Mark a test scenario as completed (check) - Available to all users",
+     *     description="Any user can check/complete a test scenario. This marks it as checked by the developer.",
      *     security={{"sanctum":{}}},
      *     @OA\Response(response=200, description="Test scenario completed successfully")
      * )
      */
     public function completeTestScenario(Request $request, TaskTestScenario $scenario): JsonResponse
     {
+        // No authorization check - all authenticated users can check/complete test scenarios
         return DB::transaction(function () use ($request, $scenario) {
             $user = $request->user();
             $scenario = $this->taskService->completeTestScenario($scenario, $user);
@@ -800,7 +802,8 @@ class TaskController extends Controller
      *     path="/api/v1/test-scenarios/{scenario}/verify",
      *     operationId="verifyTestScenario",
      *     tags={"Tasks"},
-     *     summary="Verify a test scenario by reviewer",
+     *     summary="Verify a test scenario - Only for Admin and Task Reviewers",
+     *     description="Only users with Admin role or assigned as Reviewer in the task team can verify test scenarios. This is the final approval step.",
      *     security={{"sanctum":{}}},
      *     @OA\RequestBody(
      *         required=true,
@@ -810,11 +813,34 @@ class TaskController extends Controller
      *             @OA\Property(property="notes", type="string")
      *         )
      *     ),
-     *     @OA\Response(response=200, description="Test scenario verified successfully")
+     *     @OA\Response(response=200, description="Test scenario verified successfully"),
+     *     @OA\Response(response=403, description="Unauthorized - Only Admin and Task Reviewers can verify")
      * )
      */
     public function verifyTestScenario(VerifyTestScenarioRequest $request, TaskTestScenario $scenario): JsonResponse
     {
+        $user = $request->user();
+        
+        // Load the task with assignees
+        $task = $scenario->task()->with('assignees')->first();
+        
+        // Check if user is Admin/Super Admin
+        $isAdmin = $user->hasAnyRole(['admin', 'super-admin']);
+        
+        // Check if user is assigned as reviewer in this task
+        $isTaskReviewer = $task->assignees()
+            ->where('user_id', $user->id)
+            ->where('role', 'reviewer')
+            ->exists();
+        
+        // Only Admin or Task Reviewer can verify
+        if (!$isAdmin && !$isTaskReviewer) {
+            return ApiResponse::error(
+                __('messages.no_permission_verify_test_scenarios'),
+                403
+            );
+        }
+
         return DB::transaction(function () use ($request, $scenario) {
             $data = $request->validated();
             $user = $request->user();
