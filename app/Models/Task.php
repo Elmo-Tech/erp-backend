@@ -39,6 +39,8 @@ class Task extends Model implements Trackable
         'total_time_spent',
         'internal_reviewer_notes',
         'reopen_count',
+        'completed_at',
+        'delay_days',
         'created_by',
         'updated_by',
     ];
@@ -53,8 +55,10 @@ class Task extends Model implements Trackable
             'estimated_hours' => 'decimal:2',
             'total_time_spent' => 'integer',
             'reopen_count' => 'integer',
+            'delay_days' => 'integer',
             'due_date' => 'date',
             'start_date' => 'date',
+            'completed_at' => 'datetime',
             'sprint_number' => 'integer',
         ];
     }
@@ -200,6 +204,106 @@ class Task extends Model implements Trackable
             ->where('user_id', $user->id)
             ->whereIn('role', ['developer', 'lead'])
             ->exists();
+    }
+
+    /**
+     * Get delivery status information.
+     */
+    public function getDeliveryStatus(): array
+    {
+        $status = [
+            'isCompleted' => $this->status === TaskStatus::COMPLETED,
+            'completedAt' => $this->completed_at,
+            'dueDate' => $this->due_date,
+            'delayDays' => $this->delay_days,
+            'isOverdue' => false,
+            'isEarly' => false,
+            'isOnTime' => false,
+            'statusText' => 'In Progress',
+            'statusColor' => 'warning'
+        ];
+
+        if ($this->status === TaskStatus::COMPLETED) {
+            // Task is completed
+            if ($this->delay_days !== null) {
+                if ($this->delay_days > 0) {
+                    $status['isOverdue'] = true;
+                    $status['statusText'] = "Completed {$this->delay_days} days late";
+                    $status['statusColor'] = 'destructive';
+                } elseif ($this->delay_days < 0) {
+                    $status['isEarly'] = true;
+                    $status['statusText'] = "Completed " . abs($this->delay_days) . " days early";
+                    $status['statusColor'] = 'success';
+                } else {
+                    $status['isOnTime'] = true;
+                    $status['statusText'] = "Completed on time";
+                    $status['statusColor'] = 'success';
+                }
+            } else {
+                $status['statusText'] = "Completed (no due date)";
+                $status['statusColor'] = 'success';
+            }
+        } elseif ($this->due_date && now()->isAfter($this->due_date)) {
+            // Task is not completed but past due date
+            $dueDate = $this->due_date->startOfDay();
+            $today = now()->startOfDay();
+            $overdueDays = (int) $dueDate->diffInDays($today);
+            $status['isOverdue'] = true;
+            $status['statusText'] = "Overdue by {$overdueDays} days";
+            $status['statusColor'] = 'destructive';
+        } elseif ($this->due_date) {
+            // Task has due date but not overdue
+            $dueDate = $this->due_date->startOfDay();
+            $today = now()->startOfDay();
+            $remainingDays = (int) $today->diffInDays($dueDate);
+            if ($remainingDays <= 1) {
+                $status['statusText'] = "Due today";
+                $status['statusColor'] = 'warning';
+            } elseif ($remainingDays <= 3) {
+                $status['statusText'] = "Due in {$remainingDays} days";
+                $status['statusColor'] = 'warning';
+            } else {
+                $status['statusText'] = "Due in {$remainingDays} days";
+                $status['statusColor'] = 'default';
+            }
+        }
+
+        return $status;
+    }
+
+    /**
+     * Check if task is overdue.
+     */
+    public function isOverdue(): bool
+    {
+        return $this->due_date && 
+               $this->status !== TaskStatus::COMPLETED && 
+               now()->isAfter($this->due_date);
+    }
+
+    /**
+     * Get days until due date (negative if overdue).
+     */
+    public function getDaysUntilDue(): ?int
+    {
+        if (!$this->due_date) {
+            return null;
+        }
+
+        if ($this->status === TaskStatus::COMPLETED) {
+            return $this->delay_days ? -$this->delay_days : null;
+        }
+
+        $dueDate = $this->due_date->startOfDay();
+        $today = now()->startOfDay();
+        
+        if ($today->isAfter($dueDate)) {
+            // Overdue - return positive number of days overdue
+            return (int) $dueDate->diffInDays($today);
+        } else {
+            // Not due yet - return negative number of days until due
+            return -(int) $today->diffInDays($dueDate);
+        }
     }
 
     public function getTestCompletionPercentage(): float

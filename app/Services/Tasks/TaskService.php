@@ -792,9 +792,51 @@ class TaskService
             );
         }
 
-        // If moving to completed, set completion timestamp
+        // If moving to completed, set completion timestamp and calculate delay
         if ($newStatus === TaskStatus::COMPLETED && $oldStatus !== TaskStatus::COMPLETED) {
-            $task->update(['completed_at' => now()]);
+            $completedAt = now();
+            $delayDays = null;
+            
+            // Calculate delay if due_date is set
+            if ($task->due_date) {
+                $dueDate = $task->due_date->startOfDay();
+                $completedDate = $completedAt->startOfDay();
+                
+                if ($completedDate->isAfter($dueDate)) {
+                    // Completed after due date = late (positive)
+                    $delayDays = $dueDate->diffInDays($completedDate);
+                } elseif ($completedDate->isBefore($dueDate)) {
+                    // Completed before due date = early (negative)
+                    $delayDays = -$completedDate->diffInDays($dueDate);
+                } else {
+                    // Completed on due date = on time
+                    $delayDays = 0;
+                }
+            }
+            
+            $task->update([
+                'completed_at' => $completedAt,
+                'delay_days' => $delayDays
+            ]);
+            
+            // Log completion with delay info
+            $delayMessage = '';
+            if ($delayDays !== null) {
+                if ($delayDays > 0) {
+                    $delayMessage = " ({$delayDays} days late)";
+                } elseif ($delayDays < 0) {
+                    $delayMessage = " (" . abs($delayDays) . " days early)";
+                } else {
+                    $delayMessage = " (on time)";
+                }
+            }
+            
+            TaskActivity::logComment(
+                $task,
+                $user,
+                "Task completed{$delayMessage}",
+                false // public comment
+            );
         }
 
         // If moving away from completed, clear completion timestamp

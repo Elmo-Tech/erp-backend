@@ -67,6 +67,13 @@ class TaskResource extends JsonResource
             'canStartTimer' => $this->canStartTimer(),
             'hasChildren' => $this->hasChildren(),
             
+            // Delivery tracking
+            'completedAt' => $this->completed_at?->format('Y-m-d\TH:i:s'),
+            'delayDays' => $this->delay_days,
+            'deliveryStatus' => $this->getDeliveryStatus(),
+            'isOverdue' => $this->isOverdue(),
+            'daysUntilDue' => $this->getDaysUntilDue(),
+            
             // Internal notes - only for authorized users
             'internalReviewerNotes' => $canViewInternal ? ($this->internal_reviewer_notes ?? '') : null,
             
