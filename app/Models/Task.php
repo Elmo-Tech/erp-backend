@@ -290,28 +290,6 @@ class Task extends Model implements Trackable
 
         return $status;
     }
-            $status['isOverdue'] = true;
-            $status['statusText'] = "Overdue by {$overdueDays} days";
-            $status['statusColor'] = 'destructive';
-        } elseif ($this->due_date) {
-            // Task has due date but not overdue
-            $dueDate = $this->due_date->startOfDay();
-            $today = now()->startOfDay();
-            $remainingDays = (int) $today->diffInDays($dueDate);
-            if ($remainingDays <= 1) {
-                $status['statusText'] = "Due today";
-                $status['statusColor'] = 'warning';
-            } elseif ($remainingDays <= 3) {
-                $status['statusText'] = "Due in {$remainingDays} days";
-                $status['statusColor'] = 'warning';
-            } else {
-                $status['statusText'] = "Due in {$remainingDays} days";
-                $status['statusColor'] = 'default';
-            }
-        }
-
-        return $status;
-    }
 
     /**
      * Check if task is overdue.

@@ -140,8 +140,10 @@ class EmployeeReviewService
      */
     private function getTasksData(User $user, array $filters): array
     {
-        $query = Task::where('assigned_to', $user->id)
-            ->with(['project:id,title']);
+        // Get tasks assigned to user through assignees relationship
+        $query = Task::whereHas('assignees', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        })->with(['project:id,title']);
 
         if (!empty($filters['dateFrom'])) {
             $query->whereDate('created_at', '>=', $filters['dateFrom']);
@@ -461,7 +463,7 @@ class EmployeeReviewService
             $query->whereDate('created_at', '<=', $filters['dateTo']);
         }
 
-        $transactions = $query->orderBy('created_at', 'desc')->get();
+        $transactions = $query->with('createdBy')->orderBy('created_at', 'desc')->get();
 
         // حساب الإحصائيات
         $pointsEarned = $transactions->where('points', '>', 0)->sum('points');
