@@ -225,21 +225,41 @@ class Task extends Model implements Trackable
 
         if ($this->status === TaskStatus::COMPLETED) {
             // Task is completed
-            if ($this->delay_days !== null) {
-                if ($this->delay_days > 0) {
-                    $status['isOverdue'] = true;
-                    $status['statusText'] = "Completed {$this->delay_days} days late";
-                    $status['statusColor'] = 'destructive';
-                } elseif ($this->delay_days < 0) {
-                    $status['isEarly'] = true;
-                    $status['statusText'] = "Completed " . abs($this->delay_days) . " days early";
-                    $status['statusColor'] = 'success';
+            if ($this->due_date) {
+                // Task has a due date, calculate delay if not already calculated
+                $delayDays = $this->delay_days;
+                
+                // If delay_days is null but we have both due_date and completed_at, calculate it
+                if ($delayDays === null && $this->completed_at && $this->due_date) {
+                    $dueDate = $this->due_date->startOfDay();
+                    $completedDate = $this->completed_at->startOfDay();
+                    $delayDays = (int) $dueDate->diffInDays($completedDate, false);
+                }
+                
+                if ($delayDays !== null) {
+                    if ($delayDays > 0) {
+                        $status['isOverdue'] = true;
+                        $status['statusText'] = "Completed {$delayDays} days late";
+                        $status['statusColor'] = 'destructive';
+                        $status['delayDays'] = $delayDays;
+                    } elseif ($delayDays < 0) {
+                        $status['isEarly'] = true;
+                        $status['statusText'] = "Completed " . abs($delayDays) . " days early";
+                        $status['statusColor'] = 'success';
+                        $status['delayDays'] = $delayDays;
+                    } else {
+                        $status['isOnTime'] = true;
+                        $status['statusText'] = "Completed on time";
+                        $status['statusColor'] = 'success';
+                        $status['delayDays'] = 0;
+                    }
                 } else {
-                    $status['isOnTime'] = true;
-                    $status['statusText'] = "Completed on time";
+                    // Fallback if we still can't calculate delay
+                    $status['statusText'] = "Completed";
                     $status['statusColor'] = 'success';
                 }
             } else {
+                // Task has no due date
                 $status['statusText'] = "Completed (no due date)";
                 $status['statusColor'] = 'success';
             }
@@ -248,6 +268,28 @@ class Task extends Model implements Trackable
             $dueDate = $this->due_date->startOfDay();
             $today = now()->startOfDay();
             $overdueDays = (int) $dueDate->diffInDays($today);
+            $status['isOverdue'] = true;
+            $status['statusText'] = "Overdue by {$overdueDays} days";
+            $status['statusColor'] = 'destructive';
+        } elseif ($this->due_date) {
+            // Task has due date but not overdue
+            $dueDate = $this->due_date->startOfDay();
+            $today = now()->startOfDay();
+            $remainingDays = (int) $today->diffInDays($dueDate);
+            if ($remainingDays <= 1) {
+                $status['statusText'] = "Due today";
+                $status['statusColor'] = 'warning';
+            } elseif ($remainingDays <= 3) {
+                $status['statusText'] = "Due in {$remainingDays} days";
+                $status['statusColor'] = 'warning';
+            } else {
+                $status['statusText'] = "Due in {$remainingDays} days";
+                $status['statusColor'] = 'default';
+            }
+        }
+
+        return $status;
+    }
             $status['isOverdue'] = true;
             $status['statusText'] = "Overdue by {$overdueDays} days";
             $status['statusColor'] = 'destructive';

@@ -41,6 +41,7 @@ class TaskObserver
      * It handles:
      * - Detecting status changes from testing to in_progress
      * - Incrementing reopen_count for bug bounce rate tracking
+     * - Calculating delay_days when task is completed
      *
      * @param Task $task
      * @return void
@@ -64,6 +65,18 @@ class TaskObserver
         // This tracks the "bug bounce rate" - how many times a task fails testing
         if ($oldStatus === TaskStatus::TESTING && $newStatus === TaskStatus::IN_PROGRESS) {
             $task->reopen_count = ($task->reopen_count ?? 0) + 1;
+        }
+
+        // Calculate delay_days when task is completed
+        if ($newStatus === TaskStatus::COMPLETED && $oldStatus !== TaskStatus::COMPLETED) {
+            $task->completed_at = now();
+            
+            // Calculate delay_days if task has a due_date
+            if ($task->due_date) {
+                $dueDate = $task->due_date->startOfDay();
+                $completedDate = $task->completed_at->startOfDay();
+                $task->delay_days = (int) $dueDate->diffInDays($completedDate, false);
+            }
         }
     }
 
