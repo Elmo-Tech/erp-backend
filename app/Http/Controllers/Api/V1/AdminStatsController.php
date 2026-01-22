@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Reporting\EmployeeReviewService;
+use App\Services\Reporting\PdfService;
 use App\Services\Reporting\ProfitabilityService;
 use App\Services\Reporting\QualityService;
 use App\Services\Reporting\UserPerformanceService;
@@ -19,7 +20,8 @@ class AdminStatsController extends Controller
         private ProfitabilityService $profitabilityService,
         private QualityService $qualityService,
         private UserPerformanceService $userPerformanceService,
-        private EmployeeReviewService $employeeReviewService
+        private EmployeeReviewService $employeeReviewService,
+        private PdfService $pdfService
     ) {
         // Apply middleware using Laravel 12 approach
         $this->middleware(['auth:sanctum', 'locale']);
@@ -949,33 +951,6 @@ class AdminStatsController extends Controller
             $reviewData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
 
             try {
-                // Generate PDF using the Blade template
-                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.employee-review', $reviewData);
-                
-                // Set PDF options
-                $pdf->setPaper('A4', 'portrait');
-                $pdf->setOptions([
-                    'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => false,
-                    'defaultFont' => 'Arial',
-                    'fontDir' => storage_path('app/fonts'),
-                    'fontCache' => storage_path('app/fonts'),
-                    'tempDir' => sys_get_temp_dir(),
-                    'chroot' => base_path(),
-                    'logOutputFile' => null,
-                    'defaultPaperSize' => 'a4',
-                    'defaultPaperOrientation' => 'portrait',
-                    'dpi' => 96,
-                    'enableFontSubsetting' => false,
-                    'pdfBackend' => 'CPDF',
-                    'defaultMediaType' => 'screen',
-                    'enablePhp' => false,
-                    'enableJavascript' => false,
-                    'enableRemote' => false,
-                    'fontHeightRatio' => 1.1,
-                    'enableHtml5Parser' => true,
-                ]);
-
                 // Generate filename with date range if provided
                 $dateRange = '';
                 if (isset($filters['dateFrom']) && isset($filters['dateTo'])) {
@@ -983,37 +958,19 @@ class AdminStatsController extends Controller
                 }
                 $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . $dateRange . '.pdf';
                 
-                // Return PDF as download
-                return $pdf->download($fileName);
+                // Use PdfService for robust PDF generation
+                return $this->pdfService->downloadPdf('reports.employee-review', $reviewData, $fileName);
                 
             } catch (\Exception $pdfException) {
-                // Fallback: Try with minimal options if font caching fails
-                try {
-                    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.employee-review', $reviewData);
-                    $pdf->setPaper('A4', 'portrait');
-                    $pdf->setOptions([
-                        'isHtml5ParserEnabled' => true,
-                        'isRemoteEnabled' => false,
-                        'defaultFont' => 'serif', // Use basic serif font
-                        'enableFontSubsetting' => false,
-                        'pdfBackend' => 'CPDF',
-                        'enablePhp' => false,
-                        'enableJavascript' => false,
-                        'enableRemote' => false,
-                    ]);
-
-                    $dateRange = '';
-                    if (isset($filters['dateFrom']) && isset($filters['dateTo'])) {
-                        $dateRange = '_' . $filters['dateFrom'] . '_to_' . $filters['dateTo'];
-                    }
-                    $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . $dateRange . '.pdf';
-                    
-                    return $pdf->download($fileName);
-                    
-                } catch (\Exception $fallbackException) {
-                    // If PDF generation completely fails, throw the original error
-                    throw new \Exception('PDF generation failed: ' . $pdfException->getMessage());
-                }
+                // Log the error for debugging
+                \Log::error('Employee Review PDF Export Failed', [
+                    'user_id' => $userId,
+                    'filters' => $filters,
+                    'error' => $pdfException->getMessage(),
+                    'trace' => $pdfException->getTraceAsString()
+                ]);
+                
+                throw new \Exception('PDF generation failed: ' . $pdfException->getMessage());
             }
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -1026,6 +983,40 @@ class AdminStatsController extends Controller
                 'Failed to export employee review: ' . $e->getMessage(),
                 500
             );
+        }
+    }
+
+    /**
+     * Ensure PDF directories exist with proper permissions
+     * 
+     * @return void
+     */
+    private function ensurePdfDirectoriesExist(): void
+    {
+        $directories = [
+            storage_path('app/fonts'),
+            storage_path('fonts'),
+            storage_path('framework/cache'),
+            storage_path('framework/sessions'),
+            storage_path('framework/views'),
+        ];
+
+        foreach ($directories as $directory) {
+            if (!is_dir($directory)) {
+                try {
+                    mkdir($directory, 0755, true);
+                    
+                    // Create .gitkeep file to ensure directory is tracked
+                    $gitkeepFile = $directory . '/.gitkeep';
+                    if (!file_exists($gitkeepFile)) {
+                        file_put_contents($gitkeepFile, '');
+                    }
+                    
+                    \Log::info("Created PDF directory: {$directory}");
+                } catch (\Exception $e) {
+                    \Log::warning("Failed to create PDF directory {$directory}: " . $e->getMessage());
+                }
+            }
         }
     }
 
