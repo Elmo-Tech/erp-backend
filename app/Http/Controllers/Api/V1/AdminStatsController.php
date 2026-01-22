@@ -948,26 +948,73 @@ class AdminStatsController extends Controller
             // Get employee review data
             $reviewData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
 
-            // Generate PDF using the Blade template
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.employee-review', $reviewData);
-            
-            // Set PDF options
-            $pdf->setPaper('A4', 'portrait');
-            $pdf->setOptions([
-                'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
-                'defaultFont' => 'Arial'
-            ]);
+            try {
+                // Generate PDF using the Blade template
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.employee-review', $reviewData);
+                
+                // Set PDF options
+                $pdf->setPaper('A4', 'portrait');
+                $pdf->setOptions([
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => false,
+                    'defaultFont' => 'Arial',
+                    'fontDir' => storage_path('app/fonts'),
+                    'fontCache' => storage_path('app/fonts'),
+                    'tempDir' => sys_get_temp_dir(),
+                    'chroot' => base_path(),
+                    'logOutputFile' => null,
+                    'defaultPaperSize' => 'a4',
+                    'defaultPaperOrientation' => 'portrait',
+                    'dpi' => 96,
+                    'enableFontSubsetting' => false,
+                    'pdfBackend' => 'CPDF',
+                    'defaultMediaType' => 'screen',
+                    'enablePhp' => false,
+                    'enableJavascript' => false,
+                    'enableRemote' => false,
+                    'fontHeightRatio' => 1.1,
+                    'enableHtml5Parser' => true,
+                ]);
 
-            // Generate filename with date range if provided
-            $dateRange = '';
-            if (isset($filters['dateFrom']) && isset($filters['dateTo'])) {
-                $dateRange = '_' . $filters['dateFrom'] . '_to_' . $filters['dateTo'];
+                // Generate filename with date range if provided
+                $dateRange = '';
+                if (isset($filters['dateFrom']) && isset($filters['dateTo'])) {
+                    $dateRange = '_' . $filters['dateFrom'] . '_to_' . $filters['dateTo'];
+                }
+                $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . $dateRange . '.pdf';
+                
+                // Return PDF as download
+                return $pdf->download($fileName);
+                
+            } catch (\Exception $pdfException) {
+                // Fallback: Try with minimal options if font caching fails
+                try {
+                    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.employee-review', $reviewData);
+                    $pdf->setPaper('A4', 'portrait');
+                    $pdf->setOptions([
+                        'isHtml5ParserEnabled' => true,
+                        'isRemoteEnabled' => false,
+                        'defaultFont' => 'serif', // Use basic serif font
+                        'enableFontSubsetting' => false,
+                        'pdfBackend' => 'CPDF',
+                        'enablePhp' => false,
+                        'enableJavascript' => false,
+                        'enableRemote' => false,
+                    ]);
+
+                    $dateRange = '';
+                    if (isset($filters['dateFrom']) && isset($filters['dateTo'])) {
+                        $dateRange = '_' . $filters['dateFrom'] . '_to_' . $filters['dateTo'];
+                    }
+                    $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . $dateRange . '.pdf';
+                    
+                    return $pdf->download($fileName);
+                    
+                } catch (\Exception $fallbackException) {
+                    // If PDF generation completely fails, throw the original error
+                    throw new \Exception('PDF generation failed: ' . $pdfException->getMessage());
+                }
             }
-            $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . $dateRange . '.pdf';
-            
-            // Return PDF as download
-            return $pdf->download($fileName);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return ApiResponse::error(
