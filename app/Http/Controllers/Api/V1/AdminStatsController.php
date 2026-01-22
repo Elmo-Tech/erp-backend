@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\Reporting\EmployeeReviewService;
 use App\Services\Reporting\ProfitabilityService;
 use App\Services\Reporting\QualityService;
@@ -909,7 +910,7 @@ class AdminStatsController extends Controller
         $report = "=== EMPLOYEE PERFORMANCE REVIEW ===\n\n";
         $report .= "Employee: {$employee['name']}\n";
         $report .= "Email: {$employee['email']}\n";
-        $report .= "Specialization: " . ($employee['specialization'] ?? 'N/A') . "\n";
+        $report .= "Specialization: " . ($employee['specialization'] ? $employee['specialization']->value : 'N/A') . "\n";
         $report .= "Current Points: {$employee['totalPoints']}\n";
         $report .= "Review Period: " . ($period['dateFrom'] ?? 'All time') . " to " . ($period['dateTo'] ?? 'Present') . "\n\n";
 
@@ -940,7 +941,8 @@ class AdminStatsController extends Controller
 
         if (!empty($points['transactions'])) {
             $report .= "=== RECENT POINT TRANSACTIONS ===\n";
-            foreach (array_slice($points['transactions'], 0, 10) as $transaction) {
+            $transactions = is_array($points['transactions']) ? $points['transactions'] : $points['transactions']->toArray();
+            foreach (array_slice($transactions, 0, 10) as $transaction) {
                 $report .= "Date: {$transaction['createdAt']}\n";
                 $report .= "Points: {$transaction['points']}\n";
                 $report .= "Type: {$transaction['type']}\n";

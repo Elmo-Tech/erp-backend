@@ -372,7 +372,9 @@ class EmployeeReviewService
      */
     private function calculateTaskCompletionRate(User $user, array $filters): float
     {
-        $query = Task::where('assigned_to', $user->id);
+        $query = Task::whereHas('assignees', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        });
 
         if (!empty($filters['dateFrom'])) {
             $query->whereDate('created_at', '>=', $filters['dateFrom']);
@@ -397,7 +399,9 @@ class EmployeeReviewService
      */
     private function calculateAverageBounceRate(User $user, array $filters): float
     {
-        $query = Task::where('assigned_to', $user->id);
+        $query = Task::whereHas('assignees', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        });
 
         if (!empty($filters['dateFrom'])) {
             $query->whereDate('created_at', '>=', $filters['dateFrom']);
