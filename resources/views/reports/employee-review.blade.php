@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ trans('employee_review.Employee Performance Review') }}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&family=Inter:wght@400;600;700&display=swap');
-        
+        /* Use local fonts only - no external imports for PDF */
         body {
-            font-family: {{ app()->getLocale() == 'ar' ? "'Noto Sans Arabic', 'DejaVu Sans', Arial, sans-serif" : "'Inter', 'DejaVu Sans', Arial, sans-serif" }};
+            font-family: {{ app()->getLocale() == 'ar' ? '"Noto Sans Arabic", "DejaVu Sans", "Arial Unicode MS", sans-serif' : '"DejaVu Sans", "Arial", sans-serif' }};
             font-size: 12px;
             line-height: 1.4;
             color: #333;

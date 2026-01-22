@@ -109,6 +109,7 @@ return [
 
         /**
          * Whether to enable font subsetting or not.
+         * Disabled for Arabic text support to prevent character removal
          */
         'enable_font_subsetting' => false,
 
@@ -176,10 +177,11 @@ return [
          * The default font family
          *
          * Used if no suitable fonts can be found. This must exist in the font folder.
+         * Updated to support Arabic text rendering
          *
          * @var string
          */
-        'default_font' => 'serif',
+        'default_font' => 'DejaVu Sans',
 
         /**
          * Image DPI setting

@@ -4,9 +4,63 @@ namespace App\Services\Reporting;
 
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\File;
 
 class PdfService
 {
+    /**
+     * Load font configuration for Arabic support
+     *
+     * @return array
+     */
+    private function loadFontConfig(): array
+    {
+        $configPath = storage_path('app/fonts/font_config.php');
+        
+        if (File::exists($configPath)) {
+            return include $configPath;
+        }
+        
+        // Default fallback configuration
+        return [
+            'arabic_fonts' => [
+                'regular' => 'DejaVu Sans',
+                'bold' => 'DejaVu Sans',
+                'fallback' => 'DejaVu Sans',
+            ],
+            'font_stack' => [
+                'ar' => "'DejaVu Sans', 'Arial Unicode MS', sans-serif",
+                'en' => "'DejaVu Sans', 'Arial', sans-serif",
+            ],
+        ];
+    }
+
+    /**
+     * Get default font based on locale and available fonts
+     *
+     * @param array $fontConfig
+     * @return string
+     */
+    private function getDefaultFont(array $fontConfig): string
+    {
+        $locale = app()->getLocale();
+        
+        if ($locale === 'ar') {
+            // Check if Arabic fonts are available
+            $arabicFont = $fontConfig['arabic_fonts']['regular'] ?? 'DejaVu Sans';
+            $fontPath = storage_path('app/fonts');
+            
+            // Verify font files exist
+            if (File::exists($fontPath . '/NotoSansArabic-Regular.ttf')) {
+                return 'Noto Sans Arabic';
+            }
+            
+            return 'DejaVu Sans'; // Fallback for Arabic
+        }
+        
+        return 'DejaVu Sans'; // Default for other languages
+    }
+
     /**
      * Generate PDF with robust error handling and directory management
      *
@@ -30,21 +84,27 @@ class PdfService
             Log::info('PDF generation: Locale set to ' . $data['locale']);
         }
         
+        // Load font configuration
+        $fontConfig = $this->loadFontConfig();
+        
         // Default options for safe PDF generation with Arabic support
         $defaultOptions = [
-            'defaultFont' => app()->getLocale() == 'ar' ? 'DejaVu Sans' : 'serif',
+            'defaultFont' => $this->getDefaultFont($fontConfig),
+            'isRemoteEnabled' => false, // Disable remote for security and reliability
+            'isPhpEnabled' => false,
             'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true, // Enable remote for Google Fonts
-            'enablePhp' => false,
             'enableJavascript' => false,
-            'enableFontSubsetting' => true, // Enable font subsetting for Arabic
+            'enableFontSubsetting' => false, // Disable subsetting for Arabic characters
             'pdfBackend' => 'CPDF',
+            'dpi' => 96,
             'fontHeightRatio' => 1.1,
             'enableHtml5Parser' => true,
-            'dpi' => 96,
-            'defaultPaperSize' => 'a4',
+            'defaultPaperSize' => 'A4',
             'defaultPaperOrientation' => 'portrait',
-            'chroot' => public_path(), // Allow access to public directory for fonts
+            'fontDir' => storage_path('app/fonts'),
+            'fontCache' => storage_path('app/fonts'),
+            'tempDir' => storage_path('app/temp'),
+            'chroot' => storage_path('app'), // Restrict to storage directory
         ];
 
         // Merge with provided options
@@ -77,16 +137,20 @@ class PdfService
                 'locale' => app()->getLocale()
             ]);
 
-            // Fallback: Try with minimal options and basic font
+            // Fallback: Try with minimal options and DejaVu Sans
             try {
+                Log::info('Attempting PDF generation with fallback options');
+                
                 $pdf = Pdf::loadView($view, $data);
                 $pdf->setPaper('A4', 'portrait');
                 $pdf->setOptions([
-                    'defaultFont' => 'DejaVu Sans', // Use DejaVu Sans for better Unicode support
+                    'defaultFont' => 'DejaVu Sans',
                     'isRemoteEnabled' => false,
                     'enablePhp' => false,
                     'isHtml5ParserEnabled' => true,
-                    'enableFontSubsetting' => true,
+                    'enableFontSubsetting' => false, // Critical: Disable for Arabic
+                    'fontDir' => storage_path('app/fonts'),
+                    'fontCache' => storage_path('app/fonts'),
                 ]);
 
                 // Restore original locale
@@ -154,6 +218,7 @@ class PdfService
     {
         $directories = [
             storage_path('app/fonts'),
+            storage_path('app/temp'),
             storage_path('fonts'),
             storage_path('framework/cache'),
             storage_path('framework/sessions'),
