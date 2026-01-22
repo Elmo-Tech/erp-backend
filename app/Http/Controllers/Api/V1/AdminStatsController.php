@@ -839,4 +839,120 @@ class AdminStatsController extends Controller
             );
         }
     }
+
+    /**
+     * Export employee review as PDF report.
+     */
+    public function exportEmployeeReview(Request $request, int $userId)
+    {
+        try {
+            // Check permission
+            if (!$request->user()->can('view_admin_stats')) {
+                return ApiResponse::error(
+                    'Access denied. You do not have permission to view admin statistics.',
+                    403
+                );
+            }
+
+            // Validate user exists
+            $user = User::findOrFail($userId);
+
+            // Get filters
+            $filters = [];
+            if ($request->has('dateFrom')) {
+                $filters['dateFrom'] = $request->get('dateFrom');
+            }
+            if ($request->has('dateTo')) {
+                $filters['dateTo'] = $request->get('dateTo');
+            }
+
+            // Get employee review data
+            $reviewData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
+
+            // Generate simple text report (can be enhanced to PDF later)
+            $reportContent = $this->generateTextReport($reviewData);
+
+            // Return as downloadable file
+            $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . '_' . date('Y-m-d') . '.txt';
+            
+            return response($reportContent, 200, [
+                'Content-Type' => 'text/plain',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                'Content-Length' => strlen($reportContent),
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return ApiResponse::error(
+                'User not found',
+                404
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to export employee review: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * Generate text report for employee review.
+     */
+    private function generateTextReport(array $reviewData): string
+    {
+        $employee = $reviewData['employee'];
+        $period = $reviewData['period'];
+        $overview = $reviewData['overview'];
+        $tasks = $reviewData['tasks'];
+        $points = $reviewData['points'];
+        $attendance = $reviewData['attendance'];
+
+        $report = "=== EMPLOYEE PERFORMANCE REVIEW ===\n\n";
+        $report .= "Employee: {$employee['name']}\n";
+        $report .= "Email: {$employee['email']}\n";
+        $report .= "Specialization: " . ($employee['specialization'] ?? 'N/A') . "\n";
+        $report .= "Current Points: {$employee['totalPoints']}\n";
+        $report .= "Review Period: " . ($period['dateFrom'] ?? 'All time') . " to " . ($period['dateTo'] ?? 'Present') . "\n\n";
+
+        $report .= "=== OVERVIEW METRICS ===\n";
+        $report .= "Total Tracked Hours: {$overview['totalTrackedHours']}\n";
+        $report .= "Total Idle Hours: {$overview['totalIdleHours']}\n";
+        $report .= "Task Completion Rate: {$overview['taskCompletionRate']}%\n";
+        $report .= "Average Bounce Rate: {$overview['averageBounceRate']}\n";
+        $report .= "Attendance Days: {$overview['attendanceDays']}\n";
+        $report .= "Productivity Score: {$overview['productivityScore']}\n\n";
+
+        $report .= "=== POINTS SUMMARY ===\n";
+        $report .= "Points Earned: {$overview['pointsEarned']}\n";
+        $report .= "Points Deducted: {$overview['pointsDeducted']}\n";
+        $report .= "Net Points Change: {$overview['netPointsChange']}\n\n";
+
+        $report .= "=== TASKS SUMMARY ===\n";
+        $report .= "Total Tasks: {$tasks['total']}\n";
+        $report .= "Completed Tasks: {$tasks['completed']}\n";
+        $report .= "In Progress Tasks: {$tasks['inProgress']}\n";
+        $report .= "Total Bounces: {$tasks['totalBounces']}\n\n";
+
+        $report .= "=== ATTENDANCE SUMMARY ===\n";
+        $report .= "Total Days: {$attendance['totalDays']}\n";
+        $report .= "Late Days: {$attendance['lateDays']}\n";
+        $report .= "Total Late Minutes: {$attendance['totalLateMinutes']}\n";
+        $report .= "Average Idle Per Day: {$attendance['averageIdlePerDay']} minutes\n\n";
+
+        if (!empty($points['transactions'])) {
+            $report .= "=== RECENT POINT TRANSACTIONS ===\n";
+            foreach (array_slice($points['transactions'], 0, 10) as $transaction) {
+                $report .= "Date: {$transaction['createdAt']}\n";
+                $report .= "Points: {$transaction['points']}\n";
+                $report .= "Type: {$transaction['type']}\n";
+                $report .= "Reason: {$transaction['reason']}\n";
+                $report .= "By: {$transaction['createdBy']}\n";
+                $report .= "Balance After: {$transaction['balanceAfter']}\n";
+                $report .= "---\n";
+            }
+        }
+
+        $report .= "\nReport Generated: " . date('Y-m-d H:i:s') . "\n";
+
+        return $report;
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Services\Reporting;
 
 use App\Models\Attendance;
+use App\Models\PointTransaction;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
@@ -34,6 +35,7 @@ class EmployeeReviewService
         $projects = $this->getProjectsData($user, $filters);
         $attendance = $this->getAttendanceData($user, $filters);
         $productivity = $this->getProductivityMetrics($user, $filters);
+        $points = $this->getPointsData($user, $filters); // إضافة بيانات النقاط
 
         return [
             'employee' => [
@@ -42,6 +44,7 @@ class EmployeeReviewService
                 'email' => $user->email,
                 'avatar' => $user->avatar,
                 'specialization' => $user->specialization,
+                'totalPoints' => $user->total_points ?? 0, // إضافة النقاط الحالية
             ],
             'period' => [
                 'dateFrom' => $filters['dateFrom'] ?? null,
@@ -53,6 +56,7 @@ class EmployeeReviewService
             'projects' => $projects,
             'attendance' => $attendance,
             'productivity' => $productivity,
+            'points' => $points, // إضافة بيانات النقاط
         ];
     }
 
@@ -66,6 +70,9 @@ class EmployeeReviewService
         $taskCompletionRate = $this->calculateTaskCompletionRate($user, $filters);
         $averageBounceRate = $this->calculateAverageBounceRate($user, $filters);
         $attendanceDays = $this->countAttendanceDays($user, $filters);
+        
+        // حساب إحصائيات النقاط للفترة
+        $pointsStats = $this->calculatePointsStats($user, $filters);
 
         return [
             'totalTrackedHours' => round($totalTrackedMinutes / 60, 2),
@@ -74,6 +81,10 @@ class EmployeeReviewService
             'averageBounceRate' => number_format($averageBounceRate, 2, '.', ''),
             'attendanceDays' => $attendanceDays,
             'productivityScore' => $this->calculateProductivityScore($taskCompletionRate, $averageBounceRate),
+            // إضافة إحصائيات النقاط
+            'pointsEarned' => $pointsStats['earned'],
+            'pointsDeducted' => $pointsStats['deducted'],
+            'netPointsChange' => $pointsStats['net'],
         ];
     }
 
@@ -161,6 +172,11 @@ class EmployeeReviewService
                 'reopenCount' => $task->reopen_count,
                 'estimatedHours' => $task->estimated_hours,
                 'totalTimeSpent' => round($task->total_time_spent / 60, 2),
+                // إضافة معلومات التسليم
+                'dueDate' => $task->due_date?->format('Y-m-d'),
+                'completedAt' => $task->completed_at?->format('Y-m-d\TH:i:s'),
+                'delayDays' => $task->delay_days,
+                'isOverdue' => $task->isOverdue(),
             ];
         })->values();
 
@@ -174,6 +190,11 @@ class EmployeeReviewService
                 'priority' => $task->priority,
                 'createdAt' => $task->created_at->format('Y-m-d'),
                 'updatedAt' => $task->updated_at->format('Y-m-d'),
+                // إضافة معلومات التسليم
+                'dueDate' => $task->due_date?->format('Y-m-d'),
+                'completedAt' => $task->completed_at?->format('Y-m-d\TH:i:s'),
+                'delayDays' => $task->delay_days,
+                'isOverdue' => $task->isOverdue(),
             ];
         })->values();
 
@@ -424,5 +445,88 @@ class EmployeeReviewService
                 throw new InvalidArgumentException('dateFrom cannot be greater than dateTo');
             }
         }
+    }
+
+    /**
+     * Get points data for the user.
+     */
+    private function getPointsData(User $user, array $filters): array
+    {
+        $query = PointTransaction::where('user_id', $user->id);
+
+        if (!empty($filters['dateFrom'])) {
+            $query->whereDate('created_at', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $query->whereDate('created_at', '<=', $filters['dateTo']);
+        }
+
+        $transactions = $query->orderBy('created_at', 'desc')->get();
+
+        // حساب الإحصائيات
+        $pointsEarned = $transactions->where('points', '>', 0)->sum('points');
+        $pointsDeducted = abs($transactions->where('points', '<', 0)->sum('points'));
+        $netChange = $pointsEarned - $pointsDeducted;
+
+        // تجميع المعاملات حسب الشهر
+        $monthlyBreakdown = $transactions->groupBy(function ($transaction) {
+            return Carbon::parse($transaction->created_at)->format('Y-m');
+        })->map(function ($monthTransactions) {
+            $earned = $monthTransactions->where('points', '>', 0)->sum('points');
+            $deducted = abs($monthTransactions->where('points', '<', 0)->sum('points'));
+            return [
+                'earned' => $earned,
+                'deducted' => $deducted,
+                'net' => $earned - $deducted,
+            ];
+        });
+
+        // تحويل المعاملات للعرض
+        $transactionsList = $transactions->map(function ($transaction) {
+            return [
+                'transactionId' => $transaction->id,
+                'points' => $transaction->points,
+                'type' => $transaction->type->label(),
+                'reason' => $transaction->reason ?? '',
+                'createdAt' => $transaction->created_at->format('Y-m-d\TH:i:s'),
+                'createdBy' => $transaction->createdBy?->name ?? 'System',
+                'balanceAfter' => $transaction->balance_after,
+            ];
+        });
+
+        return [
+            'currentPoints' => $user->total_points ?? 0,
+            'pointsEarned' => $pointsEarned,
+            'pointsDeducted' => $pointsDeducted,
+            'netChange' => $netChange,
+            'transactions' => $transactionsList,
+            'monthlyBreakdown' => $monthlyBreakdown,
+        ];
+    }
+
+    /**
+     * Calculate points statistics for overview.
+     */
+    private function calculatePointsStats(User $user, array $filters): array
+    {
+        $query = PointTransaction::where('user_id', $user->id);
+
+        if (!empty($filters['dateFrom'])) {
+            $query->whereDate('created_at', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $query->whereDate('created_at', '<=', $filters['dateTo']);
+        }
+
+        $transactions = $query->get();
+
+        $earned = $transactions->where('points', '>', 0)->sum('points');
+        $deducted = abs($transactions->where('points', '<', 0)->sum('points'));
+
+        return [
+            'earned' => $earned,
+            'deducted' => $deducted,
+            'net' => $earned - $deducted,
+        ];
     }
 }
