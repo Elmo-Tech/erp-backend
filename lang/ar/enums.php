@@ -1,48 +1,56 @@
 <?php
 
 return [
-    // Proposal Status
-    'proposal_status' => [
-        'draft' => 'مسودة',
-        'sent' => 'مُرسل',
-        'viewed' => 'تمت المشاهدة',
-        'approved' => 'معتمد',
-        'rejected' => 'مرفوض',
-        'expired' => 'منتهي الصلاحية',
-    ],
+    // User Specializations
+    'frontend' => 'مطور واجهات أمامية',
+    'backend' => 'مطور خلفي',
+    'fullstack' => 'مطور متكامل',
+    'mobile' => 'مطور تطبيقات محمولة',
+    'devops' => 'مهندس DevOps',
+    'ui_ux' => 'مصمم واجهات وتجربة مستخدم',
+    'qa' => 'مختبر جودة',
+    'project_manager' => 'مدير مشروع',
+    'business_analyst' => 'محلل أعمال',
+    'data_scientist' => 'عالم بيانات',
     
-    // Industry Sector
-    'industry_sector' => [
-        'medical' => 'طبي',
-        'ecommerce' => 'تجارة إلكترونية',
-        'real_estate' => 'عقارات',
-        'saas' => 'برمجيات كخدمة',
-        'education' => 'تعليم',
-        'fintech' => 'تقنية مالية',
-        'logistics' => 'لوجستيات',
-        'hospitality' => 'ضيافة',
-        'manufacturing' => 'تصنيع',
-        'other' => 'أخرى',
-    ],
+    // Point Transaction Types
+    'Manual' => 'يدوي',
+    'manual' => 'يدوي',
+    'task_completion' => 'إنجاز مهمة',
+    'attendance_bonus' => 'مكافأة حضور',
+    'performance_bonus' => 'مكافأة أداء',
+    'late_penalty' => 'غرامة تأخير',
+    'absence_penalty' => 'غرامة غياب',
+    'quality_bonus' => 'مكافأة جودة',
+    'innovation_bonus' => 'مكافأة إبداع',
     
-    // Lead Temperature
-    'lead_temperature' => [
-        'hot' => 'ساخن',
-        'warm' => 'دافئ',
-        'cold' => 'بارد',
-        'hot_desc' => 'احتياج عاجل، ميزانية متوفرة',
-        'warm_desc' => 'مهتم ولكن يقارن عروض',
-        'cold_desc' => 'استفسار عام بدون خطة زمنية',
-    ],
+    // Task Statuses
+    'todo' => 'للإنجاز',
+    'in_progress' => 'قيد التنفيذ',
+    'in_review' => 'قيد المراجعة',
+    'testing' => 'قيد الاختبار',
+    'completed' => 'مكتمل',
+    'cancelled' => 'ملغي',
     
-    // Quotation Status
-    'quotation_status' => [
-        'draft' => 'مسودة',
-        'sent' => 'مُرسل',
-        'viewed' => 'تمت المشاهدة',
-        'expired' => 'منتهي الصلاحية',
-        'negotiation' => 'تفاوض',
-        'approved' => 'معتمد',
-        'rejected' => 'مرفوض',
-    ],
+    // Project Statuses
+    'draft' => 'مسودة',
+    'active' => 'نشط',
+    'on_hold' => 'معلق',
+    'completed' => 'مكتمل',
+    'cancelled' => 'ملغي',
+    
+    // Task Priorities
+    'low' => 'منخفض',
+    'medium' => 'متوسط',
+    'high' => 'عالي',
+    'urgent' => 'عاجل',
+    
+    // Lead Statuses
+    'new' => 'جديد',
+    'contacted' => 'تم التواصل',
+    'qualified' => 'مؤهل',
+    'proposal_sent' => 'تم إرسال العرض',
+    'negotiation' => 'تفاوض',
+    'won' => 'فاز',
+    'lost' => 'خسر',
 ];

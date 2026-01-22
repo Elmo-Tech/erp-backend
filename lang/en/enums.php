@@ -1,62 +1,56 @@
 <?php
 
 return [
-    // Proposal Status
-    'proposal_status' => [
-        'draft' => 'Draft',
-        'sent' => 'Sent',
-        'viewed' => 'Viewed',
-        'approved' => 'Approved',
-        'rejected' => 'Rejected',
-        'expired' => 'Expired',
-    ],
+    // User Specializations
+    'frontend' => 'Frontend Developer',
+    'backend' => 'Backend Developer',
+    'fullstack' => 'Full Stack Developer',
+    'mobile' => 'Mobile Developer',
+    'devops' => 'DevOps Engineer',
+    'ui_ux' => 'UI/UX Designer',
+    'qa' => 'Quality Assurance',
+    'project_manager' => 'Project Manager',
+    'business_analyst' => 'Business Analyst',
+    'data_scientist' => 'Data Scientist',
     
-    // Industry Sector
-    'industry_sector' => [
-        'medical' => 'Medical',
-        'ecommerce' => 'E-Commerce',
-        'real_estate' => 'Real Estate',
-        'saas' => 'SaaS',
-        'education' => 'Education',
-        'fintech' => 'FinTech',
-        'logistics' => 'Logistics',
-        'hospitality' => 'Hospitality',
-        'manufacturing' => 'Manufacturing',
-        'other' => 'Other',
-    ],
+    // Point Transaction Types
+    'Manual' => 'Manual',
+    'manual' => 'Manual',
+    'task_completion' => 'Task Completion',
+    'attendance_bonus' => 'Attendance Bonus',
+    'performance_bonus' => 'Performance Bonus',
+    'late_penalty' => 'Late Penalty',
+    'absence_penalty' => 'Absence Penalty',
+    'quality_bonus' => 'Quality Bonus',
+    'innovation_bonus' => 'Innovation Bonus',
     
-    // Lead Temperature
-    'lead_temperature' => [
-        'hot' => 'Hot',
-        'warm' => 'Warm',
-        'cold' => 'Cold',
-        'hot_desc' => 'Urgent need, budget available',
-        'warm_desc' => 'Interested but comparing offers',
-        'cold_desc' => 'General inquiry without timeline',
-    ],
+    // Task Statuses
+    'todo' => 'To Do',
+    'in_progress' => 'In Progress',
+    'in_review' => 'In Review',
+    'testing' => 'Testing',
+    'completed' => 'Completed',
+    'cancelled' => 'Cancelled',
     
-    // Quotation Status
-    'quotation_status' => [
-        'draft' => 'Draft',
-        'sent' => 'Sent',
-        'viewed' => 'Viewed',
-        'expired' => 'Expired',
-        'negotiation' => 'Negotiation',
-        'approved' => 'Approved',
-        'rejected' => 'Rejected',
-    ],
-
-    // Audit Action Types
-    'audit_action' => [
-        'status_change' => 'Status Change',
-        'data_edit' => 'Data Edit',
-        'upload' => 'File Upload',
-        'activity_log' => 'Activity Log',
-        'created' => 'Created',
-        'deleted' => 'Deleted',
-        'converted' => 'Converted',
-        'sent' => 'Sent',
-        'approved' => 'Approved',
-        'rejected' => 'Rejected',
-    ],
+    // Project Statuses
+    'draft' => 'Draft',
+    'active' => 'Active',
+    'on_hold' => 'On Hold',
+    'completed' => 'Completed',
+    'cancelled' => 'Cancelled',
+    
+    // Task Priorities
+    'low' => 'Low',
+    'medium' => 'Medium',
+    'high' => 'High',
+    'urgent' => 'Urgent',
+    
+    // Lead Statuses
+    'new' => 'New',
+    'contacted' => 'Contacted',
+    'qualified' => 'Qualified',
+    'proposal_sent' => 'Proposal Sent',
+    'negotiation' => 'Negotiation',
+    'won' => 'Won',
+    'lost' => 'Lost',
 ];

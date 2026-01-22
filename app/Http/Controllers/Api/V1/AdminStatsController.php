@@ -947,8 +947,20 @@ class AdminStatsController extends Controller
                 $filters['dateTo'] = $request->get('dateTo');
             }
 
+            // Get locale from request header (Accept-Language)
+            $locale = $request->header('Accept-Language', 'en');
+            if (!in_array($locale, ['ar', 'en'])) {
+                $locale = 'en';
+            }
+
+            // Set locale for translations
+            app()->setLocale($locale);
+
             // Get employee review data
             $reviewData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
+            
+            // Add locale to review data for PDF generation
+            $reviewData['locale'] = $locale;
 
             try {
                 // Generate filename with date range if provided
@@ -958,8 +970,14 @@ class AdminStatsController extends Controller
                 }
                 $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . $dateRange . '.pdf';
                 
-                // Use PdfService for robust PDF generation
-                return $this->pdfService->downloadPdf('reports.employee-review', $reviewData, $fileName);
+                // Use PdfService for robust PDF generation with locale-specific options
+                $pdfOptions = [
+                    'defaultFont' => $locale === 'ar' ? 'DejaVu Sans' : 'serif',
+                    'isRemoteEnabled' => true, // Enable for Google Fonts
+                    'enableFontSubsetting' => true,
+                ];
+                
+                return $this->pdfService->downloadPdf('reports.employee-review', $reviewData, $fileName, $pdfOptions);
                 
             } catch (\Exception $pdfException) {
                 // Log the error for debugging

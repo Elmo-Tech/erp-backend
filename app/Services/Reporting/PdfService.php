@@ -21,6 +21,15 @@ class PdfService
         // Ensure required directories exist
         $this->ensureDirectoriesExist();
 
+        // Store current locale to restore later
+        $currentLocale = app()->getLocale();
+        
+        // Set locale if provided in data
+        if (isset($data['locale'])) {
+            app()->setLocale($data['locale']);
+            Log::info('PDF generation: Locale set to ' . $data['locale']);
+        }
+        
         // Default options for safe PDF generation with Arabic support
         $defaultOptions = [
             'defaultFont' => app()->getLocale() == 'ar' ? 'DejaVu Sans' : 'serif',
@@ -42,18 +51,30 @@ class PdfService
         $pdfOptions = array_merge($defaultOptions, $options);
 
         try {
+            Log::info('PDF generation attempt', [
+                'view' => $view,
+                'locale' => app()->getLocale(),
+                'options' => $pdfOptions
+            ]);
+            
             // First attempt: Try with provided options
             $pdf = Pdf::loadView($view, $data);
             $pdf->setPaper('A4', 'portrait');
             $pdf->setOptions($pdfOptions);
 
+            Log::info('PDF generation successful with primary options');
+            
+            // Restore original locale
+            app()->setLocale($currentLocale);
+            
             return $pdf;
 
         } catch (\Exception $e) {
             Log::warning('PDF generation failed with provided options', [
                 'error' => $e->getMessage(),
                 'view' => $view,
-                'options' => $pdfOptions
+                'options' => $pdfOptions,
+                'locale' => app()->getLocale()
             ]);
 
             // Fallback: Try with minimal options and basic font
@@ -61,21 +82,29 @@ class PdfService
                 $pdf = Pdf::loadView($view, $data);
                 $pdf->setPaper('A4', 'portrait');
                 $pdf->setOptions([
-                    'defaultFont' => 'serif', // Use basic serif font as fallback
+                    'defaultFont' => 'DejaVu Sans', // Use DejaVu Sans for better Unicode support
                     'isRemoteEnabled' => false,
                     'enablePhp' => false,
                     'isHtml5ParserEnabled' => true,
+                    'enableFontSubsetting' => true,
                 ]);
 
+                // Restore original locale
+                app()->setLocale($currentLocale);
+                
                 Log::info('PDF generation succeeded with fallback options', ['view' => $view]);
                 return $pdf;
 
             } catch (\Exception $fallbackException) {
+                // Restore original locale
+                app()->setLocale($currentLocale);
+                
                 Log::error('PDF generation completely failed', [
                     'original_error' => $e->getMessage(),
                     'fallback_error' => $fallbackException->getMessage(),
                     'view' => $view,
-                    'data_keys' => array_keys($data)
+                    'data_keys' => array_keys($data),
+                    'locale' => $currentLocale
                 ]);
 
                 throw new \Exception(
