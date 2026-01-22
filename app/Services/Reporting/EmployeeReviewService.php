@@ -37,7 +37,11 @@ class EmployeeReviewService
         $projects = $this->getProjectsData($user, $filters);
         $attendance = $this->getAttendanceData($user, $filters);
         $productivity = $this->getProductivityMetrics($user, $filters);
-        $points = $this->getPointsData($user, $filters); // إضافة بيانات النقاط
+        $points = $this->getPointsData($user, $filters);
+        
+        // إضافة معلومات أيام السماح والخصومات
+        $gracePeriod = $this->getGracePeriodInfo($user, $filters);
+        $deductions = $this->getDeductionInfo($user, $filters);
 
         return [
             'employee' => [
@@ -46,7 +50,7 @@ class EmployeeReviewService
                 'email' => $user->email,
                 'avatar' => $user->avatar,
                 'specialization' => $user->specialization,
-                'totalPoints' => $user->total_points ?? 0, // إضافة النقاط الحالية
+                'totalPoints' => $user->total_points ?? 0,
             ],
             'period' => [
                 'dateFrom' => $filters['dateFrom'] ?? null,
@@ -58,7 +62,9 @@ class EmployeeReviewService
             'projects' => $projects,
             'attendance' => $attendance,
             'productivity' => $productivity,
-            'points' => $points, // إضافة بيانات النقاط
+            'points' => $points,
+            'gracePeriod' => $gracePeriod, // إضافة معلومات أيام السماح
+            'deductions' => $deductions,   // إضافة معلومات الخصومات
         ];
     }
 
@@ -629,6 +635,116 @@ class EmployeeReviewService
             'earned' => $totalEarned,
             'deducted' => $totalDeducted,
             'net' => $totalEarned - $totalDeducted,
+        ];
+    }
+
+    /**
+     * Get grace period information for the employee.
+     * Grace period is typically the number of days an employee can be late
+     * before deductions start applying.
+     */
+    private function getGracePeriodInfo(User $user, array $filters): array
+    {
+        // Default grace period settings (can be moved to config or database)
+        $gracePeriodDays = config('attendance.grace_period_days', 5); // 5 days default
+        
+        // Get attendance data for the period
+        $query = Attendance::where('user_id', $user->id)
+            ->where('is_late', true);
+
+        if (!empty($filters['dateFrom'])) {
+            $query->where('date', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $query->where('date', '<=', $filters['dateTo']);
+        }
+
+        $lateAttendances = $query->get();
+        $lateDaysCount = $lateAttendances->count();
+        
+        // Calculate remaining grace days
+        $remainingDays = max(0, $gracePeriodDays - $lateDaysCount);
+        $isExpired = $lateDaysCount > $gracePeriodDays;
+
+        // Get first late day to calculate when grace period started
+        $firstLateDay = $lateAttendances->sortBy('date')->first();
+        
+        return [
+            'allowedDays' => $gracePeriodDays,
+            'daysUsed' => $lateDaysCount,
+            'remainingDays' => $remainingDays,
+            'isExpired' => $isExpired,
+            'firstLateDate' => $firstLateDay?->date,
+            'gracePeriodEndDate' => $firstLateDay ? 
+                Carbon::parse($firstLateDay->date)->addDays($gracePeriodDays)->format('Y-m-d') : null,
+            'daysOverLimit' => max(0, $lateDaysCount - $gracePeriodDays),
+        ];
+    }
+
+    /**
+     * Get deduction information for late attendance after grace period.
+     */
+    private function getDeductionInfo(User $user, array $filters): array
+    {
+        // Default deduction settings (can be moved to config or database)
+        $gracePeriodDays = config('attendance.grace_period_days', 5);
+        $deductionRatePerMinute = config('attendance.deduction_rate_per_minute', 0.1); // 0.1 points per minute
+        
+        // Get all late attendances
+        $query = Attendance::where('user_id', $user->id)
+            ->where('is_late', true)
+            ->where('late_minutes', '>', 0);
+
+        if (!empty($filters['dateFrom'])) {
+            $query->where('date', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $query->where('date', '<=', $filters['dateTo']);
+        }
+
+        $lateAttendances = $query->orderBy('date')->get();
+        
+        // Skip grace period days and calculate deductions for remaining days
+        $deductibleAttendances = $lateAttendances->skip($gracePeriodDays);
+        
+        $totalLateMinutes = $deductibleAttendances->sum('late_minutes');
+        $totalDeductions = $totalLateMinutes * $deductionRatePerMinute;
+        $daysWithDeductions = $deductibleAttendances->count();
+        
+        // Breakdown by day
+        $dailyDeductions = $deductibleAttendances->map(function ($attendance) use ($deductionRatePerMinute) {
+            $deduction = $attendance->late_minutes * $deductionRatePerMinute;
+            return [
+                'date' => $attendance->date,
+                'lateMinutes' => $attendance->late_minutes,
+                'deduction' => round($deduction, 2),
+                'clockIn' => $attendance->clock_in,
+            ];
+        })->values();
+
+        // Monthly breakdown
+        $monthlyDeductions = $deductibleAttendances->groupBy(function ($attendance) {
+            return Carbon::parse($attendance->date)->format('Y-m');
+        })->map(function ($monthAttendances) use ($deductionRatePerMinute) {
+            $monthLateMinutes = $monthAttendances->sum('late_minutes');
+            $monthDeductions = $monthLateMinutes * $deductionRatePerMinute;
+            return [
+                'lateMinutes' => $monthLateMinutes,
+                'deductions' => round($monthDeductions, 2),
+                'lateDays' => $monthAttendances->count(),
+            ];
+        });
+
+        return [
+            'totalLateMinutes' => $totalLateMinutes,
+            'deductionRate' => $deductionRatePerMinute,
+            'totalDeductions' => round($totalDeductions, 2),
+            'daysWithDeductions' => $daysWithDeductions,
+            'dailyDeductions' => $dailyDeductions,
+            'monthlyDeductions' => $monthlyDeductions,
+            'gracePeriodDays' => $gracePeriodDays,
+            'averageDeductionPerDay' => $daysWithDeductions > 0 ? 
+                round($totalDeductions / $daysWithDeductions, 2) : 0,
         ];
     }
 }

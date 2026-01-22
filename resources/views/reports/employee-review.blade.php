@@ -1,17 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Performance Review</title>
+    <title>{{ __('Employee Performance Review') }}</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&family=Inter:wght@400;600;700&display=swap');
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: {{ app()->getLocale() == 'ar' ? "'Noto Sans Arabic', Arial, sans-serif" : "'Inter', Arial, sans-serif" }};
             font-size: 12px;
             line-height: 1.4;
             color: #333;
             margin: 0;
             padding: 20px;
+            direction: {{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }};
         }
         
         .header {
@@ -25,6 +28,7 @@
             color: #2563eb;
             font-size: 24px;
             margin: 0;
+            font-weight: 700;
         }
         
         .employee-info {
@@ -38,6 +42,7 @@
             color: #1e40af;
             font-size: 16px;
             margin: 0 0 10px 0;
+            font-weight: 600;
         }
         
         .info-grid {
@@ -67,6 +72,7 @@
             margin: 0 0 15px 0;
             font-size: 14px;
             border-radius: 4px;
+            font-weight: 600;
         }
         
         .metrics-grid {
@@ -81,7 +87,7 @@
             padding: 12px;
             border-radius: 6px;
             text-align: center;
-            border-left: 4px solid #2563eb;
+            border-{{ app()->getLocale() == 'ar' ? 'right' : 'left' }}: 4px solid #2563eb;
         }
         
         .metric-value {
@@ -121,7 +127,7 @@
         .transactions-table td {
             border: 1px solid #d1d5db;
             padding: 8px;
-            text-align: left;
+            text-align: {{ app()->getLocale() == 'ar' ? 'right' : 'left' }};
             font-size: 11px;
         }
         
@@ -138,6 +144,37 @@
         .negative-points {
             color: #dc2626;
             font-weight: bold;
+        }
+        
+        .warning-points {
+            color: #d97706;
+            font-weight: bold;
+        }
+        
+        .grace-period-info {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .grace-period-expired {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+        }
+        
+        .grace-period-active {
+            background-color: #d1fae5;
+            border: 1px solid #10b981;
+        }
+        
+        .deduction-info {
+            background-color: #fef2f2;
+            border: 1px solid #f87171;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
         }
         
         .footer {
@@ -163,141 +200,200 @@
 </head>
 <body>
     <div class="header">
-        <h1>Employee Performance Review</h1>
-        <p>Generated on {{ date('F j, Y') }}</p>
+        <h1>{{ __('employee_review.Employee Performance Review') }}</h1>
+        <p>{{ __('employee_review.Generated on') }} {{ date('F j, Y') }}</p>
     </div>
 
     <div class="employee-info">
-        <h2>Employee Information</h2>
+        <h2>{{ __('employee_review.Employee Information') }}</h2>
         <div class="info-grid">
             <div class="info-item">
-                <span class="info-label">Name:</span> {{ $employee['name'] }}
+                <span class="info-label">{{ __('employee_review.Name') }}:</span> {{ $employee['name'] }}
             </div>
             <div class="info-item">
-                <span class="info-label">Email:</span> {{ $employee['email'] }}
+                <span class="info-label">{{ __('employee_review.Email') }}:</span> {{ $employee['email'] }}
             </div>
             <div class="info-item">
-                <span class="info-label">Specialization:</span> 
-                {{ $employee['specialization'] ? $employee['specialization']->value : 'N/A' }}
+                <span class="info-label">{{ __('employee_review.Specialization') }}:</span> 
+                {{ $employee['specialization'] ? __('enums.' . $employee['specialization']->value) : __('employee_review.N/A') }}
             </div>
             <div class="info-item">
-                <span class="info-label">Current Points:</span> {{ $employee['totalPoints'] }}
+                <span class="info-label">{{ __('employee_review.Current Points') }}:</span> {{ $employee['totalPoints'] }}
             </div>
             <div class="info-item">
-                <span class="info-label">Review Period:</span> 
-                {{ $period['dateFrom'] ?? 'All time' }} to {{ $period['dateTo'] ?? 'Present' }}
+                <span class="info-label">{{ __('employee_review.Review Period') }}:</span> 
+                {{ $period['dateFrom'] ?? __('employee_review.All time') }} {{ __('employee_review.to') }} {{ $period['dateTo'] ?? __('employee_review.Present') }}
             </div>
         </div>
     </div>
 
+    {{-- Grace Period & Deduction Information --}}
+    @if(isset($gracePeriod))
+    <div class="grace-period-info {{ $gracePeriod['isExpired'] ? 'grace-period-expired' : 'grace-period-active' }}">
+        <h3 style="margin: 0 0 10px 0; color: {{ $gracePeriod['isExpired'] ? '#dc2626' : '#059669' }};">
+            {{ __('employee_review.Grace Period Status') }}
+        </h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">{{ __('employee_review.Grace Period Days') }}:</span> {{ $gracePeriod['allowedDays'] }} {{ __('employee_review.days') }}
+            </div>
+            <div class="info-item">
+                <span class="info-label">{{ __('employee_review.Days Used') }}:</span> {{ $gracePeriod['daysUsed'] }} {{ __('employee_review.days') }}
+            </div>
+            <div class="info-item">
+                <span class="info-label">{{ __('employee_review.Remaining Days') }}:</span> 
+                <span class="{{ $gracePeriod['remainingDays'] <= 0 ? 'negative-points' : 'positive-points' }}">
+                    {{ max(0, $gracePeriod['remainingDays']) }} {{ __('employee_review.days') }}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">{{ __('employee_review.Status') }}:</span> 
+                <span class="{{ $gracePeriod['isExpired'] ? 'negative-points' : 'positive-points' }}">
+                    {{ $gracePeriod['isExpired'] ? __('employee_review.Expired') : __('employee_review.Active') }}
+                </span>
+            </div>
+        </div>
+        @if($gracePeriod['isExpired'])
+        <p style="margin: 10px 0 0 0; color: #dc2626; font-weight: bold;">
+            {{ __('employee_review.⚠️ Grace period has expired. Deductions may apply for late attendance.') }}
+        </p>
+        @endif
+    </div>
+    @endif
+
+    {{-- Deduction Information --}}
+    @if(isset($deductions) && !empty($deductions['totalDeductions']))
+    <div class="deduction-info">
+        <h3 style="margin: 0 0 10px 0; color: #dc2626;">{{ __('employee_review.Attendance Deductions') }}</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">{{ __('employee_review.Total Late Minutes') }}:</span> 
+                <span class="negative-points">{{ $deductions['totalLateMinutes'] }} {{ __('employee_review.minutes') }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">{{ __('employee_review.Deduction Rate') }}:</span> 
+                {{ $deductions['deductionRate'] }}{{ __('employee_review./minute') }}
+            </div>
+            <div class="info-item">
+                <span class="info-label">{{ __('employee_review.Total Deductions') }}:</span> 
+                <span class="negative-points">-{{ $deductions['totalDeductions'] }} {{ __('employee_review.points') }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">{{ __('employee_review.Days with Deductions') }}:</span> 
+                {{ $deductions['daysWithDeductions'] }} {{ __('employee_review.days') }}
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="section">
-        <h3>Performance Overview</h3>
+        <h3>{{ __('employee_review.Performance Overview') }}</h3>
         <div class="metrics-grid">
             <div class="metric-card">
                 <div class="metric-value">{{ number_format($overview['totalTrackedHours'], 1) }}</div>
-                <div class="metric-label">Total Tracked Hours</div>
+                <div class="metric-label">{{ __('employee_review.Total Tracked Hours') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ number_format($overview['totalIdleHours'], 1) }}</div>
-                <div class="metric-label">Total Idle Hours</div>
+                <div class="metric-label">{{ __('employee_review.Total Idle Hours') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ number_format($overview['taskCompletionRate'], 1) }}%</div>
-                <div class="metric-label">Task Completion Rate</div>
+                <div class="metric-label">{{ __('employee_review.Task Completion Rate') }}</div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: {{ $overview['taskCompletionRate'] }}%"></div>
                 </div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ number_format($overview['averageBounceRate'], 2) }}</div>
-                <div class="metric-label">Average Bounce Rate</div>
+                <div class="metric-label">{{ __('employee_review.Average Bounce Rate') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ $overview['attendanceDays'] }}</div>
-                <div class="metric-label">Attendance Days</div>
+                <div class="metric-label">{{ __('employee_review.Attendance Days') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ number_format($overview['productivityScore'], 1) }}</div>
-                <div class="metric-label">Productivity Score</div>
+                <div class="metric-label">{{ __('employee_review.Productivity Score') }}</div>
             </div>
         </div>
     </div>
 
     <div class="section">
-        <h3>Points Summary</h3>
+        <h3>{{ __('employee_review.Points Summary') }}</h3>
         <div class="metrics-grid">
             <div class="metric-card">
                 <div class="metric-value positive-points">+{{ $overview['pointsEarned'] }}</div>
-                <div class="metric-label">Points Earned</div>
+                <div class="metric-label">{{ __('employee_review.Points Earned') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value negative-points">-{{ $overview['pointsDeducted'] }}</div>
-                <div class="metric-label">Points Deducted</div>
+                <div class="metric-label">{{ __('employee_review.Points Deducted') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value {{ $overview['netPointsChange'] >= 0 ? 'positive-points' : 'negative-points' }}">
                     {{ $overview['netPointsChange'] >= 0 ? '+' : '' }}{{ $overview['netPointsChange'] }}
                 </div>
-                <div class="metric-label">Net Points Change</div>
+                <div class="metric-label">{{ __('employee_review.Net Points Change') }}</div>
             </div>
         </div>
     </div>
 
     <div class="section">
-        <h3>Tasks Summary</h3>
+        <h3>{{ __('employee_review.Tasks Summary') }}</h3>
         <div class="metrics-grid">
             <div class="metric-card">
                 <div class="metric-value">{{ $tasks['total'] }}</div>
-                <div class="metric-label">Total Tasks</div>
+                <div class="metric-label">{{ __('employee_review.Total Tasks') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ $tasks['completed'] }}</div>
-                <div class="metric-label">Completed Tasks</div>
+                <div class="metric-label">{{ __('employee_review.Completed Tasks') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ $tasks['inProgress'] }}</div>
-                <div class="metric-label">In Progress Tasks</div>
+                <div class="metric-label">{{ __('employee_review.In Progress Tasks') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ $tasks['totalBounces'] }}</div>
-                <div class="metric-label">Total Bounces</div>
+                <div class="metric-label">{{ __('employee_review.Total Bounces') }}</div>
             </div>
         </div>
     </div>
 
     <div class="section">
-        <h3>Attendance Summary</h3>
+        <h3>{{ __('employee_review.Attendance Summary') }}</h3>
         <div class="metrics-grid">
             <div class="metric-card">
                 <div class="metric-value">{{ $attendance['totalDays'] }}</div>
-                <div class="metric-label">Total Days</div>
+                <div class="metric-label">{{ __('employee_review.Total Days') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ $attendance['lateDays'] }}</div>
-                <div class="metric-label">Late Days</div>
+                <div class="metric-label">{{ __('employee_review.Late Days') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ $attendance['totalLateMinutes'] }}</div>
-                <div class="metric-label">Total Late Minutes</div>
+                <div class="metric-label">{{ __('employee_review.Total Late Minutes') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-value">{{ number_format($attendance['averageIdlePerDay'], 1) }}</div>
-                <div class="metric-label">Avg Idle Per Day (min)</div>
+                <div class="metric-label">{{ __('employee_review.Avg Idle Per Day (min)') }}</div>
             </div>
         </div>
     </div>
 
     @if(!empty($points['transactions']) && count($points['transactions']) > 0)
     <div class="section page-break">
-        <h3>Recent Point Transactions</h3>
+        <h3>{{ __('employee_review.Recent Point Transactions') }}</h3>
         <table class="transactions-table">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Points</th>
-                    <th>Type</th>
-                    <th>Reason</th>
-                    <th>Created By</th>
+                    <th>{{ __('employee_review.Date') }}</th>
+                    <th>{{ __('employee_review.Points') }}</th>
+                    <th>{{ __('employee_review.Type') }}</th>
+                    <th>{{ __('employee_review.Reason') }}</th>
+                    <th>{{ __('employee_review.Created By') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -310,9 +406,9 @@
                     <td class="{{ $transaction['points'] >= 0 ? 'positive-points' : 'negative-points' }}">
                         {{ $transaction['points'] >= 0 ? '+' : '' }}{{ $transaction['points'] }}
                     </td>
-                    <td>{{ ucfirst(str_replace('_', ' ', $transaction['type'])) }}</td>
-                    <td>{{ $transaction['reason'] ?? 'N/A' }}</td>
-                    <td>{{ $transaction['createdBy'] ?? 'System' }}</td>
+                    <td>{{ __('enums.' . $transaction['type']) }}</td>
+                    <td>{{ $transaction['reason'] ?? __('employee_review.N/A') }}</td>
+                    <td>{{ $transaction['createdBy'] ?? __('employee_review.System') }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -321,8 +417,8 @@
     @endif
 
     <div class="footer">
-        <p>This report was generated automatically by the Business OS system.</p>
-        <p>Report ID: {{ uniqid() }} | Generated at {{ date('Y-m-d H:i:s') }}</p>
+        <p>{{ __('employee_review.This report was generated automatically by the Business OS system.') }}</p>
+        <p>{{ __('employee_review.Report ID') }}: {{ uniqid() }} | {{ __('employee_review.Generated at') }} {{ date('Y-m-d H:i:s') }}</p>
     </div>
 </body>
 </html>

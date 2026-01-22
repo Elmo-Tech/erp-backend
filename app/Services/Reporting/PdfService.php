@@ -21,18 +21,21 @@ class PdfService
         // Ensure required directories exist
         $this->ensureDirectoriesExist();
 
-        // Default options for safe PDF generation
+        // Default options for safe PDF generation with Arabic support
         $defaultOptions = [
-            'defaultFont' => 'serif',
+            'defaultFont' => app()->getLocale() == 'ar' ? 'DejaVu Sans' : 'serif',
             'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => false,
+            'isRemoteEnabled' => true, // Enable remote for Google Fonts
             'enablePhp' => false,
             'enableJavascript' => false,
-            'enableRemote' => false,
-            'enableFontSubsetting' => false,
+            'enableFontSubsetting' => true, // Enable font subsetting for Arabic
             'pdfBackend' => 'CPDF',
             'fontHeightRatio' => 1.1,
             'enableHtml5Parser' => true,
+            'dpi' => 96,
+            'defaultPaperSize' => 'a4',
+            'defaultPaperOrientation' => 'portrait',
+            'chroot' => public_path(), // Allow access to public directory for fonts
         ];
 
         // Merge with provided options
@@ -53,14 +56,15 @@ class PdfService
                 'options' => $pdfOptions
             ]);
 
-            // Fallback: Try with minimal options
+            // Fallback: Try with minimal options and basic font
             try {
                 $pdf = Pdf::loadView($view, $data);
                 $pdf->setPaper('A4', 'portrait');
                 $pdf->setOptions([
-                    'defaultFont' => 'serif',
+                    'defaultFont' => 'serif', // Use basic serif font as fallback
                     'isRemoteEnabled' => false,
                     'enablePhp' => false,
+                    'isHtml5ParserEnabled' => true,
                 ]);
 
                 Log::info('PDF generation succeeded with fallback options', ['view' => $view]);
