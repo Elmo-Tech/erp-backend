@@ -5,20 +5,27 @@ namespace App\Observers;
 use App\Enums\TaskStatus;
 use App\Models\Task;
 use App\Notifications\TaskAssigned;
+use App\Services\Points\UnifiedPointService;
 
 /**
- * Observer for Task model to handle bug bounce rate tracking and notifications.
+ * Observer for Task model to handle bug bounce rate tracking, notifications, and point awards.
  *
  * This observer:
  * - Tracks status transitions from testing to in_progress
  * - Increments reopen_count when a task bounces back from testing
  * - Sends notifications when tasks are assigned
+ * - Awards points for task completion and on-time delivery
+ * - Deducts points for task reopening (bug bounces)
  * - Helps measure code quality and identify problematic tasks
  *
  * Requirements: 5.2, 5.3, 5.4
  */
 class TaskObserver
 {
+    public function __construct(
+        protected UnifiedPointService $pointService
+    ) {}
+
     /**
      * Handle the Task "created" event.
      */
@@ -42,6 +49,7 @@ class TaskObserver
      * - Detecting status changes from testing to in_progress
      * - Incrementing reopen_count for bug bounce rate tracking
      * - Calculating delay_days when task is completed
+     * - Awarding/deducting points based on task completion and quality
      *
      * @param Task $task
      * @return void
@@ -61,22 +69,42 @@ class TaskObserver
             $oldStatus = TaskStatus::tryFrom($oldStatus);
         }
 
-        // Increment reopen_count when moving from testing to in_progress
-        // This tracks the "bug bounce rate" - how many times a task fails testing
+        // Handle task reopening (bug bounce) - deduct points
         if ($oldStatus === TaskStatus::TESTING && $newStatus === TaskStatus::IN_PROGRESS) {
             $task->reopen_count = ($task->reopen_count ?? 0) + 1;
+            
+            // Deduct points for bug bounce if task has an assignee
+            if ($task->assignee) {
+                $this->pointService->deductTaskReopenPoints($task->assignee, $task);
+            }
         }
 
-        // Calculate delay_days when task is completed
+        // Handle task completion - award points
         if ($newStatus === TaskStatus::COMPLETED && $oldStatus !== TaskStatus::COMPLETED) {
             $task->completed_at = now();
             
             // Calculate delay_days if task has a due_date
+            $isOnTime = false;
             if ($task->due_date) {
                 $dueDate = $task->due_date->startOfDay();
                 $completedDate = $task->completed_at->startOfDay();
-                $task->delay_days = (int) $dueDate->diffInDays($completedDate, false);
+                $delayDays = (int) $dueDate->diffInDays($completedDate, false);
+                $task->delay_days = $delayDays;
+                
+                // Task is on time if completed on or before due date
+                $isOnTime = $delayDays <= 0;
             }
+            
+            // Award points for task completion if task has an assignee
+            if ($task->assignee) {
+                $this->pointService->awardTaskCompletionPoints($task->assignee, $task, $isOnTime);
+            }
+        }
+
+        // Handle task being moved away from completed status
+        if ($oldStatus === TaskStatus::COMPLETED && $newStatus !== TaskStatus::COMPLETED) {
+            $task->completed_at = null;
+            // Note: We keep delay_days for historical tracking
         }
     }
 

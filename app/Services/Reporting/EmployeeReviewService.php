@@ -8,6 +8,8 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Models\UserPoint;
+use App\Enums\PointTransactionType;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
@@ -454,29 +456,94 @@ class EmployeeReviewService
     }
 
     /**
-     * Get points data for the user.
+     * Get points data for the user from both systems (PointTransaction + UserPoint).
+     * This method consolidates data from both the automatic points system (PointTransaction)
+     * and the manual points system (UserPoint) to provide a complete view.
      */
     private function getPointsData(User $user, array $filters): array
     {
-        $query = PointTransaction::where('user_id', $user->id);
-
+        // Get automatic points from PointTransaction table
+        $pointTransactionQuery = PointTransaction::where('user_id', $user->id);
         if (!empty($filters['dateFrom'])) {
-            $query->whereDate('created_at', '>=', $filters['dateFrom']);
+            $pointTransactionQuery->whereDate('created_at', '>=', $filters['dateFrom']);
         }
         if (!empty($filters['dateTo'])) {
-            $query->whereDate('created_at', '<=', $filters['dateTo']);
+            $pointTransactionQuery->whereDate('created_at', '<=', $filters['dateTo']);
+        }
+        $pointTransactions = $pointTransactionQuery->with('createdBy')->get();
+
+        // Get manual points from UserPoint table
+        $userPointQuery = UserPoint::where('user_id', $user->id);
+        if (!empty($filters['dateFrom'])) {
+            $userPointQuery->whereDate('created_at', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $userPointQuery->whereDate('created_at', '<=', $filters['dateTo']);
+        }
+        $userPoints = $userPointQuery->with('createdBy')->get();
+
+        // Consolidate all transactions into a unified format
+        $allTransactions = collect();
+
+        // Add PointTransactions (automatic system)
+        foreach ($pointTransactions as $pt) {
+            $allTransactions->push([
+                'transactionId' => 'pt_' . $pt->id,
+                'points' => $pt->points,
+                'type' => $pt->type->label(),
+                'reason' => $pt->reason ?? '',
+                'createdAt' => $pt->created_at->format('Y-m-d\TH:i:s'),
+                'createdBy' => $pt->createdBy?->name ?? 'System',
+                'balanceAfter' => $pt->balance_after,
+                'source' => 'automatic',
+                'sourceType' => $pt->source_type,
+                'sourceId' => $pt->source_id,
+                'rawCreatedAt' => $pt->created_at,
+            ]);
         }
 
-        $transactions = $query->with('createdBy')->orderBy('created_at', 'desc')->get();
+        // Add UserPoints (manual system)
+        foreach ($userPoints as $up) {
+            $typeLabel = 'Manual';
+            if ($up->transaction_type) {
+                try {
+                    // Check if it's already an enum instance or needs conversion
+                    if ($up->transaction_type instanceof PointTransactionType) {
+                        $typeLabel = $up->transaction_type->label();
+                    } else {
+                        $typeLabel = PointTransactionType::from($up->transaction_type)->label();
+                    }
+                } catch (\ValueError $e) {
+                    $typeLabel = ucfirst(str_replace('_', ' ', $up->transaction_type));
+                }
+            }
 
-        // حساب الإحصائيات
-        $pointsEarned = $transactions->where('points', '>', 0)->sum('points');
-        $pointsDeducted = abs($transactions->where('points', '<', 0)->sum('points'));
+            $allTransactions->push([
+                'transactionId' => 'up_' . $up->id,
+                'points' => $up->points_change,
+                'type' => $typeLabel,
+                'reason' => $up->reason,
+                'createdAt' => $up->created_at->format('Y-m-d\TH:i:s'),
+                'createdBy' => $up->createdBy?->name ?? 'System',
+                'balanceAfter' => $up->points_after,
+                'source' => $up->type, // 'manual' or 'automatic'
+                'sourceType' => null,
+                'sourceId' => null,
+                'rawCreatedAt' => $up->created_at,
+            ]);
+        }
+
+        // Sort all transactions by creation date (newest first)
+        $sortedTransactions = $allTransactions->sortByDesc('rawCreatedAt')->values();
+
+        // Calculate statistics from all transactions
+        $pointsEarned = $allTransactions->where('points', '>', 0)->sum('points');
+        $pointsDeducted = abs($allTransactions->where('points', '<', 0)->sum('points'));
         $netChange = $pointsEarned - $pointsDeducted;
 
-        // تجميع المعاملات حسب الشهر
-        $monthlyBreakdown = $transactions->groupBy(function ($transaction) {
-            return Carbon::parse($transaction->created_at)->format('Y-m');
+        // Monthly breakdown from all transactions
+        $monthlyBreakdown = $allTransactions->groupBy(function ($transaction) {
+            return Carbon::parse($transaction['rawCreatedAt'])->format('Y-m');
         })->map(function ($monthTransactions) {
             $earned = $monthTransactions->where('points', '>', 0)->sum('points');
             $deducted = abs($monthTransactions->where('points', '<', 0)->sum('points'));
@@ -487,17 +554,24 @@ class EmployeeReviewService
             ];
         });
 
-        // تحويل المعاملات للعرض
-        $transactionsList = $transactions->map(function ($transaction) {
-            return [
-                'transactionId' => $transaction->id,
-                'points' => $transaction->points,
-                'type' => $transaction->type->label(),
-                'reason' => $transaction->reason ?? '',
-                'createdAt' => $transaction->created_at->format('Y-m-d\TH:i:s'),
-                'createdBy' => $transaction->createdBy?->name ?? 'System',
-                'balanceAfter' => $transaction->balance_after,
-            ];
+        // Breakdown by source (automatic vs manual)
+        $bySource = [
+            'automatic' => [
+                'count' => $allTransactions->where('source', 'automatic')->count(),
+                'earned' => $allTransactions->where('source', 'automatic')->where('points', '>', 0)->sum('points'),
+                'deducted' => abs($allTransactions->where('source', 'automatic')->where('points', '<', 0)->sum('points')),
+            ],
+            'manual' => [
+                'count' => $allTransactions->where('source', 'manual')->count(),
+                'earned' => $allTransactions->where('source', 'manual')->where('points', '>', 0)->sum('points'),
+                'deducted' => abs($allTransactions->where('source', 'manual')->where('points', '<', 0)->sum('points')),
+            ],
+        ];
+
+        // Remove rawCreatedAt from final output
+        $finalTransactions = $sortedTransactions->map(function ($transaction) {
+            unset($transaction['rawCreatedAt']);
+            return $transaction;
         });
 
         return [
@@ -505,34 +579,56 @@ class EmployeeReviewService
             'pointsEarned' => $pointsEarned,
             'pointsDeducted' => $pointsDeducted,
             'netChange' => $netChange,
-            'transactions' => $transactionsList,
+            'transactions' => $finalTransactions,
             'monthlyBreakdown' => $monthlyBreakdown,
+            'bySource' => $bySource,
+            'summary' => [
+                'totalTransactions' => $allTransactions->count(),
+                'automaticTransactions' => $pointTransactions->count(),
+                'manualTransactions' => $userPoints->count(),
+            ],
         ];
     }
 
     /**
-     * Calculate points statistics for overview.
+     * Calculate points statistics for overview from both systems.
      */
     private function calculatePointsStats(User $user, array $filters): array
     {
-        $query = PointTransaction::where('user_id', $user->id);
-
+        // Get from PointTransaction (automatic system)
+        $pointTransactionQuery = PointTransaction::where('user_id', $user->id);
         if (!empty($filters['dateFrom'])) {
-            $query->whereDate('created_at', '>=', $filters['dateFrom']);
+            $pointTransactionQuery->whereDate('created_at', '>=', $filters['dateFrom']);
         }
         if (!empty($filters['dateTo'])) {
-            $query->whereDate('created_at', '<=', $filters['dateTo']);
+            $pointTransactionQuery->whereDate('created_at', '<=', $filters['dateTo']);
         }
+        $pointTransactions = $pointTransactionQuery->get();
 
-        $transactions = $query->get();
+        // Get from UserPoint (manual system)
+        $userPointQuery = UserPoint::where('user_id', $user->id);
+        if (!empty($filters['dateFrom'])) {
+            $userPointQuery->whereDate('created_at', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $userPointQuery->whereDate('created_at', '<=', $filters['dateTo']);
+        }
+        $userPoints = $userPointQuery->get();
 
-        $earned = $transactions->where('points', '>', 0)->sum('points');
-        $deducted = abs($transactions->where('points', '<', 0)->sum('points'));
+        // Calculate totals from both systems
+        $ptEarned = $pointTransactions->where('points', '>', 0)->sum('points');
+        $ptDeducted = abs($pointTransactions->where('points', '<', 0)->sum('points'));
+        
+        $upEarned = $userPoints->where('points_change', '>', 0)->sum('points_change');
+        $upDeducted = abs($userPoints->where('points_change', '<', 0)->sum('points_change'));
+
+        $totalEarned = $ptEarned + $upEarned;
+        $totalDeducted = $ptDeducted + $upDeducted;
 
         return [
-            'earned' => $earned,
-            'deducted' => $deducted,
-            'net' => $earned - $deducted,
+            'earned' => $totalEarned,
+            'deducted' => $totalDeducted,
+            'net' => $totalEarned - $totalDeducted,
         ];
     }
 }

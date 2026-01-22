@@ -404,6 +404,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/add', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'addPoints'])->name('user-points.add');
         Route::post('/deduct', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'deductPoints'])->name('user-points.deduct');
         Route::post('/set', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'setPoints'])->name('user-points.set');        Route::get('/history/{userId}', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'history'])->name('user-points.history');
+        Route::get('/unified-history/{userId}', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'getUnifiedHistory'])->name('user-points.unified-history');
         Route::get('/leaderboard', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'leaderboard'])->name('user-points.leaderboard');
         Route::get('/statistics', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'statistics'])->name('user-points.statistics');
         Route::get('/report', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'report'])->name('user-points.report');

@@ -12,6 +12,7 @@ use App\Http\Resources\V1\UserPoints\UserWithPointsCollection;
 use App\Http\Resources\V1\UserPoints\LeaderboardResource;
 use App\Models\User;
 use App\Services\HR\UserPointsService;
+use App\Services\Points\UnifiedPointService;
 use App\Helpers\ApiResponse;
 use App\Enums\PointTransactionType;
 use Illuminate\Http\Request;
@@ -25,8 +26,10 @@ use Illuminate\Http\JsonResponse;
  */
 class UserPointsController extends Controller
 {
-    public function __construct(private UserPointsService $userPointsService)
-    {
+    public function __construct(
+        private UserPointsService $userPointsService,
+        private UnifiedPointService $unifiedPointService
+    ) {
         // Apply middleware using Laravel 12 approach
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -689,6 +692,37 @@ class UserPointsController extends Controller
                 );
 
             }
+
+    /**
+     * Get unified user points history from both systems
+     */
+    public function getUnifiedHistory(Request $request, int $userId): JsonResponse
+    {
+        $user = User::findOrFail($userId);
+        
+        $filters = [];
+        if ($request->has('dateFrom')) {
+            $filters['dateFrom'] = $request->dateFrom;
+        }
+        if ($request->has('dateTo')) {
+            $filters['dateTo'] = $request->dateTo;
+        }
+        
+        $limit = $request->get('limit', 50);
+        
+        $history = $this->unifiedPointService->getUserHistory($user, $limit, $filters);
+        $summary = $this->unifiedPointService->getUserSummary(
+            $user, 
+            $filters['dateFrom'] ?? null, 
+            $filters['dateTo'] ?? null
+        );
+        
+        return ApiResponse::success([
+            'transactions' => $history,
+            'summary' => $summary,
+            'currentPoints' => $user->total_points ?? 0,
+        ], __('Unified points history retrieved successfully'));
+    }
 
         }
 
