@@ -842,6 +842,84 @@ class AdminStatsController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/v1/admin/stats/employee-review/{userId}/export",
+     *     summary="Export employee review as PDF",
+     *     description="Export detailed employee performance review as a downloadable PDF report",
+     *     operationId="exportEmployeeReview",
+     *     tags={"Admin Stats"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the user to export review for",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateFrom",
+     *         in="query",
+     *         required=false,
+     *         description="Start date for the review period (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2026-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="dateTo",
+     *         in="query",
+     *         required=false,
+     *         description="End date for the review period (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date", example="2026-01-22")
+     *     ),
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=false,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="PDF file download",
+     *         @OA\MediaType(
+     *             mediaType="application/pdf",
+     *             @OA\Schema(
+     *                 type="string",
+     *                 format="binary",
+     *                 description="PDF file containing employee performance review"
+     *             )
+     *         ),
+     *         @OA\Header(
+     *             header="Content-Disposition",
+     *             description="Attachment filename",
+     *             @OA\Schema(type="string", example="attachment; filename=employee_review_John_Doe_2026-01-01_to_2026-01-22.pdf")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Access denied - insufficient permissions",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Access denied. You do not have permission to view admin statistics.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="User not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Server error during PDF generation",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Failed to export employee review: PDF generation error")
+     *         )
+     *     )
+     * )
+     *
      * Export employee review as PDF report.
      */
     public function exportEmployeeReview(Request $request, int $userId)
@@ -870,17 +948,26 @@ class AdminStatsController extends Controller
             // Get employee review data
             $reviewData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
 
-            // Generate simple text report (can be enhanced to PDF later)
-            $reportContent = $this->generateTextReport($reviewData);
-
-            // Return as downloadable file
-            $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . '_' . date('Y-m-d') . '.txt';
+            // Generate PDF using the Blade template
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.employee-review', $reviewData);
             
-            return response($reportContent, 200, [
-                'Content-Type' => 'text/plain',
-                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
-                'Content-Length' => strlen($reportContent),
+            // Set PDF options
+            $pdf->setPaper('A4', 'portrait');
+            $pdf->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'defaultFont' => 'Arial'
             ]);
+
+            // Generate filename with date range if provided
+            $dateRange = '';
+            if (isset($filters['dateFrom']) && isset($filters['dateTo'])) {
+                $dateRange = '_' . $filters['dateFrom'] . '_to_' . $filters['dateTo'];
+            }
+            $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . $dateRange . '.pdf';
+            
+            // Return PDF as download
+            return $pdf->download($fileName);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return ApiResponse::error(
@@ -895,66 +982,4 @@ class AdminStatsController extends Controller
         }
     }
 
-    /**
-     * Generate text report for employee review.
-     */
-    private function generateTextReport(array $reviewData): string
-    {
-        $employee = $reviewData['employee'];
-        $period = $reviewData['period'];
-        $overview = $reviewData['overview'];
-        $tasks = $reviewData['tasks'];
-        $points = $reviewData['points'];
-        $attendance = $reviewData['attendance'];
-
-        $report = "=== EMPLOYEE PERFORMANCE REVIEW ===\n\n";
-        $report .= "Employee: {$employee['name']}\n";
-        $report .= "Email: {$employee['email']}\n";
-        $report .= "Specialization: " . ($employee['specialization'] ? $employee['specialization']->value : 'N/A') . "\n";
-        $report .= "Current Points: {$employee['totalPoints']}\n";
-        $report .= "Review Period: " . ($period['dateFrom'] ?? 'All time') . " to " . ($period['dateTo'] ?? 'Present') . "\n\n";
-
-        $report .= "=== OVERVIEW METRICS ===\n";
-        $report .= "Total Tracked Hours: {$overview['totalTrackedHours']}\n";
-        $report .= "Total Idle Hours: {$overview['totalIdleHours']}\n";
-        $report .= "Task Completion Rate: {$overview['taskCompletionRate']}%\n";
-        $report .= "Average Bounce Rate: {$overview['averageBounceRate']}\n";
-        $report .= "Attendance Days: {$overview['attendanceDays']}\n";
-        $report .= "Productivity Score: {$overview['productivityScore']}\n\n";
-
-        $report .= "=== POINTS SUMMARY ===\n";
-        $report .= "Points Earned: {$overview['pointsEarned']}\n";
-        $report .= "Points Deducted: {$overview['pointsDeducted']}\n";
-        $report .= "Net Points Change: {$overview['netPointsChange']}\n\n";
-
-        $report .= "=== TASKS SUMMARY ===\n";
-        $report .= "Total Tasks: {$tasks['total']}\n";
-        $report .= "Completed Tasks: {$tasks['completed']}\n";
-        $report .= "In Progress Tasks: {$tasks['inProgress']}\n";
-        $report .= "Total Bounces: {$tasks['totalBounces']}\n\n";
-
-        $report .= "=== ATTENDANCE SUMMARY ===\n";
-        $report .= "Total Days: {$attendance['totalDays']}\n";
-        $report .= "Late Days: {$attendance['lateDays']}\n";
-        $report .= "Total Late Minutes: {$attendance['totalLateMinutes']}\n";
-        $report .= "Average Idle Per Day: {$attendance['averageIdlePerDay']} minutes\n\n";
-
-        if (!empty($points['transactions'])) {
-            $report .= "=== RECENT POINT TRANSACTIONS ===\n";
-            $transactions = is_array($points['transactions']) ? $points['transactions'] : $points['transactions']->toArray();
-            foreach (array_slice($transactions, 0, 10) as $transaction) {
-                $report .= "Date: {$transaction['createdAt']}\n";
-                $report .= "Points: {$transaction['points']}\n";
-                $report .= "Type: {$transaction['type']}\n";
-                $report .= "Reason: {$transaction['reason']}\n";
-                $report .= "By: {$transaction['createdBy']}\n";
-                $report .= "Balance After: {$transaction['balanceAfter']}\n";
-                $report .= "---\n";
-            }
-        }
-
-        $report .= "\nReport Generated: " . date('Y-m-d H:i:s') . "\n";
-
-        return $report;
-    }
 }
