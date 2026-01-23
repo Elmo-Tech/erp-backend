@@ -11,12 +11,15 @@ use App\Http\Resources\V1\UserPoints\UserPointResource;
 use App\Http\Resources\V1\UserPoints\UserWithPointsCollection;
 use App\Http\Resources\V1\UserPoints\LeaderboardResource;
 use App\Models\User;
+use App\Models\PointTransaction;
+use App\Models\UserPoint;
 use App\Services\HR\UserPointsService;
 use App\Services\Points\UnifiedPointService;
 use App\Helpers\ApiResponse;
 use App\Enums\PointTransactionType;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Tag(
@@ -724,6 +727,154 @@ class UserPointsController extends Controller
         ], __('Unified points history retrieved successfully'));
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/user-points/transaction/{transactionId}",
+     *     summary="Delete a point transaction",
+     *     description="Delete a specific point transaction and recalculate user's total points",
+     *     tags={"User Points"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="transactionId",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string", example="pt_123")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Transaction deleted successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Transaction deleted successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="deletedTransaction", type="object"),
+     *                 @OA\Property(property="newUserTotal", type="integer", example=95)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Transaction not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Transaction not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized to delete this transaction",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You can only delete manual transactions")
+     *         )
+     *     )
+     * )
+     */
+    public function deleteTransaction(string $transactionId): JsonResponse
+    {
+        // Parse transaction ID (format: pt_123 or up_123)
+        if (!str_contains($transactionId, '_')) {
+            return ApiResponse::error(
+                __('Invalid transaction ID format'),
+                [],
+                400
+            );
         }
 
-        
+        [$type, $id] = explode('_', $transactionId, 2);
+
+        if ($type === 'pt') {
+            // Delete from PointTransaction
+            $transaction = PointTransaction::find($id);
+            
+            if (!$transaction) {
+                return ApiResponse::error(
+                    __('Transaction not found'),
+                    [],
+                    404
+                );
+            }
+
+            // Only allow deletion of manual transactions
+            if (!in_array($transaction->type->value, ['manual_bonus', 'manual_deduction'])) {
+                return ApiResponse::error(
+                    __('You can only delete manual transactions'),
+                    [],
+                    403
+                );
+            }
+
+            $user = $transaction->user;
+            $pointsToRevert = $transaction->points;
+
+            // Delete transaction and update user points
+            DB::transaction(function () use ($transaction, $user, $pointsToRevert) {
+                $transaction->delete();
+                $user->decrement('total_points', $pointsToRevert);
+            });
+
+            return ApiResponse::success([
+                'deletedTransaction' => [
+                    'id' => $transactionId,
+                    'points' => $pointsToRevert,
+                    'type' => $transaction->type->value,
+                ],
+                'newUserTotal' => $user->fresh()->total_points,
+            ], __('Transaction deleted successfully'));
+
+        } elseif ($type === 'up') {
+            // Delete from UserPoint
+            $userPoint = UserPoint::find($id);
+            
+            if (!$userPoint) {
+                return ApiResponse::error(
+                    __('Transaction not found'),
+                    [],
+                    404
+                );
+            }
+
+            // Only allow deletion of manual transactions
+            if ($userPoint->type !== 'manual') {
+                return ApiResponse::error(
+                    __('You can only delete manual transactions'),
+                    [],
+                    403
+                );
+            }
+
+            $user = $userPoint->user;
+            $pointsToRevert = $userPoint->points_change;
+
+            // Delete user point and update user points
+            DB::transaction(function () use ($userPoint, $user, $pointsToRevert) {
+                $userPoint->delete();
+                $user->decrement('total_points', $pointsToRevert);
+            });
+
+            return ApiResponse::success([
+                'deletedTransaction' => [
+                    'id' => $transactionId,
+                    'points' => $pointsToRevert,
+                    'type' => $userPoint->type,
+                ],
+                'newUserTotal' => $user->fresh()->total_points,
+            ], __('Transaction deleted successfully'));
+
+        } else {
+            return ApiResponse::error(
+                __('Invalid transaction type'),
+                [],
+                400
+            );
+        }
+    }
+}
