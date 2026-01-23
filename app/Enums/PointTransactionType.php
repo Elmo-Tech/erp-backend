@@ -30,25 +30,25 @@ enum PointTransactionType: string
     public function defaultPoints(): int
     {
         return match ($this) {
-            // Positive
-            self::TASK_COMPLETED => 10,
-            self::TASK_ON_TIME => 5,
-            self::CODE_REVIEW_APPROVED => 5,
-            self::INNOVATION_VERIFIED => 15,
-            self::ATTENDANCE_BONUS => 5,
-            self::QUALITY_BONUS => 10,
-            self::PERFORMANCE_BONUS => 20,
+            // Positive - All worth 1 point
+            self::TASK_COMPLETED => 1,
+            self::TASK_ON_TIME => 1,
+            self::CODE_REVIEW_APPROVED => 1,
+            self::INNOVATION_VERIFIED => 1,
+            self::ATTENDANCE_BONUS => 1,
+            self::QUALITY_BONUS => 1,
+            self::PERFORMANCE_BONUS => 1,
             self::MANUAL_BONUS => 0, // Variable
-            self::GENERAL_CLEANLINESS_BONUS => 5,
+            self::GENERAL_CLEANLINESS_BONUS => 1,
 
-            // Negative
-            self::BUG_FOUND => -5,
-            self::TASK_LATE => -3,
-            self::CODE_REVIEW_REJECTED => -2,
-            self::ATTENDANCE_LATE => -2,
-            self::TASK_REOPENED => -5,
+            // Negative - All worth -1 point
+            self::BUG_FOUND => -1,
+            self::TASK_LATE => -1,
+            self::CODE_REVIEW_REJECTED => -1,
+            self::ATTENDANCE_LATE => -1,
+            self::TASK_REOPENED => -1,
             self::MANUAL_DEDUCTION => 0, // Variable
-            self::GENERAL_CLEANLINESS_DEDUCTION => -5,
+            self::GENERAL_CLEANLINESS_DEDUCTION => -1,
         };
     }
 
