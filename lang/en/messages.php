@@ -32,6 +32,7 @@ return [
     'code_review_created' => 'Code review created successfully',
     'code_review_updated' => 'Code review updated successfully',
     'code_review_approved' => 'Code review approved successfully',
+    'code_review_rejected' => 'Code review rejected successfully',
     'revision_requested' => 'Revision requested successfully',
 
     // Innovation Logs

@@ -383,6 +383,7 @@ Route::prefix('v1')->group(function () {
         Route::put('/{id}', [CodeReviewController::class, 'update'])->name('code-reviews.update');
         Route::post('/{id}/approve', [CodeReviewController::class, 'approve'])->name('code-reviews.approve');
         Route::post('/{id}/request-revision', [CodeReviewController::class, 'requestRevision'])->name('code-reviews.request-revision');
+        Route::post('/{id}/reject', [CodeReviewController::class, 'reject'])->name('code-reviews.reject');
     });
 
     // Innovation Log Routes

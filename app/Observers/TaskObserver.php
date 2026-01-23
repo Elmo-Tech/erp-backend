@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\PointTransactionType;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Models\Task;
@@ -99,6 +100,18 @@ class TaskObserver
             // Award points for task completion if task has an assignee and is not a subtask
             if ($task->assignee && $this->shouldAwardPoints($task)) {
                 $this->pointService->awardTaskCompletionPoints($task->assignee, $task, $isOnTime);
+                
+                // Deduct points for late delivery
+                if (!$isOnTime && $task->delay_days > 0) {
+                    $this->pointService->deductPoints(
+                        $task->assignee,
+                        PointTransactionType::TASK_LATE,
+                        null,
+                        $task,
+                        "Task delivered {$task->delay_days} days late: {$task->title}",
+                        true
+                    );
+                }
             }
         }
 

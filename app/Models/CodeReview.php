@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CodeReviewStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,6 +36,7 @@ class CodeReview extends Model
             'testing_score' => 'integer',
             'documentation_score' => 'integer',
             'average_score' => 'decimal:2',
+            'status' => CodeReviewStatus::class,
             'reviewed_at' => 'datetime',
         ];
     }
@@ -75,26 +77,31 @@ class CodeReview extends Model
 
     public function scopePending($query)
     {
-        return $query->where('status', 'pending');
+        return $query->where('status', CodeReviewStatus::PENDING);
     }
 
     public function scopeApproved($query)
     {
-        return $query->where('status', 'approved');
+        return $query->where('status', CodeReviewStatus::APPROVED);
     }
 
     public function scopeNeedsRevision($query)
     {
-        return $query->where('status', 'needs_revision');
+        return $query->where('status', CodeReviewStatus::NEEDS_REVISION);
     }
 
     public function isApproved(): bool
     {
-        return $this->status === 'approved';
+        return $this->status === CodeReviewStatus::APPROVED;
     }
 
     public function needsRevision(): bool
     {
-        return $this->status === 'needs_revision';
+        return $this->status === CodeReviewStatus::NEEDS_REVISION;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === CodeReviewStatus::REJECTED;
     }
 }

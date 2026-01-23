@@ -404,6 +404,66 @@ class CodeReviewController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/v1/code-reviews/{id}/reject",
+     *     operationId="rejectCodeReview",
+     *     tags={"Code Reviews"},
+     *     summary="Reject a code review",
+     *     description="Marks the code review as rejected with a reason.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"reason"},
+     *             @OA\Property(property="reason", type="string", description="Reason for rejecting the code review")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=404, description="Not found"),
+     *     @OA\Response(response=422, description="Validation Error")
+     * )
+     */
+    public function reject(Request $request, int $id): JsonResponse
+    {
+        $review = CodeReview::findOrFail($id);
+
+        if ($review->reviewer_id !== $request->user()->id && !$request->user()->can('manage_code_reviews')) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+
+        $request->validate([
+            'reason' => 'required|string|max:2000',
+        ]);
+
+        $review = $this->codeReviewService->rejectReview($review, $request->input('reason'));
+
+        return ApiResponse::success(
+            new CodeReviewResource($review),
+            __('messages.code_review_rejected')
+        );
+    }
+
+    /**
      * @OA\Get(
      *     path="/api/v1/code-reviews/my-pending",
      *     operationId="getMyPendingReviews",

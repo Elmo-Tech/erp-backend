@@ -2,6 +2,7 @@
 
 namespace App\Services\Performance;
 
+use App\Enums\CodeReviewStatus;
 use App\Models\CodeReview;
 use App\Models\Task;
 use App\Models\User;
@@ -25,7 +26,7 @@ class CodeReviewService
             'documentation_score' => $data['documentationScore'] ?? 0,
             'review_notes' => $data['reviewNotes'] ?? null,
             'improvement_suggestions' => $data['improvementSuggestions'] ?? null,
-            'status' => 'pending',
+            'status' => CodeReviewStatus::PENDING,
         ]);
 
         $review->calculateAverageScore();
@@ -61,7 +62,7 @@ class CodeReviewService
     public function approveReview(CodeReview $review): CodeReview
     {
         $review->update([
-            'status' => 'approved',
+            'status' => CodeReviewStatus::APPROVED,
             'reviewed_at' => now(),
         ]);
 
@@ -74,7 +75,7 @@ class CodeReviewService
     public function requestRevision(CodeReview $review, string $suggestions): CodeReview
     {
         $review->update([
-            'status' => 'needs_revision',
+            'status' => CodeReviewStatus::NEEDS_REVISION,
             'improvement_suggestions' => $suggestions,
             'reviewed_at' => now(),
         ]);
@@ -88,7 +89,7 @@ class CodeReviewService
     public function rejectReview(CodeReview $review, string $reason): CodeReview
     {
         $review->update([
-            'status' => 'rejected',
+            'status' => CodeReviewStatus::REJECTED,
             'review_notes' => $reason,
             'reviewed_at' => now(),
         ]);
@@ -105,13 +106,13 @@ class CodeReviewService
             ->whereBetween('reviewed_at', [$startDate, $endDate])
             ->get();
 
-        $approvedReviews = $reviews->where('status', 'approved');
+        $approvedReviews = $reviews->where('status', CodeReviewStatus::APPROVED);
 
         return [
             'totalReviews' => $reviews->count(),
             'approved' => $approvedReviews->count(),
-            'needsRevision' => $reviews->where('status', 'needs_revision')->count(),
-            'rejected' => $reviews->where('status', 'rejected')->count(),
+            'needsRevision' => $reviews->where('status', CodeReviewStatus::NEEDS_REVISION)->count(),
+            'rejected' => $reviews->where('status', CodeReviewStatus::REJECTED)->count(),
             'averageScores' => [
                 'codeQuality' => round($approvedReviews->avg('code_quality_score'), 2),
                 'readability' => round($approvedReviews->avg('readability_score'), 2),
@@ -132,7 +133,7 @@ class CodeReviewService
     public function getPendingReviewsForReviewer(User $reviewer): \Illuminate\Database\Eloquent\Collection
     {
         return CodeReview::where('reviewer_id', $reviewer->id)
-            ->where('status', 'pending')
+            ->where('status', CodeReviewStatus::PENDING)
             ->with(['task', 'developer'])
             ->orderByDesc('created_at')
             ->get();
@@ -146,7 +147,7 @@ class CodeReviewService
     {
         $reviews = CodeReview::where('developer_id', $developer->id)
             ->whereBetween('reviewed_at', [$startDate, $endDate])
-            ->where('status', 'approved')
+            ->where('status', CodeReviewStatus::APPROVED)
             ->get();
 
         if ($reviews->isEmpty()) {

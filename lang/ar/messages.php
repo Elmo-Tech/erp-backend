@@ -32,6 +32,7 @@ return [
     'code_review_created' => 'تم إنشاء مراجعة الكود بنجاح',
     'code_review_updated' => 'تم تحديث مراجعة الكود بنجاح',
     'code_review_approved' => 'تم الموافقة على مراجعة الكود بنجاح',
+    'code_review_rejected' => 'تم رفض مراجعة الكود بنجاح',
     'revision_requested' => 'تم طلب التعديل بنجاح',
 
     // Innovation Logs

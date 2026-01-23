@@ -4,10 +4,12 @@ namespace App\Providers;
 
 use App\Events\NotificationCreated;
 use App\Events\TimerUpdated;
+use App\Models\CodeReview;
 use App\Models\InnovationLog;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
+use App\Observers\CodeReviewObserver;
 use App\Observers\InnovationLogObserver;
 use App\Observers\ProjectObserver;
 use App\Observers\TaskObserver;
@@ -41,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
         Task::observe(TaskObserver::class);
         TimeEntry::observe(TimeEntryObserver::class);
         InnovationLog::observe(InnovationLogObserver::class);
+        CodeReview::observe(CodeReviewObserver::class);
 
         // Register event listeners for broadcasting
         Event::listen(NotificationCreated::class, function (NotificationCreated $event) {
