@@ -32,7 +32,7 @@ return new class extends Migration
             $table->timestamps();
             
             // Add audit columns
-            $this->addCreatedUpdatedByColumns($table);
+            $this->addAuditColumns($table);
             
             // Indexes
             $table->index(['task_id', 'status']);
