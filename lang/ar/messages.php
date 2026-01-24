@@ -81,4 +81,17 @@ return [
     // Project Permissions
     'no_permission_view_budget' => 'ليس لديك صلاحية لعرض معلومات ميزانية المشروع.',
     'no_permission_view_history' => 'ليس لديك صلاحية لعرض سجل تغييرات المشروع.',
+
+    // Task Deliverables
+    'deliverables_retrieved' => 'تم جلب مخرجات المهمة بنجاح',
+    'deliverable_retrieved' => 'تم جلب المخرج بنجاح',
+    'deliverable_created' => 'تم إنشاء المخرج بنجاح',
+    'deliverable_updated' => 'تم تحديث المخرج بنجاح',
+    'deliverable_deleted' => 'تم حذف المخرج بنجاح',
+    'deliverable_submitted' => 'تم تسليم المخرج للمراجعة بنجاح',
+    'deliverable_reviewed' => 'تم مراجعة المخرج بنجاح',
+    'deliverable_cannot_update' => 'لا يمكن تحديث المخرج في الحالة الحالية',
+    'deliverable_cannot_delete' => 'لا يمكن حذف المخرج في الحالة الحالية',
+    'deliverable_cannot_submit' => 'لا يمكن تسليم المخرج في الحالة الحالية',
+    'deliverable_cannot_review' => 'لا يمكن مراجعة المخرج في الحالة الحالية',
 ];

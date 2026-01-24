@@ -104,6 +104,10 @@ class TaskResource extends JsonResource
                 TaskResource::collection($this->children)
             ),
             
+            'deliverables' => $this->whenLoaded('deliverables', fn() => 
+                TaskDeliverableResource::collection($this->deliverables)
+            ),
+            
             'project' => $this->whenLoaded('project', fn() => [
                 'projectId' => $this->project->id,
                 'title' => $this->project->title,

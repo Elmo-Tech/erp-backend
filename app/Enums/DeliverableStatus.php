@@ -10,6 +10,17 @@ enum DeliverableStatus: string
     case APPROVED = 'approved';
     case REJECTED = 'rejected';
 
+    /**
+     * Get all status values
+     */
+    public static function values(): array
+    {
+        return array_column(self::cases(), 'value');
+    }
+
+    /**
+     * Get status label for display
+     */
     public function label(): string
     {
         return match ($this) {
@@ -21,6 +32,9 @@ enum DeliverableStatus: string
         };
     }
 
+    /**
+     * Get status color for UI
+     */
     public function color(): string
     {
         return match ($this) {
@@ -32,19 +46,41 @@ enum DeliverableStatus: string
         };
     }
 
-    public function canTransitionTo(self $newStatus): bool
+    /**
+     * Check if status allows submission
+     */
+    public function canSubmit(): bool
+    {
+        return $this === self::PENDING;
+    }
+
+    /**
+     * Check if status allows review
+     */
+    public function canReview(): bool
+    {
+        return in_array($this, [self::SUBMITTED, self::UNDER_REVIEW]);
+    }
+
+    /**
+     * Get valid transition statuses
+     */
+    public function validTransitions(): array
     {
         return match ($this) {
-            self::PENDING => $newStatus === self::SUBMITTED,
-            self::SUBMITTED => in_array($newStatus, [self::UNDER_REVIEW, self::APPROVED, self::REJECTED]),
-            self::UNDER_REVIEW => in_array($newStatus, [self::APPROVED, self::REJECTED]),
-            self::APPROVED => false, // Final state
-            self::REJECTED => $newStatus === self::SUBMITTED, // Can resubmit
+            self::PENDING => [self::SUBMITTED],
+            self::SUBMITTED => [self::UNDER_REVIEW, self::APPROVED, self::REJECTED],
+            self::UNDER_REVIEW => [self::APPROVED, self::REJECTED],
+            self::APPROVED => [],
+            self::REJECTED => [self::PENDING], // Allow resubmission after rejection
         };
     }
 
-    public static function getReviewableStatuses(): array
+    /**
+     * Check if transition to another status is valid
+     */
+    public function canTransitionTo(DeliverableStatus $status): bool
     {
-        return [self::SUBMITTED, self::UNDER_REVIEW];
+        return in_array($status, $this->validTransitions());
     }
 }

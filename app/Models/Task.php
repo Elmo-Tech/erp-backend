@@ -151,17 +151,17 @@ class Task extends Model implements Trackable
 
     public function deliverables(): HasMany
     {
-        return $this->hasMany(TaskDeliverable::class)->ordered();
+        return $this->hasMany(TaskDeliverable::class)->orderBy('order')->orderBy('created_at');
     }
 
     public function pendingDeliverables(): HasMany
     {
-        return $this->deliverables()->byStatus(DeliverableStatus::PENDING);
+        return $this->deliverables()->where('status', DeliverableStatus::PENDING);
     }
 
     public function submittedDeliverables(): HasMany
     {
-        return $this->deliverables()->pendingReview();
+        return $this->deliverables()->whereIn('status', [DeliverableStatus::SUBMITTED, DeliverableStatus::UNDER_REVIEW]);
     }
 
     public function approvedDeliverables(): HasMany

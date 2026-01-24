@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use App\Enums\DeliverableStatus;
-use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\HasCreatedUpdatedBy;
+use App\Enums\DeliverableStatus;
 
 class TaskDeliverable extends Model
 {
@@ -26,8 +26,6 @@ class TaskDeliverable extends Model
         'points_awarded',
         'is_bonus',
         'order',
-        'created_by',
-        'updated_by',
     ];
 
     protected function casts(): array
@@ -43,7 +41,7 @@ class TaskDeliverable extends Model
     }
 
     /**
-     * Get the task that owns this deliverable.
+     * Get the task that owns this deliverable
      */
     public function task(): BelongsTo
     {
@@ -51,7 +49,7 @@ class TaskDeliverable extends Model
     }
 
     /**
-     * Get the reviewer who reviewed this deliverable.
+     * Get the user who reviewed this deliverable
      */
     public function reviewer(): BelongsTo
     {
@@ -59,7 +57,31 @@ class TaskDeliverable extends Model
     }
 
     /**
-     * Check if deliverable can be submitted.
+     * Scope to get deliverables by status
+     */
+    public function scopeByStatus($query, DeliverableStatus $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    /**
+     * Scope to get bonus deliverables
+     */
+    public function scopeBonus($query)
+    {
+        return $query->where('is_bonus', true);
+    }
+
+    /**
+     * Scope to get regular deliverables
+     */
+    public function scopeRegular($query)
+    {
+        return $query->where('is_bonus', false);
+    }
+
+    /**
+     * Check if deliverable can be submitted
      */
     public function canBeSubmitted(): bool
     {
@@ -67,7 +89,7 @@ class TaskDeliverable extends Model
     }
 
     /**
-     * Check if deliverable can be reviewed.
+     * Check if deliverable can be reviewed
      */
     public function canBeReviewed(): bool
     {
@@ -78,62 +100,44 @@ class TaskDeliverable extends Model
     }
 
     /**
-     * Check if deliverable is completed (approved or rejected).
+     * Submit the deliverable
      */
-    public function isCompleted(): bool
+    public function submit(?string $submissionNotes = null): void
     {
-        return in_array($this->status, [
-            DeliverableStatus::APPROVED,
-            DeliverableStatus::REJECTED
+        if (!$this->canBeSubmitted()) {
+            throw new \InvalidArgumentException('Deliverable cannot be submitted in current status');
+        }
+
+        $this->update([
+            'status' => DeliverableStatus::SUBMITTED,
+            'submission_notes' => $submissionNotes,
+            'submitted_at' => now(),
         ]);
     }
 
     /**
-     * Get the status color for UI display.
+     * Review the deliverable
      */
-    public function getStatusColor(): string
-    {
-        return match ($this->status) {
-            DeliverableStatus::PENDING => 'gray',
-            DeliverableStatus::SUBMITTED => 'blue',
-            DeliverableStatus::UNDER_REVIEW => 'yellow',
-            DeliverableStatus::APPROVED => 'green',
-            DeliverableStatus::REJECTED => 'red',
-        };
-    }
+    public function review(
+        DeliverableStatus $status,
+        int $reviewedBy,
+        ?string $reviewNotes = null,
+        int $pointsAwarded = 0
+    ): void {
+        if (!$this->canBeReviewed()) {
+            throw new \InvalidArgumentException('Deliverable cannot be reviewed in current status');
+        }
 
-    /**
-     * Scope to get deliverables for a specific task.
-     */
-    public function scopeForTask($query, int $taskId)
-    {
-        return $query->where('task_id', $taskId);
-    }
+        if (!in_array($status, [DeliverableStatus::APPROVED, DeliverableStatus::REJECTED])) {
+            throw new \InvalidArgumentException('Invalid review status');
+        }
 
-    /**
-     * Scope to get deliverables by status.
-     */
-    public function scopeByStatus($query, DeliverableStatus $status)
-    {
-        return $query->where('status', $status);
-    }
-
-    /**
-     * Scope to get deliverables pending review.
-     */
-    public function scopePendingReview($query)
-    {
-        return $query->whereIn('status', [
-            DeliverableStatus::SUBMITTED,
-            DeliverableStatus::UNDER_REVIEW
+        $this->update([
+            'status' => $status,
+            'review_notes' => $reviewNotes,
+            'reviewed_at' => now(),
+            'reviewed_by' => $reviewedBy,
+            'points_awarded' => $pointsAwarded,
         ]);
-    }
-
-    /**
-     * Scope to order by display order.
-     */
-    public function scopeOrdered($query)
-    {
-        return $query->orderBy('order')->orderBy('created_at');
     }
 }

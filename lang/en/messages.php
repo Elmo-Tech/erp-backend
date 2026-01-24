@@ -81,4 +81,17 @@ return [
     // Project Permissions
     'no_permission_view_budget' => 'You do not have permission to view project budget information.',
     'no_permission_view_history' => 'You do not have permission to view project history.',
+
+    // Task Deliverables
+    'deliverables_retrieved' => 'Task deliverables retrieved successfully',
+    'deliverable_retrieved' => 'Deliverable retrieved successfully',
+    'deliverable_created' => 'Deliverable created successfully',
+    'deliverable_updated' => 'Deliverable updated successfully',
+    'deliverable_deleted' => 'Deliverable deleted successfully',
+    'deliverable_submitted' => 'Deliverable submitted for review successfully',
+    'deliverable_reviewed' => 'Deliverable reviewed successfully',
+    'deliverable_cannot_update' => 'Cannot update deliverable in current status',
+    'deliverable_cannot_delete' => 'Cannot delete deliverable in current status',
+    'deliverable_cannot_submit' => 'Cannot submit deliverable in current status',
+    'deliverable_cannot_review' => 'Cannot review deliverable in current status',
 ];

@@ -290,13 +290,11 @@ Route::prefix('v1')->group(function () {
     // All routes have auth:sanctum and locale middleware applied in controller
     Route::get('tasks/{taskId}/deliverables', [TaskDeliverableController::class, 'index'])->name('tasks.deliverables.index');
     Route::post('tasks/{taskId}/deliverables', [TaskDeliverableController::class, 'store'])->name('tasks.deliverables.store');
-    Route::put('deliverables/{id}', [TaskDeliverableController::class, 'update'])->name('deliverables.update');
-    Route::delete('deliverables/{id}', [TaskDeliverableController::class, 'destroy'])->name('deliverables.destroy');
-    Route::post('deliverables/{id}/submit', [TaskDeliverableController::class, 'submit'])->name('deliverables.submit');
-    Route::post('deliverables/{id}/start-review', [TaskDeliverableController::class, 'startReview'])->name('deliverables.start-review');
-    Route::post('deliverables/{id}/approve', [TaskDeliverableController::class, 'approve'])->name('deliverables.approve');
-    Route::post('deliverables/{id}/reject', [TaskDeliverableController::class, 'reject'])->name('deliverables.reject');
-    Route::post('tasks/{taskId}/deliverables/reorder', [TaskDeliverableController::class, 'reorder'])->name('tasks.deliverables.reorder');
+    Route::get('tasks/{taskId}/deliverables/{deliverableId}', [TaskDeliverableController::class, 'show'])->name('tasks.deliverables.show');
+    Route::put('tasks/{taskId}/deliverables/{deliverableId}', [TaskDeliverableController::class, 'update'])->name('tasks.deliverables.update');
+    Route::delete('tasks/{taskId}/deliverables/{deliverableId}', [TaskDeliverableController::class, 'destroy'])->name('tasks.deliverables.destroy');
+    Route::post('tasks/{taskId}/deliverables/{deliverableId}/submit', [TaskDeliverableController::class, 'submit'])->name('tasks.deliverables.submit');
+    Route::post('tasks/{taskId}/deliverables/{deliverableId}/review', [TaskDeliverableController::class, 'review'])->name('tasks.deliverables.review');
 
     // Client Portal Routes
     // All routes have auth:sanctum, locale, and role:client middleware applied in controllers
