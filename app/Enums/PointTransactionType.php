@@ -14,6 +14,7 @@ enum PointTransactionType: string
     case PERFORMANCE_BONUS = 'performance_bonus';
     case MANUAL_BONUS = 'manual_bonus';
     case GENERAL_CLEANLINESS_BONUS = 'general_cleanliness_bonus';
+    case DELIVERABLE_APPROVED = 'deliverable_approved';
 
     // Negative Points
     case BUG_FOUND = 'bug_found';
@@ -23,6 +24,7 @@ enum PointTransactionType: string
     case TASK_REOPENED = 'task_reopened';
     case MANUAL_DEDUCTION = 'manual_deduction';
     case GENERAL_CLEANLINESS_DEDUCTION = 'general_cleanliness_deduction';
+    case DELIVERABLE_REJECTED = 'deliverable_rejected';
 
     /**
      * Get the default points for this transaction type
@@ -40,6 +42,7 @@ enum PointTransactionType: string
             self::PERFORMANCE_BONUS => 1,
             self::MANUAL_BONUS => 0, // Variable
             self::GENERAL_CLEANLINESS_BONUS => 1,
+            self::DELIVERABLE_APPROVED => 1,
 
             // Negative - All worth -1 point
             self::BUG_FOUND => -1,
@@ -49,6 +52,7 @@ enum PointTransactionType: string
             self::TASK_REOPENED => -1,
             self::MANUAL_DEDUCTION => 0, // Variable
             self::GENERAL_CLEANLINESS_DEDUCTION => -1,
+            self::DELIVERABLE_REJECTED => -1,
         };
     }
 
@@ -67,6 +71,7 @@ enum PointTransactionType: string
             self::PERFORMANCE_BONUS,
             self::MANUAL_BONUS,
             self::GENERAL_CLEANLINESS_BONUS,
+            self::DELIVERABLE_APPROVED,
         ]);
     }
 
@@ -85,6 +90,7 @@ enum PointTransactionType: string
             self::PERFORMANCE_BONUS => 'Performance Bonus',
             self::MANUAL_BONUS => 'Manual Bonus',
             self::GENERAL_CLEANLINESS_BONUS => 'General Cleanliness Bonus',
+            self::DELIVERABLE_APPROVED => 'Deliverable Approved',
             self::BUG_FOUND => 'Bug Found',
             self::TASK_LATE => 'Task Delivered Late',
             self::CODE_REVIEW_REJECTED => 'Code Review Rejected',
@@ -92,6 +98,7 @@ enum PointTransactionType: string
             self::TASK_REOPENED => 'Task Reopened',
             self::MANUAL_DEDUCTION => 'Manual Deduction',
             self::GENERAL_CLEANLINESS_DEDUCTION => 'General Cleanliness Deduction',
+            self::DELIVERABLE_REJECTED => 'Deliverable Rejected',
         };
     }
 }

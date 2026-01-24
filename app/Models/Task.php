@@ -8,6 +8,7 @@ use App\Enums\TaskCategory;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Enums\TaskPriority;
+use App\Enums\DeliverableStatus;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -146,6 +147,26 @@ class Task extends Model implements Trackable
     public function codeReviews(): HasMany
     {
         return $this->hasMany(CodeReview::class);
+    }
+
+    public function deliverables(): HasMany
+    {
+        return $this->hasMany(TaskDeliverable::class)->ordered();
+    }
+
+    public function pendingDeliverables(): HasMany
+    {
+        return $this->deliverables()->byStatus(DeliverableStatus::PENDING);
+    }
+
+    public function submittedDeliverables(): HasMany
+    {
+        return $this->deliverables()->pendingReview();
+    }
+
+    public function approvedDeliverables(): HasMany
+    {
+        return $this->deliverables()->byStatus(DeliverableStatus::APPROVED);
     }
 
     public function getTrackableDisplayName(): string

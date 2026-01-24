@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\SalesAnalyticsController;
 use App\Http\Controllers\Api\V1\TaskController;
+use App\Http\Controllers\Api\V1\TaskDeliverableController;
 use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -284,6 +285,18 @@ Route::prefix('v1')->group(function () {
     
     // Project Points Summary Route
     Route::get('projects/{projectId}/points-summary', [TaskController::class, 'pointsSummary'])->name('projects.points-summary');
+
+    // Task Deliverables Routes
+    // All routes have auth:sanctum and locale middleware applied in controller
+    Route::get('tasks/{taskId}/deliverables', [TaskDeliverableController::class, 'index'])->name('tasks.deliverables.index');
+    Route::post('tasks/{taskId}/deliverables', [TaskDeliverableController::class, 'store'])->name('tasks.deliverables.store');
+    Route::put('deliverables/{id}', [TaskDeliverableController::class, 'update'])->name('deliverables.update');
+    Route::delete('deliverables/{id}', [TaskDeliverableController::class, 'destroy'])->name('deliverables.destroy');
+    Route::post('deliverables/{id}/submit', [TaskDeliverableController::class, 'submit'])->name('deliverables.submit');
+    Route::post('deliverables/{id}/start-review', [TaskDeliverableController::class, 'startReview'])->name('deliverables.start-review');
+    Route::post('deliverables/{id}/approve', [TaskDeliverableController::class, 'approve'])->name('deliverables.approve');
+    Route::post('deliverables/{id}/reject', [TaskDeliverableController::class, 'reject'])->name('deliverables.reject');
+    Route::post('tasks/{taskId}/deliverables/reorder', [TaskDeliverableController::class, 'reorder'])->name('tasks.deliverables.reorder');
 
     // Client Portal Routes
     // All routes have auth:sanctum, locale, and role:client middleware applied in controllers
