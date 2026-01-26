@@ -19,18 +19,20 @@ class DeliverablePermissionsSeeder extends Seeder
             ['guard_name' => 'web']
         );
 
-        // Assign to Admin role
-        $adminRole = Role::where('name', 'Admin')->first();
+        // Assign to admin role (lowercase)
+        $adminRole = Role::where('name', 'admin')->first();
         if ($adminRole && !$adminRole->hasPermissionTo('manage_deliverables')) {
             $adminRole->givePermissionTo('manage_deliverables');
+            $this->command->info('✅ manage_deliverables assigned to admin role');
         }
 
-        // Assign to super-admin role
-        $superAdminRole = Role::where('name', 'Super Admin')->first();
+        // Assign to super-admin role (lowercase with dash)
+        $superAdminRole = Role::where('name', 'super-admin')->first();
         if ($superAdminRole && !$superAdminRole->hasPermissionTo('manage_deliverables')) {
             $superAdminRole->givePermissionTo('manage_deliverables');
+            $this->command->info('✅ manage_deliverables assigned to super-admin role');
         }
 
-        $this->command->info('✅ Deliverable permissions created and assigned to Admin role');
+        $this->command->info('✅ Deliverable permissions seeding completed');
     }
 }
