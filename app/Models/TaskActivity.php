@@ -45,6 +45,9 @@ class TaskActivity extends Model
     public const TYPE_TAG_REMOVED = 'tag_removed';
     public const TYPE_PRIORITY_CHANGE = 'priority_change';
     public const TYPE_DUE_DATE_CHANGE = 'due_date_change';
+    public const TYPE_DELIVERABLE_SUBMITTED = 'deliverable_submitted';
+    public const TYPE_DELIVERABLE_APPROVED = 'deliverable_approved';
+    public const TYPE_DELIVERABLE_REJECTED = 'deliverable_rejected';
 
     /**
      * Get the task.
@@ -161,5 +164,72 @@ class TaskActivity extends Model
     public function scopeComments($query)
     {
         return $query->whereIn('type', [self::TYPE_COMMENT, self::TYPE_INTERNAL_NOTE]);
+    }
+
+    /**
+     * Log deliverable submission.
+     */
+    public static function logDeliverableSubmitted(Task $task, User $developer, string $deliverableTitle): self
+    {
+        return self::create([
+            'task_id' => $task->id,
+            'user_id' => $developer->id,
+            'type' => self::TYPE_DELIVERABLE_SUBMITTED,
+            'description' => "Submitted deliverable: {$deliverableTitle}",
+            'metadata' => [
+                'deliverable_title' => $deliverableTitle,
+            ],
+        ]);
+    }
+
+    /**
+     * Log deliverable approval with points.
+     */
+    public static function logDeliverableApproved(
+        Task $task, 
+        User $reviewer, 
+        string $deliverableTitle, 
+        int $pointsAwarded,
+        bool $isBonus = false
+    ): self {
+        $bonusText = $isBonus ? ' (Bonus)' : '';
+        $description = "Approved deliverable: {$deliverableTitle}{$bonusText} (+{$pointsAwarded} points)";
+
+        return self::create([
+            'task_id' => $task->id,
+            'user_id' => $reviewer->id,
+            'type' => self::TYPE_DELIVERABLE_APPROVED,
+            'description' => $description,
+            'metadata' => [
+                'deliverable_title' => $deliverableTitle,
+                'points_awarded' => $pointsAwarded,
+                'is_bonus' => $isBonus,
+            ],
+        ]);
+    }
+
+    /**
+     * Log deliverable rejection with points deduction.
+     */
+    public static function logDeliverableRejected(
+        Task $task, 
+        User $reviewer, 
+        string $deliverableTitle, 
+        int $pointsDeducted,
+        ?string $reason = null
+    ): self {
+        $description = "Rejected deliverable: {$deliverableTitle} (-{$pointsDeducted} points)";
+
+        return self::create([
+            'task_id' => $task->id,
+            'user_id' => $reviewer->id,
+            'type' => self::TYPE_DELIVERABLE_REJECTED,
+            'description' => $description,
+            'metadata' => [
+                'deliverable_title' => $deliverableTitle,
+                'points_deducted' => $pointsDeducted,
+                'reason' => $reason,
+            ],
+        ]);
     }
 }

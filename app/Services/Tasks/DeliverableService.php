@@ -5,6 +5,7 @@ namespace App\Services\Tasks;
 use App\Enums\DeliverableStatus;
 use App\Enums\PointTransactionType;
 use App\Models\Task;
+use App\Models\TaskActivity;
 use App\Models\TaskDeliverable;
 use App\Models\User;
 use App\Models\UserPoint;
@@ -81,12 +82,19 @@ class DeliverableService
             throw new InvalidArgumentException('Only assigned developers can submit deliverables.');
         }
 
-        return DB::transaction(function () use ($deliverable, $data) {
+        return DB::transaction(function () use ($deliverable, $developer, $data) {
             $deliverable->update([
                 'status' => DeliverableStatus::SUBMITTED,
                 'submission_notes' => $data['submissionNotes'] ?? null,
                 'submitted_at' => now(),
             ]);
+
+            // Log activity
+            TaskActivity::logDeliverableSubmitted(
+                $deliverable->task,
+                $developer,
+                $deliverable->title
+            );
 
             return $deliverable->fresh();
         });
@@ -144,6 +152,15 @@ class DeliverableService
             // Award points to the task assignee(s)
             $this->awardPointsToAssignees($deliverable, $pointsAwarded, $reviewer);
 
+            // Log activity in task history
+            TaskActivity::logDeliverableApproved(
+                $deliverable->task,
+                $reviewer,
+                $deliverable->title,
+                $pointsAwarded,
+                $deliverable->is_bonus
+            );
+
             return $deliverable->fresh();
         });
     }
@@ -177,6 +194,15 @@ class DeliverableService
 
             // Deduct points from the task assignee(s)
             $this->deductPointsFromAssignees($deliverable, $pointsDeducted, $reviewer);
+
+            // Log activity in task history
+            TaskActivity::logDeliverableRejected(
+                $deliverable->task,
+                $reviewer,
+                $deliverable->title,
+                $pointsDeducted,
+                $reviewNotes
+            );
 
             return $deliverable->fresh();
         });
