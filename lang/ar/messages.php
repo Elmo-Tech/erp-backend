@@ -94,4 +94,12 @@ return [
     'deliverable_cannot_delete' => 'لا يمكن حذف المخرج في الحالة الحالية',
     'deliverable_cannot_submit' => 'لا يمكن تسليم المخرج في الحالة الحالية',
     'deliverable_cannot_review' => 'لا يمكن مراجعة المخرج في الحالة الحالية',
+
+    // Admin Deliverable Management
+    'admin_deliverable_updated' => 'تم تحديث المخرج بنجاح من قبل المسؤول',
+    'admin_deliverable_deleted' => 'تم حذف المخرج بنجاح من قبل المسؤول',
+    'admin_status_changed' => 'تم تغيير حالة المخرج بنجاح',
+    'admin_deliverable_reset' => 'تم إعادة تعيين المخرج إلى حالة الانتظار بنجاح',
+    'admin_deliverable_approved' => 'تم الموافقة على المخرج بشكل مباشر بنجاح',
+    'admin_deliverable_rejected' => 'تم رفض المخرج بشكل مباشر بنجاح',
 ];

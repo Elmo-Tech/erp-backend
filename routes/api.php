@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\ActivityController;
+use App\Http\Controllers\Api\V1\Admin\AdminDeliverableController;
 use App\Http\Controllers\Api\V1\AdminStatsController;
 use App\Http\Controllers\Api\V1\AdminRoleController;
 use App\Http\Controllers\Api\V1\AdminUserController;
@@ -365,6 +366,16 @@ Route::prefix('v1')->group(function () {
 
         // Admin Audit Log Routes
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
+
+        // Admin Deliverable Management Routes (Full Control)
+        Route::prefix('deliverables')->group(function () {
+            Route::put('{id}', [AdminDeliverableController::class, 'update'])->name('admin.deliverables.update');
+            Route::delete('{id}', [AdminDeliverableController::class, 'destroy'])->name('admin.deliverables.destroy');
+            Route::patch('{id}/status', [AdminDeliverableController::class, 'changeStatus'])->name('admin.deliverables.change-status');
+            Route::patch('{id}/reset', [AdminDeliverableController::class, 'reset'])->name('admin.deliverables.reset');
+            Route::post('{id}/force-approve', [AdminDeliverableController::class, 'forceApprove'])->name('admin.deliverables.force-approve');
+            Route::post('{id}/force-reject', [AdminDeliverableController::class, 'forceReject'])->name('admin.deliverables.force-reject');
+        });
     });
 
     // Performance Evaluation Routes

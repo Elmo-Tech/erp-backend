@@ -94,4 +94,12 @@ return [
     'deliverable_cannot_delete' => 'Cannot delete deliverable in current status',
     'deliverable_cannot_submit' => 'Cannot submit deliverable in current status',
     'deliverable_cannot_review' => 'Cannot review deliverable in current status',
+
+    // Admin Deliverable Management
+    'admin_deliverable_updated' => 'Deliverable updated successfully by admin',
+    'admin_deliverable_deleted' => 'Deliverable deleted successfully by admin',
+    'admin_status_changed' => 'Deliverable status changed successfully',
+    'admin_deliverable_reset' => 'Deliverable reset to pending status successfully',
+    'admin_deliverable_approved' => 'Deliverable force approved successfully',
+    'admin_deliverable_rejected' => 'Deliverable force rejected successfully',
 ];

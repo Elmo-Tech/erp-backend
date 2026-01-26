@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             TagSeeder::class,
             NewPermissionsSeeder::class,
             UserPointsPermissionSeeder::class,
+            DeliverablePermissionsSeeder::class,
         ]);
     }
 }

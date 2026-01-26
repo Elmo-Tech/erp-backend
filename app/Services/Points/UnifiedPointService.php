@@ -6,7 +6,6 @@ use App\Enums\PointTransactionType;
 use App\Models\PointTransaction;
 use App\Models\User;
 use App\Models\UserPoint;
-use App\Notifications\PointsAwarded;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -101,9 +100,7 @@ class UnifiedPointService
                 'updated_by' => $admin->id,
             ]);
 
-            // Send notification
-            $user->notify(new PointsAwarded($pointTransaction));
-
+            // Notification removed - points are tracked silently
             return [
                 'pointTransaction' => $pointTransaction,
                 'userPoint' => $userPoint,
@@ -299,11 +296,7 @@ class UnifiedPointService
                 'updated_by' => $userId,
             ]);
 
-            // Send notification
-            if ($notify) {
-                $user->notify(new PointsAwarded($pointTransaction));
-            }
-
+            // Notification removed - points are tracked silently
             return $pointTransaction;
         });
     }

@@ -5,7 +5,6 @@ namespace App\Services\Points;
 use App\Enums\PointTransactionType;
 use App\Models\PointTransaction;
 use App\Models\User;
-use App\Notifications\PointsAwarded;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -77,11 +76,7 @@ class PointService
                 'updated_by' => $userId,
             ]);
 
-            // Send notification
-            if ($notify) {
-                $user->notify(new PointsAwarded($transaction));
-            }
-
+            // Notification removed - points are tracked silently
             return $transaction;
         });
     }
