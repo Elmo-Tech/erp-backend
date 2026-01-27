@@ -970,11 +970,11 @@ class AdminStatsController extends Controller
                 }
                 $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . $dateRange . '.pdf';
                 
-                // Use PdfService for robust PDF generation with locale-specific options
+                // Use PdfService for robust PDF generation with Arabic-safe options
                 $pdfOptions = [
-                    'defaultFont' => $locale === 'ar' ? 'DejaVu Sans' : 'serif',
-                    'isRemoteEnabled' => true, // Enable for Google Fonts
-                    'enableFontSubsetting' => true,
+                    'defaultFont' => 'DejaVu Sans', // Always use DejaVu Sans for Arabic support
+                    'isRemoteEnabled' => false, // Disable for security and reliability
+                    'enableFontSubsetting' => false, // Critical: Never enable for Arabic text
                 ];
                 
                 return $this->pdfService->downloadPdf('reports.employee-review', $reviewData, $fileName, $pdfOptions);

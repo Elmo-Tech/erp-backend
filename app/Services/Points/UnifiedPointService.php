@@ -347,4 +347,34 @@ class UnifiedPointService
             true
         );
     }
+
+    /**
+     * Award points for test scenario verification (passed)
+     */
+    public function awardTestScenarioPoints(User $user, Model $scenario): PointTransaction
+    {
+        return $this->awardPoints(
+            $user,
+            PointTransactionType::TEST_SCENARIO_VERIFIED,
+            null,
+            $scenario,
+            "Test scenario verified as passed: {$scenario->title}",
+            true
+        );
+    }
+
+    /**
+     * Deduct points for test scenario verification (failed)
+     */
+    public function deductTestScenarioPoints(User $user, Model $scenario): PointTransaction
+    {
+        return $this->deductPoints(
+            $user,
+            PointTransactionType::TEST_SCENARIO_FAILED,
+            null,
+            $scenario,
+            "Test scenario verified as failed: {$scenario->title}",
+            true
+        );
+    }
 }

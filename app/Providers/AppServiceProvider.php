@@ -9,12 +9,14 @@ use App\Models\InnovationLog;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskDeliverable;
+use App\Models\TaskTestScenario;
 use App\Models\TimeEntry;
 use App\Observers\CodeReviewObserver;
 use App\Observers\InnovationLogObserver;
 use App\Observers\ProjectObserver;
 use App\Observers\TaskDeliverableObserver;
 use App\Observers\TaskObserver;
+use App\Observers\TaskTestScenarioObserver;
 use App\Observers\TimeEntryObserver;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -43,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
         // Register model observers
         Project::observe(ProjectObserver::class);
         Task::observe(TaskObserver::class);
+        TaskTestScenario::observe(TaskTestScenarioObserver::class);
         TimeEntry::observe(TimeEntryObserver::class);
         InnovationLog::observe(InnovationLogObserver::class);
         CodeReview::observe(CodeReviewObserver::class);

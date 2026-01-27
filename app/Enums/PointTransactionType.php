@@ -15,6 +15,7 @@ enum PointTransactionType: string
     case MANUAL_BONUS = 'manual_bonus';
     case GENERAL_CLEANLINESS_BONUS = 'general_cleanliness_bonus';
     case DELIVERABLE_APPROVED = 'deliverable_approved';
+    case TEST_SCENARIO_VERIFIED = 'test_scenario_verified';
 
     // Negative Points
     case BUG_FOUND = 'bug_found';
@@ -25,6 +26,7 @@ enum PointTransactionType: string
     case MANUAL_DEDUCTION = 'manual_deduction';
     case GENERAL_CLEANLINESS_DEDUCTION = 'general_cleanliness_deduction';
     case DELIVERABLE_REJECTED = 'deliverable_rejected';
+    case TEST_SCENARIO_FAILED = 'test_scenario_failed';
 
     /**
      * Get the default points for this transaction type
@@ -43,6 +45,7 @@ enum PointTransactionType: string
             self::MANUAL_BONUS => 0, // Variable
             self::GENERAL_CLEANLINESS_BONUS => 1,
             self::DELIVERABLE_APPROVED => 1,
+            self::TEST_SCENARIO_VERIFIED => 1,
 
             // Negative - All worth -1 point
             self::BUG_FOUND => -1,
@@ -53,6 +56,7 @@ enum PointTransactionType: string
             self::MANUAL_DEDUCTION => 0, // Variable
             self::GENERAL_CLEANLINESS_DEDUCTION => -1,
             self::DELIVERABLE_REJECTED => -1,
+            self::TEST_SCENARIO_FAILED => -1,
         };
     }
 
@@ -72,6 +76,7 @@ enum PointTransactionType: string
             self::MANUAL_BONUS,
             self::GENERAL_CLEANLINESS_BONUS,
             self::DELIVERABLE_APPROVED,
+            self::TEST_SCENARIO_VERIFIED,
         ]);
     }
 
@@ -91,6 +96,7 @@ enum PointTransactionType: string
             self::MANUAL_BONUS => 'Manual Bonus',
             self::GENERAL_CLEANLINESS_BONUS => 'General Cleanliness Bonus',
             self::DELIVERABLE_APPROVED => 'Deliverable Approved',
+            self::TEST_SCENARIO_VERIFIED => 'Test Scenario Verified',
             self::BUG_FOUND => 'Bug Found',
             self::TASK_LATE => 'Task Delivered Late',
             self::CODE_REVIEW_REJECTED => 'Code Review Rejected',
@@ -99,6 +105,7 @@ enum PointTransactionType: string
             self::MANUAL_DEDUCTION => 'Manual Deduction',
             self::GENERAL_CLEANLINESS_DEDUCTION => 'General Cleanliness Deduction',
             self::DELIVERABLE_REJECTED => 'Deliverable Rejected',
+            self::TEST_SCENARIO_FAILED => 'Test Scenario Failed',
         };
     }
 }

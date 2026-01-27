@@ -89,12 +89,12 @@ class PdfService
         
         // Default options for safe PDF generation with Arabic support
         $defaultOptions = [
-            'defaultFont' => $this->getDefaultFont($fontConfig),
+            'defaultFont' => 'DejaVu Sans', // Always use DejaVu Sans - it has excellent Arabic support
             'isRemoteEnabled' => false, // Disable remote for security and reliability
             'isPhpEnabled' => false,
             'isHtml5ParserEnabled' => true,
             'enableJavascript' => false,
-            'enableFontSubsetting' => false, // Disable subsetting for Arabic characters
+            'enableFontSubsetting' => false, // CRITICAL: Must be disabled for Arabic characters
             'pdfBackend' => 'CPDF',
             'dpi' => 96,
             'fontHeightRatio' => 1.1,
@@ -107,8 +107,12 @@ class PdfService
             'chroot' => storage_path('app'), // Restrict to storage directory
         ];
 
-        // Merge with provided options
+        // Merge with provided options (but prioritize critical Arabic settings)
         $pdfOptions = array_merge($defaultOptions, $options);
+        
+        // Force critical settings for Arabic support
+        $pdfOptions['enableFontSubsetting'] = false; // Never enable subsetting for Arabic
+        $pdfOptions['defaultFont'] = 'DejaVu Sans'; // Always use DejaVu Sans
 
         try {
             Log::info('PDF generation attempt', [
@@ -117,12 +121,12 @@ class PdfService
                 'options' => $pdfOptions
             ]);
             
-            // First attempt: Try with provided options
+            // Generate PDF with Arabic-safe options
             $pdf = Pdf::loadView($view, $data);
             $pdf->setPaper('A4', 'portrait');
             $pdf->setOptions($pdfOptions);
 
-            Log::info('PDF generation successful with primary options');
+            Log::info('PDF generation successful with Arabic-safe options');
             
             // Restore original locale
             app()->setLocale($currentLocale);
@@ -137,9 +141,9 @@ class PdfService
                 'locale' => app()->getLocale()
             ]);
 
-            // Fallback: Try with minimal options and DejaVu Sans
+            // Fallback: Try with absolute minimal options
             try {
-                Log::info('Attempting PDF generation with fallback options');
+                Log::info('Attempting PDF generation with minimal fallback options');
                 
                 $pdf = Pdf::loadView($view, $data);
                 $pdf->setPaper('A4', 'portrait');
@@ -148,7 +152,7 @@ class PdfService
                     'isRemoteEnabled' => false,
                     'enablePhp' => false,
                     'isHtml5ParserEnabled' => true,
-                    'enableFontSubsetting' => false, // Critical: Disable for Arabic
+                    'enableFontSubsetting' => false, // Critical: Never enable for Arabic
                     'fontDir' => storage_path('app/fonts'),
                     'fontCache' => storage_path('app/fonts'),
                 ]);
@@ -156,7 +160,7 @@ class PdfService
                 // Restore original locale
                 app()->setLocale($currentLocale);
                 
-                Log::info('PDF generation succeeded with fallback options', ['view' => $view]);
+                Log::info('PDF generation succeeded with minimal fallback options', ['view' => $view]);
                 return $pdf;
 
             } catch (\Exception $fallbackException) {

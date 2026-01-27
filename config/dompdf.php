@@ -109,7 +109,8 @@ return [
 
         /**
          * Whether to enable font subsetting or not.
-         * Disabled for Arabic text support to prevent character removal
+         * CRITICAL: Must be disabled for Arabic text support to prevent character removal
+         * Font subsetting can remove Arabic glyphs causing display issues
          */
         'enable_font_subsetting' => false,
 
@@ -177,7 +178,7 @@ return [
          * The default font family
          *
          * Used if no suitable fonts can be found. This must exist in the font folder.
-         * Updated to support Arabic text rendering
+         * DejaVu Sans has excellent Arabic support and is included with dompdf
          *
          * @var string
          */

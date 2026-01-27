@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ trans('employee_review.Employee Performance Review') }}</title>
     <style>
-        /* Use local fonts only - no external imports for PDF */
+        /* Use DejaVu Sans for all languages - it has excellent Arabic support */
         body {
-            font-family: {{ app()->getLocale() == 'ar' ? '"Noto Sans Arabic", "DejaVu Sans", "Arial Unicode MS", sans-serif' : '"DejaVu Sans", "Arial", sans-serif' }};
+            font-family: "DejaVu Sans", "Arial Unicode MS", sans-serif;
             font-size: 12px;
             line-height: 1.4;
             color: #333;
@@ -282,6 +282,99 @@
                 {{ $deductions['daysWithDeductions'] }} {{ trans('employee_review.days') }}
             </div>
         </div>
+        
+        @if(!empty($deductions['dailyDeductions']) && count($deductions['dailyDeductions']) > 0)
+        <h4 style="margin: 15px 0 10px 0; color: #dc2626; font-size: 12px;">{{ trans('employee_review.Daily Deduction Breakdown') }}</h4>
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>{{ trans('employee_review.Date') }}</th>
+                    <th>{{ trans('employee_review.Clock In') }}</th>
+                    <th>{{ trans('employee_review.Late Minutes') }}</th>
+                    <th>{{ trans('employee_review.Points Deducted') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach(array_slice($deductions['dailyDeductions'], 0, 10) as $dailyDeduction)
+                <tr>
+                    <td>{{ \Carbon\Carbon::parse($dailyDeduction['date'])->format('M j, Y') }}</td>
+                    <td>{{ $dailyDeduction['clockIn'] }}</td>
+                    <td class="warning-points">{{ $dailyDeduction['lateMinutes'] }}</td>
+                    <td class="negative-points">-{{ $dailyDeduction['deduction'] }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @endif
+    </div>
+    @endif
+
+    {{-- Work Quality Assessment --}}
+    @if(isset($tasks) && !empty($tasks['tasksWithBounces']) && count($tasks['tasksWithBounces']) > 0)
+    <div class="section">
+        <h3>{{ trans('employee_review.Work Quality Assessment') }}</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">{{ trans('employee_review.Tasks with Issues') }}:</span> 
+                <span class="{{ count($tasks['tasksWithBounces']) > 3 ? 'negative-points' : 'warning-points' }}">
+                    {{ count($tasks['tasksWithBounces']) }} {{ trans('employee_review.tasks') }}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">{{ trans('employee_review.Total Bounces') }}:</span> 
+                <span class="{{ $tasks['totalBounces'] > 5 ? 'negative-points' : 'warning-points' }}">
+                    {{ $tasks['totalBounces'] }} {{ trans('employee_review.bounces') }}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">{{ trans('employee_review.Quality Score') }}:</span> 
+                @php
+                    $qualityScore = $tasks['total'] > 0 ? (($tasks['total'] - count($tasks['tasksWithBounces'])) / $tasks['total']) * 100 : 100;
+                @endphp
+                <span class="{{ $qualityScore >= 80 ? 'positive-points' : ($qualityScore >= 60 ? 'warning-points' : 'negative-points') }}">
+                    {{ number_format($qualityScore, 1) }}%
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">{{ trans('employee_review.Average Bounce Rate') }}:</span> 
+                <span class="{{ $overview['averageBounceRate'] <= 0.5 ? 'positive-points' : ($overview['averageBounceRate'] <= 1 ? 'warning-points' : 'negative-points') }}">
+                    {{ $overview['averageBounceRate'] }}
+                </span>
+            </div>
+        </div>
+        
+        <h4 style="margin: 15px 0 10px 0; color: #d97706; font-size: 12px;">{{ trans('employee_review.Tasks Requiring Rework') }}</h4>
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>{{ trans('employee_review.Task') }}</th>
+                    <th>{{ trans('employee_review.Project') }}</th>
+                    <th>{{ trans('employee_review.Bounces') }}</th>
+                    <th>{{ trans('employee_review.Status') }}</th>
+                    <th>{{ trans('employee_review.Time Spent') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach(array_slice($tasks['tasksWithBounces'], 0, 8) as $task)
+                <tr>
+                    <td>{{ Str::limit($task['title'], 30) }}</td>
+                    <td>{{ Str::limit($task['projectTitle'] ?? 'N/A', 20) }}</td>
+                    <td class="negative-points">{{ $task['reopenCount'] }}</td>
+                    <td>
+                        @php
+                            $statusKey = strtolower(str_replace(' ', '_', $task['status']));
+                            $translatedStatus = trans('enums.' . $statusKey);
+                            if ($translatedStatus === 'enums.' . $statusKey) {
+                                $translatedStatus = $task['status'];
+                            }
+                        @endphp
+                        {{ $translatedStatus }}
+                    </td>
+                    <td>{{ $task['totalTimeSpent'] }}h</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
     </div>
     @endif
 
@@ -424,6 +517,140 @@
         </table>
     </div>
     @endif
+
+    {{-- Management Assessment Section --}}
+    <div class="section page-break">
+        <h3>{{ trans('employee_review.Management Assessment & Recommendations') }}</h3>
+        
+        {{-- Overall Performance Rating --}}
+        <div class="grace-period-info {{ $overview['productivityScore'] >= 80 ? 'grace-period-active' : ($overview['productivityScore'] >= 60 ? '' : 'grace-period-expired') }}">
+            <h4 style="margin: 0 0 10px 0; color: {{ $overview['productivityScore'] >= 80 ? '#059669' : ($overview['productivityScore'] >= 60 ? '#d97706' : '#dc2626') }};">
+                {{ trans('employee_review.Overall Performance Rating') }}
+            </h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">{{ trans('employee_review.Productivity Score') }}:</span> 
+                    <span class="{{ $overview['productivityScore'] >= 80 ? 'positive-points' : ($overview['productivityScore'] >= 60 ? 'warning-points' : 'negative-points') }}">
+                        {{ $overview['productivityScore'] }}/100
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">{{ trans('employee_review.Performance Level') }}:</span> 
+                    @php
+                        $performanceLevel = $overview['productivityScore'] >= 90 ? 'Excellent' : 
+                                          ($overview['productivityScore'] >= 80 ? 'Good' : 
+                                          ($overview['productivityScore'] >= 70 ? 'Satisfactory' : 
+                                          ($overview['productivityScore'] >= 60 ? 'Needs Improvement' : 'Poor')));
+                        $performanceLevelKey = strtolower(str_replace(' ', '_', $performanceLevel));
+                    @endphp
+                    <span class="{{ $overview['productivityScore'] >= 80 ? 'positive-points' : ($overview['productivityScore'] >= 60 ? 'warning-points' : 'negative-points') }}">
+                        {{ trans('employee_review.' . $performanceLevelKey, [], 'en') !== 'employee_review.' . $performanceLevelKey ? trans('employee_review.' . $performanceLevelKey) : $performanceLevel }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">{{ trans('employee_review.Attendance Rating') }}:</span> 
+                    @php
+                        $latePercentage = $attendance['totalDays'] > 0 ? ($attendance['lateDays'] / $attendance['totalDays']) * 100 : 0;
+                        $attendanceRating = $latePercentage <= 5 ? 'Excellent' : 
+                                          ($latePercentage <= 10 ? 'Good' : 
+                                          ($latePercentage <= 20 ? 'Fair' : 'Poor'));
+                    @endphp
+                    <span class="{{ $latePercentage <= 10 ? 'positive-points' : ($latePercentage <= 20 ? 'warning-points' : 'negative-points') }}">
+                        {{ $attendanceRating }} ({{ number_format($latePercentage, 1) }}% {{ trans('employee_review.late days') }})
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">{{ trans('employee_review.Work Quality') }}:</span> 
+                    @php
+                        $qualityRating = $overview['averageBounceRate'] <= 0.3 ? 'Excellent' : 
+                                       ($overview['averageBounceRate'] <= 0.7 ? 'Good' : 
+                                       ($overview['averageBounceRate'] <= 1.2 ? 'Fair' : 'Poor'));
+                    @endphp
+                    <span class="{{ $overview['averageBounceRate'] <= 0.7 ? 'positive-points' : ($overview['averageBounceRate'] <= 1.2 ? 'warning-points' : 'negative-points') }}">
+                        {{ $qualityRating }} ({{ $overview['averageBounceRate'] }} {{ trans('employee_review.avg bounces') }})
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Financial Impact Assessment --}}
+        <div class="deduction-info" style="margin-top: 20px;">
+            <h4 style="margin: 0 0 10px 0; color: #dc2626;">{{ trans('employee_review.Financial Impact Assessment') }}</h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">{{ trans('employee_review.Points Balance Impact') }}:</span> 
+                    <span class="{{ $overview['netPointsChange'] >= 0 ? 'positive-points' : 'negative-points' }}">
+                        {{ $overview['netPointsChange'] >= 0 ? '+' : '' }}{{ $overview['netPointsChange'] }} {{ trans('employee_review.points') }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">{{ trans('employee_review.Attendance Deductions') }}:</span> 
+                    <span class="negative-points">
+                        -{{ $deductions['totalDeductions'] ?? 0 }} {{ trans('employee_review.points') }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">{{ trans('employee_review.Recommended Action') }}:</span> 
+                    @php
+                        $totalImpact = $overview['netPointsChange'] - ($deductions['totalDeductions'] ?? 0);
+                        $recommendedAction = $totalImpact >= 10 ? 'Bonus Consideration' : 
+                                           ($totalImpact >= 0 ? 'No Action Needed' : 
+                                           ($totalImpact >= -10 ? 'Warning' : 'Salary Deduction'));
+                    @endphp
+                    <span class="{{ $totalImpact >= 0 ? 'positive-points' : ($totalImpact >= -10 ? 'warning-points' : 'negative-points') }}">
+                        {{ $recommendedAction }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">{{ trans('employee_review.Total Financial Impact') }}:</span> 
+                    <span class="{{ $totalImpact >= 0 ? 'positive-points' : 'negative-points' }}">
+                        {{ $totalImpact >= 0 ? '+' : '' }}{{ $totalImpact }} {{ trans('employee_review.points') }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Detailed Recommendations --}}
+        <div style="margin-top: 20px; padding: 15px; background-color: #f8fafc; border-radius: 8px;">
+            <h4 style="margin: 0 0 10px 0; color: #1e40af;">{{ trans('employee_review.Management Recommendations') }}</h4>
+            
+            @if($overview['productivityScore'] >= 85)
+                <p style="color: #059669; margin: 5px 0;">
+                    <strong>✓ {{ trans('employee_review.High Performer') }}:</strong> {{ trans('employee_review.Consider for promotion or additional responsibilities. Excellent work quality and attendance.') }}
+                </p>
+            @elseif($overview['productivityScore'] >= 70)
+                <p style="color: #d97706; margin: 5px 0;">
+                    <strong>⚠ {{ trans('employee_review.Average Performer') }}:</strong> {{ trans('employee_review.Provide additional training and support. Monitor progress closely.') }}
+                </p>
+            @else
+                <p style="color: #dc2626; margin: 5px 0;">
+                    <strong>⚠ {{ trans('employee_review.Needs Improvement') }}:</strong> {{ trans('employee_review.Immediate intervention required. Consider performance improvement plan.') }}
+                </p>
+            @endif
+
+            @if(isset($gracePeriod) && $gracePeriod['isExpired'])
+                <p style="color: #dc2626; margin: 5px 0;">
+                    <strong>⚠ {{ trans('employee_review.Attendance Issue') }}:</strong> {{ trans('employee_review.Grace period exceeded. Implement attendance improvement plan.') }}
+                </p>
+            @endif
+
+            @if($overview['averageBounceRate'] > 1.0)
+                <p style="color: #dc2626; margin: 5px 0;">
+                    <strong>⚠ {{ trans('employee_review.Quality Concern') }}:</strong> {{ trans('employee_review.High rework rate indicates need for additional training or mentoring.') }}
+                </p>
+            @endif
+
+            @if($overview['netPointsChange'] < -20)
+                <p style="color: #dc2626; margin: 5px 0;">
+                    <strong>💰 {{ trans('employee_review.Salary Deduction Recommended') }}:</strong> {{ trans('employee_review.Significant negative point balance warrants salary adjustment discussion.') }}
+                </p>
+            @elseif($overview['netPointsChange'] > 20)
+                <p style="color: #059669; margin: 5px 0;">
+                    <strong>💰 {{ trans('employee_review.Bonus Consideration') }}:</strong> {{ trans('employee_review.Strong positive performance warrants bonus or salary increase consideration.') }}
+                </p>
+            @endif
+        </div>
+    </div>
 
     <div class="footer">
         <p>{{ trans('employee_review.This report was generated automatically by the Business OS system.') }}</p>
