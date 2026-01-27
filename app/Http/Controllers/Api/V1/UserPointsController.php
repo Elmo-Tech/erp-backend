@@ -12,7 +12,6 @@ use App\Http\Resources\V1\UserPoints\UserWithPointsCollection;
 use App\Http\Resources\V1\UserPoints\LeaderboardResource;
 use App\Models\User;
 use App\Models\PointTransaction;
-use App\Models\UserPoint;
 use App\Services\HR\UserPointsService;
 use App\Services\Points\UnifiedPointService;
 use App\Helpers\ApiResponse;
@@ -815,7 +814,7 @@ class UserPointsController extends Controller
             $user = $transaction->user;
             $pointsToRevert = $transaction->points;
 
-            // Delete transaction and update user points
+            // Delete transaction and update user points (PointTransaction is single source of truth)
             DB::transaction(function () use ($transaction, $user, $pointsToRevert) {
                 $transaction->delete();
                 $user->decrement('total_points', $pointsToRevert);
@@ -831,44 +830,11 @@ class UserPointsController extends Controller
             ], __('Transaction deleted successfully'));
 
         } elseif ($type === 'up') {
-            // Delete from UserPoint
-            $userPoint = UserPoint::find($id);
-            
-            if (!$userPoint) {
-                return ApiResponse::error(
-                    __('Transaction not found'),
-                    [],
-                    404
-                );
-            }
-
-            // Only allow deletion of manual transactions
-            if ($userPoint->type !== 'manual') {
-                return ApiResponse::error(
-                    __('You can only delete manual transactions'),
-                    [],
-                    403
-                );
-            }
-
-            $user = $userPoint->user;
-            $pointsToRevert = $userPoint->points_change;
-
-            // Delete user point and update user points
-            DB::transaction(function () use ($userPoint, $user, $pointsToRevert) {
-                $userPoint->delete();
-                $user->decrement('total_points', $pointsToRevert);
-            });
-
-            return ApiResponse::success([
-                'deletedTransaction' => [
-                    'id' => $transactionId,
-                    'points' => $pointsToRevert,
-                    'type' => $userPoint->type,
-                ],
-                'newUserTotal' => $user->fresh()->total_points,
-            ], __('Transaction deleted successfully'));
-
+            return ApiResponse::error(
+                __('UserPoint deletions are no longer supported. Use PointTransaction IDs.'),
+                [],
+                400
+            );
         } else {
             return ApiResponse::error(
                 __('Invalid transaction type'),

@@ -3,7 +3,7 @@
 namespace App\Services\HR;
 
 use App\Models\User;
-use App\Models\UserPoint;
+use App\Models\PointTransaction;
 use App\Enums\PointTransactionType;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -16,7 +16,7 @@ class UserPointsService
      * Add points to a user with reason tracking.
      * Supports both positive (add) and negative (deduct) values.
      */
-    public function addPoints(User $user, int $points, string $reason, User $admin, ?PointTransactionType $type = null): UserPoint
+    public function addPoints(User $user, int $points, string $reason, User $admin, ?PointTransactionType $type = null): PointTransaction
     {
         return DB::transaction(function () use ($user, $points, $reason, $admin, $type) {
             $pointsBefore = $user->total_points ?? 0;
@@ -25,15 +25,14 @@ class UserPointsService
             // Update user's total points
             $user->update(['total_points' => $pointsAfter]);
 
-            // Create point record
-            return UserPoint::create([
+            // Create point transaction (single source)
+            $transactionType = $type ?? ($points > 0 ? PointTransactionType::MANUAL_BONUS : PointTransactionType::MANUAL_DEDUCTION);
+            return PointTransaction::create([
                 'user_id' => $user->id,
-                'points_change' => $points,
-                'points_before' => $pointsBefore,
-                'points_after' => $pointsAfter,
+                'points' => $points,
+                'type' => $transactionType,
                 'reason' => $reason,
-                'type' => 'manual',
-                'transaction_type' => $type?->value,
+                'balance_after' => $pointsAfter,
                 'created_by' => $admin->id,
                 'updated_by' => $admin->id,
             ]);
@@ -43,7 +42,7 @@ class UserPointsService
     /**
      * Deduct points from a user with reason tracking.
      */
-    public function deductPoints(User $user, int $points, string $reason, User $admin, ?PointTransactionType $type = null): UserPoint
+    public function deductPoints(User $user, int $points, string $reason, User $admin, ?PointTransactionType $type = null): PointTransaction
     {
         return DB::transaction(function () use ($user, $points, $reason, $admin, $type) {
             $pointsBefore = $user->total_points ?? 0;
@@ -52,15 +51,14 @@ class UserPointsService
             // Update user's total points
             $user->update(['total_points' => $pointsAfter]);
 
-            // Create point record (negative change)
-            return UserPoint::create([
+            // Create point transaction (single source)
+            $transactionType = $type ?? PointTransactionType::MANUAL_DEDUCTION;
+            return PointTransaction::create([
                 'user_id' => $user->id,
-                'points_change' => -$points,
-                'points_before' => $pointsBefore,
-                'points_after' => $pointsAfter,
+                'points' => -abs($points),
+                'type' => $transactionType,
                 'reason' => $reason,
-                'type' => 'manual',
-                'transaction_type' => $type?->value,
+                'balance_after' => $pointsAfter,
                 'created_by' => $admin->id,
                 'updated_by' => $admin->id,
             ]);
@@ -70,7 +68,7 @@ class UserPointsService
     /**
      * Set user points to a specific value with reason tracking.
      */
-    public function setPoints(User $user, int $newPoints, string $reason, User $admin, ?PointTransactionType $type = null): UserPoint
+    public function setPoints(User $user, int $newPoints, string $reason, User $admin, ?PointTransactionType $type = null): PointTransaction
     {
         return DB::transaction(function () use ($user, $newPoints, $reason, $admin, $type) {
             $pointsBefore = $user->total_points;
@@ -79,15 +77,14 @@ class UserPointsService
             // Update user's total points
             $user->update(['total_points' => $newPoints]);
 
-            // Create point record
-            return UserPoint::create([
+            // Create point transaction (single source)
+            $transactionType = $type ?? ($pointsChange >= 0 ? PointTransactionType::MANUAL_BONUS : PointTransactionType::MANUAL_DEDUCTION);
+            return PointTransaction::create([
                 'user_id' => $user->id,
-                'points_change' => $pointsChange,
-                'points_before' => $pointsBefore,
-                'points_after' => $newPoints,
+                'points' => $pointsChange,
+                'type' => $transactionType,
                 'reason' => $reason,
-                'type' => 'manual',
-                'transaction_type' => $type?->value,
+                'balance_after' => $newPoints,
                 'created_by' => $admin->id,
                 'updated_by' => $admin->id,
             ]);
@@ -99,7 +96,7 @@ class UserPointsService
      */
     public function getUserPointsHistory(User $user, int $perPage = 15): LengthAwarePaginator
     {
-        return UserPoint::where('user_id', $user->id)
+        return PointTransaction::where('user_id', $user->id)
             ->with(['createdBy:id,name'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -149,12 +146,12 @@ class UserPointsService
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
 
-        $pointsHistory = UserPoint::where('user_id', $user->id)
+        $pointsHistory = PointTransaction::where('user_id', $user->id)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->get();
 
-        $totalAdded = $pointsHistory->where('points_change', '>', 0)->sum('points_change');
-        $totalDeducted = abs($pointsHistory->where('points_change', '<', 0)->sum('points_change'));
+        $totalAdded = $pointsHistory->where('points', '>', 0)->sum('points');
+        $totalDeducted = abs($pointsHistory->where('points', '<', 0)->sum('points'));
         $netChange = $totalAdded - $totalDeducted;
 
         return [
@@ -187,7 +184,7 @@ class UserPointsService
      */
     public function getRecentActivities(int $limit = 20): Collection
     {
-        return UserPoint::with(['user:id,name,avatar', 'createdBy:id,name'])
+        return PointTransaction::with(['user:id,name,avatar', 'createdBy:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
@@ -196,7 +193,7 @@ class UserPointsService
     /**
      * Automatically add points for task completion (called from TaskService).
      */
-    public function addTaskCompletionPoints(User $user, int $points, string $taskTitle): UserPoint
+    public function addTaskCompletionPoints(User $user, int $points, string $taskTitle): PointTransaction
     {
         return DB::transaction(function () use ($user, $points, $taskTitle) {
             $pointsBefore = $user->total_points ?? 0;
@@ -205,14 +202,14 @@ class UserPointsService
             // Update user's total points
             $user->update(['total_points' => $pointsAfter]);
 
-            // Create automatic point record
-            return UserPoint::create([
+            // Create automatic point transaction
+            $transactionType = $points >= 0 ? PointTransactionType::TASK_ON_TIME : PointTransactionType::TASK_LATE;
+            return PointTransaction::create([
                 'user_id' => $user->id,
-                'points_change' => $points,
-                'points_before' => $pointsBefore,
-                'points_after' => $pointsAfter,
+                'points' => $points,
+                'type' => $transactionType,
                 'reason' => "Task completed: {$taskTitle}",
-                'type' => 'automatic',
+                'balance_after' => $pointsAfter,
                 'created_by' => $user->id, // Self-generated
                 'updated_by' => $user->id,
             ]);
@@ -229,7 +226,7 @@ class UserPointsService
         $averagePoints = $totalUsers > 0 ? round($totalPoints / $totalUsers, 2) : 0;
 
         $thisMonth = Carbon::now()->startOfMonth();
-        $monthlyActivity = UserPoint::where('created_at', '>=', $thisMonth)->count();
+        $monthlyActivity = PointTransaction::where('created_at', '>=', $thisMonth)->count();
 
         $topUser = User::employees()
             ->where('is_active', true)
@@ -253,7 +250,7 @@ class UserPointsService
      */
     public function getPointsReport(array $filters = [], int $perPage = 20): array
     {
-        $baseQuery = UserPoint::query();
+        $baseQuery = PointTransaction::query();
 
         // Apply date filters
         if (!empty($filters['dateFrom'])) {
@@ -280,8 +277,8 @@ class UserPointsService
         // Get summary data
         $summaryData = (clone $baseQuery)->get();
 
-        $totalPointsAdded = $summaryData->where('points_change', '>', 0)->sum('points_change');
-        $totalPointsDeducted = abs($summaryData->where('points_change', '<', 0)->sum('points_change'));
+        $totalPointsAdded = $summaryData->where('points', '>', 0)->sum('points');
+        $totalPointsDeducted = abs($summaryData->where('points', '<', 0)->sum('points'));
 
         return [
             'activities' => $activities->items(),

@@ -8,7 +8,6 @@ use App\Models\Task;
 use App\Models\TaskActivity;
 use App\Models\TaskDeliverable;
 use App\Models\User;
-use App\Models\UserPoint;
 use App\Services\Points\UnifiedPointService;
 use App\Notifications\DeliverableSubmitted;
 use App\Notifications\DeliverableReviewed;

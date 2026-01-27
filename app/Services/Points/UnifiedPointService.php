@@ -5,7 +5,6 @@ namespace App\Services\Points;
 use App\Enums\PointTransactionType;
 use App\Models\PointTransaction;
 use App\Models\User;
-use App\Models\UserPoint;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -13,10 +12,10 @@ use Carbon\Carbon;
 /**
  * Unified Point Service
  * 
- * This service consolidates both the PointTransaction system (automatic) 
- * and UserPoint system (manual) to provide a unified interface for point management.
+ * This service provides a unified interface for point management using PointTransaction
+ * as the single source of truth.
  * 
- * It ensures both systems stay in sync and provides comprehensive point tracking.
+ * All point operations (automatic and manual) write to PointTransaction only.
  */
 class UnifiedPointService
 {
@@ -87,58 +86,33 @@ class UnifiedPointService
                 'updated_by' => $admin->id,
             ]);
 
-            // Create UserPoint for backward compatibility
-            $userPoint = UserPoint::create([
-                'user_id' => $user->id,
-                'points_change' => $points,
-                'points_before' => $pointsBefore,
-                'points_after' => $pointsAfter,
-                'reason' => $reason,
-                'type' => 'manual',
-                'transaction_type' => $transactionType->value,
-                'created_by' => $admin->id,
-                'updated_by' => $admin->id,
-            ]);
-
             // Notification removed - points are tracked silently
             return [
                 'pointTransaction' => $pointTransaction,
-                'userPoint' => $userPoint,
             ];
         });
     }
 
     /**
-     * Get comprehensive user point history from both systems
+     * Get comprehensive user point history from PointTransaction (single source of truth)
      */
     public function getUserHistory(User $user, ?int $limit = null, array $filters = []): array
     {
-        // Get from PointTransaction
-        $ptQuery = PointTransaction::where('user_id', $user->id);
+        // Get from PointTransaction only
+        $query = PointTransaction::where('user_id', $user->id);
+        
         if (!empty($filters['dateFrom'])) {
-            $ptQuery->whereDate('created_at', '>=', $filters['dateFrom']);
+            $query->whereDate('created_at', '>=', $filters['dateFrom']);
         }
         if (!empty($filters['dateTo'])) {
-            $ptQuery->whereDate('created_at', '<=', $filters['dateTo']);
+            $query->whereDate('created_at', '<=', $filters['dateTo']);
         }
-        $pointTransactions = $ptQuery->with('createdBy')->get();
+        
+        $pointTransactions = $query->with('createdBy')->orderBy('created_at', 'desc')->get();
 
-        // Get from UserPoint
-        $upQuery = UserPoint::where('user_id', $user->id);
-        if (!empty($filters['dateFrom'])) {
-            $upQuery->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $upQuery->whereDate('created_at', '<=', $filters['dateTo']);
-        }
-        $userPoints = $upQuery->with('createdBy')->get();
-
-        // Consolidate all transactions
-        $allTransactions = collect();
-
-        // Add PointTransactions
-        foreach ($pointTransactions as $pt) {
-            $allTransactions->push([
+        // Transform to unified format
+        $allTransactions = $pointTransactions->map(function ($pt) {
+            return [
                 'id' => 'pt_' . $pt->id,
                 'points' => $pt->points,
                 'type' => $pt->type->label(),
@@ -149,56 +123,15 @@ class UnifiedPointService
                 'source' => 'automatic',
                 'sourceType' => $pt->source_type,
                 'sourceId' => $pt->source_id,
-            ]);
-        }
-
-        // Add UserPoints (avoid duplicates by checking if they have corresponding PointTransaction)
-        foreach ($userPoints as $up) {
-            // Skip if this is a manual entry that already has a corresponding PointTransaction
-            $hasCorrespondingPT = $pointTransactions->where('created_at', $up->created_at)
-                ->where('points', $up->points_change)
-                ->where('reason', $up->reason)
-                ->isNotEmpty();
-
-            if (!$hasCorrespondingPT) {
-                $typeLabel = 'Manual';
-                if ($up->transaction_type) {
-                    try {
-                        // Check if it's already an enum instance or needs conversion
-                        if ($up->transaction_type instanceof PointTransactionType) {
-                            $typeLabel = $up->transaction_type->label();
-                        } else {
-                            $typeLabel = PointTransactionType::from($up->transaction_type)->label();
-                        }
-                    } catch (\ValueError $e) {
-                        $typeLabel = ucfirst(str_replace('_', ' ', $up->transaction_type));
-                    }
-                }
-
-                $allTransactions->push([
-                    'id' => 'up_' . $up->id,
-                    'points' => $up->points_change,
-                    'type' => $typeLabel,
-                    'reason' => $up->reason,
-                    'createdAt' => $up->created_at,
-                    'createdBy' => $up->createdBy?->name ?? 'System',
-                    'balanceAfter' => $up->points_after,
-                    'source' => $up->type,
-                    'sourceType' => null,
-                    'sourceId' => null,
-                ]);
-            }
-        }
-
-        // Sort by creation date
-        $sortedTransactions = $allTransactions->sortByDesc('createdAt');
+            ];
+        });
 
         // Apply limit if specified
         if ($limit) {
-            $sortedTransactions = $sortedTransactions->take($limit);
+            $allTransactions = $allTransactions->take($limit);
         }
 
-        return $sortedTransactions->values()->toArray();
+        return $allTransactions->values()->toArray();
     }
 
     /**
@@ -221,31 +154,22 @@ class UnifiedPointService
             ];
         });
 
-        $bySource = collect($history)->groupBy('source')->map(function ($group) {
-            return [
-                'count' => $group->count(),
-                'total' => $group->sum('points'),
-            ];
-        });
-
         return [
             'totalEarned' => $earned,
             'totalDeducted' => $deducted,
             'netPoints' => $earned - $deducted,
             'transactionCount' => count($history),
             'byType' => $byType,
-            'bySource' => $bySource,
         ];
     }
 
     /**
-     * Recalculate user's total points from all transactions
+     * Recalculate user's total points from PointTransaction (single source of truth)
      */
     public function recalculateUserPoints(User $user): int
     {
-        // Get all unique transactions (avoid double counting)
-        $history = $this->getUserHistory($user);
-        $total = collect($history)->sum('points');
+        // Get all transactions from PointTransaction
+        $total = PointTransaction::where('user_id', $user->id)->sum('points');
         
         $user->update(['total_points' => $total]);
 
@@ -253,7 +177,7 @@ class UnifiedPointService
     }
 
     /**
-     * Create a unified transaction (both PointTransaction and UserPoint)
+     * Create a unified transaction (PointTransaction only - single source of truth)
      */
     protected function createTransaction(
         User $user,
@@ -270,7 +194,7 @@ class UnifiedPointService
 
             $userId = auth()->id();
 
-            // Create PointTransaction (primary system)
+            // Create PointTransaction (single source of truth)
             $pointTransaction = PointTransaction::create([
                 'user_id' => $user->id,
                 'points' => $points,
@@ -279,19 +203,6 @@ class UnifiedPointService
                 'source_id' => $source?->id,
                 'reason' => $reason,
                 'balance_after' => $user->total_points,
-                'created_by' => $userId,
-                'updated_by' => $userId,
-            ]);
-
-            // Create UserPoint for backward compatibility (only for automatic transactions)
-            UserPoint::create([
-                'user_id' => $user->id,
-                'points_change' => $points,
-                'points_before' => $user->total_points - $points,
-                'points_after' => $user->total_points,
-                'reason' => $reason ?? $type->label(),
-                'type' => 'automatic',
-                'transaction_type' => $type->value,
                 'created_by' => $userId,
                 'updated_by' => $userId,
             ]);

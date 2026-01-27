@@ -81,22 +81,23 @@ class Attendance extends Model
 
     /**
      * Calculate deduction minutes based on lateness rules.
-     * 
-     * Rules:
-     * - If late <= 30 minutes: No deduction
-     * - If late > 30 minutes AND has grace days: Use grace day, no deduction
-     * - If late > 30 minutes AND no grace days: Deduct in 30-minute increments
-     *   (e.g., 35 min late = 30 min deduction, 65 min late = 60 min deduction)
-     * 
+     *
+     * Rules (threshold-based):
+     * - If late <= threshold minutes: No deduction
+     * - If late > threshold minutes AND has grace days: Use grace day, no deduction
+     * - If late > threshold minutes AND no grace days: Deduct in threshold-minute increments
+     *   (e.g., 20 min late with 15 threshold = 15 min deduction, 40 min late = 30 min deduction)
+     *
      * @param User $user The user to check grace days for
      * @return array{deduction_minutes: int, used_grace_day: bool}
      */
     public function calculateDeduction(User $user): array
     {
         $lateMinutes = $this->late_minutes ?? $this->calculateLateMinutes();
+        $lateThreshold = (int) config('attendance.late_threshold_minutes', 15);
         
         // Not late enough to matter
-        if ($lateMinutes <= 30) {
+        if ($lateMinutes <= $lateThreshold) {
             return ['deduction_minutes' => 0, 'used_grace_day' => false];
         }
 
@@ -105,9 +106,9 @@ class Attendance extends Model
             return ['deduction_minutes' => 0, 'used_grace_day' => true];
         }
 
-        // Calculate deduction in 30-minute increments
-        // 31-60 min = 30 min deduction, 61-90 min = 60 min deduction, etc.
-        $deductionMinutes = floor($lateMinutes / 30) * 30;
+        // Calculate deduction in threshold-minute increments
+        // 16-30 min (threshold=15) = 15 min deduction, 31-45 min = 30 min deduction, etc.
+        $deductionMinutes = floor($lateMinutes / $lateThreshold) * $lateThreshold;
         
         return ['deduction_minutes' => (int) $deductionMinutes, 'used_grace_day' => false];
     }

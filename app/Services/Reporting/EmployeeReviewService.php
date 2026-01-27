@@ -8,7 +8,6 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
-use App\Models\UserPoint;
 use App\Enums\PointTransactionType;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -16,6 +15,18 @@ use InvalidArgumentException;
 
 class EmployeeReviewService
 {
+    private function buildPointSignature(
+        int $userId,
+        int $points,
+        
+        $createdAt,
+        ?string $transactionType,
+        ?string $reason
+    ): string {
+        $timestamp = Carbon::parse($createdAt)->format('Y-m-d H:i');
+        $normalizedReason = trim(strtolower($reason ?? ''));
+        return implode('|', [$userId, $points, $transactionType ?? '', $timestamp, $normalizedReason]);
+    }
     /**
      * Get comprehensive employee review data.
      *
@@ -468,9 +479,8 @@ class EmployeeReviewService
     }
 
     /**
-     * Get points data for the user from both systems (PointTransaction + UserPoint).
-     * This method consolidates data from both the automatic points system (PointTransaction)
-     * and the manual points system (UserPoint) to provide a complete view.
+     * Get points data for the user from PointTransaction (single source of truth).
+     * This method consolidates all point data from the unified PointTransaction system.
      */
     private function getPointsData(User $user, array $filters): array
     {
@@ -483,16 +493,6 @@ class EmployeeReviewService
             $pointTransactionQuery->whereDate('created_at', '<=', $filters['dateTo']);
         }
         $pointTransactions = $pointTransactionQuery->with('createdBy')->get();
-
-        // Get manual points from UserPoint table
-        $userPointQuery = UserPoint::where('user_id', $user->id);
-        if (!empty($filters['dateFrom'])) {
-            $userPointQuery->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $userPointQuery->whereDate('created_at', '<=', $filters['dateTo']);
-        }
-        $userPoints = $userPointQuery->with('createdBy')->get();
 
         // Consolidate all transactions into a unified format
         $allTransactions = collect();
@@ -514,36 +514,6 @@ class EmployeeReviewService
             ]);
         }
 
-        // Add UserPoints (manual system)
-        foreach ($userPoints as $up) {
-            $typeLabel = 'Manual';
-            if ($up->transaction_type) {
-                try {
-                    // Check if it's already an enum instance or needs conversion
-                    if ($up->transaction_type instanceof PointTransactionType) {
-                        $typeLabel = $up->transaction_type->label();
-                    } else {
-                        $typeLabel = PointTransactionType::from($up->transaction_type)->label();
-                    }
-                } catch (\ValueError $e) {
-                    $typeLabel = ucfirst(str_replace('_', ' ', $up->transaction_type));
-                }
-            }
-
-            $allTransactions->push([
-                'transactionId' => 'up_' . $up->id,
-                'points' => $up->points_change,
-                'type' => $typeLabel,
-                'reason' => $up->reason,
-                'createdAt' => $up->created_at->format('Y-m-d\TH:i:s'),
-                'createdBy' => $up->createdBy?->name ?? 'System',
-                'balanceAfter' => $up->points_after,
-                'source' => $up->type, // 'manual' or 'automatic'
-                'sourceType' => null,
-                'sourceId' => null,
-                'rawCreatedAt' => $up->created_at,
-            ]);
-        }
 
         // Sort all transactions by creation date (newest first)
         $sortedTransactions = $allTransactions->sortByDesc('rawCreatedAt')->values();
@@ -566,17 +536,17 @@ class EmployeeReviewService
             ];
         });
 
-        // Breakdown by source (automatic vs manual)
+        // Breakdown by source (automatic vs manual) based on type
         $bySource = [
             'automatic' => [
-                'count' => $allTransactions->where('source', 'automatic')->count(),
-                'earned' => $allTransactions->where('source', 'automatic')->where('points', '>', 0)->sum('points'),
-                'deducted' => abs($allTransactions->where('source', 'automatic')->where('points', '<', 0)->sum('points')),
+                'count' => $allTransactions->reject(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->count(),
+                'earned' => $allTransactions->reject(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->where('points', '>', 0)->sum('points'),
+                'deducted' => abs($allTransactions->reject(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->where('points', '<', 0)->sum('points')),
             ],
             'manual' => [
-                'count' => $allTransactions->where('source', 'manual')->count(),
-                'earned' => $allTransactions->where('source', 'manual')->where('points', '>', 0)->sum('points'),
-                'deducted' => abs($allTransactions->where('source', 'manual')->where('points', '<', 0)->sum('points')),
+                'count' => $allTransactions->filter(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->count(),
+                'earned' => $allTransactions->filter(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->where('points', '>', 0)->sum('points'),
+                'deducted' => abs($allTransactions->filter(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->where('points', '<', 0)->sum('points')),
             ],
         ];
 
@@ -597,13 +567,13 @@ class EmployeeReviewService
             'summary' => [
                 'totalTransactions' => $allTransactions->count(),
                 'automaticTransactions' => $pointTransactions->count(),
-                'manualTransactions' => $userPoints->count(),
+                'manualTransactions' => $allTransactions->filter(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->count(),
             ],
         ];
     }
 
     /**
-     * Calculate points statistics for overview from both systems.
+     * Calculate points statistics for overview from PointTransaction (single source of truth).
      */
     private function calculatePointsStats(User $user, array $filters): array
     {
@@ -617,25 +587,9 @@ class EmployeeReviewService
         }
         $pointTransactions = $pointTransactionQuery->get();
 
-        // Get from UserPoint (manual system)
-        $userPointQuery = UserPoint::where('user_id', $user->id);
-        if (!empty($filters['dateFrom'])) {
-            $userPointQuery->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $userPointQuery->whereDate('created_at', '<=', $filters['dateTo']);
-        }
-        $userPoints = $userPointQuery->get();
-
-        // Calculate totals from both systems
-        $ptEarned = $pointTransactions->where('points', '>', 0)->sum('points');
-        $ptDeducted = abs($pointTransactions->where('points', '<', 0)->sum('points'));
-        
-        $upEarned = $userPoints->where('points_change', '>', 0)->sum('points_change');
-        $upDeducted = abs($userPoints->where('points_change', '<', 0)->sum('points_change'));
-
-        $totalEarned = $ptEarned + $upEarned;
-        $totalDeducted = $ptDeducted + $upDeducted;
+        // Calculate totals from PointTransaction only
+        $totalEarned = $pointTransactions->where('points', '>', 0)->sum('points');
+        $totalDeducted = abs($pointTransactions->where('points', '<', 0)->sum('points'));
 
         return [
             'earned' => $totalEarned,
@@ -654,9 +608,10 @@ class EmployeeReviewService
         // Default grace period settings (can be moved to config or database)
         $gracePeriodDays = config('attendance.grace_period_days', 5); // 5 days default
         
-        // Get attendance data for the period
+        // Get attendance data for the period (use threshold-based lateness)
+        $lateThreshold = (int) config('attendance.late_threshold_minutes', 15);
         $query = Attendance::where('user_id', $user->id)
-            ->where('is_late', true);
+            ->where('late_minutes', '>', $lateThreshold);
 
         if (!empty($filters['dateFrom'])) {
             $query->where('date', '>=', $filters['dateFrom']);
@@ -696,10 +651,10 @@ class EmployeeReviewService
         $gracePeriodDays = config('attendance.grace_period_days', 5);
         $deductionRatePerMinute = config('attendance.deduction_rate_per_minute', 0.1); // 0.1 points per minute
         
-        // Get all late attendances
+        // Get all late attendances based on threshold
+        $lateThreshold = (int) config('attendance.late_threshold_minutes', 15);
         $query = Attendance::where('user_id', $user->id)
-            ->where('is_late', true)
-            ->where('late_minutes', '>', 0);
+            ->where('late_minutes', '>', $lateThreshold);
 
         if (!empty($filters['dateFrom'])) {
             $query->where('date', '>=', $filters['dateFrom']);

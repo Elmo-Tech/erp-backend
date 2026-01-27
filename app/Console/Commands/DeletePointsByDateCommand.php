@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Models\PointTransaction;
 use App\Models\User;
-use App\Models\UserPoint;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -53,9 +52,8 @@ class DeletePointsByDateCommand extends Command
             $this->warn('🔍 DRY RUN MODE - No actual deletions will be performed');
         }
 
-        // Build queries for both tables
+        // Build query for PointTransaction table
         $pointTransactionQuery = PointTransaction::whereDate('created_at', $targetDate);
-        $userPointQuery = UserPoint::whereDate('created_at', $targetDate);
 
         // Apply user filter if specified
         if ($userId) {
@@ -66,27 +64,23 @@ class DeletePointsByDateCommand extends Command
             }
             
             $pointTransactionQuery->where('user_id', $userId);
-            $userPointQuery->where('user_id', $userId);
             $this->info("👤 Filtering for user: {$user->name} (ID: {$userId})");
         }
 
         // Apply type filter if specified
         if ($type) {
             $pointTransactionQuery->where('type', $type);
-            $userPointQuery->where('transaction_type', $type);
             $this->info("🏷️  Filtering for type: {$type}");
         }
 
         // Get records to be deleted
         $pointTransactions = $pointTransactionQuery->with('user:id,name,total_points')->get();
-        $userPoints = $userPointQuery->with('user:id,name,total_points')->get();
 
         // Show summary
         $this->info("\n📊 SUMMARY:");
         $this->info("Point Transactions to delete: {$pointTransactions->count()}");
-        $this->info("User Points to delete: {$userPoints->count()}");
 
-        if ($pointTransactions->isEmpty() && $userPoints->isEmpty()) {
+        if ($pointTransactions->isEmpty()) {
             $this->warn('No records found for the specified criteria.');
             return 0;
         }
@@ -94,37 +88,27 @@ class DeletePointsByDateCommand extends Command
         // Show affected users
         $affectedUsers = collect()
             ->merge($pointTransactions->pluck('user'))
-            ->merge($userPoints->pluck('user'))
             ->unique('id')
             ->sortBy('name');
 
         $this->info("\n👥 AFFECTED USERS ({$affectedUsers->count()}):");
         foreach ($affectedUsers as $user) {
             $userPtCount = $pointTransactions->where('user_id', $user->id)->count();
-            $userUpCount = $userPoints->where('user_id', $user->id)->count();
-            $totalPointsToDelete = $pointTransactions->where('user_id', $user->id)->sum('points') + 
-                                 $userPoints->where('user_id', $user->id)->sum('points_change');
+            $totalPointsToDelete = $pointTransactions->where('user_id', $user->id)->sum('points');
             
             $this->line("  • {$user->name} (ID: {$user->id}) - Current: {$user->total_points} points");
-            $this->line("    - PointTransactions: {$userPtCount}, UserPoints: {$userUpCount}");
+            $this->line("    - PointTransactions: {$userPtCount}");
             $this->line("    - Points to remove: {$totalPointsToDelete}");
         }
 
         // Show detailed records if not too many
-        if ($pointTransactions->count() + $userPoints->count() <= 20) {
+        if ($pointTransactions->count() <= 20) {
             $this->info("\n📋 DETAILED RECORDS:");
             
             if ($pointTransactions->isNotEmpty()) {
                 $this->info("Point Transactions:");
                 foreach ($pointTransactions as $pt) {
                     $this->line("  • ID: {$pt->id} | User: {$pt->user->name} | Points: {$pt->points} | Type: {$pt->type->value} | Reason: {$pt->reason}");
-                }
-            }
-            
-            if ($userPoints->isNotEmpty()) {
-                $this->info("User Points:");
-                foreach ($userPoints as $up) {
-                    $this->line("  • ID: {$up->id} | User: {$up->user->name} | Points: {$up->points_change} | Type: {$up->type} | Reason: {$up->reason}");
                 }
             }
         }
@@ -143,15 +127,13 @@ class DeletePointsByDateCommand extends Command
         }
 
         // Perform deletion in transaction
-        DB::transaction(function () use ($pointTransactionQuery, $userPointQuery, $affectedUsers) {
+        DB::transaction(function () use ($pointTransactionQuery, $affectedUsers) {
             $this->info("\n🗑️  Deleting records...");
             
             // Delete records
             $deletedPt = $pointTransactionQuery->delete();
-            $deletedUp = $userPointQuery->delete();
             
             $this->info("Deleted {$deletedPt} Point Transactions");
-            $this->info("Deleted {$deletedUp} User Points");
             
             // Recalculate user totals
             $this->info("\n🔄 Recalculating user point totals...");
@@ -162,18 +144,7 @@ class DeletePointsByDateCommand extends Command
                 // Calculate total from remaining PointTransactions
                 $totalFromPt = PointTransaction::where('user_id', $user->id)->sum('points');
                 
-                // Calculate total from remaining UserPoints (avoid double counting)
-                $totalFromUp = UserPoint::where('user_id', $user->id)
-                    ->whereNotExists(function ($query) {
-                        $query->select(DB::raw(1))
-                            ->from('point_transactions')
-                            ->whereColumn('point_transactions.user_id', 'user_points.user_id')
-                            ->whereColumn('point_transactions.created_at', 'user_points.created_at')
-                            ->whereColumn('point_transactions.points', 'user_points.points_change');
-                    })
-                    ->sum('points_change');
-                
-                $newTotal = $totalFromPt + $totalFromUp;
+                $newTotal = $totalFromPt;
                 $oldTotal = $user->total_points;
                 
                 $user->update(['total_points' => $newTotal]);

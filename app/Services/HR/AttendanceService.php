@@ -243,15 +243,17 @@ class AttendanceService
         $usedGraceDay = false;
         $deductionMinutes = 0;
 
-        if ($lateMinutes > 30) {
+        $lateThreshold = (int) config('attendance.late_threshold_minutes', 15);
+
+        if ($lateMinutes > $lateThreshold) {
             // Check if user has grace days remaining
             if ($user->hasGraceDaysRemaining()) {
                 $usedGraceDay = true;
                 $deductionMinutes = 0;
                 $user->useGraceDay();
             } else {
-                // No grace days - calculate deduction in 30-minute increments
-                $deductionMinutes = floor($lateMinutes / 30) * 30;
+                // No grace days - calculate deduction in threshold-minute increments
+                $deductionMinutes = floor($lateMinutes / $lateThreshold) * $lateThreshold;
             }
         }
 
@@ -321,7 +323,9 @@ class AttendanceService
             $newUsedGraceDay = false;
             $deductionMinutes = 0;
 
-            if ($lateMinutes > 30) {
+            $lateThreshold = (int) config('attendance.late_threshold_minutes', 15);
+
+            if ($lateMinutes > $lateThreshold) {
                 // Need grace day or deduction
                 if ($oldUsedGraceDay) {
                     // Already using grace day, keep it
@@ -334,7 +338,7 @@ class AttendanceService
                     $user->useGraceDay();
                 } else {
                     // No grace days available
-                    $deductionMinutes = floor($lateMinutes / 30) * 30;
+                    $deductionMinutes = floor($lateMinutes / $lateThreshold) * $lateThreshold;
                 }
             } else {
                 // Not late enough for grace day/deduction

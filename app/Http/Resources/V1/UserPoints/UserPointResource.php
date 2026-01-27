@@ -9,23 +9,32 @@ class UserPointResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
+     * 
+     * This resource works with PointTransaction as the single source of truth.
+     * Field names are normalized for frontend compatibility.
      *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
+        $points = $this->points ?? $this->points_change ?? 0;
+        $balanceAfter = $this->balance_after ?? $this->points_after ?? 0;
+        
+        // Get type label if it's an enum
+        $typeLabel = $this->type?->label() 
+            ?? ($this->type instanceof \BackedEnum ? $this->type->value : $this->type)
+            ?? "Manual";
+
         return [
-            'userPointId' => $this->id ?? 0,
+            'id' => $this->id ?? 0,
             'userId' => $this->user_id ?? 0,
-            'pointsChange' => $this->points_change ?? 0,
-            'pointsBefore' => $this->points_before ?? 0,
-            'pointsAfter' => $this->points_after ?? 0,
+            'points' => $points,
+            'type' => $typeLabel,
             'reason' => $this->reason ?? "",
-            'type' => $this->type ?? "manual",
-            'transactionType' => $this->transaction_type?->value ?? $this->transaction_type ?? null,
-            'createdBy' => $this->whenLoaded('createdBy', fn() => $this->createdBy->name ?? ""),
+            'createdBy' => $this->whenLoaded('createdBy', fn() => $this->createdBy->name ?? "System"),
             'createdAt' => $this->created_at?->toISOString() ?? "",
             'updatedAt' => $this->updated_at?->toISOString() ?? "",
+            'balanceAfter' => $balanceAfter,
         ];
     }
 }
