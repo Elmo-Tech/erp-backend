@@ -9,14 +9,16 @@ use App\Models\TaskActivity;
 use App\Models\TaskDeliverable;
 use App\Models\User;
 use App\Models\UserPoint;
-use App\Services\Points\PointsService;
+use App\Services\Points\UnifiedPointService;
+use App\Notifications\DeliverableSubmitted;
+use App\Notifications\DeliverableReviewed;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class DeliverableService
 {
     public function __construct(
-        private PointsService $pointsService
+        private UnifiedPointService $pointService
     ) {}
 
     /**
@@ -96,6 +98,9 @@ class DeliverableService
                 $deliverable->title
             );
 
+            // Send notification to reviewers
+            $this->notifyReviewers($deliverable, $developer);
+
             return $deliverable->fresh();
         });
     }
@@ -161,6 +166,9 @@ class DeliverableService
                 $deliverable->is_bonus
             );
 
+            // Send notification to developers
+            $this->notifyDevelopers($deliverable, $reviewer, 'approved');
+
             return $deliverable->fresh();
         });
     }
@@ -203,6 +211,9 @@ class DeliverableService
                 $pointsDeducted,
                 $reviewNotes
             );
+
+            // Send notification to developers
+            $this->notifyDevelopers($deliverable, $reviewer, 'rejected');
 
             return $deliverable->fresh();
         });
@@ -275,12 +286,13 @@ class DeliverableService
         $developers = $deliverable->task->developers;
         
         foreach ($developers as $assignee) {
-            $this->pointsService->awardPoints(
+            $this->pointService->awardPoints(
                 $assignee->user,
-                $points,
-                "Deliverable approved: {$deliverable->title}",
                 PointTransactionType::DELIVERABLE_APPROVED,
-                $reviewer
+                $points,
+                $deliverable,
+                "Deliverable approved: {$deliverable->title}",
+                true
             );
         }
     }
@@ -293,13 +305,77 @@ class DeliverableService
         $developers = $deliverable->task->developers;
         
         foreach ($developers as $assignee) {
-            $this->pointsService->deductPoints(
+            $this->pointService->deductPoints(
                 $assignee->user,
-                $points,
-                "Deliverable rejected: {$deliverable->title}",
                 PointTransactionType::DELIVERABLE_REJECTED,
-                $reviewer
+                $points,
+                $deliverable,
+                "Deliverable rejected: {$deliverable->title}",
+                true
             );
+        }
+    }
+
+    /**
+     * Send notifications to reviewers when deliverable is submitted.
+     */
+    private function notifyReviewers(TaskDeliverable $deliverable, User $developer): void
+    {
+        // Get all users who can review deliverables
+        $reviewers = collect();
+        
+        // Add admins and super-admins (only if roles exist)
+        $adminRoles = ['admin', 'super-admin'];
+        foreach ($adminRoles as $roleName) {
+            try {
+                $roleUsers = User::role($roleName)->get();
+                $reviewers = $reviewers->merge($roleUsers);
+            } catch (\Spatie\Permission\Exceptions\RoleDoesNotExist $e) {
+                // Role doesn't exist, skip it
+                continue;
+            }
+        }
+        
+        // Add users with review permission (only if permission exists)
+        try {
+            $reviewers = $reviewers->merge(
+                User::permission('review_task_deliverables')->get()
+            );
+        } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
+            // Permission doesn't exist, skip it
+        }
+        
+        // Add task reviewers if any
+        if ($deliverable->task->reviewers) {
+            $reviewers = $reviewers->merge($deliverable->task->reviewers);
+        }
+        
+        // Remove duplicates and the developer who submitted
+        $reviewers = $reviewers->unique('id')->reject(function ($user) use ($developer) {
+            return $user->id === $developer->id;
+        });
+        
+        // Send notifications
+        foreach ($reviewers as $reviewer) {
+            $reviewer->notify(new DeliverableSubmitted($deliverable, $developer->name));
+        }
+    }
+
+    /**
+     * Send notifications to developers when deliverable is reviewed.
+     */
+    private function notifyDevelopers(TaskDeliverable $deliverable, User $reviewer, string $status): void
+    {
+        $developers = $deliverable->task->developers;
+        
+        foreach ($developers as $assignee) {
+            $assignee->user->notify(new DeliverableReviewed(
+                $deliverable,
+                $reviewer->name,
+                $status,
+                $reviewer->id,
+                $deliverable->review_notes
+            ));
         }
     }
 }

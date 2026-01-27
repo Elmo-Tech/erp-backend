@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\ProjectStatus;
 use App\Models\Project;
-use App\Models\User;
+use App\Models\Client;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -27,7 +27,7 @@ class ProjectFactory extends Factory
     public function definition(): array
     {
         return [
-            'client_id' => User::factory(),
+            'client_id' => Client::factory(),
             'quotation_id' => null,
             'title' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph(),

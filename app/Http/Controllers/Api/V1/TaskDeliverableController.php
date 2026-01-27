@@ -10,6 +10,7 @@ use App\Http\Requests\V1\Tasks\ReviewTaskDeliverableRequest;
 use App\Http\Resources\V1\Tasks\TaskDeliverableResource;
 use App\Models\Task;
 use App\Models\TaskDeliverable;
+use App\Services\Tasks\DeliverableService;
 use App\Helpers\ApiResponse;
 use App\Enums\DeliverableStatus;
 use Illuminate\Http\JsonResponse;
@@ -23,8 +24,9 @@ use Illuminate\Support\Facades\DB;
  */
 class TaskDeliverableController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private DeliverableService $deliverableService
+    ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
 
@@ -175,22 +177,15 @@ class TaskDeliverableController extends Controller
     {
         $task = Task::findOrFail($taskId);
         
-        return DB::transaction(function () use ($request, $task) {
-            $deliverable = $task->deliverables()->create([
-                'title' => $request->title,
-                'description' => $request->description,
-                'acceptance_criteria' => $request->acceptanceCriteria,
-                'is_bonus' => $request->isBonus ?? false,
-                'order' => $request->order ?? 0,
-                'status' => DeliverableStatus::PENDING,
-            ]);
-
-            $deliverable->load('reviewer');
+        try {
+            $deliverable = $this->deliverableService->createDeliverable($task, $request->validated());
 
             return ApiResponse::success([
                 'deliverable' => new TaskDeliverableResource($deliverable)
             ], __('messages.deliverable_created'), 201);
-        });
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
     }
 
     /**
@@ -295,28 +290,15 @@ class TaskDeliverableController extends Controller
         $task = Task::findOrFail($taskId);
         $deliverable = $task->deliverables()->findOrFail($deliverableId);
 
-        if ($deliverable->status !== DeliverableStatus::PENDING) {
-            return ApiResponse::error(
-                __('messages.deliverable_cannot_update'),
-                400
-            );
-        }
-
-        return DB::transaction(function () use ($request, $deliverable) {
-            $deliverable->update([
-                'title' => $request->title ?? $deliverable->title,
-                'description' => $request->description ?? $deliverable->description,
-                'acceptance_criteria' => $request->acceptanceCriteria ?? $deliverable->acceptance_criteria,
-                'is_bonus' => $request->isBonus ?? $deliverable->is_bonus,
-                'order' => $request->order ?? $deliverable->order,
-            ]);
-
-            $deliverable->load('reviewer');
+        try {
+            $updatedDeliverable = $this->deliverableService->updateDeliverable($deliverable, $request->validated());
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($deliverable)
+                'deliverable' => new TaskDeliverableResource($updatedDeliverable)
             ], __('messages.deliverable_updated'));
-        });
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
     }
 
     /**
@@ -360,19 +342,16 @@ class TaskDeliverableController extends Controller
         $task = Task::findOrFail($taskId);
         $deliverable = $task->deliverables()->findOrFail($deliverableId);
 
-        if ($deliverable->status !== DeliverableStatus::PENDING) {
-            return ApiResponse::error(
-                __('messages.deliverable_cannot_delete'),
-                400
+        try {
+            $this->deliverableService->deleteDeliverable($deliverable);
+
+            return ApiResponse::success(
+                null,
+                __('messages.deliverable_deleted')
             );
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
         }
-
-        $deliverable->delete();
-
-        return ApiResponse::success(
-            null,
-            __('messages.deliverable_deleted')
-        );
     }
 
     /**
@@ -422,21 +401,19 @@ class TaskDeliverableController extends Controller
         $task = Task::findOrFail($taskId);
         $deliverable = $task->deliverables()->findOrFail($deliverableId);
 
-        if (!$deliverable->canBeSubmitted()) {
-            return ApiResponse::error(
-                __('messages.deliverable_cannot_submit'),
-                400
+        try {
+            $submittedDeliverable = $this->deliverableService->submitDeliverable(
+                $deliverable, 
+                auth()->user(), 
+                $request->validated()
             );
-        }
-
-        return DB::transaction(function () use ($request, $deliverable) {
-            $deliverable->submit($request->submissionNotes);
-            $deliverable->load('reviewer');
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($deliverable)
+                'deliverable' => new TaskDeliverableResource($submittedDeliverable)
             ], __('messages.deliverable_submitted'));
-        });
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
     }
 
     /**
@@ -488,30 +465,32 @@ class TaskDeliverableController extends Controller
         $task = Task::findOrFail($taskId);
         $deliverable = $task->deliverables()->findOrFail($deliverableId);
 
-        if (!$deliverable->canBeReviewed()) {
-            return ApiResponse::error(
-                __('messages.deliverable_cannot_review'),
-                400
-            );
-        }
+        try {
+            $reviewData = [
+                'reviewNotes' => $request->reviewNotes,
+                'pointsAwarded' => $request->pointsAwarded ?? 1,
+            ];
 
-        return DB::transaction(function () use ($request, $deliverable) {
-            $status = $request->status === 'approved' 
-                ? DeliverableStatus::APPROVED 
-                : DeliverableStatus::REJECTED;
-
-            $deliverable->review(
-                $status,
-                auth()->id(),
-                $request->reviewNotes,
-                $request->pointsAwarded ?? 0
-            );
-
-            $deliverable->load('reviewer');
+            if ($request->status === 'approved') {
+                $reviewedDeliverable = $this->deliverableService->approveDeliverable(
+                    $deliverable,
+                    auth()->user(),
+                    $reviewData
+                );
+            } else {
+                $reviewData['pointsDeducted'] = $request->pointsAwarded ?? 1;
+                $reviewedDeliverable = $this->deliverableService->rejectDeliverable(
+                    $deliverable,
+                    auth()->user(),
+                    $reviewData
+                );
+            }
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($deliverable)
+                'deliverable' => new TaskDeliverableResource($reviewedDeliverable)
             ], __('messages.deliverable_reviewed'));
-        });
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
     }
 }

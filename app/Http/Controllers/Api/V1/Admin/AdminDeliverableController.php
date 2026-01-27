@@ -8,6 +8,7 @@ use App\Http\Requests\V1\Admin\AdminChangeDeliverableStatusRequest;
 use App\Http\Requests\V1\Admin\AdminForceReviewDeliverableRequest;
 use App\Http\Resources\V1\Tasks\TaskDeliverableResource;
 use App\Models\TaskDeliverable;
+use App\Services\Tasks\DeliverableService;
 use App\Helpers\ApiResponse;
 use App\Enums\DeliverableStatus;
 use Illuminate\Http\JsonResponse;
@@ -21,8 +22,9 @@ use Illuminate\Support\Facades\DB;
  */
 class AdminDeliverableController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private DeliverableService $deliverableService
+    ) {
         $this->middleware(['auth:sanctum', 'locale']);
         // Only admins can access these endpoints
         $this->middleware('permission:manage_deliverables');
@@ -337,21 +339,24 @@ class AdminDeliverableController extends Controller
     {
         $deliverable = TaskDeliverable::with('reviewer', 'task')->findOrFail($deliverableId);
 
-        return DB::transaction(function () use ($request, $deliverable) {
-            $deliverable->update([
-                'status' => DeliverableStatus::APPROVED,
-                'review_notes' => $request->reviewNotes ?? '[Admin Force Approved]',
-                'reviewed_at' => now(),
-                'reviewed_by' => auth()->id(),
-                'points_awarded' => $request->pointsAwarded ?? 1,
-            ]);
+        try {
+            $reviewData = [
+                'reviewNotes' => $request->reviewNotes ?? '[Admin Force Approved]',
+                'pointsAwarded' => $request->pointsAwarded ?? 1,
+            ];
 
-            $deliverable->load('reviewer', 'task');
+            $approvedDeliverable = $this->deliverableService->approveDeliverable(
+                $deliverable,
+                auth()->user(),
+                $reviewData
+            );
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($deliverable)
+                'deliverable' => new TaskDeliverableResource($approvedDeliverable)
             ], __('messages.admin_deliverable_approved'));
-        });
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
     }
 
     /**
@@ -390,20 +395,23 @@ class AdminDeliverableController extends Controller
     {
         $deliverable = TaskDeliverable::with('reviewer', 'task')->findOrFail($deliverableId);
 
-        return DB::transaction(function () use ($request, $deliverable) {
-            $deliverable->update([
-                'status' => DeliverableStatus::REJECTED,
-                'review_notes' => $request->reviewNotes ?? '[Admin Force Rejected]',
-                'reviewed_at' => now(),
-                'reviewed_by' => auth()->id(),
-                'points_awarded' => 0,
-            ]);
+        try {
+            $reviewData = [
+                'reviewNotes' => $request->reviewNotes ?? '[Admin Force Rejected]',
+                'pointsDeducted' => 1, // Default deduction for admin rejection
+            ];
 
-            $deliverable->load('reviewer', 'task');
+            $rejectedDeliverable = $this->deliverableService->rejectDeliverable(
+                $deliverable,
+                auth()->user(),
+                $reviewData
+            );
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($deliverable)
+                'deliverable' => new TaskDeliverableResource($rejectedDeliverable)
             ], __('messages.admin_deliverable_rejected'));
-        });
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
     }
 }

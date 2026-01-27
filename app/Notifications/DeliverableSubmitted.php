@@ -15,8 +15,7 @@ class DeliverableSubmitted extends Notification implements ShouldQueue
 
     public function __construct(
         public TaskDeliverable $deliverable,
-        public string $submitterName,
-        public ?int $submitterId = null
+        public string $developerName
     ) {}
 
     public function via(object $notifiable): array
@@ -30,25 +29,20 @@ class DeliverableSubmitted extends Notification implements ShouldQueue
         $projectName = $this->deliverable->task?->project?->title ?? __('No Project');
 
         return (new MailMessage)
-            ->subject(__('Deliverable Submitted for Review: :name', ['name' => $this->deliverable->name]))
+            ->subject(__('New Deliverable Submitted: :name', ['name' => $this->deliverable->title]))
             ->greeting(__('Hello :name,', ['name' => $notifiable->name]))
-            ->line(__(':submitter has submitted a deliverable for your review.', [
-                'submitter' => $this->submitterName,
-            ]))
+            ->line(__(':developer has submitted a new deliverable for review! 📋', ['developer' => $this->developerName]))
             ->line('**' . __('Deliverable Details:') . '**')
-            ->line(__('Deliverable: :name', ['name' => $this->deliverable->name]))
+            ->line(__('Deliverable: :name', ['name' => $this->deliverable->title]))
             ->line(__('Task: :task', ['task' => $taskTitle]))
             ->line(__('Project: :project', ['project' => $projectName]))
-            ->when($this->deliverable->description, function ($message) {
-                return $message->line(__('Description: :description', [
-                    'description' => substr($this->deliverable->description, 0, 150) . '...'
-                ]));
-            })
-            ->when($this->deliverable->file_path, function ($message) {
-                return $message->line(__('File attached: Yes'));
+            ->line(__('Submitted At: :time', ['time' => $this->deliverable->submitted_at?->format('Y-m-d H:i')]))
+            ->when($this->deliverable->submission_notes, function ($message) {
+                return $message->line('**' . __('Submission Notes:') . '**')
+                              ->line($this->deliverable->submission_notes);
             })
             ->action(__('Review Deliverable'), url("/dashboard/tasks/{$this->deliverable->task_id}"))
-            ->line(__('Please review and approve or reject this deliverable.'));
+            ->line(__('Please review this deliverable at your earliest convenience.'));
     }
 
     public function toArray(object $notifiable): array
@@ -56,18 +50,18 @@ class DeliverableSubmitted extends Notification implements ShouldQueue
         return [
             'type' => 'deliverable_submitted',
             'deliverable_id' => $this->deliverable->id,
-            'deliverable_name' => $this->deliverable->name,
+            'deliverable_name' => $this->deliverable->title,
             'task_id' => $this->deliverable->task_id,
             'task_title' => $this->deliverable->task?->title,
             'project_id' => $this->deliverable->task?->project_id,
             'project_name' => $this->deliverable->task?->project?->title,
-            'submitter_id' => $this->submitterId,
-            'submitter_name' => $this->submitterName,
-            'has_file' => !empty($this->deliverable->file_path),
+            'developer_name' => $this->developerName,
             'submitted_at' => $this->deliverable->submitted_at?->toISOString(),
-            'message' => __(':submitter submitted deliverable ":name" for review', [
-                'submitter' => $this->submitterName,
-                'name' => $this->deliverable->name,
+            'submission_notes' => $this->deliverable->submission_notes,
+            'is_bonus' => $this->deliverable->is_bonus,
+            'message' => __(':developer submitted deliverable ":name" for review 📋', [
+                'developer' => $this->developerName,
+                'name' => $this->deliverable->title,
             ]),
         ];
     }
