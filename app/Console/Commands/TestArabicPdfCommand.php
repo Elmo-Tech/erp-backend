@@ -32,7 +32,7 @@ class TestArabicPdfCommand extends Command
             'employee' => [
                 'name' => 'أحمد محمد علي',
                 'email' => 'ahmed@example.com',
-                'specialization' => 'مطور واجهات أمامية',
+                'specialization' => 'frontend_developer', // Use string instead of enum object
                 'totalPoints' => 150
             ],
             'period' => [
@@ -54,7 +54,8 @@ class TestArabicPdfCommand extends Command
                 'total' => 45,
                 'completed' => 42,
                 'inProgress' => 3,
-                'totalBounces' => 2
+                'totalBounces' => 2,
+                'tasksWithBounces' => [] // Add empty array to prevent errors
             ],
             'attendance' => [
                 'totalDays' => 22,
@@ -79,6 +80,12 @@ class TestArabicPdfCommand extends Command
                         'createdBy' => 'النظام'
                     ]
                 ]
+            ],
+            // Add missing optional sections to prevent template errors
+            'gracePeriod' => null,
+            'deductions' => [
+                'totalDeductions' => 0,
+                'dailyDeductions' => []
             ],
             'locale' => 'ar'
         ];

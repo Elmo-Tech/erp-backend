@@ -214,7 +214,23 @@
             </div>
             <div class="info-item">
                 <span class="info-label">{{ trans('employee_review.Specialization') }}:</span> 
-                {{ $employee['specialization'] ? trans('enums.' . $employee['specialization']->value) : trans('employee_review.N/A') }}
+                @php
+                    $specialization = $employee['specialization'];
+                    if ($specialization) {
+                        // Handle both enum objects and string values
+                        $specializationValue = is_object($specialization) && property_exists($specialization, 'value') 
+                            ? $specialization->value 
+                            : (string) $specialization;
+                        $translatedSpecialization = trans('enums.' . $specializationValue);
+                        // Fallback to original value if translation not found
+                        if ($translatedSpecialization === 'enums.' . $specializationValue) {
+                            $translatedSpecialization = $specializationValue;
+                        }
+                    } else {
+                        $translatedSpecialization = trans('employee_review.N/A');
+                    }
+                @endphp
+                {{ $translatedSpecialization }}
             </div>
             <div class="info-item">
                 <span class="info-label">{{ trans('employee_review.Current Points') }}:</span> {{ $employee['totalPoints'] }}
@@ -295,7 +311,10 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach(array_slice($deductions['dailyDeductions'], 0, 10) as $dailyDeduction)
+                @php
+                    $dailyDeductionsArray = is_array($deductions['dailyDeductions']) ? $deductions['dailyDeductions'] : $deductions['dailyDeductions']->toArray();
+                @endphp
+                @foreach(array_slice($dailyDeductionsArray, 0, 10) as $dailyDeduction)
                 <tr>
                     <td>{{ \Carbon\Carbon::parse($dailyDeduction['date'])->format('M j, Y') }}</td>
                     <td>{{ $dailyDeduction['clockIn'] }}</td>
@@ -355,7 +374,10 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach(array_slice($tasks['tasksWithBounces'], 0, 8) as $task)
+                @php
+                    $tasksWithBouncesArray = is_array($tasks['tasksWithBounces']) ? $tasks['tasksWithBounces'] : $tasks['tasksWithBounces']->toArray();
+                @endphp
+                @foreach(array_slice($tasksWithBouncesArray, 0, 8) as $task)
                 <tr>
                     <td>{{ Str::limit($task['title'], 30) }}</td>
                     <td>{{ Str::limit($task['projectTitle'] ?? 'N/A', 20) }}</td>
@@ -491,8 +513,9 @@
             <tbody>
                 @php
                     $transactions = is_array($points['transactions']) ? $points['transactions'] : $points['transactions']->toArray();
+                    $limitedTransactions = array_slice($transactions, 0, 15);
                 @endphp
-                @foreach(array_slice($transactions, 0, 15) as $transaction)
+                @foreach($limitedTransactions as $transaction)
                 <tr>
                     <td>{{ \Carbon\Carbon::parse($transaction['createdAt'])->format('M j, Y') }}</td>
                     <td class="{{ $transaction['points'] >= 0 ? 'positive-points' : 'negative-points' }}">
