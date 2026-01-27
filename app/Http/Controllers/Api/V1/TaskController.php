@@ -11,6 +11,7 @@ use App\Http\Requests\V1\Tasks\StoreTestScenarioRequest;
 use App\Http\Requests\V1\Tasks\VerifyTestScenarioRequest;
 use App\Http\Requests\V1\Tasks\UpdateTaskStatusRequest;
 use App\Http\Requests\V1\Tasks\AddCommentRequest;
+use App\Http\Requests\V1\Tasks\MarkCompleteRequest;
 use App\Http\Resources\V1\Tasks\TaskCollection;
 use App\Http\Resources\V1\Tasks\TaskResource;
 use App\Http\Resources\V1\Tasks\TaskAssigneeResource;
@@ -1156,5 +1157,99 @@ class TaskController extends Controller
                 __('messages.task_status_updated')
             );
         });
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/tasks/{id}/mark-complete",
+     *     operationId="markTaskComplete",
+     *     tags={"Tasks"},
+     *     summary="Mark a task as complete",
+     *     description="Mark a task as complete. Only primary assignees can mark tasks as complete, and active timers must be stopped first.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Task ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="reason", type="string", example="Task completed successfully", maxLength=500)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Task marked as complete successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Task marked as complete successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/TaskResource")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Validation error - Timer active or already completed",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Please stop the active timer before marking task as complete")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized - Only primary assignees can mark tasks as complete",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Only primary assignees can mark tasks as complete")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Task not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Task not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function markComplete(MarkCompleteRequest $request, Task $task): JsonResponse
+    {
+        try {
+            return DB::transaction(function () use ($request, $task) {
+                $data = $request->validated();
+                $user = $request->user();
+
+                $task = $this->taskService->markAsComplete(
+                    $task,
+                    $user,
+                    $data['reason'] ?? null
+                );
+
+                return ApiResponse::success(
+                    new TaskResource($task->load(['assignee', 'project', 'parent', 'children.assignee', 'assignees.user', 'tags'])),
+                    __('messages.task_marked_complete')
+                );
+            });
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
     }
 }

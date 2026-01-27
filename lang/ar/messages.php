@@ -48,6 +48,13 @@ return [
     'invoice_created_from_milestone' => 'تم إنشاء الفاتورة من المرحلة بنجاح',
     'invoice_linked_to_milestone' => 'تم ربط الفاتورة بالمرحلة بنجاح',
     'milestone_already_has_invoice' => 'المرحلة مرتبطة بفاتورة بالفعل',
+
+    // Tasks
+    'task_status_updated' => 'تم تحديث حالة المهمة بنجاح',
+    'task_marked_complete' => 'تم تحديد المهمة كمكتملة بنجاح',
+    'no_permission_manage_team' => 'ليس لديك صلاحية لإدارة الفريق في هذا النوع من المهام',
+    'no_permission_manage_test_scenarios' => 'ليس لديك صلاحية لإدارة سيناريوهات الاختبار في هذا النوع من المهام',
+    'no_permission_verify_test_scenarios' => 'فقط المدير ومراجعي المهام يمكنهم التحقق من سيناريوهات الاختبار',
     'cannot_create_invoice_for_paid_milestone' => 'لا يمكن إنشاء فاتورة لمرحلة مدفوعة',
 
     // Status Updates

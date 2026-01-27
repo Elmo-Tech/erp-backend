@@ -9,6 +9,7 @@ use App\Models\Task;
 use App\Models\TaskActivity;
 use App\Models\TaskAssignee;
 use App\Models\TaskTestScenario;
+use App\Models\TimeEntry;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -846,5 +847,41 @@ class TaskService
         if ($oldStatus === TaskStatus::COMPLETED && $newStatus !== TaskStatus::COMPLETED) {
             $task->update(['completed_at' => null]);
         }
+    }
+
+    /**
+     * Mark a task as complete with timeline validation.
+     * Validates that the user is a primary assignee and no active timers exist.
+     */
+    public function markAsComplete(Task $task, User $user, ?string $reason = null): Task
+    {
+        // Check if user is a primary assignee of this task
+        $isPrimaryAssignee = $task->assignees()
+            ->where('user_id', $user->id)
+            ->where('is_primary', true)
+            ->exists();
+
+        if (!$isPrimaryAssignee) {
+            throw new \InvalidArgumentException('Only primary assignees can mark tasks as complete');
+        }
+
+        // Check if task is already completed
+        if ($task->status === TaskStatus::COMPLETED) {
+            throw new \InvalidArgumentException('Task is already completed');
+        }
+
+        // Check for active timers on this task
+        $activeTimer = TimeEntry::where('trackable_type', Task::class)
+            ->where('trackable_id', $task->id)
+            ->where('user_id', $user->id)
+            ->whereNull('end_time')
+            ->first();
+
+        if ($activeTimer) {
+            throw new \InvalidArgumentException('Please stop the active timer before marking task as complete');
+        }
+
+        // Update task status to completed
+        return $this->updateTaskStatus($task, TaskStatus::COMPLETED->value, $user, $reason);
     }
 }

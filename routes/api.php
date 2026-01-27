@@ -261,6 +261,9 @@ Route::prefix('v1')->group(function () {
     // Task Status Update Route (flexible status transitions)
     Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
     
+    // Task Mark Complete Route (with timeline validation)
+    Route::post('tasks/{task}/mark-complete', [TaskController::class, 'markComplete'])->name('tasks.mark-complete');
+    
     // Task Children Route (for lazy loading hierarchy)
     Route::get('tasks/{task}/children', [TaskController::class, 'children'])->name('tasks.children');
     

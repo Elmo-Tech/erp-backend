@@ -48,6 +48,13 @@ return [
     'invoice_created_from_milestone' => 'Invoice created from milestone successfully',
     'invoice_linked_to_milestone' => 'Invoice linked to milestone successfully',
     'milestone_already_has_invoice' => 'Milestone already has an invoice linked',
+
+    // Tasks
+    'task_status_updated' => 'Task status updated successfully',
+    'task_marked_complete' => 'Task marked as complete successfully',
+    'no_permission_manage_team' => 'You do not have permission to manage team on this task type',
+    'no_permission_manage_test_scenarios' => 'You do not have permission to manage test scenarios on this task type',
+    'no_permission_verify_test_scenarios' => 'Only Admin and Task Reviewers can verify test scenarios',
     'cannot_create_invoice_for_paid_milestone' => 'Cannot create invoice for paid milestone',
 
     // Status Updates
