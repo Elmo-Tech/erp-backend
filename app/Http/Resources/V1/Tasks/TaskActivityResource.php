@@ -37,7 +37,7 @@ class TaskActivityResource extends JsonResource
             'user' => $this->whenLoaded('user', fn() => [
                 'userId' => $this->user->id,
                 'name' => $this->user->name,
-                'avatar' => $this->user->avatar ?? '',
+                'avatar' => $this->user->avatar,
             ]),
             'createdAt' => $this->created_at?->format('Y-m-d\TH:i:s') ?? '',
         ];

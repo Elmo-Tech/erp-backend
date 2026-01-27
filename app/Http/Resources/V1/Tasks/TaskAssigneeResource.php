@@ -33,7 +33,7 @@ class TaskAssigneeResource extends JsonResource
                 'userId' => $this->user->id,
                 'name' => $this->user->name,
                 'email' => $this->user->email,
-                'avatar' => $this->user->avatar ?? '',
+                'avatar' => $this->user->avatar,
             ]),
             'createdAt' => $this->created_at?->toISOString() ?? '',
         ];

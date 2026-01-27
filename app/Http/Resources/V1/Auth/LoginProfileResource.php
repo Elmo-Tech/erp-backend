@@ -34,7 +34,7 @@ class LoginProfileResource extends JsonResource
             'name' => $this->name ?? "",
             'email' => $this->email ?? "",
             'emailVerifiedAt' => $this->email_verified_at?->toISOString() ?? null,
-            'avatar' => $this->avatar ? \Storage::disk('public')->url($this->avatar) : "",
+            'avatar' => $this->avatar,
             'skills' => $this->skills ?? [],
             'createdAt' => $this->created_at?->toISOString() ?? "",
             'updatedAt' => $this->updated_at?->toISOString() ?? "",

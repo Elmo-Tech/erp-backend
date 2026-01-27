@@ -30,7 +30,7 @@ class LeadHistoryResource extends JsonResource
                     'userId' => $this->changedByUser->id,
                     'name' => $this->changedByUser->name ?? '',
                     'email' => $this->changedByUser->email ?? '',
-                    'avatar' => $this->changedByUser->avatar ?? '',
+                    'avatar' => $this->changedByUser->avatar,
                 ];
             }),
             'ipAddress' => $this->ip_address ?? '',

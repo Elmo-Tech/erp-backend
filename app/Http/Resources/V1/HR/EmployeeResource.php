@@ -38,7 +38,7 @@ class EmployeeResource extends JsonResource
             'userId' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'avatar' => $this->avatar ?? '',
+            'avatar' => $this->avatar,
             'isActive' => (bool) $this->is_active,
             'role' => $this->roles->first()?->name ?? '',
             'specialization' => $this->specialization?->value ?? '',

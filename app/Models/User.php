@@ -4,10 +4,12 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserSpecialization;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -79,6 +81,17 @@ class User extends Authenticatable
             'grace_days_reset_date' => 'date',
             'total_points' => 'integer',
         ];
+    }
+
+    /**
+     * Get the avatar URL accessor.
+     * Automatically converts avatar path to full URL.
+     */
+    protected function avatar(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? Storage::disk('public')->url($value) : "",
+        );
     }
 
     /**

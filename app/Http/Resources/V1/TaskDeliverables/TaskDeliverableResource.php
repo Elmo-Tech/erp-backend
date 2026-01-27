@@ -78,7 +78,7 @@ class TaskDeliverableResource extends JsonResource
                     'userId' => $this->reviewer->id,
                     'name' => $this->reviewer->name,
                     'email' => $this->reviewer->email,
-                    'avatar' => $this->reviewer->avatar ?? "",
+                    'avatar' => $this->reviewer->avatar,
                 ];
             }),
             

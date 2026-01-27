@@ -52,7 +52,7 @@ class AttendanceResource extends JsonResource
                 'userId' => $this->user->id,
                 'name' => $this->user->name,
                 'email' => $this->user->email,
-                'avatar' => $this->user->avatar ?? '',
+                'avatar' => $this->user->avatar,
                 'graceDaysRemaining' => max(0, $this->user->grace_days_allowed - $this->user->grace_days_used),
             ]),
         ];

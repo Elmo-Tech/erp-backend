@@ -82,7 +82,7 @@ class TaskResource extends JsonResource
                 'userId' => $this->assignee->id,
                 'name' => $this->assignee->name,
                 'email' => $this->assignee->email,
-                'avatar' => $this->assignee->avatar ?? '',
+                'avatar' => $this->assignee->avatar,
             ] : null),
             
             'assignees' => $this->whenLoaded('assignees', fn() => 

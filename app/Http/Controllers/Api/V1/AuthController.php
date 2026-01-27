@@ -432,7 +432,7 @@ class AuthController extends Controller
         ]);
 
         return ApiResponse::success([
-            'avatar' => \Storage::disk('public')->url($path),
+            'avatar' => $user->avatar,
         ], 'Avatar updated successfully');
     }
 }

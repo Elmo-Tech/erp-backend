@@ -36,7 +36,7 @@ class AdminUserResource extends JsonResource
             'name' => $this->name ?? "",
             'email' => $this->email ?? "",
             'emailVerifiedAt' => $this->email_verified_at?->toISOString() ?? null,
-            'avatar' => $this->avatar ?? "",
+            'avatar' => $this->avatar,
             'skills' => $this->skills ?? [],
             'roles' => $this->roles->pluck('name')->toArray(),
             'createdAt' => $this->created_at?->toISOString() ?? "",

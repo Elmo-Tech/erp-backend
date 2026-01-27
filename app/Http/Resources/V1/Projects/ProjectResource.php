@@ -62,7 +62,7 @@ class ProjectResource extends JsonResource
                             'userId' => $member->user->id,
                             'name' => $member->user->name ?? '',
                             'email' => $member->user->email ?? '',
-                            'avatar' => $member->user->avatar ?? '',
+                            'avatar' => $member->user->avatar,
                         ] : null,
                         'createdAt' => $member->created_at?->toISOString() ?? '',
                     ];
