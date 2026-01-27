@@ -181,7 +181,8 @@ class UserPerformanceService
     }
 
     /**
-     * Calculate task completion rate for a user.
+     * Calculate task completion rate for a user (PRIMARY assignees only).
+     * This ensures accurate performance metrics by only counting tasks the user is primarily responsible for.
      *
      * @param User $user
      * @param array $filters
@@ -189,7 +190,10 @@ class UserPerformanceService
      */
     private function calculateTaskCompletionRate(User $user, array $filters): float
     {
-        $taskQuery = Task::where('assigned_to', $user->id);
+        $taskQuery = Task::whereHas('assignees', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->where('is_primary', true); // Only primary assignees
+        });
 
         // Apply date range filter on task creation
         if (!empty($filters['dateFrom'])) {
@@ -211,7 +215,8 @@ class UserPerformanceService
     }
 
     /**
-     * Calculate average bounce rate for a user.
+     * Calculate average bounce rate for a user (PRIMARY assignees only).
+     * This ensures accurate quality metrics by only counting tasks the user is primarily responsible for.
      *
      * @param User $user
      * @param array $filters
@@ -219,7 +224,10 @@ class UserPerformanceService
      */
     private function calculateUserBounceRate(User $user, array $filters): float
     {
-        $taskQuery = Task::where('assigned_to', $user->id);
+        $taskQuery = Task::whereHas('assignees', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->where('is_primary', true); // Only primary assignees
+        });
 
         // Apply date range filter on task creation
         if (!empty($filters['dateFrom'])) {

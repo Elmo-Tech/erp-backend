@@ -145,12 +145,14 @@ class EmployeeReviewService
 
     /**
      * Get tasks data with details.
+     * Only includes tasks where the user is a PRIMARY assignee to ensure accurate performance metrics.
      */
     private function getTasksData(User $user, array $filters): array
     {
-        // Get tasks assigned to user through assignees relationship
+        // Get tasks assigned to user as PRIMARY assignee only
         $query = Task::whereHas('assignees', function ($q) use ($user) {
-            $q->where('user_id', $user->id);
+            $q->where('user_id', $user->id)
+              ->where('is_primary', true); // Only primary assignees
         })->with(['project:id,title']);
 
         if (!empty($filters['dateFrom'])) {
@@ -376,12 +378,14 @@ class EmployeeReviewService
     }
 
     /**
-     * Calculate task completion rate.
+     * Calculate task completion rate for PRIMARY assignees only.
+     * This ensures accurate performance metrics by only counting tasks the user is primarily responsible for.
      */
     private function calculateTaskCompletionRate(User $user, array $filters): float
     {
         $query = Task::whereHas('assignees', function ($q) use ($user) {
-            $q->where('user_id', $user->id);
+            $q->where('user_id', $user->id)
+              ->where('is_primary', true); // Only primary assignees
         });
 
         if (!empty($filters['dateFrom'])) {
@@ -403,12 +407,14 @@ class EmployeeReviewService
     }
 
     /**
-     * Calculate average bounce rate.
+     * Calculate average bounce rate for PRIMARY assignees only.
+     * This ensures accurate quality metrics by only counting tasks the user is primarily responsible for.
      */
     private function calculateAverageBounceRate(User $user, array $filters): float
     {
         $query = Task::whereHas('assignees', function ($q) use ($user) {
-            $q->where('user_id', $user->id);
+            $q->where('user_id', $user->id)
+              ->where('is_primary', true); // Only primary assignees
         });
 
         if (!empty($filters['dateFrom'])) {

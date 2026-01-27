@@ -147,8 +147,9 @@ class EmployeeService
         $totalDeductionMinutes = $attendances->sum('deduction_minutes');
         $graceDaysUsed = $attendances->where('used_grace_day', true)->count();
 
-        // Get task points
+        // Get task points (only from primary assignees)
         $taskPoints = TaskAssignee::where('user_id', $employee->id)
+            ->where('is_primary', true) // Only count points from primary assignments
             ->whereHas('task', function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('updated_at', [$startDate, $endDate]);
             })

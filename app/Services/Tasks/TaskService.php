@@ -619,11 +619,12 @@ class TaskService
             'metadata' => ['scenario_id' => $scenario->id, 'passed' => $passed],
         ]);
 
-        // Award/deduct points
+        // Award/deduct points only for primary assignees
         $developer = $scenario->completedBy;
         if ($developer) {
             $assignee = TaskAssignee::where('task_id', $scenario->task_id)
                 ->where('user_id', $developer->id)
+                ->where('is_primary', true) // Only primary assignees get points
                 ->first();
             
             if ($assignee) {
@@ -728,12 +729,14 @@ class TaskService
     }
 
     /**
-     * Get user points summary for a project.
+     * Get user points summary for a project (only from primary assignees).
+     * This ensures that reviewers and team leads don't get counted in performance metrics.
      */
     public function getUserPointsSummary(int $projectId): Collection
     {
         return TaskAssignee::query()
             ->whereHas('task', fn($q) => $q->where('project_id', $projectId))
+            ->where('is_primary', true) // Only count points from primary assignments
             ->selectRaw('user_id, SUM(points_earned) as total_points')
             ->groupBy('user_id')
             ->with('user:id,name,email')

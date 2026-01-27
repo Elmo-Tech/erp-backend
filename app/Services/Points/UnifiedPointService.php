@@ -302,23 +302,14 @@ class UnifiedPointService
     }
 
     /**
-     * Award task completion points
+     * Award task completion points based on timing only
+     * No base completion points - only timing-based points
      */
-    public function awardTaskCompletionPoints(User $user, Model $task, bool $isOnTime = false): array
+    public function awardTaskCompletionPoints(User $user, Model $task, bool $isOnTime = false, int $delayDays = 0): array
     {
         $results = [];
 
-        // Award basic completion points
-        $results['completion'] = $this->awardPoints(
-            $user,
-            PointTransactionType::TASK_COMPLETED,
-            null,
-            $task,
-            "Task completed: {$task->title}",
-            true
-        );
-
-        // Award on-time bonus if applicable
+        // Only award points for on-time delivery
         if ($isOnTime) {
             $results['onTime'] = $this->awardPoints(
                 $user,
@@ -326,6 +317,17 @@ class UnifiedPointService
                 null,
                 $task,
                 "Task delivered on time: {$task->title}",
+                true
+            );
+        }
+        // Deduct points for late delivery (1 point per day late)
+        elseif ($delayDays > 0) {
+            $results['late'] = $this->deductPoints(
+                $user,
+                PointTransactionType::TASK_LATE,
+                $delayDays, // Deduct 1 point per day late
+                $task,
+                "Task delivered {$delayDays} day(s) late: {$task->title}",
                 true
             );
         }

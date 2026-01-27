@@ -119,6 +119,24 @@ class Task extends Model implements Trackable
         return $this->assignees()->where('is_primary', true);
     }
 
+    /**
+     * Get all primary assignees (developers who are actually working on the task).
+     * These are the users who should be affected by performance metrics.
+     */
+    public function primaryAssignees(): HasMany
+    {
+        return $this->assignees()->where('is_primary', true);
+    }
+
+    /**
+     * Get non-primary assignees (reviewers and team leads).
+     * These users should NOT be affected by performance metrics.
+     */
+    public function nonPrimaryAssignees(): HasMany
+    {
+        return $this->assignees()->where('is_primary', false);
+    }
+
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'task_tags')->withTimestamps();
@@ -216,6 +234,17 @@ class Task extends Model implements Trackable
         return $this->assignees()
             ->where('user_id', $user->id)
             ->where('role', 'reviewer')
+            ->exists();
+    }
+
+    /**
+     * Check if a user is a primary assignee (should be affected by performance metrics).
+     */
+    public function isPrimaryAssignee(User $user): bool
+    {
+        return $this->assignees()
+            ->where('user_id', $user->id)
+            ->where('is_primary', true)
             ->exists();
     }
 

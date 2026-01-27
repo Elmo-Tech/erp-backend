@@ -16,8 +16,8 @@ use App\Services\Points\UnifiedPointService;
  * - Tracks status transitions from testing to in_progress
  * - Increments reopen_count when a task bounces back from testing
  * - Sends notifications when tasks are assigned
- * - Awards points for task completion and on-time delivery (MAIN and WEEKLY tasks only)
- * - Deducts points for task reopening (bug bounces) (MAIN and WEEKLY tasks only)
+ * - Awards points for on-time delivery only (MAIN and WEEKLY tasks only)
+ * - Deducts points for late delivery based on delay days (MAIN and WEEKLY tasks only)
  * - Helps measure code quality and identify problematic tasks
  *
  * Requirements: 5.2, 5.3, 5.4
@@ -51,7 +51,8 @@ class TaskObserver
      * - Detecting status changes from testing to in_progress
      * - Incrementing reopen_count for bug bounce rate tracking
      * - Calculating delay_days when task is completed
-     * - Awarding/deducting points based on task completion and quality
+     * - Awarding points for on-time delivery only
+     * - Deducting points for late delivery (1 point per day late)
      *
      * @param Task $task
      * @return void
@@ -75,18 +76,22 @@ class TaskObserver
         if ($oldStatus === TaskStatus::TESTING && $newStatus === TaskStatus::IN_PROGRESS) {
             $task->reopen_count = ($task->reopen_count ?? 0) + 1;
             
-            // Deduct points for bug bounce if task has an assignee and is not a subtask
-            if ($task->assignee && $this->shouldAwardPoints($task)) {
-                $this->pointService->deductTaskReopenPoints($task->assignee, $task);
+            // Deduct points for bug bounce only from primary assignees
+            if ($this->shouldAwardPoints($task)) {
+                $primaryAssignees = $task->assignees()->where('is_primary', true)->get();
+                foreach ($primaryAssignees as $assignee) {
+                    $this->pointService->deductTaskReopenPoints($assignee->user, $task);
+                }
             }
         }
 
-        // Handle task completion - award points
+        // Handle task completion - award/deduct points based on timing only
         if ($newStatus === TaskStatus::COMPLETED && $oldStatus !== TaskStatus::COMPLETED) {
             $task->completed_at = now();
             
             // Calculate delay_days if task has a due_date
             $isOnTime = false;
+            $delayDays = 0;
             if ($task->due_date) {
                 $dueDate = $task->due_date->startOfDay();
                 $completedDate = $task->completed_at->startOfDay();
@@ -97,20 +102,11 @@ class TaskObserver
                 $isOnTime = $delayDays <= 0;
             }
             
-            // Award points for task completion if task has an assignee and is not a subtask
-            if ($task->assignee && $this->shouldAwardPoints($task)) {
-                $this->pointService->awardTaskCompletionPoints($task->assignee, $task, $isOnTime);
-                
-                // Deduct points for late delivery
-                if (!$isOnTime && $task->delay_days > 0) {
-                    $this->pointService->deductPoints(
-                        $task->assignee,
-                        PointTransactionType::TASK_LATE,
-                        null,
-                        $task,
-                        "Task delivered {$task->delay_days} days late: {$task->title}",
-                        true
-                    );
+            // Award/deduct points based on timing only (no base completion points)
+            if ($this->shouldAwardPoints($task)) {
+                $primaryAssignees = $task->assignees()->where('is_primary', true)->get();
+                foreach ($primaryAssignees as $assignee) {
+                    $this->pointService->awardTaskCompletionPoints($assignee->user, $task, $isOnTime, $delayDays);
                 }
             }
         }

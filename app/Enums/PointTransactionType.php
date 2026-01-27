@@ -5,7 +5,6 @@ namespace App\Enums;
 enum PointTransactionType: string
 {
     // Positive Points
-    case TASK_COMPLETED = 'task_completed';
     case TASK_ON_TIME = 'task_on_time';
     case CODE_REVIEW_APPROVED = 'code_review_approved';
     case INNOVATION_VERIFIED = 'innovation_verified';
@@ -35,7 +34,6 @@ enum PointTransactionType: string
     {
         return match ($this) {
             // Positive - All worth 1 point
-            self::TASK_COMPLETED => 1,
             self::TASK_ON_TIME => 1,
             self::CODE_REVIEW_APPROVED => 1,
             self::INNOVATION_VERIFIED => 1,
@@ -47,9 +45,9 @@ enum PointTransactionType: string
             self::DELIVERABLE_APPROVED => 1,
             self::TEST_SCENARIO_VERIFIED => 1,
 
-            // Negative - All worth -1 point
+            // Negative - TASK_LATE is variable based on delay days, others worth -1 point
             self::BUG_FOUND => -1,
-            self::TASK_LATE => -1,
+            self::TASK_LATE => -1, // Default -1, but can be overridden with actual delay days
             self::CODE_REVIEW_REJECTED => -1,
             self::ATTENDANCE_LATE => -1,
             self::TASK_REOPENED => -1,
@@ -66,7 +64,6 @@ enum PointTransactionType: string
     public function isPositive(): bool
     {
         return in_array($this, [
-            self::TASK_COMPLETED,
             self::TASK_ON_TIME,
             self::CODE_REVIEW_APPROVED,
             self::INNOVATION_VERIFIED,
@@ -86,7 +83,6 @@ enum PointTransactionType: string
     public function label(): string
     {
         return match ($this) {
-            self::TASK_COMPLETED => 'Task Completed',
             self::TASK_ON_TIME => 'Task Delivered On Time',
             self::CODE_REVIEW_APPROVED => 'Code Review Approved',
             self::INNOVATION_VERIFIED => 'Innovation Verified',
