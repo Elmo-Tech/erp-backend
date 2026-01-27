@@ -2,312 +2,409 @@
 <html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ trans('employee_review.Employee Performance Review') }}</title>
     <style>
-        /* Use DejaVu Sans for all languages - it has excellent Arabic support */
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+        /* إعدادات الصفحة للطباعة */
+        @page {
+            margin: 0;
+            size: A4;
+        }
+
+        :root {
+            --primary: #0f172a;      /* Slate 900 - للنصوص الأساسية */
+            --secondary: #64748b;    /* Slate 500 - للنصوص الفرعية */
+            --border: #e2e8f0;       /* Slate 200 - للحدود */
+            --bg-surface: #ffffff;   /* خلفية الكروت */
+            --bg-base: #f8fafc;      /* خلفية الصفحة */
+            
+            --brand: #2563eb;        /* Blue 600 - اللون الرئيسي */
+            --success: #10b981;      /* Emerald 500 - للإيجابيات */
+            --success-bg: #ecfdf5;   
+            --danger: #ef4444;       /* Red 500 - للسلبيات */
+            --danger-bg: #fef2f2;
+            --warning: #f59e0b;      /* Amber 500 - للتحذيرات */
+            --warning-bg: #fffbeb;
+        }
+
         body {
-            font-family: "DejaVu Sans", "Arial Unicode MS", sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
-            color: #333;
+            font-family: 'Cairo', 'DejaVu Sans', 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--primary);
             margin: 0;
-            padding: 20px;
-            direction: {{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }};
+            padding: 40px;
+            font-size: 11px;
+            line-height: 1.5;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
         
+        * {
+            font-family: 'Cairo', 'DejaVu Sans', 'Inter', sans-serif;
+        }
+
+        /* تنسيقات عامة مساعدة */
+        .flex { display: flex; align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .text-right { text-align: right; }
+        .text-left { text-align: left; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: 700; }
+        .text-sm { font-size: 10px; }
+        .text-xs { font-size: 9px; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mt-4 { margin-top: 1rem; }
+        
+        /* الألوان للنصوص */
+        .text-success { color: #059669; }
+        .text-danger { color: #dc2626; }
+        .text-warning { color: #d97706; }
+        .text-secondary { color: var(--secondary); }
+        .text-brand { color: var(--brand); }
+
+        /* الكروت (Cards) */
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* الهيدر */
         .header {
-            text-align: center;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 20px;
             margin-bottom: 30px;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 20px;
         }
-        
         .header h1 {
-            color: #2563eb;
-            font-size: 24px;
+            font-size: 22px;
+            font-weight: 800;
             margin: 0;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+        }
+        .header-meta {
+            color: var(--secondary);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* أيقونات SVG */
+        .icon {
+            width: 16px;
+            height: 16px;
+            vertical-align: middle;
+            margin-{{ app()->getLocale() == 'ar' ? 'left' : 'right' }}: 6px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .icon-lg { width: 20px; height: 20px; }
+
+        /* قسم الموظف */
+        .employee-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .emp-item label {
+            display: block;
+            font-size: 9px;
+            color: var(--secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .emp-item div {
+            font-size: 13px;
             font-weight: 700;
         }
-        
-        .employee-info {
-            background-color: #f8fafc;
-            padding: 15px;
-            border-radius: 8px;
+
+        /* قسم الراتب (Hero) */
+        .salary-section {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
             margin-bottom: 25px;
         }
-        
-        .employee-info h2 {
-            color: #1e40af;
-            font-size: 16px;
-            margin: 0 0 10px 0;
-            font-weight: 600;
+        .salary-header {
+            background: #f1f5f9;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
         }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        .salary-body {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
         }
-        
-        .info-item {
-            margin-bottom: 5px;
-        }
-        
-        .info-label {
-            font-weight: bold;
-            color: #374151;
-        }
-        
-        .section {
-            margin-bottom: 25px;
-            page-break-inside: avoid;
-        }
-        
-        .section h3 {
-            background-color: #2563eb;
+        .salary-item { text-align: center; }
+        .salary-val { font-size: 18px; font-weight: 700; display: block; }
+        .salary-lbl { font-size: 10px; color: var(--secondary); font-family: 'Cairo', 'DejaVu Sans', sans-serif; }
+        .math-op { font-size: 20px; color: #cbd5e1; }
+        .final-box {
+            background: var(--primary);
             color: white;
-            padding: 8px 12px;
-            margin: 0 0 15px 0;
-            font-size: 14px;
-            border-radius: 4px;
-            font-weight: 600;
-        }
-        
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .metric-card {
-            background-color: #f1f5f9;
-            padding: 12px;
+            padding: 10px 20px;
             border-radius: 6px;
             text-align: center;
-            border-{{ app()->getLocale() == 'ar' ? 'right' : 'left' }}: 4px solid #2563eb;
         }
-        
-        .metric-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #1e40af;
-            margin-bottom: 5px;
-        }
-        
-        .metric-label {
-            font-size: 11px;
-            color: #64748b;
+
+        /* الجداول */
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th {
+            background: #f8fafc;
+            color: var(--secondary);
+            font-weight: 600;
             text-transform: uppercase;
-        }
-        
-        .progress-bar {
-            background-color: #e2e8f0;
-            height: 8px;
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 5px 0;
-        }
-        
-        .progress-fill {
-            background-color: #10b981;
-            height: 100%;
-            transition: width 0.3s ease;
-        }
-        
-        .transactions-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        
-        .transactions-table th,
-        .transactions-table td {
-            border: 1px solid #d1d5db;
-            padding: 8px;
+            padding: 10px;
             text-align: {{ app()->getLocale() == 'ar' ? 'right' : 'left' }};
-            font-size: 11px;
+            border-bottom: 1px solid var(--border);
         }
-        
-        .transactions-table th {
-            background-color: #f3f4f6;
-            font-weight: bold;
+        td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            color: var(--primary);
         }
-        
-        .positive-points {
-            color: #059669;
-            font-weight: bold;
+        tr:last-child td { border-bottom: none; }
+
+        /* البادجات */
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            display: inline-block;
         }
+        .bg-success { background: var(--success-bg); color: var(--success); border: 1px solid #a7f3d0; }
+        .bg-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid #fecaca; }
+        .bg-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid #fde68a; }
+
+        /* فواصل الصفحات */
+        .page-break { page-break-before: always; }
         
-        .negative-points {
-            color: #dc2626;
-            font-weight: bold;
-        }
+        /* Progress Bar */
+        .progress-container { background: #e2e8f0; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 5px; }
+        .progress-bar { height: 100%; border-radius: 3px; }
         
-        .warning-points {
-            color: #d97706;
-            font-weight: bold;
-        }
-        
-        .grace-period-info {
-            background-color: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .grace-period-expired {
-            background-color: #fee2e2;
-            border: 1px solid #ef4444;
-        }
-        
-        .grace-period-active {
-            background-color: #d1fae5;
-            border: 1px solid #10b981;
-        }
-        
-        .deduction-info {
-            background-color: #fef2f2;
-            border: 1px solid #f87171;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #d1d5db;
-            text-align: center;
-            font-size: 10px;
-            color: #6b7280;
-        }
-        
-        .page-break {
-            page-break-before: always;
-        }
-        
-        @media print {
-            body {
-                margin: 0;
-                padding: 15px;
-            }
+        /* إصلاح النصوص العربية */
+        .arabic-text {
+            font-family: 'Cairo', 'DejaVu Sans', sans-serif !important;
+            direction: ltr;
+            unicode-bidi: embed;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>{{ trans('employee_review.Employee Performance Review') }}</h1>
-        <p>{{ trans('employee_review.Generated on') }} {{ date('F j, Y') }}</p>
+
+    <div class="header flex justify-between">
+        <div>
+            <h1>
+                <svg class="icon icon-lg" style="margin-right: 8px; margin-left: 8px; color: var(--brand);" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                {{ trans('employee_review.Employee Performance Review') }}
+            </h1>
+        </div>
+        <div class="text-right header-meta">
+            <div>{{ trans('employee_review.Generated on') }} {{ date('F j, Y') }}</div>
+            <div style="margin-top: 4px;">{{ trans('employee_review.Report ID') }}: #{{ uniqid() }}</div>
+        </div>
     </div>
 
-    <div class="employee-info">
-        <h2>{{ trans('employee_review.Employee Information') }}</h2>
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Name') }}:</span> {{ $employee['name'] }}
+    <div class="card">
+        <div class="employee-grid">
+            <div class="emp-item">
+                <label>{{ trans('employee_review.Name') }}</label>
+                <div class="flex">
+                    <svg class="icon text-secondary" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span class="arabic-text">{{ $employee['name'] }}</span>
+                </div>
             </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Email') }}:</span> {{ $employee['email'] }}
+            <div class="emp-item">
+                <label>{{ trans('employee_review.Email') }}</label>
+                <div class="flex">
+                    <svg class="icon text-secondary" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    {{ $employee['email'] }}
+                </div>
             </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Specialization') }}:</span> 
-                @php
-                    $specialization = $employee['specialization'];
-                    if ($specialization) {
-                        // Handle both enum objects and string values
-                        $specializationValue = is_object($specialization) && property_exists($specialization, 'value') 
-                            ? $specialization->value 
-                            : (string) $specialization;
-                        $translatedSpecialization = trans('enums.' . $specializationValue);
-                        // Fallback to original value if translation not found
-                        if ($translatedSpecialization === 'enums.' . $specializationValue) {
-                            $translatedSpecialization = $specializationValue;
+            <div class="emp-item">
+                <label>{{ trans('employee_review.Specialization') }}</label>
+                <div class="flex">
+                    <svg class="icon text-secondary" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                    @php
+                        $specialization = $employee['specialization'];
+                        if ($specialization) {
+                            $specializationValue = is_object($specialization) && property_exists($specialization, 'value') ? $specialization->value : (string) $specialization;
+                            $translatedSpecialization = trans('enums.' . $specializationValue);
+                            if ($translatedSpecialization === 'enums.' . $specializationValue) $translatedSpecialization = $specializationValue;
+                        } else {
+                            $translatedSpecialization = trans('employee_review.N/A');
                         }
-                    } else {
-                        $translatedSpecialization = trans('employee_review.N/A');
-                    }
-                @endphp
-                {{ $translatedSpecialization }}
+                    @endphp
+                    <span class="arabic-text">{{ $translatedSpecialization }}</span>
+                </div>
             </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Current Points') }}:</span> {{ $employee['totalPoints'] }}
-            </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Review Period') }}:</span> 
-                {{ $period['dateFrom'] ?? trans('employee_review.All time') }} {{ trans('employee_review.to') }} {{ $period['dateTo'] ?? trans('employee_review.Present') }}
+            <div class="emp-item">
+                <label>{{ trans('employee_review.Current Points') }}</label>
+                <div class="flex">
+                    <svg class="icon {{ $employee['totalPoints'] >= 0 ? 'text-success' : 'text-danger' }}" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    {{ $employee['totalPoints'] }}
+                </div>
             </div>
         </div>
     </div>
 
-    {{-- Grace Period & Deduction Information --}}
-    @if(isset($gracePeriod))
-    <div class="grace-period-info {{ $gracePeriod['isExpired'] ? 'grace-period-expired' : 'grace-period-active' }}">
-        <h3 style="margin: 0 0 10px 0; color: {{ $gracePeriod['isExpired'] ? '#dc2626' : '#059669' }};">
-            {{ trans('employee_review.Grace Period Status') }}
-        </h3>
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Grace Period Days') }}:</span> {{ $gracePeriod['allowedDays'] }} {{ trans('employee_review.days') }}
+    @php
+        $baseSalary = $employee['salary'] ?? 0;
+        $pointValue = 10;
+        $pointsImpact = $overview['netPointsChange'] * $pointValue;
+        $attendanceDeduction = ($deductions['totalDeductions'] ?? 0) * $pointValue;
+        $totalAdjustment = $pointsImpact - $attendanceDeduction;
+        $finalSalary = $baseSalary + $totalAdjustment;
+    @endphp
+
+    <div class="salary-section">
+        <div class="salary-header flex justify-between">
+            <span>
+                <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                {{ trans('employee_review.Monthly Salary Calculation') }}
+            </span>
+            <span style="font-weight: 400; font-size: 10px; color: var(--secondary);">1 Point = {{ $pointValue }} EGP</span>
+        </div>
+        <div class="salary-body">
+            <div class="salary-item">
+                <span class="salary-val">{{ number_format($baseSalary) }}</span>
+                <span class="salary-lbl arabic-text">{{ trans('employee_review.Base Salary') }}</span>
             </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Days Used') }}:</span> {{ $gracePeriod['daysUsed'] }} {{ trans('employee_review.days') }}
-            </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Remaining Days') }}:</span> 
-                <span class="{{ $gracePeriod['remainingDays'] <= 0 ? 'negative-points' : 'positive-points' }}">
-                    {{ max(0, $gracePeriod['remainingDays']) }} {{ trans('employee_review.days') }}
+            <div class="math-op">+</div>
+            <div class="salary-item">
+                <span class="salary-val {{ $pointsImpact >= 0 ? 'text-success' : 'text-danger' }}">
+                    {{ number_format($pointsImpact) }}
                 </span>
+                <span class="salary-lbl arabic-text">{{ trans('employee_review.Performance') }}</span>
             </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Status') }}:</span> 
-                <span class="{{ $gracePeriod['isExpired'] ? 'negative-points' : 'positive-points' }}">
-                    {{ $gracePeriod['isExpired'] ? trans('employee_review.Expired') : trans('employee_review.Active') }}
-                </span>
+            <div class="math-op">-</div>
+            <div class="salary-item">
+                <span class="salary-val text-danger">{{ number_format($attendanceDeduction) }}</span>
+                <span class="salary-lbl arabic-text">{{ trans('employee_review.Deductions') }}</span>
+            </div>
+            <div class="math-op">=</div>
+            <div class="final-box">
+                <span style="display: block; font-size: 20px; font-weight: 800; line-height: 1;">{{ number_format($finalSalary) }} <small style="font-size: 10px;">EGP</small></span>
+                <span class="arabic-text" style="font-size: 9px; opacity: 0.9;">{{ trans('employee_review.Final Net Salary') }}</span>
             </div>
         </div>
-        @if($gracePeriod['isExpired'])
-        <p style="margin: 10px 0 0 0; color: #dc2626; font-weight: bold;">
-            {{ trans('employee_review.⚠️ Grace period has expired. Deductions may apply for late attendance.') }}
-        </p>
-        @endif
     </div>
-    @endif
 
-    {{-- Deduction Information --}}
-    @if(isset($deductions) && !empty($deductions['totalDeductions']))
-    <div class="deduction-info">
-        <h3 style="margin: 0 0 10px 0; color: #dc2626;">{{ trans('employee_review.Attendance Deductions') }}</h3>
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Total Late Minutes') }}:</span> 
-                <span class="negative-points">{{ $deductions['totalLateMinutes'] }} {{ trans('employee_review.minutes') }}</span>
+    <h3 style="margin-top: 0; font-size: 14px; margin-bottom: 10px;" class="arabic-text">{{ trans('employee_review.Performance Overview') }}</h3>
+    <div class="grid-3">
+        <div class="card" style="margin-bottom: 0;">
+            <div class="flex justify-between mb-2">
+                <span class="text-secondary text-xs uppercase font-bold arabic-text">{{ trans('employee_review.Productivity') }}</span>
+                <svg class="icon text-brand" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
             </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Deduction Rate') }}:</span> 
-                {{ $deductions['deductionRate'] }}{{ trans('employee_review./minute') }}
-            </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Total Deductions') }}:</span> 
-                <span class="negative-points">-{{ $deductions['totalDeductions'] }} {{ trans('employee_review.points') }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Days with Deductions') }}:</span> 
-                {{ $deductions['daysWithDeductions'] }} {{ trans('employee_review.days') }}
+            <div style="font-size: 24px; font-weight: 800;">{{ number_format($overview['productivityScore'], 1) }}<small class="text-secondary" style="font-size: 12px;">/100</small></div>
+            <div class="badge {{ $overview['productivityScore'] >= 80 ? 'bg-success' : 'bg-warning' }}" style="margin-top: 5px;">
+                <span class="arabic-text">{{ $overview['productivityScore'] >= 80 ? trans('employee_review.Good') : trans('employee_review.Average') }}</span>
             </div>
         </div>
         
-        @if(!empty($deductions['dailyDeductions']) && count($deductions['dailyDeductions']) > 0)
-        <h4 style="margin: 15px 0 10px 0; color: #dc2626; font-size: 12px;">{{ trans('employee_review.Daily Deduction Breakdown') }}</h4>
-        <table class="transactions-table">
+        <div class="card" style="margin-bottom: 0;">
+            <div class="flex justify-between mb-2">
+                <span class="text-secondary text-xs uppercase font-bold arabic-text">{{ trans('employee_review.Task Completion') }}</span>
+                <svg class="icon text-success" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <div style="font-size: 24px; font-weight: 800;">{{ number_format($overview['taskCompletionRate'], 1) }}%</div>
+            <div class="progress-container">
+                <div class="progress-bar" style="width: {{ $overview['taskCompletionRate'] }}%; background: var(--success);"></div>
+            </div>
+            <div class="text-xs text-secondary mt-4 arabic-text">{{ $tasks['completed'] }} / {{ $tasks['total'] }} {{ trans('employee_review.Tasks') }}</div>
+        </div>
+
+        <div class="card" style="margin-bottom: 0;">
+            <div class="flex justify-between mb-2">
+                <span class="text-secondary text-xs uppercase font-bold arabic-text">{{ trans('employee_review.Tracked Hours') }}</span>
+                <svg class="icon text-warning" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <div style="font-size: 24px; font-weight: 800;">{{ number_format($overview['totalTrackedHours'], 1) }}<small style="font-size: 12px;">h</small></div>
+            <div class="text-xs text-secondary mt-4 arabic-text">
+                {{ trans('employee_review.Idle') }}: {{ number_format($overview['totalIdleHours'], 1) }}h
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 25px;"></div>
+
+    <div class="grid-2">
+        @if(isset($gracePeriod))
+        <div class="card {{ $gracePeriod['isExpired'] ? 'bg-danger' : 'bg-success' }}" style="background: {{ $gracePeriod['isExpired'] ? '#fef2f2' : '#f0fdf4' }}; border-color: {{ $gracePeriod['isExpired'] ? '#fecaca' : '#bbf7d0' }};">
+            <h4 class="flex arabic-text" style="margin: 0 0 10px 0; color: {{ $gracePeriod['isExpired'] ? '#991b1b' : '#166534' }};">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                {{ trans('employee_review.Grace Period Status') }}
+            </h4>
+            <div class="grid-2">
+                <div>
+                    <span class="text-xs text-secondary block arabic-text">{{ trans('employee_review.Status') }}</span>
+                    <span class="font-bold {{ $gracePeriod['isExpired'] ? 'text-danger' : 'text-success' }} arabic-text">
+                        {{ $gracePeriod['isExpired'] ? trans('employee_review.Expired') : trans('employee_review.Active') }}
+                    </span>
+                </div>
+                <div>
+                    <span class="text-xs text-secondary block arabic-text">{{ trans('employee_review.Days Remaining') }}</span>
+                    <span class="font-bold">{{ max(0, $gracePeriod['remainingDays']) }} / {{ $gracePeriod['allowedDays'] }}</span>
+                </div>
+            </div>
+            <p class="text-xs mt-4 arabic-text" style="color: {{ $gracePeriod['isExpired'] ? '#7f1d1d' : '#14532d' }}; opacity: 0.8;">
+                {{ $gracePeriod['isExpired'] ? trans('employee_review.Grace period has expired. Deductions may apply.') : trans('employee_review.Grace period is active. No deductions applied.') }}
+            </p>
+        </div>
+        @endif
+
+        @if(isset($deductions))
+        <div class="card">
+            <h4 class="flex arabic-text" style="margin: 0 0 10px 0;">
+                <svg class="icon text-danger" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                {{ trans('employee_review.Attendance Deductions') }}
+            </h4>
+            <div class="grid-2">
+                <div>
+                    <span class="text-xs text-secondary block arabic-text">{{ trans('employee_review.Late Minutes') }}</span>
+                    <span class="font-bold text-danger">{{ $deductions['totalLateMinutes'] }} min</span>
+                </div>
+                <div>
+                    <span class="text-xs text-secondary block arabic-text">{{ trans('employee_review.Total Deductions') }}</span>
+                    <span class="font-bold text-danger">-{{ $deductions['totalDeductions'] }} pts</span>
+                </div>
+            </div>
+        </div>
+        @endif
+    </div>
+
+    @if(isset($deductions) && !empty($deductions['dailyDeductions']) && count($deductions['dailyDeductions']) > 0)
+    <div class="card">
+        <h4 class="arabic-text" style="margin: 0 0 15px 0; font-size: 12px;">{{ trans('employee_review.Daily Deduction Breakdown') }}</h4>
+        <table>
             <thead>
                 <tr>
-                    <th>{{ trans('employee_review.Date') }}</th>
-                    <th>{{ trans('employee_review.Clock In') }}</th>
-                    <th>{{ trans('employee_review.Late Minutes') }}</th>
-                    <th>{{ trans('employee_review.Points Deducted') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Date') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Clock In') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Late Minutes') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Points Deducted') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -317,60 +414,31 @@
                 @foreach(array_slice($dailyDeductionsArray, 0, 10) as $dailyDeduction)
                 <tr>
                     <td>{{ \Carbon\Carbon::parse($dailyDeduction['date'])->format('M j, Y') }}</td>
-                    <td>{{ $dailyDeduction['clockIn'] }}</td>
-                    <td class="warning-points">{{ $dailyDeduction['lateMinutes'] }}</td>
-                    <td class="negative-points">-{{ $dailyDeduction['deduction'] }}</td>
+                    <td><span class="badge bg-warning" style="color: #92400e;">{{ $dailyDeduction['clockIn'] }}</span></td>
+                    <td class="font-bold text-warning">{{ $dailyDeduction['lateMinutes'] }} min</td>
+                    <td class="font-bold text-danger">-{{ $dailyDeduction['deduction'] }}</td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
-        @endif
     </div>
     @endif
 
-    {{-- Work Quality Assessment --}}
+    <div class="page-break"></div>
+
     @if(isset($tasks) && !empty($tasks['tasksWithBounces']) && count($tasks['tasksWithBounces']) > 0)
-    <div class="section">
-        <h3>{{ trans('employee_review.Work Quality Assessment') }}</h3>
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Tasks with Issues') }}:</span> 
-                <span class="{{ count($tasks['tasksWithBounces']) > 3 ? 'negative-points' : 'warning-points' }}">
-                    {{ count($tasks['tasksWithBounces']) }} {{ trans('employee_review.tasks') }}
-                </span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Total Bounces') }}:</span> 
-                <span class="{{ $tasks['totalBounces'] > 5 ? 'negative-points' : 'warning-points' }}">
-                    {{ $tasks['totalBounces'] }} {{ trans('employee_review.bounces') }}
-                </span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Quality Score') }}:</span> 
-                @php
-                    $qualityScore = $tasks['total'] > 0 ? (($tasks['total'] - count($tasks['tasksWithBounces'])) / $tasks['total']) * 100 : 100;
-                @endphp
-                <span class="{{ $qualityScore >= 80 ? 'positive-points' : ($qualityScore >= 60 ? 'warning-points' : 'negative-points') }}">
-                    {{ number_format($qualityScore, 1) }}%
-                </span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">{{ trans('employee_review.Average Bounce Rate') }}:</span> 
-                <span class="{{ $overview['averageBounceRate'] <= 0.5 ? 'positive-points' : ($overview['averageBounceRate'] <= 1 ? 'warning-points' : 'negative-points') }}">
-                    {{ $overview['averageBounceRate'] }}
-                </span>
-            </div>
-        </div>
-        
-        <h4 style="margin: 15px 0 10px 0; color: #d97706; font-size: 12px;">{{ trans('employee_review.Tasks Requiring Rework') }}</h4>
-        <table class="transactions-table">
+    <div class="card" style="border-left: 4px solid var(--danger);">
+        <h4 class="flex text-danger arabic-text" style="margin: 0 0 15px 0;">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            {{ trans('employee_review.Tasks Requiring Rework') }} ({{ count($tasks['tasksWithBounces']) }})
+        </h4>
+        <table>
             <thead>
                 <tr>
-                    <th>{{ trans('employee_review.Task') }}</th>
-                    <th>{{ trans('employee_review.Project') }}</th>
-                    <th>{{ trans('employee_review.Bounces') }}</th>
-                    <th>{{ trans('employee_review.Status') }}</th>
-                    <th>{{ trans('employee_review.Time Spent') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Task') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Project') }}</th>
+                    <th class="text-center arabic-text">{{ trans('employee_review.Bounces') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Status') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -379,20 +447,17 @@
                 @endphp
                 @foreach(array_slice($tasksWithBouncesArray, 0, 8) as $task)
                 <tr>
-                    <td>{{ Str::limit($task['title'], 30) }}</td>
-                    <td>{{ Str::limit($task['projectTitle'] ?? 'N/A', 20) }}</td>
-                    <td class="negative-points">{{ $task['reopenCount'] }}</td>
+                    <td class="font-bold arabic-text">{{ Str::limit($task['title'], 35) }}</td>
+                    <td class="text-secondary arabic-text">{{ Str::limit($task['projectTitle'] ?? 'N/A', 20) }}</td>
+                    <td class="text-center text-danger font-bold">{{ $task['reopenCount'] }}</td>
                     <td>
                         @php
                             $statusKey = strtolower(str_replace(' ', '_', $task['status']));
                             $translatedStatus = trans('enums.' . $statusKey);
-                            if ($translatedStatus === 'enums.' . $statusKey) {
-                                $translatedStatus = $task['status'];
-                            }
+                            if ($translatedStatus === 'enums.' . $statusKey) $translatedStatus = $task['status'];
                         @endphp
-                        {{ $translatedStatus }}
+                        <span class="badge bg-warning arabic-text">{{ $translatedStatus }}</span>
                     </td>
-                    <td>{{ $task['totalTimeSpent'] }}h</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -400,114 +465,16 @@
     </div>
     @endif
 
-    <div class="section">
-        <h3>{{ trans('employee_review.Performance Overview') }}</h3>
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-value">{{ number_format($overview['totalTrackedHours'], 1) }}</div>
-                <div class="metric-label">{{ trans('employee_review.Total Tracked Hours') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ number_format($overview['totalIdleHours'], 1) }}</div>
-                <div class="metric-label">{{ trans('employee_review.Total Idle Hours') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ number_format($overview['taskCompletionRate'], 1) }}%</div>
-                <div class="metric-label">{{ trans('employee_review.Task Completion Rate') }}</div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: {{ $overview['taskCompletionRate'] }}%"></div>
-                </div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ number_format($overview['averageBounceRate'], 2) }}</div>
-                <div class="metric-label">{{ trans('employee_review.Average Bounce Rate') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ $overview['attendanceDays'] }}</div>
-                <div class="metric-label">{{ trans('employee_review.Attendance Days') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ number_format($overview['productivityScore'], 1) }}</div>
-                <div class="metric-label">{{ trans('employee_review.Productivity Score') }}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>{{ trans('employee_review.Points Summary') }}</h3>
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-value positive-points">+{{ $overview['pointsEarned'] }}</div>
-                <div class="metric-label">{{ trans('employee_review.Points Earned') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value negative-points">-{{ $overview['pointsDeducted'] }}</div>
-                <div class="metric-label">{{ trans('employee_review.Points Deducted') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value {{ $overview['netPointsChange'] >= 0 ? 'positive-points' : 'negative-points' }}">
-                    {{ $overview['netPointsChange'] >= 0 ? '+' : '' }}{{ $overview['netPointsChange'] }}
-                </div>
-                <div class="metric-label">{{ trans('employee_review.Net Points Change') }}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>{{ trans('employee_review.Tasks Summary') }}</h3>
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-value">{{ $tasks['total'] }}</div>
-                <div class="metric-label">{{ trans('employee_review.Total Tasks') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ $tasks['completed'] }}</div>
-                <div class="metric-label">{{ trans('employee_review.Completed Tasks') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ $tasks['inProgress'] }}</div>
-                <div class="metric-label">{{ trans('employee_review.In Progress Tasks') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ $tasks['totalBounces'] }}</div>
-                <div class="metric-label">{{ trans('employee_review.Total Bounces') }}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>{{ trans('employee_review.Attendance Summary') }}</h3>
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-value">{{ $attendance['totalDays'] }}</div>
-                <div class="metric-label">{{ trans('employee_review.Total Days') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ $attendance['lateDays'] }}</div>
-                <div class="metric-label">{{ trans('employee_review.Late Days') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ $attendance['totalLateMinutes'] }}</div>
-                <div class="metric-label">{{ trans('employee_review.Total Late Minutes') }}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{{ number_format($attendance['averageIdlePerDay'], 1) }}</div>
-                <div class="metric-label">{{ trans('employee_review.Avg Idle Per Day (min)') }}</div>
-            </div>
-        </div>
-    </div>
-
     @if(!empty($points['transactions']) && count($points['transactions']) > 0)
-    <div class="section page-break">
-        <h3>{{ trans('employee_review.Recent Point Transactions') }}</h3>
-        <table class="transactions-table">
-            <thead>
+    <h3 class="arabic-text" style="font-size: 14px; margin-bottom: 10px; margin-top: 20px;">{{ trans('employee_review.Recent Point Transactions') }}</h3>
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <table>
+            <thead style="background: #f1f5f9;">
                 <tr>
-                    <th>{{ trans('employee_review.Date') }}</th>
-                    <th>{{ trans('employee_review.Points') }}</th>
-                    <th>{{ trans('employee_review.Type') }}</th>
-                    <th>{{ trans('employee_review.Reason') }}</th>
-                    <th>{{ trans('employee_review.Created By') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Date') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Type') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Reason') }}</th>
+                    <th class="text-center arabic-text">{{ trans('employee_review.Points') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -517,23 +484,19 @@
                 @endphp
                 @foreach($limitedTransactions as $transaction)
                 <tr>
-                    <td>{{ \Carbon\Carbon::parse($transaction['createdAt'])->format('M j, Y') }}</td>
-                    <td class="{{ $transaction['points'] >= 0 ? 'positive-points' : 'negative-points' }}">
-                        {{ $transaction['points'] >= 0 ? '+' : '' }}{{ $transaction['points'] }}
-                    </td>
-                    <td>
+                    <td style="width: 15%;">{{ \Carbon\Carbon::parse($transaction['createdAt'])->format('M j, Y') }}</td>
+                    <td style="width: 20%;">
                         @php
                             $transactionType = strtolower(str_replace(' ', '_', $transaction['type']));
                             $translatedType = trans('enums.' . $transactionType);
-                            // Fallback if translation not found
-                            if ($translatedType === 'enums.' . $transactionType) {
-                                $translatedType = $transaction['type'];
-                            }
+                            if ($translatedType === 'enums.' . $transactionType) $translatedType = $transaction['type'];
                         @endphp
-                        {{ $translatedType }}
+                        <span class="arabic-text" style="font-size: 10px; font-weight: 600;">{{ $translatedType }}</span>
                     </td>
-                    <td>{{ $transaction['reason'] ?? trans('employee_review.N/A') }}</td>
-                    <td>{{ $transaction['createdBy'] ?? trans('employee_review.System') }}</td>
+                    <td style="width: 50%; color: var(--secondary);" class="arabic-text">{{ $transaction['reason'] ?? trans('employee_review.N/A') }}</td>
+                    <td style="width: 15%;" class="text-center font-bold {{ $transaction['points'] >= 0 ? 'text-success' : 'text-danger' }}">
+                        {{ $transaction['points'] >= 0 ? '+' : '' }}{{ $transaction['points'] }}
+                    </td>
                 </tr>
                 @endforeach
             </tbody>
@@ -541,143 +504,33 @@
     </div>
     @endif
 
-    {{-- Management Assessment Section --}}
-    <div class="section page-break">
-        <h3>{{ trans('employee_review.Management Assessment & Recommendations') }}</h3>
+    <div class="card" style="background: #f8fafc; border: 1px dashed var(--border);">
+        <h4 class="arabic-text" style="margin: 0 0 10px 0; color: var(--primary);">{{ trans('employee_review.Management Recommendations') }}</h4>
         
-        {{-- Overall Performance Rating --}}
-        <div class="grace-period-info {{ $overview['productivityScore'] >= 80 ? 'grace-period-active' : ($overview['productivityScore'] >= 60 ? '' : 'grace-period-expired') }}">
-            <h4 style="margin: 0 0 10px 0; color: {{ $overview['productivityScore'] >= 80 ? '#059669' : ($overview['productivityScore'] >= 60 ? '#d97706' : '#dc2626') }};">
-                {{ trans('employee_review.Overall Performance Rating') }}
-            </h4>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">{{ trans('employee_review.Productivity Score') }}:</span> 
-                    <span class="{{ $overview['productivityScore'] >= 80 ? 'positive-points' : ($overview['productivityScore'] >= 60 ? 'warning-points' : 'negative-points') }}">
-                        {{ $overview['productivityScore'] }}/100
-                    </span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">{{ trans('employee_review.Performance Level') }}:</span> 
-                    @php
-                        $performanceLevel = $overview['productivityScore'] >= 90 ? 'Excellent' : 
-                                          ($overview['productivityScore'] >= 80 ? 'Good' : 
-                                          ($overview['productivityScore'] >= 70 ? 'Satisfactory' : 
-                                          ($overview['productivityScore'] >= 60 ? 'Needs Improvement' : 'Poor')));
-                        $performanceLevelKey = strtolower(str_replace(' ', '_', $performanceLevel));
-                    @endphp
-                    <span class="{{ $overview['productivityScore'] >= 80 ? 'positive-points' : ($overview['productivityScore'] >= 60 ? 'warning-points' : 'negative-points') }}">
-                        {{ trans('employee_review.' . $performanceLevelKey, [], 'en') !== 'employee_review.' . $performanceLevelKey ? trans('employee_review.' . $performanceLevelKey) : $performanceLevel }}
-                    </span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">{{ trans('employee_review.Attendance Rating') }}:</span> 
-                    @php
-                        $latePercentage = $attendance['totalDays'] > 0 ? ($attendance['lateDays'] / $attendance['totalDays']) * 100 : 0;
-                        $attendanceRating = $latePercentage <= 5 ? 'Excellent' : 
-                                          ($latePercentage <= 10 ? 'Good' : 
-                                          ($latePercentage <= 20 ? 'Fair' : 'Poor'));
-                    @endphp
-                    <span class="{{ $latePercentage <= 10 ? 'positive-points' : ($latePercentage <= 20 ? 'warning-points' : 'negative-points') }}">
-                        {{ $attendanceRating }} ({{ number_format($latePercentage, 1) }}% {{ trans('employee_review.late days') }})
-                    </span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">{{ trans('employee_review.Work Quality') }}:</span> 
-                    @php
-                        $qualityRating = $overview['averageBounceRate'] <= 0.3 ? 'Excellent' : 
-                                       ($overview['averageBounceRate'] <= 0.7 ? 'Good' : 
-                                       ($overview['averageBounceRate'] <= 1.2 ? 'Fair' : 'Poor'));
-                    @endphp
-                    <span class="{{ $overview['averageBounceRate'] <= 0.7 ? 'positive-points' : ($overview['averageBounceRate'] <= 1.2 ? 'warning-points' : 'negative-points') }}">
-                        {{ $qualityRating }} ({{ $overview['averageBounceRate'] }} {{ trans('employee_review.avg bounces') }})
-                    </span>
-                </div>
+        @php
+            $totalImpact = $overview['netPointsChange'] - ($deductions['totalDeductions'] ?? 0);
+        @endphp
+
+        @if($totalImpact > 20)
+            <div class="flex text-success font-bold arabic-text">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                {{ trans('employee_review.Bonus Consideration') }}
             </div>
-        </div>
-
-        {{-- Financial Impact Assessment --}}
-        <div class="deduction-info" style="margin-top: 20px;">
-            <h4 style="margin: 0 0 10px 0; color: #dc2626;">{{ trans('employee_review.Financial Impact Assessment') }}</h4>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">{{ trans('employee_review.Points Balance Impact') }}:</span> 
-                    <span class="{{ $overview['netPointsChange'] >= 0 ? 'positive-points' : 'negative-points' }}">
-                        {{ $overview['netPointsChange'] >= 0 ? '+' : '' }}{{ $overview['netPointsChange'] }} {{ trans('employee_review.points') }}
-                    </span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">{{ trans('employee_review.Attendance Deductions') }}:</span> 
-                    <span class="negative-points">
-                        -{{ $deductions['totalDeductions'] ?? 0 }} {{ trans('employee_review.points') }}
-                    </span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">{{ trans('employee_review.Recommended Action') }}:</span> 
-                    @php
-                        $totalImpact = $overview['netPointsChange'] - ($deductions['totalDeductions'] ?? 0);
-                        $recommendedAction = $totalImpact >= 10 ? 'Bonus Consideration' : 
-                                           ($totalImpact >= 0 ? 'No Action Needed' : 
-                                           ($totalImpact >= -10 ? 'Warning' : 'Salary Deduction'));
-                    @endphp
-                    <span class="{{ $totalImpact >= 0 ? 'positive-points' : ($totalImpact >= -10 ? 'warning-points' : 'negative-points') }}">
-                        {{ $recommendedAction }}
-                    </span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">{{ trans('employee_review.Total Financial Impact') }}:</span> 
-                    <span class="{{ $totalImpact >= 0 ? 'positive-points' : 'negative-points' }}">
-                        {{ $totalImpact >= 0 ? '+' : '' }}{{ $totalImpact }} {{ trans('employee_review.points') }}
-                    </span>
-                </div>
+            <p class="text-secondary arabic-text" style="margin: 5px 0 0 28px;">{{ trans('employee_review.Strong positive performance warrants bonus or salary increase consideration.') }}</p>
+        @elseif($totalImpact < -10)
+             <div class="flex text-danger font-bold arabic-text">
+                <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                {{ trans('employee_review.Action Required') }}
             </div>
-        </div>
-
-        {{-- Detailed Recommendations --}}
-        <div style="margin-top: 20px; padding: 15px; background-color: #f8fafc; border-radius: 8px;">
-            <h4 style="margin: 0 0 10px 0; color: #1e40af;">{{ trans('employee_review.Management Recommendations') }}</h4>
-            
-            @if($overview['productivityScore'] >= 85)
-                <p style="color: #059669; margin: 5px 0;">
-                    <strong>✓ {{ trans('employee_review.High Performer') }}:</strong> {{ trans('employee_review.Consider for promotion or additional responsibilities. Excellent work quality and attendance.') }}
-                </p>
-            @elseif($overview['productivityScore'] >= 70)
-                <p style="color: #d97706; margin: 5px 0;">
-                    <strong>⚠ {{ trans('employee_review.Average Performer') }}:</strong> {{ trans('employee_review.Provide additional training and support. Monitor progress closely.') }}
-                </p>
-            @else
-                <p style="color: #dc2626; margin: 5px 0;">
-                    <strong>⚠ {{ trans('employee_review.Needs Improvement') }}:</strong> {{ trans('employee_review.Immediate intervention required. Consider performance improvement plan.') }}
-                </p>
-            @endif
-
-            @if(isset($gracePeriod) && $gracePeriod['isExpired'])
-                <p style="color: #dc2626; margin: 5px 0;">
-                    <strong>⚠ {{ trans('employee_review.Attendance Issue') }}:</strong> {{ trans('employee_review.Grace period exceeded. Implement attendance improvement plan.') }}
-                </p>
-            @endif
-
-            @if($overview['averageBounceRate'] > 1.0)
-                <p style="color: #dc2626; margin: 5px 0;">
-                    <strong>⚠ {{ trans('employee_review.Quality Concern') }}:</strong> {{ trans('employee_review.High rework rate indicates need for additional training or mentoring.') }}
-                </p>
-            @endif
-
-            @if($overview['netPointsChange'] < -20)
-                <p style="color: #dc2626; margin: 5px 0;">
-                    <strong>💰 {{ trans('employee_review.Salary Deduction Recommended') }}:</strong> {{ trans('employee_review.Significant negative point balance warrants salary adjustment discussion.') }}
-                </p>
-            @elseif($overview['netPointsChange'] > 20)
-                <p style="color: #059669; margin: 5px 0;">
-                    <strong>💰 {{ trans('employee_review.Bonus Consideration') }}:</strong> {{ trans('employee_review.Strong positive performance warrants bonus or salary increase consideration.') }}
-                </p>
-            @endif
-        </div>
+            <p class="text-secondary arabic-text" style="margin: 5px 0 0 28px;">{{ trans('employee_review.Significant negative point balance warrants salary adjustment discussion.') }}</p>
+        @else
+            <div class="flex text-secondary font-bold arabic-text">
+                <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                {{ trans('employee_review.Stable Performance') }}
+            </div>
+            <p class="text-secondary arabic-text" style="margin: 5px 0 0 28px;">{{ trans('employee_review.Performance is stable. Continue monitoring.') }}</p>
+        @endif
     </div>
 
-    <div class="footer">
-        <p>{{ trans('employee_review.This report was generated automatically by the Business OS system.') }}</p>
-        <p>{{ trans('employee_review.Report ID') }}: {{ uniqid() }} | {{ trans('employee_review.Generated at') }} {{ date('Y-m-d H:i:s') }}</p>
-    </div>
 </body>
 </html>

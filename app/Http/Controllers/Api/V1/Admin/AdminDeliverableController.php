@@ -339,24 +339,27 @@ class AdminDeliverableController extends Controller
     {
         $deliverable = TaskDeliverable::with('reviewer', 'task')->findOrFail($deliverableId);
 
-        try {
-            $reviewData = [
-                'reviewNotes' => $request->reviewNotes ?? '[Admin Force Approved]',
-                'pointsAwarded' => $request->pointsAwarded ?? 1,
-            ];
+        return DB::transaction(function () use ($request, $deliverable) {
+            $pointsAwarded = $request->pointsAwarded ?? 1;
+            $reviewNotes = $request->reviewNotes ?? '[Admin Force Approved]';
 
-            $approvedDeliverable = $this->deliverableService->approveDeliverable(
-                $deliverable,
-                auth()->user(),
-                $reviewData
-            );
+            $deliverable->update([
+                'status' => DeliverableStatus::APPROVED,
+                'review_notes' => $reviewNotes,
+                'reviewed_at' => now(),
+                'reviewed_by' => auth()->id(),
+                'points_awarded' => $pointsAwarded,
+            ]);
+
+            // Award points to the task assignee(s)
+            $this->deliverableService->awardPointsToAssignees($deliverable, $pointsAwarded, auth()->user());
+
+            $deliverable->load('reviewer', 'task');
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($approvedDeliverable)
+                'deliverable' => new TaskDeliverableResource($deliverable)
             ], __('messages.admin_deliverable_approved'));
-        } catch (\InvalidArgumentException $e) {
-            return ApiResponse::error($e->getMessage(), 400);
-        }
+        });
     }
 
     /**
@@ -395,23 +398,26 @@ class AdminDeliverableController extends Controller
     {
         $deliverable = TaskDeliverable::with('reviewer', 'task')->findOrFail($deliverableId);
 
-        try {
-            $reviewData = [
-                'reviewNotes' => $request->reviewNotes ?? '[Admin Force Rejected]',
-                'pointsDeducted' => 1, // Default deduction for admin rejection
-            ];
+        return DB::transaction(function () use ($request, $deliverable) {
+            $pointsDeducted = 1; // Default deduction for admin rejection
+            $reviewNotes = $request->reviewNotes ?? '[Admin Force Rejected]';
 
-            $rejectedDeliverable = $this->deliverableService->rejectDeliverable(
-                $deliverable,
-                auth()->user(),
-                $reviewData
-            );
+            $deliverable->update([
+                'status' => DeliverableStatus::REJECTED,
+                'review_notes' => $reviewNotes,
+                'reviewed_at' => now(),
+                'reviewed_by' => auth()->id(),
+                'points_awarded' => -$pointsDeducted,
+            ]);
+
+            // Deduct points from the task assignee(s)
+            $this->deliverableService->deductPointsFromAssignees($deliverable, $pointsDeducted, auth()->user());
+
+            $deliverable->load('reviewer', 'task');
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($rejectedDeliverable)
+                'deliverable' => new TaskDeliverableResource($deliverable)
             ], __('messages.admin_deliverable_rejected'));
-        } catch (\InvalidArgumentException $e) {
-            return ApiResponse::error($e->getMessage(), 400);
-        }
+        });
     }
 }

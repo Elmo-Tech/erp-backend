@@ -281,7 +281,7 @@ class DeliverableService
      * Award points to primary task assignees only.
      * Reviewers and team leads should not be affected by deliverable approvals.
      */
-    private function awardPointsToAssignees(TaskDeliverable $deliverable, int $points, User $reviewer): void
+    public function awardPointsToAssignees(TaskDeliverable $deliverable, int $points, User $reviewer): void
     {
         // Only award points to primary assignees (the actual developers working on the task)
         $primaryAssignees = $deliverable->task->assignees()->where('is_primary', true)->get();
@@ -302,7 +302,7 @@ class DeliverableService
      * Deduct points from primary task assignees only.
      * Reviewers and team leads should not be affected by deliverable rejections.
      */
-    private function deductPointsFromAssignees(TaskDeliverable $deliverable, int $points, User $reviewer): void
+    public function deductPointsFromAssignees(TaskDeliverable $deliverable, int $points, User $reviewer): void
     {
         // Only deduct points from primary assignees (the actual developers working on the task)
         $primaryAssignees = $deliverable->task->assignees()->where('is_primary', true)->get();

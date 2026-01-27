@@ -961,6 +961,13 @@ class AdminStatsController extends Controller
             
             // Add locale to review data for PDF generation
             $reviewData['locale'] = $locale;
+            
+            // Add forPdf flag to get ALL transactions without pagination
+            $filters['forPdf'] = true;
+            
+            // Get complete points data for PDF (all transactions)
+            $completePointsData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
+            $reviewData['points'] = $completePointsData['points'];
 
             try {
                 // Generate filename with date range if provided
@@ -968,7 +975,7 @@ class AdminStatsController extends Controller
                 if (isset($filters['dateFrom']) && isset($filters['dateTo'])) {
                     $dateRange = '_' . $filters['dateFrom'] . '_to_' . $filters['dateTo'];
                 }
-                $fileName = 'employee_review_' . str_replace(' ', '_', $user->name) . $dateRange . '.pdf';
+                $fileName = 'Employee Review' . str_replace(' ', ' ', $user->name) . $dateRange . '.pdf';
                 
                 // Use PdfService for robust PDF generation with Arabic-safe options
                 $pdfOptions = [

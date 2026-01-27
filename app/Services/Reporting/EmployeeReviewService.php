@@ -31,7 +31,7 @@ class EmployeeReviewService
      * Get comprehensive employee review data.
      *
      * @param int $userId
-     * @param array $filters ['dateFrom' => string, 'dateTo' => string]
+     * @param array $filters ['dateFrom' => string, 'dateTo' => string, 'page' => int, 'perPage' => int, 'forPdf' => bool]
      * @return array
      */
     public function getEmployeeReview(int $userId, array $filters = []): array
@@ -40,6 +40,9 @@ class EmployeeReviewService
         $this->validateDateRange($filters);
 
         $user = User::findOrFail($userId);
+
+        // Use total_points from User model as the source of truth for current points
+        $currentPoints = $user->total_points ?? 0;
 
         // Get all data sections
         $overview = $this->getOverviewMetrics($user, $filters);
@@ -53,6 +56,11 @@ class EmployeeReviewService
         // إضافة معلومات أيام السماح والخصومات
         $gracePeriod = $this->getGracePeriodInfo($user, $filters);
         $deductions = $this->getDeductionInfo($user, $filters);
+        
+        // إضافة تحليلات متقدمة
+        $taskPerformance = $this->getTaskPerformanceAnalysis($user, $filters);
+        $qualityMetrics = $this->getQualityMetrics($user, $filters);
+        $trends = $this->getProductivityTrends($user, $filters);
 
         return [
             'employee' => [
@@ -61,7 +69,8 @@ class EmployeeReviewService
                 'email' => $user->email,
                 'avatar' => $user->avatar,
                 'specialization' => $user->specialization,
-                'totalPoints' => $user->total_points ?? 0,
+                'totalPoints' => $currentPoints,
+                'salary' => $user->salary ?? 0, // إضافة الراتب الأساسي
             ],
             'period' => [
                 'dateFrom' => $filters['dateFrom'] ?? null,
@@ -74,8 +83,11 @@ class EmployeeReviewService
             'attendance' => $attendance,
             'productivity' => $productivity,
             'points' => $points,
-            'gracePeriod' => $gracePeriod, // إضافة معلومات أيام السماح
-            'deductions' => $deductions,   // إضافة معلومات الخصومات
+            'gracePeriod' => $gracePeriod,
+            'deductions' => $deductions,
+            'taskPerformance' => $taskPerformance,
+            'qualityMetrics' => $qualityMetrics,
+            'trends' => $trends,
         ];
     }
 
@@ -481,6 +493,10 @@ class EmployeeReviewService
     /**
      * Get points data for the user from PointTransaction (single source of truth).
      * This method consolidates all point data from the unified PointTransaction system.
+     * 
+     * @param User $user
+     * @param array $filters ['dateFrom', 'dateTo', 'page', 'perPage', 'forPdf']
+     * @return array
      */
     private function getPointsData(User $user, array $filters): array
     {
@@ -492,7 +508,29 @@ class EmployeeReviewService
         if (!empty($filters['dateTo'])) {
             $pointTransactionQuery->whereDate('created_at', '<=', $filters['dateTo']);
         }
-        $pointTransactions = $pointTransactionQuery->with('createdBy')->get();
+        
+        // Get total count
+        $totalCount = (clone $pointTransactionQuery)->count();
+        
+        // Check if this is for PDF generation (get all transactions)
+        $forPdf = $filters['forPdf'] ?? false;
+        
+        if ($forPdf) {
+            // For PDF: Get ALL transactions without pagination
+            $pointTransactions = $pointTransactionQuery->with('createdBy')
+                ->orderBy('created_at', 'desc')
+                ->get();
+            
+            $page = 1;
+            $perPage = $totalCount;
+        } else {
+            // For API: Apply pagination (default 50 per page)
+            $page = $filters['page'] ?? 1;
+            $perPage = $filters['perPage'] ?? 50;
+            $pointTransactions = $pointTransactionQuery->with('createdBy')
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage, ['*'], 'page', $page);
+        }
 
         // Consolidate all transactions into a unified format
         $allTransactions = collect();
@@ -514,18 +552,27 @@ class EmployeeReviewService
             ]);
         }
 
-
         // Sort all transactions by creation date (newest first)
         $sortedTransactions = $allTransactions->sortByDesc('rawCreatedAt')->values();
 
-        // Calculate statistics from all transactions
-        $pointsEarned = $allTransactions->where('points', '>', 0)->sum('points');
-        $pointsDeducted = abs($allTransactions->where('points', '<', 0)->sum('points'));
+        // Calculate statistics from ALL transactions in the period (not just current page)
+        // For accurate stats, we need to query all transactions again
+        $allPeriodTransactions = PointTransaction::where('user_id', $user->id);
+        if (!empty($filters['dateFrom'])) {
+            $allPeriodTransactions->whereDate('created_at', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $allPeriodTransactions->whereDate('created_at', '<=', $filters['dateTo']);
+        }
+        $allPeriodTransactions = $allPeriodTransactions->get();
+        
+        $pointsEarned = $allPeriodTransactions->where('points', '>', 0)->sum('points');
+        $pointsDeducted = abs($allPeriodTransactions->where('points', '<', 0)->sum('points'));
         $netChange = $pointsEarned - $pointsDeducted;
 
-        // Monthly breakdown from all transactions
-        $monthlyBreakdown = $allTransactions->groupBy(function ($transaction) {
-            return Carbon::parse($transaction['rawCreatedAt'])->format('Y-m');
+        // Monthly breakdown from all transactions in period
+        $monthlyBreakdown = $allPeriodTransactions->groupBy(function ($transaction) {
+            return Carbon::parse($transaction->created_at)->format('Y-m');
         })->map(function ($monthTransactions) {
             $earned = $monthTransactions->where('points', '>', 0)->sum('points');
             $deducted = abs($monthTransactions->where('points', '<', 0)->sum('points'));
@@ -537,16 +584,19 @@ class EmployeeReviewService
         });
 
         // Breakdown by source (automatic vs manual) based on type
+        $automaticCount = $allPeriodTransactions->filter(fn($t) => !str_starts_with($t->type->label(), 'Manual'))->count();
+        $manualCount = $allPeriodTransactions->filter(fn($t) => str_starts_with($t->type->label(), 'Manual'))->count();
+        
         $bySource = [
             'automatic' => [
-                'count' => $allTransactions->reject(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->count(),
-                'earned' => $allTransactions->reject(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->where('points', '>', 0)->sum('points'),
-                'deducted' => abs($allTransactions->reject(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->where('points', '<', 0)->sum('points')),
+                'count' => $automaticCount,
+                'earned' => $allPeriodTransactions->filter(fn($t) => !str_starts_with($t->type->label(), 'Manual'))->where('points', '>', 0)->sum('points'),
+                'deducted' => abs($allPeriodTransactions->filter(fn($t) => !str_starts_with($t->type->label(), 'Manual'))->where('points', '<', 0)->sum('points')),
             ],
             'manual' => [
-                'count' => $allTransactions->filter(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->count(),
-                'earned' => $allTransactions->filter(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->where('points', '>', 0)->sum('points'),
-                'deducted' => abs($allTransactions->filter(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->where('points', '<', 0)->sum('points')),
+                'count' => $manualCount,
+                'earned' => $allPeriodTransactions->filter(fn($t) => str_starts_with($t->type->label(), 'Manual'))->where('points', '>', 0)->sum('points'),
+                'deducted' => abs($allPeriodTransactions->filter(fn($t) => str_starts_with($t->type->label(), 'Manual'))->where('points', '<', 0)->sum('points')),
             ],
         ];
 
@@ -562,12 +612,19 @@ class EmployeeReviewService
             'pointsDeducted' => $pointsDeducted,
             'netChange' => $netChange,
             'transactions' => $finalTransactions,
+            'transactionsPagination' => [
+                'total' => $totalCount,
+                'perPage' => $perPage,
+                'currentPage' => $page,
+                'totalPages' => ceil($totalCount / $perPage),
+                'showing' => $allTransactions->count(),
+            ],
             'monthlyBreakdown' => $monthlyBreakdown,
             'bySource' => $bySource,
             'summary' => [
-                'totalTransactions' => $allTransactions->count(),
-                'automaticTransactions' => $pointTransactions->count(),
-                'manualTransactions' => $allTransactions->filter(fn($t) => str_starts_with($t['type'] ?? '', 'Manual'))->count(),
+                'totalTransactions' => $totalCount,
+                'automaticTransactions' => $automaticCount,
+                'manualTransactions' => $manualCount,
             ],
         ];
     }
@@ -708,4 +765,181 @@ class EmployeeReviewService
                 round($totalDeductions / $daysWithDeductions, 2) : 0,
         ];
     }
+
+    /**
+     * Get task delivery performance analysis.
+     * Analyzes on-time vs late delivery rates and trends.
+     */
+    private function getTaskPerformanceAnalysis(User $user, array $filters): array
+    {
+        $query = Task::whereHas('assignees', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->where('is_primary', true);
+        })->where('status', 'completed');
+
+        if (!empty($filters['dateFrom'])) {
+            $query->whereDate('completed_at', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $query->whereDate('completed_at', '<=', $filters['dateTo']);
+        }
+
+        $completedTasks = $query->get();
+        
+        if ($completedTasks->isEmpty()) {
+            return [
+                'totalCompleted' => 0,
+                'onTimeCount' => 0,
+                'lateCount' => 0,
+                'onTimeRate' => 0,
+                'averageDelayDays' => 0,
+                'byMonth' => [],
+            ];
+        }
+
+        $onTimeTasks = $completedTasks->filter(fn($task) => ($task->delay_days ?? 0) <= 0);
+        $lateTasks = $completedTasks->filter(fn($task) => ($task->delay_days ?? 0) > 0);
+        
+        $totalCompleted = $completedTasks->count();
+        $onTimeCount = $onTimeTasks->count();
+        $lateCount = $lateTasks->count();
+        $onTimeRate = $totalCompleted > 0 ? ($onTimeCount / $totalCompleted) * 100 : 0;
+        
+        // Calculate average delay for late tasks only
+        $averageDelayDays = $lateCount > 0 
+            ? $lateTasks->sum('delay_days') / $lateCount 
+            : 0;
+
+        // Monthly breakdown
+        $byMonth = $completedTasks->groupBy(function ($task) {
+            return Carbon::parse($task->completed_at)->format('Y-m');
+        })->map(function ($monthTasks) {
+            $monthOnTime = $monthTasks->filter(fn($task) => ($task->delay_days ?? 0) <= 0)->count();
+            $monthLate = $monthTasks->filter(fn($task) => ($task->delay_days ?? 0) > 0)->count();
+            $monthTotal = $monthTasks->count();
+            
+            return [
+                'total' => $monthTotal,
+                'onTime' => $monthOnTime,
+                'late' => $monthLate,
+                'onTimeRate' => $monthTotal > 0 ? ($monthOnTime / $monthTotal) * 100 : 0,
+            ];
+        });
+
+        return [
+            'totalCompleted' => $totalCompleted,
+            'onTimeCount' => $onTimeCount,
+            'lateCount' => $lateCount,
+            'onTimeRate' => number_format($onTimeRate, 2, '.', ''),
+            'averageDelayDays' => number_format($averageDelayDays, 2, '.', ''),
+            'byMonth' => $byMonth,
+        ];
+    }
+
+    /**
+     * Get quality metrics including bug bounce rate and first-time pass rate.
+     */
+    private function getQualityMetrics(User $user, array $filters): array
+    {
+        $query = Task::whereHas('assignees', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->where('is_primary', true);
+        });
+
+        if (!empty($filters['dateFrom'])) {
+            $query->whereDate('created_at', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $query->whereDate('created_at', '<=', $filters['dateTo']);
+        }
+
+        $tasks = $query->get();
+        
+        if ($tasks->isEmpty()) {
+            return [
+                'totalTasks' => 0,
+                'tasksWithBounces' => 0,
+                'firstTimePassRate' => 0,
+                'averageBounceRate' => 0,
+                'totalBounces' => 0,
+            ];
+        }
+
+        $totalTasks = $tasks->count();
+        $tasksWithBounces = $tasks->where('reopen_count', '>', 0)->count();
+        $tasksWithoutBounces = $totalTasks - $tasksWithBounces;
+        $firstTimePassRate = $totalTasks > 0 ? ($tasksWithoutBounces / $totalTasks) * 100 : 0;
+        $totalBounces = $tasks->sum('reopen_count');
+        $averageBounceRate = $totalTasks > 0 ? $totalBounces / $totalTasks : 0;
+
+        return [
+            'totalTasks' => $totalTasks,
+            'tasksWithBounces' => $tasksWithBounces,
+            'tasksWithoutBounces' => $tasksWithoutBounces,
+            'firstTimePassRate' => number_format($firstTimePassRate, 2, '.', ''),
+            'averageBounceRate' => number_format($averageBounceRate, 2, '.', ''),
+            'totalBounces' => $totalBounces,
+        ];
+    }
+
+    /**
+     * Get productivity trends over time (weekly/monthly).
+     */
+    private function getProductivityTrends(User $user, array $filters): array
+    {
+        // Get time entries grouped by week
+        $timeQuery = TimeEntry::where('user_id', $user->id)
+            ->whereNotNull('end_time');
+
+        if (!empty($filters['dateFrom'])) {
+            $timeQuery->whereDate('start_time', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $timeQuery->whereDate('start_time', '<=', $filters['dateTo']);
+        }
+
+        $timeEntries = $timeQuery->get();
+
+        // Group by week
+        $weeklyData = $timeEntries->groupBy(function ($entry) {
+            return Carbon::parse($entry->start_time)->format('Y-W');
+        })->map(function ($weekEntries, $week) {
+            return [
+                'week' => $week,
+                'totalHours' => round($weekEntries->sum('duration_minutes') / 60, 2),
+                'entries' => $weekEntries->count(),
+            ];
+        })->values();
+
+        // Get tasks completed grouped by week
+        $taskQuery = Task::whereHas('assignees', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->where('is_primary', true);
+        })->where('status', 'completed');
+
+        if (!empty($filters['dateFrom'])) {
+            $taskQuery->whereDate('completed_at', '>=', $filters['dateFrom']);
+        }
+        if (!empty($filters['dateTo'])) {
+            $taskQuery->whereDate('completed_at', '<=', $filters['dateTo']);
+        }
+
+        $completedTasks = $taskQuery->get();
+
+        $weeklyTasks = $completedTasks->groupBy(function ($task) {
+            return Carbon::parse($task->completed_at)->format('Y-W');
+        })->map(function ($weekTasks, $week) {
+            return [
+                'week' => $week,
+                'completed' => $weekTasks->count(),
+                'onTime' => $weekTasks->filter(fn($task) => ($task->delay_days ?? 0) <= 0)->count(),
+            ];
+        })->values();
+
+        return [
+            'weeklyTimeTracking' => $weeklyData,
+            'weeklyTaskCompletion' => $weeklyTasks,
+        ];
+    }
 }
+
