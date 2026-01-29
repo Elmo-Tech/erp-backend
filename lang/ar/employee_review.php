@@ -238,4 +238,38 @@ return [
     
     // Performance Indicators section
     'Performance Indicators' => 'مؤشرات الأداء',
+    // Days of the week
+    'Monday' => 'الاثنين',
+    'Tuesday' => 'الثلاثاء', 
+    'Wednesday' => 'الأربعاء',
+    'Thursday' => 'الخميس',
+    'Friday' => 'الجمعة',
+    'Saturday' => 'السبت',
+    'Sunday' => 'الأحد',
+
+    // Status indicators
+    'on_time' => 'في الوقت المحدد',
+    'late' => 'متأخر',
+    'absent' => 'غائب',
+    'rest_day' => 'يوم راحة',
+    'partial' => 'جزئي',
+    'no_work' => 'لا يوجد عمل',
+    'future' => 'مستقبلي',
+
+    // Additional terms
+    'h' => 'س',
+    'days' => 'أيام',
+    'Week' => 'الأسبوع',
+    'hours' => 'ساعات',
+    'No work recorded' => 'لم يتم تسجيل عمل',
+    'excellent' => 'ممتاز',
+    'good' => 'جيد', 
+    'needs_improvement' => 'يحتاج تحسين',
+    'Excellent' => 'ممتاز',
+    'Good' => 'جيد',
+    'Needs Improvement' => 'يحتاج تحسين',
+    'Performance Indicators' => 'مؤشرات الأداء',
+    'Showing top 10 projects' => 'عرض أفضل 10 مشاريع',
+    'total' => 'إجمالي',
+    'No completed tasks' => 'لا توجد مهام مكتملة',
 ];

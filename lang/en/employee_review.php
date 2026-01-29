@@ -239,4 +239,38 @@ return [
     
     // Performance Indicators section
     'Performance Indicators' => 'Performance Indicators',
+    // Days of the week
+    'Monday' => 'Monday',
+    'Tuesday' => 'Tuesday',
+    'Wednesday' => 'Wednesday', 
+    'Thursday' => 'Thursday',
+    'Friday' => 'Friday',
+    'Saturday' => 'Saturday',
+    'Sunday' => 'Sunday',
+
+    // Status indicators
+    'on_time' => 'On Time',
+    'late' => 'Late',
+    'absent' => 'Absent',
+    'rest_day' => 'Rest Day',
+    'partial' => 'Partial',
+    'no_work' => 'No Work',
+    'future' => 'Future',
+
+    // Additional terms
+    'h' => 'h',
+    'days' => 'days',
+    'Week' => 'Week',
+    'hours' => 'hours',
+    'No work recorded' => 'No work recorded',
+    'excellent' => 'Excellent',
+    'good' => 'Good',
+    'needs_improvement' => 'Needs Improvement',
+    'Excellent' => 'Excellent',
+    'Good' => 'Good', 
+    'Needs Improvement' => 'Needs Improvement',
+    'Performance Indicators' => 'Performance Indicators',
+    'Showing top 10 projects' => 'Showing top 10 projects',
+    'total' => 'total',
+    'No completed tasks' => 'No completed tasks',
 ];

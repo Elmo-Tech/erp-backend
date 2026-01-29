@@ -62,6 +62,12 @@ class EmployeeReviewService
         $qualityMetrics = $this->getQualityMetrics($user, $filters);
         $trends = $this->getProductivityTrends($user, $filters);
 
+        // Generate project breakdown for Blade template
+        $projectBreakdown = $this->getProjectBreakdown($user, $filters);
+        
+        // Generate weekly statistics for Blade template
+        $weeklyStats = $this->getWeeklyStatistics($user, $filters);
+
         return [
             'employee' => [
                 'userId' => $user->id,
@@ -79,7 +85,7 @@ class EmployeeReviewService
             'overview' => $overview,
             'timeTracking' => $timeTracking,
             'tasks' => $tasks,
-            'projects' => $projects,
+            'projects' => $projectBreakdown, // Updated for Blade template
             'attendance' => $attendance,
             'productivity' => $productivity,
             'points' => $points,
@@ -88,6 +94,7 @@ class EmployeeReviewService
             'taskPerformance' => $taskPerformance,
             'qualityMetrics' => $qualityMetrics,
             'trends' => $trends,
+            'weeklyStats' => $weeklyStats, // Added for Blade template
         ];
     }
 
@@ -243,6 +250,167 @@ class EmployeeReviewService
             'recentTasks' => $recentTasks,
             'totalBounces' => $tasks->sum('reopen_count'),
         ];
+    }
+
+    /**
+     * Get project breakdown for Blade template.
+     * Returns array with structure: ['name', 'totalHours', 'keyDeliverables']
+     */
+    private function getProjectBreakdown(User $user, array $filters): array
+    {
+        // Get projects where user worked on tasks
+        $query = Project::whereHas('tasks.assignees', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->where('is_primary', true);
+        })->with(['client:id,name', 'tasks.assignees' => function ($q) use ($user) {
+            $q->where('user_id', $user->id)->where('is_primary', true);
+        }]);
+
+        if (!empty($filters['dateFrom'])) {
+            $query->whereHas('tasks.timeEntries', function ($q) use ($filters) {
+                $q->whereDate('start_time', '>=', $filters['dateFrom']);
+            });
+        }
+        if (!empty($filters['dateTo'])) {
+            $query->whereHas('tasks.timeEntries', function ($q) use ($filters) {
+                $q->whereDate('start_time', '<=', $filters['dateTo']);
+            });
+        }
+
+        $projects = $query->get();
+
+        return $projects->map(function ($project) use ($user, $filters) {
+            // Get user's time on this project
+            $timeQuery = TimeEntry::where('user_id', $user->id)
+                ->where('trackable_type', 'App\\Models\\Task')
+                ->whereHas('trackable', function ($q) use ($project) {
+                    $q->where('project_id', $project->id);
+                });
+
+            if (!empty($filters['dateFrom'])) {
+                $timeQuery->whereDate('start_time', '>=', $filters['dateFrom']);
+            }
+            if (!empty($filters['dateTo'])) {
+                $timeQuery->whereDate('start_time', '<=', $filters['dateTo']);
+            }
+
+            $totalMinutes = $timeQuery->sum('duration_minutes');
+            $totalHours = round($totalMinutes / 60, 1);
+
+            // Get key deliverables (completed tasks)
+            $completedTasks = Task::where('project_id', $project->id)
+                ->where('status', 'completed')
+                ->whereHas('assignees', function ($q) use ($user) {
+                    $q->where('user_id', $user->id)->where('is_primary', true);
+                })
+                ->limit(3)
+                ->pluck('title')
+                ->toArray();
+
+            $keyDeliverables = !empty($completedTasks) 
+                ? implode(', ', $completedTasks)
+                : 'No completed tasks';
+
+            return [
+                'name' => $project->title ?? 'Untitled Project',
+                'totalHours' => $totalHours,
+                'keyDeliverables' => $keyDeliverables,
+            ];
+        })->filter(function ($project) {
+            // Only include projects where user has worked hours
+            return $project['totalHours'] > 0;
+        })->sortByDesc('totalHours')->values()->toArray();
+    }
+
+    /**
+     * Get weekly statistics for Blade template.
+     * Returns array with structure: ['weekNumber', 'dateRange', 'totalHours', 'workingDays', 'dailyBreakdown']
+     */
+    private function getWeeklyStatistics(User $user, array $filters): array
+    {
+        $dateFrom = !empty($filters['dateFrom']) ? Carbon::parse($filters['dateFrom']) : Carbon::now()->startOfMonth();
+        $dateTo = !empty($filters['dateTo']) ? Carbon::parse($filters['dateTo']) : Carbon::now()->endOfMonth();
+
+        // Get all time entries for the period
+        $timeEntries = TimeEntry::where('user_id', $user->id)
+            ->whereNotNull('end_time')
+            ->whereBetween('start_time', [$dateFrom, $dateTo])
+            ->get();
+
+        // Get attendance data for status indicators
+        $attendances = Attendance::where('user_id', $user->id)
+            ->whereBetween('date', [$dateFrom, $dateTo])
+            ->get()
+            ->keyBy('date');
+
+        // Group by week
+        $weeklyData = [];
+        $currentDate = $dateFrom->copy()->startOfWeek();
+
+        while ($currentDate->lte($dateTo)) {
+            $weekStart = $currentDate->copy();
+            $weekEnd = $currentDate->copy()->endOfWeek();
+            
+            // Get time entries for this week
+            $weekTimeEntries = $timeEntries->filter(function ($entry) use ($weekStart, $weekEnd) {
+                $entryDate = Carbon::parse($entry->start_time);
+                return $entryDate->between($weekStart, $weekEnd);
+            });
+
+            // Calculate daily breakdown
+            $dailyBreakdown = [];
+            $workingDays = 0;
+            
+            for ($day = $weekStart->copy(); $day->lte($weekEnd); $day->addDay()) {
+                $dayEntries = $weekTimeEntries->filter(function ($entry) use ($day) {
+                    return Carbon::parse($entry->start_time)->isSameDay($day);
+                });
+
+                $dayHours = round($dayEntries->sum('duration_minutes') / 60, 1);
+                $attendance = $attendances->get($day->format('Y-m-d'));
+                
+                // Determine status
+                $status = 'no_work';
+                if ($dayHours > 0) {
+                    $workingDays++;
+                    if ($attendance && $attendance->late_minutes > 0) {
+                        $status = 'late';
+                    } elseif ($dayHours >= 8) {
+                        $status = 'on_time';
+                    } else {
+                        $status = 'partial';
+                    }
+                } elseif ($day->isWeekend()) {
+                    $status = 'rest_day';
+                } elseif ($day->isFuture()) {
+                    $status = 'future';
+                } else {
+                    $status = 'absent';
+                }
+
+                $dailyBreakdown[] = [
+                    'date' => $day->format('Y-m-d'),
+                    'hours' => $dayHours,
+                    'status' => $status,
+                ];
+            }
+
+            $totalWeekHours = round($weekTimeEntries->sum('duration_minutes') / 60, 1);
+            
+            if ($totalWeekHours > 0 || $weekStart->lte(Carbon::now())) {
+                $weeklyData[] = [
+                    'weekNumber' => $weekStart->weekOfYear,
+                    'dateRange' => $weekStart->format('M j') . ' - ' . $weekEnd->format('M j, Y'),
+                    'totalHours' => $totalWeekHours,
+                    'workingDays' => $workingDays,
+                    'dailyBreakdown' => $dailyBreakdown,
+                ];
+            }
+
+            $currentDate->addWeek();
+        }
+
+        return $weeklyData;
     }
 
     /**
