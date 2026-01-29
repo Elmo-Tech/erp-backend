@@ -281,12 +281,12 @@ class EmployeeReviewService
         $projects = $query->get();
 
         // Debug logging
-        \Log::info('Project Breakdown Debug', [
-            'user_id' => $user->id,
-            'projects_found' => $projects->count(),
-            'project_ids' => $projects->pluck('id')->toArray(),
-            'filters' => $filters
-        ]);
+        // \Log::info('Project Breakdown Debug', [
+        //     'user_id' => $user->id,
+        //     'projects_found' => $projects->count(),
+        //     'project_ids' => $projects->pluck('id')->toArray(),
+        //     'filters' => $filters
+        // ]);
 
         $result = $projects->map(function ($project) use ($user, $filters) {
             // Get user's time on this project
@@ -307,13 +307,13 @@ class EmployeeReviewService
             $totalHours = round($totalMinutes / 60, 1);
 
             // Debug time calculation
-            \Log::info('Project Time Calculation', [
-                'project_id' => $project->id,
-                'project_title' => $project->title,
-                'user_id' => $user->id,
-                'total_minutes' => $totalMinutes,
-                'total_hours' => $totalHours
-            ]);
+            // \Log::info('Project Time Calculation', [
+            //     'project_id' => $project->id,
+            //     'project_title' => $project->title,
+            //     'user_id' => $user->id,
+            //     'total_minutes' => $totalMinutes,
+            //     'total_hours' => $totalHours
+            // ]);
 
             // Get key deliverables (completed tasks)
             $completedTasks = Task::where('project_id', $project->id)
@@ -340,11 +340,11 @@ class EmployeeReviewService
         })->sortByDesc('totalHours')->values()->toArray();
 
         // Debug final result
-        \Log::info('Project Breakdown Result', [
-            'user_id' => $user->id,
-            'result_count' => count($result),
-            'result' => $result
-        ]);
+        // \Log::info('Project Breakdown Result', [
+        //     'user_id' => $user->id,
+        //     'result_count' => count($result),
+        //     'result' => $result
+        // ]);
 
         return $result;
     }
@@ -460,12 +460,12 @@ class EmployeeReviewService
         $projects = $query->get();
 
         // Debug logging
-        \Log::info('Projects Data Debug', [
-            'user_id' => $user->id,
-            'total_projects_found' => $projects->count(),
-            'filters' => $filters,
-            'project_ids' => $projects->pluck('id')->toArray()
-        ]);
+        // \Log::info('Projects Data Debug', [
+        //     'user_id' => $user->id,
+        //     'total_projects_found' => $projects->count(),
+        //     'filters' => $filters,
+        //     'project_ids' => $projects->pluck('id')->toArray()
+        // ]);
 
         $projectsList = $projects->map(function ($project) use ($user) {
             // Get user's time on this project
@@ -493,10 +493,10 @@ class EmployeeReviewService
         ];
 
         // Debug the final result
-        \Log::info('Projects Data Result', [
-            'user_id' => $user->id,
-            'result' => $result
-        ]);
+        // \Log::info('Projects Data Result', [
+        //     'user_id' => $user->id,
+        //     'result' => $result
+        // ]);
 
         return $result;
     }
@@ -1112,11 +1112,11 @@ class EmployeeReviewService
         $timeEntries = $timeQuery->get();
 
         // Debug logging
-        \Log::info('Productivity Trends Debug - Time Entries', [
-            'user_id' => $user->id,
-            'time_entries_count' => $timeEntries->count(),
-            'filters' => $filters
-        ]);
+        // \Log::info('Productivity Trends Debug - Time Entries', [
+        //     'user_id' => $user->id,
+        //     'time_entries_count' => $timeEntries->count(),
+        //     'filters' => $filters
+        // ]);
 
         // Group by week
         $weeklyData = $timeEntries->groupBy(function ($entry) {
@@ -1145,11 +1145,11 @@ class EmployeeReviewService
         $completedTasks = $taskQuery->get();
 
         // Debug logging
-        \Log::info('Productivity Trends Debug - Completed Tasks', [
-            'user_id' => $user->id,
-            'completed_tasks_count' => $completedTasks->count(),
-            'filters' => $filters
-        ]);
+        // \Log::info('Productivity Trends Debug - Completed Tasks', [
+        //     'user_id' => $user->id,
+        //     'completed_tasks_count' => $completedTasks->count(),
+        //     'filters' => $filters
+        // ]);
 
         $weeklyTasks = $completedTasks->groupBy(function ($task) {
             return Carbon::parse($task->completed_at)->format('Y-W');
@@ -1167,12 +1167,12 @@ class EmployeeReviewService
         ];
 
         // Debug the final result
-        \Log::info('Productivity Trends Result', [
-            'user_id' => $user->id,
-            'weekly_time_tracking_count' => count($weeklyData),
-            'weekly_task_completion_count' => count($weeklyTasks),
-            'result' => $result
-        ]);
+        // \Log::info('Productivity Trends Result', [
+        //     'user_id' => $user->id,
+        //     'weekly_time_tracking_count' => count($weeklyData),
+        //     'weekly_task_completion_count' => count($weeklyTasks),
+        //     'result' => $result
+        // ]);
 
         return $result;
     }

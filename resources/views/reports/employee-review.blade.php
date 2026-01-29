@@ -504,7 +504,7 @@
     </div>
     @endif
 
-    @if(isset($projects) && !empty($projects) && count($projects) > 0)
+    @if(isset($projectBreakdown) && !empty($projectBreakdown) && count($projectBreakdown) > 0)
     <div class="card">
         <h4 class="flex arabic-text" style="margin: 0 0 15px 0; font-size: 12px;">
             <svg class="icon text-brand" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
@@ -520,7 +520,7 @@
             </thead>
             <tbody>
                 @php
-                    $projectsArray = is_array($projects) ? $projects : $projects->toArray();
+                    $projectsArray = is_array($projectBreakdown) ? $projectBreakdown : $projectBreakdown->toArray();
                 @endphp
                 @foreach(array_slice($projectsArray, 0, 10) as $project)
                 <tr>
