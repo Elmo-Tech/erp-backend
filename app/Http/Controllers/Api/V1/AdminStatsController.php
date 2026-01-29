@@ -821,8 +821,24 @@ class AdminStatsController extends Controller
                 $filters['dateTo'] = $request->get('dateTo');
             }
 
+            // Add debug logging
+            \Log::info('Employee Review Request', [
+                'userId' => $userId,
+                'filters' => $filters,
+                'user' => auth()->user()->name
+            ]);
+
             // Get employee review data
             $reviewData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
+
+            // Add debug logging for response
+            \Log::info('Employee Review Response Structure', [
+                'userId' => $userId,
+                'projects_count' => $reviewData['projects']['total'] ?? 'N/A',
+                'trends_weeks' => count($reviewData['trends']['weeklyTimeTracking'] ?? []),
+                'has_projects_array' => isset($reviewData['projects']['projects']),
+                'projects_array_count' => count($reviewData['projects']['projects'] ?? [])
+            ]);
 
             return ApiResponse::success(
                 $reviewData,
@@ -836,6 +852,11 @@ class AdminStatsController extends Controller
                 'Invalid date range'
             );
         } catch (\Exception $e) {
+            \Log::error('Employee Review Error', [
+                'userId' => $userId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return ApiResponse::error(
                 'Failed to retrieve employee review: ' . $e->getMessage(),
                 500
