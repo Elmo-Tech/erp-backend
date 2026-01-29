@@ -504,6 +504,176 @@
     </div>
     @endif
 
+    @if(isset($projects) && !empty($projects) && count($projects) > 0)
+    <div class="card">
+        <h4 class="flex arabic-text" style="margin: 0 0 15px 0; font-size: 12px;">
+            <svg class="icon text-brand" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            {{ trans('employee_review.Project-wise Breakdown') }}
+        </h4>
+        <table>
+            <thead>
+                <tr>
+                    <th class="arabic-text">{{ trans('employee_review.Project Name') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Total Hours') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Key Deliverables') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @php
+                    $projectsArray = is_array($projects) ? $projects : $projects->toArray();
+                @endphp
+                @foreach(array_slice($projectsArray, 0, 10) as $project)
+                <tr>
+                    <td class="font-bold arabic-text">{{ Str::limit($project['name'] ?? 'N/A', 40) }}</td>
+                    <td class="text-center font-bold text-brand">{{ number_format($project['totalHours'] ?? 0, 1) }}h</td>
+                    <td class="text-secondary arabic-text">{{ Str::limit($project['keyDeliverables'] ?? trans('employee_review.N/A'), 60) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @if(count($projectsArray) > 10)
+        <div class="text-xs text-secondary mt-4 text-center arabic-text">
+            {{ trans('employee_review.Showing top 10 projects') }} ({{ count($projectsArray) }} {{ trans('employee_review.total') }})
+        </div>
+        @endif
+    </div>
+    @endif
+
+    @if(isset($weeklyStats) && !empty($weeklyStats) && count($weeklyStats) > 0)
+    <div class="card">
+        <h4 class="flex arabic-text" style="margin: 0 0 15px 0; font-size: 12px;">
+            <svg class="icon text-warning" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            {{ trans('employee_review.Weekly Statistics') }} - {{ trans('employee_review.Current Month') }}
+        </h4>
+        
+        <div class="grid-2">
+            @php
+                $weeklyStatsArray = is_array($weeklyStats) ? $weeklyStats : $weeklyStats->toArray();
+                $totalWeeklyHours = array_sum(array_column($weeklyStatsArray, 'totalHours'));
+                $averageWeeklyHours = count($weeklyStatsArray) > 0 ? $totalWeeklyHours / count($weeklyStatsArray) : 0;
+            @endphp
+            
+            <div style="background: var(--success-bg); padding: 15px; border-radius: 6px; border: 1px solid #a7f3d0;">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs text-secondary uppercase font-bold arabic-text">{{ trans('employee_review.Total Monthly Hours') }}</span>
+                    <svg class="icon text-success" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <div style="font-size: 20px; font-weight: 800; color: var(--success);">{{ number_format($totalWeeklyHours, 1) }}<small style="font-size: 12px;">h</small></div>
+            </div>
+            
+            <div style="background: var(--warning-bg); padding: 15px; border-radius: 6px; border: 1px solid #fde68a;">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs text-secondary uppercase font-bold arabic-text">{{ trans('employee_review.Average Weekly Hours') }}</span>
+                    <svg class="icon text-warning" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                </div>
+                <div style="font-size: 20px; font-weight: 800; color: var(--warning);">{{ number_format($averageWeeklyHours, 1) }}<small style="font-size: 12px;">h</small></div>
+            </div>
+        </div>
+
+        <table style="margin-top: 20px;">
+            <thead>
+                <tr>
+                    <th class="arabic-text">{{ trans('employee_review.Week') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Date Range') }}</th>
+                    <th class="text-center arabic-text">{{ trans('employee_review.Total Hours') }}</th>
+                    <th class="text-center arabic-text">{{ trans('employee_review.Working Days') }}</th>
+                    <th class="text-center arabic-text">{{ trans('employee_review.Performance') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($weeklyStatsArray as $weekIndex => $week)
+                <tr>
+                    <td class="font-bold">{{ trans('employee_review.Week') }} {{ $week['weekNumber'] ?? ($weekIndex + 1) }}</td>
+                    <td class="text-secondary">{{ $week['dateRange'] ?? 'N/A' }}</td>
+                    <td class="text-center font-bold text-brand">{{ number_format($week['totalHours'] ?? 0, 1) }}h</td>
+                    <td class="text-center">{{ $week['workingDays'] ?? 0 }} {{ trans('employee_review.days') }}</td>
+                    <td class="text-center">
+                        @php
+                            $weekHours = $week['totalHours'] ?? 0;
+                            $performance = $weekHours >= 40 ? 'excellent' : ($weekHours >= 30 ? 'good' : 'needs_improvement');
+                            $badgeClass = $weekHours >= 40 ? 'bg-success' : ($weekHours >= 30 ? 'bg-warning' : 'bg-danger');
+                        @endphp
+                        <span class="badge {{ $badgeClass }} arabic-text">
+                            {{ trans('employee_review.' . $performance) }}
+                        </span>
+                    </td>
+                </tr>
+                @if(isset($week['dailyBreakdown']) && !empty($week['dailyBreakdown']))
+                <tr>
+                    <td colspan="5" style="padding: 0; border-bottom: none;">
+                        <div style="background: #f8fafc; padding: 10px; margin: 5px 0;">
+                            <h5 class="arabic-text" style="margin: 0 0 8px 0; font-size: 10px; color: var(--secondary); text-transform: uppercase;">
+                                {{ trans('employee_review.Daily Breakdown') }} - {{ trans('employee_review.Week') }} {{ $week['weekNumber'] ?? ($weekIndex + 1) }}
+                            </h5>
+                            <div class="grid-4" style="gap: 8px;">
+                                @php
+                                    $dailyBreakdown = is_array($week['dailyBreakdown']) ? $week['dailyBreakdown'] : $week['dailyBreakdown']->toArray();
+                                    $dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                                @endphp
+                                @foreach($dailyBreakdown as $dayIndex => $day)
+                                <div style="text-align: center; padding: 6px; background: white; border-radius: 4px; border: 1px solid var(--border);">
+                                    <div class="text-xs font-bold arabic-text" style="color: var(--secondary);">
+                                        {{ trans('employee_review.' . ($dayNames[$dayIndex] ?? 'Day')) }}
+                                    </div>
+                                    <div class="text-xs" style="margin-top: 2px;">
+                                        @if(isset($day['date']))
+                                        <div style="color: var(--secondary); font-size: 8px;">{{ \Carbon\Carbon::parse($day['date'])->format('M j') }}</div>
+                                        @endif
+                                        @php
+                                            $dayHours = $day['hours'] ?? 0;
+                                            $hoursColor = $dayHours >= 8 ? 'var(--success)' : ($dayHours >= 6 ? 'var(--warning)' : ($dayHours > 0 ? 'var(--danger)' : 'var(--secondary)'));
+                                        @endphp
+                                        <div class="font-bold" style="color: {{ $hoursColor }}; font-size: 11px;">
+                                            @if($dayHours > 0)
+                                                {{ number_format($dayHours, 1) }}{{ trans('employee_review.h') }}
+                                            @else
+                                                <span class="arabic-text">{{ trans('employee_review.No work recorded') }}</span>
+                                            @endif
+                                        </div>
+                                        @if(isset($day['status']) && $day['status'])
+                                        <div class="text-xs" style="margin-top: 2px;">
+                                            @php
+                                                $statusColor = $day['status'] === 'on_time' ? 'var(--success)' : ($day['status'] === 'late' ? 'var(--danger)' : 'var(--secondary)');
+                                            @endphp
+                                            <span class="arabic-text" style="color: {{ $statusColor }}; font-size: 8px;">
+                                                {{ trans('employee_review.' . $day['status']) }}
+                                            </span>
+                                        </div>
+                                        @endif
+                                    </div>
+                                </div>
+                                @endforeach
+                                
+                                @if(count($dailyBreakdown) < 7)
+                                    @for($i = count($dailyBreakdown); $i < 7; $i++)
+                                    <div style="text-align: center; padding: 6px; background: #f1f5f9; border-radius: 4px; border: 1px solid var(--border); opacity: 0.5;">
+                                        <div class="text-xs font-bold arabic-text" style="color: var(--secondary);">
+                                            {{ trans('employee_review.' . ($dayNames[$i] ?? 'Day')) }}
+                                        </div>
+                                        <div class="text-xs arabic-text" style="margin-top: 2px; color: var(--secondary);">
+                                            {{ trans('employee_review.Rest day') }}
+                                        </div>
+                                    </div>
+                                    @endfor
+                                @endif
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                @endif
+                @endforeach
+            </tbody>
+        </table>
+        
+        <div class="text-xs text-secondary mt-4 arabic-text" style="padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border);">
+            <strong>{{ trans('employee_review.Performance Indicators') }}:</strong>
+            <span class="badge bg-success" style="margin: 0 5px;">{{ trans('employee_review.Excellent') }}</span> 40+ {{ trans('employee_review.hours') }}/{{ trans('employee_review.Week') }}
+            <span class="badge bg-warning" style="margin: 0 5px;">{{ trans('employee_review.Good') }}</span> 30-39 {{ trans('employee_review.hours') }}/{{ trans('employee_review.Week') }}
+            <span class="badge bg-danger" style="margin: 0 5px;">{{ trans('employee_review.Needs Improvement') }}</span> < 30 {{ trans('employee_review.hours') }}/{{ trans('employee_review.Week') }}
+        </div>
+    </div>
+    @endif
+
     <div class="card" style="background: #f8fafc; border: 1px dashed var(--border);">
         <h4 class="arabic-text" style="margin: 0 0 10px 0; color: var(--primary);">{{ trans('employee_review.Management Recommendations') }}</h4>
         

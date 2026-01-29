@@ -185,4 +185,58 @@ return [
     'Deducted this period' => 'Deducted this period',
     'Net change this period' => 'Net change this period',
     'points/minute' => 'points/minute',
+    
+    // New translations for project and weekly sections
+    'Project-wise Breakdown' => 'Project-wise Breakdown',
+    'Project Name' => 'Project Name',
+    'Total Hours' => 'Total Hours',
+    'Key Deliverables' => 'Key Deliverables',
+    'Showing top 10 projects' => 'Showing top 10 projects',
+    'total' => 'total',
+    
+    'Weekly Statistics' => 'Weekly Statistics',
+    'Current Month' => 'Current Month',
+    'Total Monthly Hours' => 'Total Monthly Hours',
+    'Average Weekly Hours' => 'Average Weekly Hours',
+    'Week' => 'Week',
+    'Date Range' => 'Date Range',
+    'Working Days' => 'Working Days',
+    'Performance' => 'Performance',
+    
+    // Daily breakdown translations
+    'Daily Breakdown' => 'Daily Breakdown',
+    'Day' => 'Day',
+    'Hours Worked' => 'Hours Worked',
+    'Monday' => 'Monday',
+    'Tuesday' => 'Tuesday',
+    'Wednesday' => 'Wednesday',
+    'Thursday' => 'Thursday',
+    'Friday' => 'Friday',
+    'Saturday' => 'Saturday',
+    'Sunday' => 'Sunday',
+    'No work recorded' => 'No work recorded',
+    'Rest day' => 'Rest day',
+    'Holiday' => 'Holiday',
+    'Absent' => 'Absent',
+    'Present' => 'Present',
+    'Late' => 'Late',
+    'On time' => 'On time',
+    
+    // Performance indicators
+    'Excellent' => 'Excellent',
+    'Very Good' => 'Very Good',
+    'Good' => 'Good',
+    'Fair' => 'Fair',
+    'Poor' => 'Poor',
+    
+    // Time indicators
+    'hours' => 'hours',
+    'hour' => 'hour',
+    'mins' => 'mins',
+    'min' => 'min',
+    'h' => 'h',
+    'm' => 'm',
+    
+    // Performance Indicators section
+    'Performance Indicators' => 'Performance Indicators',
 ];

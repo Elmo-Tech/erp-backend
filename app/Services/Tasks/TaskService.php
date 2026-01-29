@@ -82,8 +82,8 @@ class TaskService
 
     /**
      * Get tasks where the user is assigned as a team member.
-     * Returns only top-level tasks (no parent) to avoid duplicates.
-     * Children are loaded via relationships.
+     * Returns ALL tasks (including children) where user is assigned.
+     * This allows filtering by status to work correctly for leaf tasks.
      */
     public function getMyAssignedTasks(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
@@ -93,6 +93,7 @@ class TaskService
                 'project', 
                 'tags', 
                 'assignees.user', 
+                'parent', // Load parent to show hierarchy
                 // Load children (Weekly tasks) with their children (Subtasks)
                 'children.assignee', 
                 'children.tags', 
@@ -103,8 +104,8 @@ class TaskService
             ])
             ->whereHas('assignees', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
-            })
-            ->whereNull('parent_id'); // Only get top-level tasks to avoid duplicates
+            });
+            // Removed whereNull('parent_id') to get ALL tasks where user is assigned
 
         // Apply user specialization filtering
         if ($user->specialization) {

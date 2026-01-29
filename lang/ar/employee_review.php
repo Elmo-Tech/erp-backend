@@ -184,4 +184,58 @@ return [
     'Deducted this period' => 'المخصوم في هذه الفترة',
     'Net change this period' => 'صافي التغيير في هذه الفترة',
     'points/minute' => 'نقطة/دقيقة',
+    
+    // New translations for project and weekly sections
+    'Project-wise Breakdown' => 'التفصيل حسب المشروع',
+    'Project Name' => 'اسم المشروع',
+    'Total Hours' => 'إجمالي الساعات',
+    'Key Deliverables' => 'المخرجات الرئيسية',
+    'Showing top 10 projects' => 'عرض أفضل 10 مشاريع',
+    'total' => 'إجمالي',
+    
+    'Weekly Statistics' => 'الإحصائيات الأسبوعية',
+    'Current Month' => 'الشهر الحالي',
+    'Total Monthly Hours' => 'إجمالي ساعات الشهر',
+    'Average Weekly Hours' => 'متوسط الساعات الأسبوعية',
+    'Week' => 'الأسبوع',
+    'Date Range' => 'النطاق الزمني',
+    'Working Days' => 'أيام العمل',
+    'Performance' => 'الأداء',
+    
+    // Daily breakdown translations
+    'Daily Breakdown' => 'التفصيل اليومي',
+    'Day' => 'اليوم',
+    'Hours Worked' => 'ساعات العمل',
+    'Monday' => 'الاثنين',
+    'Tuesday' => 'الثلاثاء',
+    'Wednesday' => 'الأربعاء',
+    'Thursday' => 'الخميس',
+    'Friday' => 'الجمعة',
+    'Saturday' => 'السبت',
+    'Sunday' => 'الأحد',
+    'No work recorded' => 'لا يوجد عمل مسجل',
+    'Rest day' => 'يوم راحة',
+    'Holiday' => 'عطلة',
+    'Absent' => 'غائب',
+    'Present' => 'حاضر',
+    'Late' => 'متأخر',
+    'On time' => 'في الوقت',
+    
+    // Performance indicators
+    'Excellent' => 'ممتاز',
+    'Very Good' => 'جيد جداً',
+    'Good' => 'جيد',
+    'Fair' => 'مقبول',
+    'Poor' => 'ضعيف',
+    
+    // Time indicators
+    'hours' => 'ساعات',
+    'hour' => 'ساعة',
+    'mins' => 'دقائق',
+    'min' => 'دقيقة',
+    'h' => 'س',
+    'm' => 'د',
+    
+    // Performance Indicators section
+    'Performance Indicators' => 'مؤشرات الأداء',
 ];
