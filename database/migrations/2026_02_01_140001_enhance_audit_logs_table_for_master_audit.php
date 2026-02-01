@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -13,13 +14,25 @@ return new class extends Migration
     {
         Schema::table('audit_logs', function (Blueprint $table) {
             // Add event type for categorizing different types of system events
-            $table->string('event_type', 50)->after('action')->index();
+            // Make it nullable first to handle existing records
+            $table->string('event_type', 50)->nullable()->after('action')->index();
             
             // Add severity level for filtering critical events
             $table->enum('severity', ['info', 'warning', 'critical'])->default('info')->after('event_type')->index();
             
             // Add description field for human-readable event description
             $table->text('description')->nullable()->after('severity');
+        });
+
+        // Update existing records with default event_type
+        DB::table('audit_logs')->whereNull('event_type')->update([
+            'event_type' => 'system_action',
+            'description' => 'Legacy audit log entry'
+        ]);
+
+        // Now make event_type NOT NULL
+        Schema::table('audit_logs', function (Blueprint $table) {
+            $table->string('event_type', 50)->nullable(false)->change();
         });
     }
 
