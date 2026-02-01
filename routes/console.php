@@ -30,3 +30,9 @@ Schedule::command('performance:create-period')
     })
     ->withoutOverlapping()
     ->onOneServer();
+
+// Reset grace days for all employees on the 1st of every month at 00:01
+Schedule::command('attendance:reset-grace-days')
+    ->monthlyOn(1, '00:01')
+    ->withoutOverlapping()
+    ->onOneServer();

@@ -372,6 +372,7 @@ class AttendanceService
             ->update([
                 'grace_days_used' => 0,
                 'grace_days_reset_date' => Carbon::now('Africa/Cairo')->startOfMonth(),
+                'total_deductions' => 0, // Reset monthly salary deductions
             ]);
     }
 }
