@@ -1,0 +1,584 @@
+openapi: 3.0.0
+info:
+  title: Advanced Sales Engine API
+  description: Enhanced quotations with payment plans and expiry management
+  version: 2.0.0
+  contact:
+    name: Business OS Development Team
+    email: dev@business-os.com
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+  - url: https://api.business-os.com/api/v1
+    description: Production server
+
+paths:
+  /quotations:
+    post:
+      tags:
+        - Quotations
+      summary: Create a new quotation with payment plan
+      description: Create a quotation with optional payment plan and expiry date
+      security:
+        - sanctum: []
+      parameters:
+        - name: Accept-Language
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [en, ar]
+            example: en
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - leadId
+                - estimations
+                - hourlyRate
+                - discountPercentage
+                - currency
+              properties:
+                leadId:
+                  type: integer
+                  example: 1
+                  description: ID of the associated lead
+                estimations:
+                  type: object
+                  properties:
+                    frontendHours:
+                      type: number
+                      example: 40
+                    backendHours:
+                      type: number
+                      example: 60
+                    uiUxHours:
+                      type: number
+                      example: 20
+                    testingHours:
+                      type: number
+                      example: 15
+                    pmHours:
+                      type: number
+                      example: 10
+                hourlyRate:
+                  type: number
+                  example: 50.00
+                  description: Rate per hour in the specified currency
+                discountPercentage:
+                  type: number
+                  example: 10.00
+                  minimum: 0
+                  maximum: 100
+                currency:
+                  type: string
+                  example: USD
+                  minLength: 3
+                  maxLength: 3
+                expiryDate:
+                  type: string
+                  format: date
+                  example: "2026-03-01"
+                  description: Date when the quotation expires
+                paymentPlan:
+                  type: array
+                  description: Payment milestones with percentages (must sum to 100%)
+                  items:
+                    type: object
+                    required:
+                      - milestone
+                      - percentage
+                    properties:
+                      milestone:
+                        type: string
+                        example: "Sign Contract"
+                        maxLength: 255
+                      percentage:
+                        type: number
+                        example: 50
+                        minimum: 0.01
+                        maximum: 100
+                  example:
+                    - milestone: "Sign Contract"
+                      percentage: 50
+                    - milestone: "Project Delivery"
+                      percentage: 50
+                status:
+                  type: string
+                  enum: [draft, sent, accepted, rejected, expired]
+                  example: draft
+            examples:
+              basic_quotation:
+                summary: Basic quotation without payment plan
+                value:
+                  leadId: 1
+                  estimations:
+                    frontendHours: 40
+                    backendHours: 60
+                    uiUxHours: 20
+                    testingHours: 15
+                    pmHours: 10
+                  hourlyRate: 50.00
+                  discountPercentage: 10.00
+                  currency: USD
+                  expiryDate: "2026-03-01"
+              with_payment_plan:
+                summary: Quotation with payment plan
+                value:
+                  leadId: 1
+                  estimations:
+                    frontendHours: 40
+                    backendHours: 60
+                    uiUxHours: 20
+                    testingHours: 15
+                    pmHours: 10
+                  hourlyRate: 50.00
+                  discountPercentage: 10.00
+                  currency: USD
+                  expiryDate: "2026-03-01"
+                  paymentPlan:
+                    - milestone: "Sign Contract"
+                      percentage: 30
+                    - milestone: "UI/UX Approval"
+                      percentage: 40
+                    - milestone: "Project Delivery"
+                      percentage: 30
+      responses:
+        "201":
+          description: Quotation created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Quotation created successfully"
+                  data:
+                    $ref: "#/components/schemas/QuotationResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+              examples:
+                payment_plan_error:
+                  summary: Payment plan validation error
+                  value:
+                    success: false
+                    message: "Validation failed for quotation creation"
+                    errors:
+                      paymentPlan:
+                        [
+                          "Total payment plan percentage must equal 100%. Current total: 90%",
+                        ]
+
+  /quotations/validate-payment-plan:
+    post:
+      tags:
+        - Quotations
+      summary: Validate payment plan structure
+      description: Validate payment plan percentages and calculate payment amounts
+      security:
+        - sanctum: []
+      parameters:
+        - name: Accept-Language
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [en, ar]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - paymentPlan
+                - finalPrice
+              properties:
+                paymentPlan:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - milestone
+                      - percentage
+                    properties:
+                      milestone:
+                        type: string
+                        maxLength: 255
+                      percentage:
+                        type: number
+                        minimum: 0.01
+                        maximum: 100
+                finalPrice:
+                  type: number
+                  minimum: 0
+            example:
+              paymentPlan:
+                - milestone: "Sign Contract"
+                  percentage: 50
+                - milestone: "Project Delivery"
+                  percentage: 50
+              finalPrice: 10000.00
+      responses:
+        "200":
+          description: Payment plan validated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Payment plan validated successfully"
+                  data:
+                    type: object
+                    properties:
+                      isValid:
+                        type: boolean
+                        example: true
+                      paymentBreakdown:
+                        $ref: "#/components/schemas/PaymentBreakdown"
+        "422":
+          description: Payment plan validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Payment plan validation failed"
+                  errors:
+                    type: object
+                    properties:
+                      paymentPlan:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          ["Total payment plan percentage must equal 100%"]
+
+  /quotations/{id}/status:
+    patch:
+      tags:
+        - Quotations
+      summary: Update quotation status
+      description: Update quotation status with optional rejection reason
+      security:
+        - sanctum: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: Accept-Language
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [en, ar]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    [
+                      draft,
+                      sent,
+                      viewed,
+                      expired,
+                      negotiation,
+                      approved,
+                      rejected,
+                    ]
+                rejectionReason:
+                  type: string
+                  description: Required when status is 'rejected'
+                rejectionNotes:
+                  type: string
+                  description: Optional additional notes for rejection
+            examples:
+              approve:
+                summary: Approve quotation
+                value:
+                  status: approved
+              reject:
+                summary: Reject quotation
+                value:
+                  status: rejected
+                  rejectionReason: "Budget constraints"
+                  rejectionNotes: "Client requested 30% reduction in scope"
+      responses:
+        "200":
+          description: Status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Quotation status updated successfully"
+                  data:
+                    $ref: "#/components/schemas/QuotationResponse"
+
+  /quotations-expiring:
+    get:
+      tags:
+        - Quotations
+      summary: Get quotations expiring soon
+      description: Retrieve quotations that are expiring within specified days
+      security:
+        - sanctum: []
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 3
+            minimum: 1
+            maximum: 30
+          description: Number of days to look ahead for expiring quotations
+        - name: Accept-Language
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [en, ar]
+      responses:
+        "200":
+          description: Expiring quotations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Expiring quotations retrieved successfully"
+                  data:
+                    type: object
+                    properties:
+                      quotations:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/QuotationResponse"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+
+components:
+  securitySchemes:
+    sanctum:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+
+  schemas:
+    QuotationResponse:
+      type: object
+      properties:
+        quotationId:
+          type: integer
+          example: 1
+        leadId:
+          type: integer
+          example: 1
+        estimations:
+          type: object
+          properties:
+            frontendHours:
+              type: number
+              example: 40
+            backendHours:
+              type: number
+              example: 60
+            uiUxHours:
+              type: number
+              example: 20
+            testingHours:
+              type: number
+              example: 15
+            pmHours:
+              type: number
+              example: 10
+        hourlyRate:
+          type: number
+          example: 50.00
+        discountPercentage:
+          type: number
+          example: 10.00
+        finalPrice:
+          type: number
+          example: 6525.00
+        currency:
+          type: string
+          example: USD
+        status:
+          type: string
+          example: draft
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-03-01T00:00:00.000000Z"
+        paymentPlan:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              milestone:
+                type: string
+                example: "Sign Contract"
+              percentage:
+                type: number
+                example: 50
+        rejectionReason:
+          type: string
+          nullable: true
+          example: "Budget constraints"
+        pricingBreakdown:
+          type: object
+          properties:
+            totalHours:
+              type: number
+              example: 145
+            grossPrice:
+              type: number
+              example: 7250.00
+            discountAmount:
+              type: number
+              example: 725.00
+            finalPrice:
+              type: number
+              example: 6525.00
+        paymentBreakdown:
+          $ref: "#/components/schemas/PaymentBreakdown"
+        lead:
+          type: object
+          properties:
+            leadId:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: "John Doe"
+            email:
+              type: string
+              example: "john@example.com"
+            company:
+              type: string
+              example: "Acme Corp"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-01T10:00:00.000000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-02-01T10:00:00.000000Z"
+        createdBy:
+          type: integer
+          example: 1
+        updatedBy:
+          type: integer
+          example: 1
+
+    PaymentBreakdown:
+      type: object
+      nullable: true
+      properties:
+        payments:
+          type: array
+          items:
+            type: object
+            properties:
+              milestone:
+                type: string
+                example: "Sign Contract"
+              percentage:
+                type: number
+                example: 50
+              amount:
+                type: number
+                example: 5000.00
+              currency:
+                type: string
+                example: USD
+        totalAmount:
+          type: number
+          example: 10000.00
+        totalPercentage:
+          type: number
+          example: 100
+
+    ValidationError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Validation failed"
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 25
+        count:
+          type: integer
+          example: 15
+        perPage:
+          type: integer
+          example: 15
+        currentPage:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 2
+
+tags:
+  - name: Quotations
+    description: Enhanced quotation management with payment plans and expiry tracking

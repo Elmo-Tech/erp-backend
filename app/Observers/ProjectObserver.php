@@ -8,9 +8,12 @@ use App\Models\Project;
 use App\Models\User;
 use App\Notifications\ProjectDeadlineApproachingNotification;
 use App\Notifications\ProjectStatusChangedNotification;
+use App\Services\AuditService;
+use App\Services\BillingService;
 use App\Services\Projects\ProjectHistoryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -32,7 +35,9 @@ class ProjectObserver
      * Create a new observer instance.
      */
     public function __construct(
-        private ProjectHistoryService $historyService
+        private ProjectHistoryService $historyService,
+        private BillingService $billingService,
+        private AuditService $auditService
     ) {}
 
     /**
@@ -121,6 +126,9 @@ class ProjectObserver
 
             // Notify team members about status change
             $this->notifyTeamAboutStatusChange($project, $oldStatusValue, $newStatusValue);
+
+            // Auto-generate invoices based on status change (Expansion Pack 4)
+            $this->handleAutomaticBilling($project, $oldStatusValue, $newStatusValue);
         }
 
         // Record deadline changes
@@ -248,5 +256,79 @@ class ProjectObserver
         // For database queue, the job will check if project is still in ui_ux status
         // and skip execution if not (defensive check in AutoApproveUIJob::handle)
         $project->auto_approval_job_id = null;
+    }
+
+    /**
+     * Handle automatic billing when project status changes.
+     * 
+     * This method implements the Event-Based Billing system from Expansion Pack 4.
+     * It automatically generates invoices for completed milestones based on project status.
+     *
+     * @param Project $project
+     * @param string|null $oldStatus
+     * @param string $newStatus
+     * @return void
+     */
+    private function handleAutomaticBilling(Project $project, ?string $oldStatus, string $newStatus): void
+    {
+        // Only process if project has a contract
+        if (!$project->contract) {
+            return;
+        }
+
+        // Log the status change for audit trail
+        $this->auditService->logProjectEvent(
+            action: 'status_changed',
+            project: $project,
+            metadata: [
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'contract_id' => $project->contract->id,
+            ],
+            severity: 'info'
+        );
+
+        // Generate invoices based on status transitions
+        try {
+            $generatedInvoices = $this->billingService->generatePendingInvoices($project);
+            
+            if (!empty($generatedInvoices)) {
+                Log::info("Auto-generated {count} invoices for project {project}", [
+                    'count' => count($generatedInvoices),
+                    'project' => $project->id,
+                    'status_change' => "{$oldStatus} -> {$newStatus}",
+                    'invoice_ids' => collect($generatedInvoices)->pluck('id')->toArray(),
+                ]);
+
+                // Log the automatic invoice generation
+                $this->auditService->logSystemEvent(
+                    action: 'auto_invoice_generation',
+                    metadata: [
+                        'project_id' => $project->id,
+                        'status_change' => "{$oldStatus} -> {$newStatus}",
+                        'invoices_generated' => count($generatedInvoices),
+                        'invoice_ids' => collect($generatedInvoices)->pluck('id')->toArray(),
+                    ],
+                    severity: 'info'
+                );
+            }
+        } catch (\Exception $e) {
+            Log::error("Failed to auto-generate invoices for project {project}: {error}", [
+                'project' => $project->id,
+                'error' => $e->getMessage(),
+                'status_change' => "{$oldStatus} -> {$newStatus}",
+            ]);
+
+            // Log the failure
+            $this->auditService->logSystemEvent(
+                action: 'auto_invoice_generation_failed',
+                metadata: [
+                    'project_id' => $project->id,
+                    'status_change' => "{$oldStatus} -> {$newStatus}",
+                    'error' => $e->getMessage(),
+                ],
+                severity: 'warning'
+            );
+        }
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\CheckQuotationExpiryJob;
 use App\Jobs\MarkOverdueInvoicesJob;
 use App\Jobs\SendActivityRemindersJob;
 use App\Jobs\SendExpiryWarningsJob;
@@ -14,6 +15,9 @@ Artisan::command('inspire', function () {
 // Schedule the MarkOverdueInvoicesJob to run daily at midnight
 // Requirements: 18.1, 18.5
 Schedule::job(new MarkOverdueInvoicesJob)->daily();
+
+// Check for expiring quotations daily at 8 AM (3-day warning)
+Schedule::job(new CheckQuotationExpiryJob)->dailyAt('08:00')->withoutOverlapping();
 
 // Send activity reminders every 5 minutes
 Schedule::job(new SendActivityRemindersJob)->everyFiveMinutes()->withoutOverlapping();

@@ -48,6 +48,23 @@ return [
     'invoice_created_from_milestone' => 'تم إنشاء الفاتورة من المرحلة بنجاح',
     'invoice_linked_to_milestone' => 'تم ربط الفاتورة بالمرحلة بنجاح',
     'milestone_already_has_invoice' => 'المرحلة مرتبطة بفاتورة بالفعل',
+    
+    // Invoices
+    'invoices_retrieved' => 'تم جلب الفواتير بنجاح',
+    'invoice_retrieved' => 'تم جلب الفاتورة بنجاح',
+    'invoice_created' => 'تم إنشاء الفاتورة بنجاح',
+    'invoice_updated' => 'تم تحديث الفاتورة بنجاح',
+    'invoice_deleted' => 'تم حذف الفاتورة بنجاح',
+    'invoice_sent' => 'تم إرسال الفاتورة بنجاح',
+    'invoice_marked_paid' => 'تم تحديد الفاتورة كمدفوعة بنجاح',
+    'milestone_invoice_generated' => 'تم إنشاء فاتورة المرحلة بنجاح',
+    'pending_invoices_generated' => 'تم إنشاء الفواتير المعلقة بنجاح',
+    'cannot_delete_non_draft_invoice' => 'يمكن حذف المسودات فقط',
+    
+    // Audit Logs
+    'audit_logs_retrieved' => 'تم جلب سجلات المراجعة بنجاح',
+    'audit_log_retrieved' => 'تم جلب سجل المراجعة بنجاح',
+    'audit_stats_retrieved' => 'تم جلب إحصائيات المراجعة بنجاح',
 
     // Tasks
     'task_status_updated' => 'تم تحديث حالة المهمة بنجاح',
@@ -109,4 +126,29 @@ return [
     'admin_deliverable_reset' => 'تم إعادة تعيين المخرج إلى حالة الانتظار بنجاح',
     'admin_deliverable_approved' => 'تم الموافقة على المخرج بشكل مباشر بنجاح',
     'admin_deliverable_rejected' => 'تم رفض المخرج بشكل مباشر بنجاح',
+    
+    // Activities
+    'activities_retrieved' => 'تم استرداد الأنشطة بنجاح',
+    'activity_created' => 'تم إنشاء النشاط بنجاح',
+    'activity_retrieved' => 'تم استرداد النشاط بنجاح',
+    'activity_updated' => 'تم تحديث النشاط بنجاح',
+    'activity_completed' => 'تم وضع علامة على النشاط كمكتمل بنجاح',
+    'activity_deleted' => 'تم حذف النشاط بنجاح',
+
+    // Contracts
+    'contracts' => [
+        'retrieved' => 'تم استرداد العقود بنجاح',
+        'generated' => 'تم إنشاء العقد بنجاح',
+        'signed' => 'تم توقيع العقد بنجاح',
+        'status_updated' => 'تم تحديث حالة العقد بنجاح',
+        'already_exists' => 'يوجد عقد بالفعل لهذا العرض',
+    ],
+
+    // Analytics
+    'sales_performance_retrieved' => 'تم استرداد مقاييس الأداء التجاري بنجاح',
+    'rejection_analysis_retrieved' => 'تم استرداد تحليل الرفض بنجاح',
+    'financial_forecast_retrieved' => 'تم استرداد التوقعات المالية بنجاح',
+    'follow_up_radar_retrieved' => 'تم استرداد رادار المتابعة بنجاح',
+    'dashboard_summary_retrieved' => 'تم استرداد ملخص لوحة التحكم بنجاح',
+    'analytics_cache_cleared' => 'تم مسح ذاكرة التخزين المؤقت للتحليلات بنجاح',
 ];

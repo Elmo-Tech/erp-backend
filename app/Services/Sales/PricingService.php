@@ -196,4 +196,106 @@ class PricingService
         }
         return $converted;
     }
+
+    /**
+     * Validate payment plan structure and percentages.
+     * 
+     * @param array $paymentPlan Array of payment milestones with percentages
+     * @return bool
+     * @throws InvalidArgumentException
+     */
+    public function validatePaymentPlan(array $paymentPlan): bool
+    {
+        if (empty($paymentPlan)) {
+            throw new InvalidArgumentException('Payment plan cannot be empty.');
+        }
+
+        $totalPercentage = 0;
+        $milestones = [];
+
+        foreach ($paymentPlan as $index => $milestone) {
+            // Validate structure
+            if (!is_array($milestone)) {
+                throw new InvalidArgumentException("Payment plan item at index {$index} must be an array.");
+            }
+
+            if (!isset($milestone['milestone']) || !isset($milestone['percentage'])) {
+                throw new InvalidArgumentException("Payment plan item at index {$index} must have 'milestone' and 'percentage' keys.");
+            }
+
+            // Validate milestone name
+            $milestoneName = trim($milestone['milestone']);
+            if (empty($milestoneName)) {
+                throw new InvalidArgumentException("Milestone name at index {$index} cannot be empty.");
+            }
+
+            // Check for duplicate milestones
+            if (in_array($milestoneName, $milestones)) {
+                throw new InvalidArgumentException("Duplicate milestone '{$milestoneName}' found in payment plan.");
+            }
+            $milestones[] = $milestoneName;
+
+            // Validate percentage
+            $percentage = $milestone['percentage'];
+            if (!is_numeric($percentage)) {
+                throw new InvalidArgumentException("Percentage at index {$index} must be numeric.");
+            }
+
+            $percentage = (float) $percentage;
+            if ($percentage <= 0 || $percentage > 100) {
+                throw new InvalidArgumentException("Percentage at index {$index} must be between 0.01 and 100.");
+            }
+
+            $totalPercentage += $percentage;
+        }
+
+        // Validate total percentage equals 100%
+        if (abs($totalPercentage - 100) > 0.01) { // Allow small floating point differences
+            throw new InvalidArgumentException("Total payment plan percentage must equal 100%. Current total: {$totalPercentage}%");
+        }
+
+        return true;
+    }
+
+    /**
+     * Calculate payment amounts based on final price and payment plan.
+     * 
+     * @param float $finalPrice Total quotation price
+     * @param array $paymentPlan Validated payment plan
+     * @return array Payment breakdown with amounts
+     */
+    public function calculatePaymentAmounts(float $finalPrice, array $paymentPlan): array
+    {
+        $this->validatePaymentPlan($paymentPlan);
+
+        $payments = [];
+        $totalCalculated = 0;
+
+        foreach ($paymentPlan as $index => $milestone) {
+            $percentage = (float) $milestone['percentage'];
+            $amount = round(($finalPrice * $percentage) / 100, 2);
+            
+            $payments[] = [
+                'milestone' => $milestone['milestone'],
+                'percentage' => $percentage,
+                'amount' => $amount,
+                'currency' => 'USD', // Default currency, can be parameterized
+            ];
+
+            $totalCalculated += $amount;
+        }
+
+        // Adjust last payment for rounding differences
+        if (count($payments) > 0 && abs($totalCalculated - $finalPrice) > 0.01) {
+            $difference = $finalPrice - $totalCalculated;
+            $payments[count($payments) - 1]['amount'] += $difference;
+            $payments[count($payments) - 1]['amount'] = round($payments[count($payments) - 1]['amount'], 2);
+        }
+
+        return [
+            'payments' => $payments,
+            'totalAmount' => $finalPrice,
+            'totalPercentage' => 100,
+        ];
+    }
 }

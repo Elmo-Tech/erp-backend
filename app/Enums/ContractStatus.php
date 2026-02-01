@@ -30,7 +30,7 @@ enum ContractStatus: string
             self::PENDING_SIGNATURE => 'yellow',
             self::SIGNED => 'blue',
             self::ACTIVE => 'green',
-            self::COMPLETED => 'purple',
+            self::COMPLETED => 'green',
             self::TERMINATED => 'red',
         };
     }

@@ -12,7 +12,7 @@ use App\Http\Controllers\Api\V1\ChangeRequestController;
 use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
 use App\Http\Controllers\Api\V1\Client\ClientProjectController;
 use App\Http\Controllers\Api\V1\ClientController;
-use App\Http\Controllers\Api\V1\ContractController;
+use App\Http\Controllers\ContractController;
 use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\EnumController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\GlobalSearchController;
 use App\Http\Controllers\Api\V1\SalesDashboardController;
+use App\Http\Controllers\Api\V1\AnalyticsController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -92,7 +93,7 @@ Route::prefix('v1')->group(function () {
     Route::post('leads/{lead}/convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'convert'])->name('leads.convert');
     
     // Activity Management Routes
-    Route::get('activities', [ActivityController::class, 'index'])->name('activities.index');
+    Route::apiResource('activities', ActivityController::class);
     Route::post('activities/{activity}/complete', [ActivityController::class, 'complete'])->name('activities.complete');
     Route::post('activities/{activity}/cancel', [ActivityController::class, 'cancel'])->name('activities.cancel');
     
@@ -134,19 +135,18 @@ Route::prefix('v1')->group(function () {
     // Quotation Management Routes (Price Quotes)
     Route::apiResource('quotations', QuotationController::class);
     Route::post('quotations/calculate', [QuotationController::class, 'calculate'])->name('quotations.calculate');
+    Route::post('quotations/validate-payment-plan', [QuotationController::class, 'validatePaymentPlan'])->name('quotations.validate-payment-plan');
     Route::post('quotations/{quotation}/send', [QuotationController::class, 'send'])->name('quotations.send');
     Route::patch('quotations/{quotation}/status', [QuotationController::class, 'updateStatus'])->name('quotations.update-status');
     Route::get('quotations-expiring', [QuotationController::class, 'expiring'])->name('quotations.expiring');
     Route::get('quotations-overdue', [QuotationController::class, 'overdue'])->name('quotations.overdue');
 
     // Contract Management Routes
-    Route::apiResource('contracts', ContractController::class);
-    Route::post('contracts/from-quotation/{quotation}', [ContractController::class, 'createFromQuotation'])->name('contracts.from-quotation');
+    Route::get('contracts', [ContractController::class, 'index'])->name('contracts.index');
+    Route::get('contracts/{contract}', [ContractController::class, 'show'])->name('contracts.show');
+    Route::post('quotations/{quotationId}/contract', [ContractController::class, 'generateFromQuotation'])->name('contracts.generate-from-quotation');
     Route::post('contracts/{contract}/sign', [ContractController::class, 'sign'])->name('contracts.sign');
-    Route::post('contracts/{contract}/activate', [ContractController::class, 'activate'])->name('contracts.activate');
     Route::patch('contracts/{contract}/status', [ContractController::class, 'updateStatus'])->name('contracts.update-status');
-    Route::get('contracts/milestones/due', [ContractController::class, 'dueMilestones'])->name('contracts.milestones.due');
-    Route::patch('contracts/milestones/{milestone}/paid', [ContractController::class, 'markMilestonePaid'])->name('contracts.milestones.paid');
 
     // Change Request Routes
     Route::get('projects/{project}/change-requests', [ChangeRequestController::class, 'index'])->name('change-requests.index');
@@ -191,6 +191,16 @@ Route::prefix('v1')->group(function () {
         Route::get('revenue/forecast', [SalesAnalyticsController::class, 'forecast'])->name('analytics.revenue.forecast');
         Route::get('quotations/stats', [SalesAnalyticsController::class, 'quotationStats'])->name('analytics.quotations.stats');
         Route::get('projects/types', [SalesAnalyticsController::class, 'projectTypes'])->name('analytics.projects.types');
+    });
+
+    // Executive Analytics Routes (Admin/Manager Only)
+    Route::prefix('analytics')->middleware(['auth:sanctum', 'locale'])->group(function () {
+        Route::get('sales-performance', [AnalyticsController::class, 'salesPerformance'])->name('analytics.sales-performance');
+        Route::get('rejection-reasons', [AnalyticsController::class, 'rejectionReasons'])->name('analytics.rejection-reasons');
+        Route::get('financial-forecast', [AnalyticsController::class, 'financialForecast'])->name('analytics.financial-forecast');
+        Route::get('follow-up-radar', [AnalyticsController::class, 'followUpRadar'])->name('analytics.follow-up-radar');
+        Route::get('dashboard-summary', [AnalyticsController::class, 'dashboardSummary'])->name('analytics.dashboard-summary');
+        Route::post('clear-cache', [AnalyticsController::class, 'clearCache'])->name('analytics.clear-cache');
     });
 
     // Time Entry Routes
@@ -318,6 +328,10 @@ Route::prefix('v1')->group(function () {
     // Admin Invoice Management Routes
     // All routes have auth:sanctum and locale middleware applied at route level
     Route::apiResource('invoices', InvoiceController::class)->middleware(['auth:sanctum', 'locale']);
+    Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->middleware(['auth:sanctum', 'locale'])->name('invoices.send');
+    Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markAsPaid'])->middleware(['auth:sanctum', 'locale'])->name('invoices.mark-paid');
+    Route::post('projects/{project}/generate-milestone-invoice', [InvoiceController::class, 'generateMilestoneInvoice'])->middleware(['auth:sanctum', 'locale'])->name('projects.generate-milestone-invoice');
+    Route::post('projects/{project}/generate-pending-invoices', [InvoiceController::class, 'generatePendingInvoices'])->middleware(['auth:sanctum', 'locale'])->name('projects.generate-pending-invoices');
 
     // Milestone Management Routes
     Route::prefix('milestones')->middleware(['auth:sanctum', 'locale'])->group(function () {
@@ -369,6 +383,8 @@ Route::prefix('v1')->group(function () {
 
         // Admin Audit Log Routes
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
+        Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('admin.audit-logs.show');
+        Route::get('audit-logs/stats', [AuditLogController::class, 'stats'])->name('admin.audit-logs.stats');
 
         // Admin Deliverable Management Routes (Full Control)
         Route::prefix('deliverables')->group(function () {

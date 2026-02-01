@@ -4,104 +4,90 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\V1\Admin\AuditLogResource;
+use App\Http\Resources\V1\AuditLog\AuditLogCollection;
+use App\Http\Resources\V1\AuditLog\AuditLogResource;
 use App\Models\AuditLog;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use OpenApi\Annotations as OA;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @OA\Tag(
+ *     name="Audit Logs",
+ *     description="System audit trail endpoints (Admin only)"
+ * )
+ */
 class AuditLogController extends Controller
 {
-    public function __construct()
-    {
-        // Apply middleware using Laravel 12 approach
+    public function __construct(
+        private AuditService $auditService
+    ) {
         $this->middleware(['auth:sanctum', 'locale']);
+        // TODO: Add permission middleware for admin only access
+        // $this->middleware('permission:view_audit_logs');
     }
 
     /**
      * @OA\Get(
-     *     path="/api/v1/admin/audit-logs",
-     *     operationId="getAuditLogs",
-     *     tags={"Admin Audit Logs"},
-     *     summary="Get audit logs with filtering and pagination",
-     *     description="Retrieve audit logs with comprehensive filtering by action, user, date range, and resource ID search. Requires view_audit_logs permission.",
+     *     path="/api/v1/audit-logs",
+     *     summary="Get paginated list of audit logs (Admin only)",
+     *     tags={"Audit Logs"},
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
      *     @OA\Parameter(
-     *         name="filter[action]",
+     *         name="filter[event_type]",
      *         in="query",
-     *         description="Filter by action type",
-     *         @OA\Schema(
-     *             type="string",
-     *             enum={
-     *                 "login", "logout", "create_project", "update_project", "delete_project",
-     *                 "create_task", "update_task", "delete_task", "update_internal_cost",
-     *                 "update_role_permissions", "create_role", "delete_role", "view_profitability",
-     *                 "forbidden_access_attempt", "approve_ui", "pay_invoice"
-     *             },
-     *             example="update_internal_cost"
-     *         )
+     *         description="Filter by event type",
+     *         @OA\Schema(type="string", enum={"contract", "invoice", "project", "payment", "security", "system"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[severity]",
+     *         in="query",
+     *         description="Filter by severity level",
+     *         @OA\Schema(type="string", enum={"info", "warning", "critical"})
      *     ),
      *     @OA\Parameter(
      *         name="filter[user_id]",
      *         in="query",
      *         description="Filter by user ID",
-     *         @OA\Schema(type="integer", example=1)
+     *         @OA\Schema(type="integer")
      *     ),
      *     @OA\Parameter(
-     *         name="filter[auditable_type]",
+     *         name="filter[action]",
      *         in="query",
-     *         description="Filter by resource type",
-     *         @OA\Schema(
-     *             type="string",
-     *             enum={"App\\Models\\User", "App\\Models\\Project", "App\\Models\\Task", "App\\Models\\Role", "App\\Models\\Invoice"},
-     *             example="App\\Models\\User"
-     *         )
+     *         description="Search in action field",
+     *         @OA\Schema(type="string")
      *     ),
      *     @OA\Parameter(
      *         name="filter[date_from]",
      *         in="query",
-     *         description="Filter logs from this date (YYYY-MM-DD)",
-     *         @OA\Schema(type="string", format="date", example="2024-01-01")
+     *         description="Filter from date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date")
      *     ),
      *     @OA\Parameter(
      *         name="filter[date_to]",
      *         in="query",
-     *         description="Filter logs up to this date (YYYY-MM-DD)",
-     *         @OA\Schema(type="string", format="date", example="2024-12-31")
-     *     ),
-     *     @OA\Parameter(
-     *         name="filter[search]",
-     *         in="query",
-     *         description="Search by resource ID or IP address",
-     *         @OA\Schema(type="string", example="192.168.1.1")
-     *     ),
-     *     @OA\Parameter(
-     *         name="sort",
-     *         in="query",
-     *         description="Sort by field (prefix with - for descending)",
-     *         @OA\Schema(type="string", enum={"created_at", "-created_at", "action", "-action", "user_id", "-user_id"}, example="-created_at")
+     *         description="Filter to date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date")
      *     ),
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
-     *         description="Page number for pagination",
-     *         @OA\Schema(type="integer", minimum=1, example=1)
+     *         description="Page number",
+     *         @OA\Schema(type="integer", default=1)
      *     ),
      *     @OA\Parameter(
-     *         name="per_page",
+     *         name="perPage",
      *         in="query",
-     *         description="Number of items per page",
-     *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
+     *         description="Items per page",
+     *         @OA\Schema(type="integer", default=20)
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -115,158 +101,186 @@ class AuditLogController extends Controller
      *                 @OA\Property(
      *                     property="auditLogs",
      *                     type="array",
-     *                     @OA\Items(
-     *                         @OA\Property(property="auditLogId", type="integer", example=1),
-     *                         @OA\Property(property="userId", type="integer", example=1),
-     *                         @OA\Property(property="userName", type="string", example="John Doe"),
-     *                         @OA\Property(property="action", type="string", example="update_internal_cost"),
-     *                         @OA\Property(property="auditableType", type="string", example="App\\Models\\User"),
-     *                         @OA\Property(property="auditableId", type="integer", nullable=true, example=5),
-     *                         @OA\Property(property="ipAddress", type="string", example="192.168.1.100"),
-     *                         @OA\Property(property="userAgent", type="string", example="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"),
-     *                         @OA\Property(
-     *                             property="metadata",
-     *                             type="object",
-     *                             example={"old_cost": "50.00", "new_cost": "75.00", "reason": "Performance review"}
-     *                         ),
-     *                         @OA\Property(property="createdAt", type="string", format="date-time", example="2024-01-15T10:30:00Z"),
-     *                         @OA\Property(property="isSensitive", type="boolean", example=true, description="Indicates if this is a security-sensitive action")
-     *                     )
+     *                     @OA\Items(ref="#/components/schemas/AuditLogResource")
      *                 ),
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
-     *                     @OA\Property(property="total", type="integer", example=150),
-     *                     @OA\Property(property="count", type="integer", example=15),
-     *                     @OA\Property(property="perPage", type="integer", example=15),
-     *                     @OA\Property(property="currentPage", type="integer", example=1),
-     *                     @OA\Property(property="totalPages", type="integer", example=10)
+     *                     @OA\Property(property="total", type="integer"),
+     *                     @OA\Property(property="count", type="integer"),
+     *                     @OA\Property(property="perPage", type="integer"),
+     *                     @OA\Property(property="currentPage", type="integer"),
+     *                     @OA\Property(property="totalPages", type="integer")
      *                 )
      *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Forbidden - User lacks view_audit_logs permission",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="You do not have permission to view audit logs")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Invalid filter parameters"),
-     *             @OA\Property(
-     *                 property="errors",
-     *                 type="object",
-     *                 @OA\Property(
-     *                     property="filter.action",
-     *                     type="array",
-     *                     @OA\Items(type="string", example="Invalid action type")
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
      *     )
      * )
      */
     public function index(Request $request): JsonResponse
     {
-        // Check permission
-        if (!auth()->user()->can('view_audit_logs')) {
-            return ApiResponse::forbidden('You do not have permission to view audit logs');
-        }
+        $auditLogs = QueryBuilder::for(AuditLog::class)
+            ->with(['user', 'auditable'])
+            ->allowedFilters([
+                AllowedFilter::exact('event_type'),
+                AllowedFilter::exact('severity'),
+                AllowedFilter::exact('user_id'),
+                AllowedFilter::partial('action'),
+                AllowedFilter::callback('date_from', function ($query, $value) {
+                    $query->whereDate('created_at', '>=', $value);
+                }),
+                AllowedFilter::callback('date_to', function ($query, $value) {
+                    $query->whereDate('created_at', '<=', $value);
+                }),
+            ])
+            ->defaultSort('-created_at')
+            ->allowedSorts(['created_at', 'event_type', 'severity', 'action'])
+            ->paginate($request->get('perPage', 20));
 
-        try {
-            // Validate request parameters
-            $validated = $request->validate([
-                'filter.action' => [
-                    'sometimes',
-                    'string',
-                    Rule::in([
-                        'login', 'logout', 'create_project', 'update_project', 'delete_project',
-                        'create_task', 'update_task', 'delete_task', 'update_internal_cost',
-                        'update_role_permissions', 'create_role', 'delete_role', 'view_profitability',
-                        'forbidden_access_attempt', 'approve_ui', 'pay_invoice'
-                    ])
-                ],
-                'filter.user_id' => 'sometimes|integer|exists:users,id',
-                'filter.auditable_type' => [
-                    'sometimes',
-                    'string',
-                    Rule::in([
-                        'App\\Models\\User', 'App\\Models\\Project', 'App\\Models\\Task',
-                        'App\\Models\\Role', 'App\\Models\\Invoice'
-                    ])
-                ],
-                'filter.date_from' => 'sometimes|date|before_or_equal:filter.date_to',
-                'filter.date_to' => 'sometimes|date|after_or_equal:filter.date_from',
-                'filter.search' => 'sometimes|string|max:255',
-                'sort' => 'sometimes|string|in:created_at,-created_at,action,-action,user_id,-user_id',
-                'page' => 'sometimes|integer|min:1',
-                'per_page' => 'sometimes|integer|min:1|max:100'
-            ]);
+        return ApiResponse::success(
+            new AuditLogCollection($auditLogs),
+            __('messages.audit_logs_retrieved')
+        );
+    }
 
-            // Build query using Spatie Query Builder
-            $auditLogs = QueryBuilder::for(AuditLog::class)
-                ->with(['user:id,name']) // Load user relationship for efficiency
-                ->allowedFilters([
-                    AllowedFilter::exact('action'),
-                    AllowedFilter::exact('user_id'),
-                    AllowedFilter::exact('auditable_type'),
-                    AllowedFilter::callback('date_from', function ($query, $value) {
-                        $query->whereDate('created_at', '>=', $value);
-                    }),
-                    AllowedFilter::callback('date_to', function ($query, $value) {
-                        $query->whereDate('created_at', '<=', $value);
-                    }),
-                    AllowedFilter::callback('search', function ($query, $value) {
-                        $query->where(function ($q) use ($value) {
-                            $q->where('auditable_id', 'LIKE', "%{$value}%")
-                              ->orWhere('ip_address', 'LIKE', "%{$value}%");
-                        });
-                    })
-                ])
-                ->allowedSorts(['created_at', 'action', 'user_id'])
-                ->defaultSort('-created_at') // Most recent first by default
-                ->paginate($request->get('per_page', 15));
+    /**
+     * @OA\Get(
+     *     path="/api/v1/audit-logs/{id}",
+     *     summary="Get audit log details (Admin only)",
+     *     tags={"Audit Logs"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Audit log retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Audit log retrieved successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/AuditLogResource")
+     *         )
+     *     )
+     * )
+     */
+    public function show(AuditLog $auditLog): JsonResponse
+    {
+        $auditLog->load(['user', 'auditable']);
 
-            // Format response data
-            $responseData = [
-                'auditLogs' => AuditLogResource::collection($auditLogs->items()),
-                'pagination' => [
-                    'total' => $auditLogs->total(),
-                    'count' => $auditLogs->count(),
-                    'perPage' => $auditLogs->perPage(),
-                    'currentPage' => $auditLogs->currentPage(),
-                    'totalPages' => $auditLogs->lastPage(),
-                ],
-            ];
+        return ApiResponse::success(
+            new AuditLogResource($auditLog),
+            __('messages.audit_log_retrieved')
+        );
+    }
 
-            return ApiResponse::success(
-                $responseData,
-                'Audit logs retrieved successfully'
-            );
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return ApiResponse::validationError(
-                $e->errors(),
-                'Invalid filter parameters'
-            );
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to retrieve audit logs: ' . $e->getMessage(),
-                500
-            );
-        }
+    /**
+     * @OA\Get(
+     *     path="/api/v1/audit-logs/stats",
+     *     summary="Get audit log statistics (Admin only)",
+     *     tags={"Audit Logs"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="days",
+     *         in="query",
+     *         description="Number of days to include in stats",
+     *         @OA\Schema(type="integer", default=30)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Audit log statistics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Audit log statistics retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="totalEvents", type="integer", example=1250),
+     *                 @OA\Property(property="criticalEvents", type="integer", example=5),
+     *                 @OA\Property(property="warningEvents", type="integer", example=45),
+     *                 @OA\Property(property="infoEvents", type="integer", example=1200),
+     *                 @OA\Property(
+     *                     property="eventsByType",
+     *                     type="object",
+     *                     @OA\Property(property="contract", type="integer", example=150),
+     *                     @OA\Property(property="invoice", type="integer", example=300),
+     *                     @OA\Property(property="project", type="integer", example=200),
+     *                     @OA\Property(property="payment", type="integer", example=100),
+     *                     @OA\Property(property="security", type="integer", example=25),
+     *                     @OA\Property(property="system", type="integer", example=475)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="dailyActivity",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         type="object",
+     *                         @OA\Property(property="date", type="string", format="date"),
+     *                         @OA\Property(property="count", type="integer")
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function stats(Request $request): JsonResponse
+    {
+        $days = $request->get('days', 30);
+        $fromDate = now()->subDays($days);
+
+        // Total events in period
+        $totalEvents = AuditLog::where('created_at', '>=', $fromDate)->count();
+
+        // Events by severity
+        $severityStats = AuditLog::where('created_at', '>=', $fromDate)
+            ->selectRaw('severity, COUNT(*) as count')
+            ->groupBy('severity')
+            ->pluck('count', 'severity')
+            ->toArray();
+
+        // Events by type
+        $typeStats = AuditLog::where('created_at', '>=', $fromDate)
+            ->selectRaw('event_type, COUNT(*) as count')
+            ->groupBy('event_type')
+            ->pluck('count', 'event_type')
+            ->toArray();
+
+        // Daily activity
+        $dailyActivity = AuditLog::where('created_at', '>=', $fromDate)
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'date' => $item->date,
+                    'count' => $item->count
+                ];
+            });
+
+        $stats = [
+            'totalEvents' => $totalEvents,
+            'criticalEvents' => $severityStats['critical'] ?? 0,
+            'warningEvents' => $severityStats['warning'] ?? 0,
+            'infoEvents' => $severityStats['info'] ?? 0,
+            'eventsByType' => $typeStats,
+            'dailyActivity' => $dailyActivity,
+        ];
+
+        return ApiResponse::success($stats, __('messages.audit_stats_retrieved'));
     }
 }

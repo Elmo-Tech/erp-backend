@@ -14,9 +14,13 @@ class QuotationExpiring extends Notification implements ShouldQueue
     use Queueable;
 
     public function __construct(
-        public Quotation $quotation,
-        public int $daysUntilExpiry
-    ) {}
+        public Quotation $quotation
+    ) {
+        $this->daysUntilExpiry = $quotation->expires_at ? 
+            now()->diffInDays($quotation->expires_at, false) : 0;
+    }
+
+    public int $daysUntilExpiry;
 
     public function via(object $notifiable): array
     {
@@ -55,7 +59,7 @@ class QuotationExpiring extends Notification implements ShouldQueue
             'lead_name' => $this->quotation->lead->name,
             'final_price' => $this->quotation->final_price,
             'currency' => $this->quotation->currency,
-            'valid_until' => $this->quotation->valid_until?->toDateString(),
+            'valid_until' => $this->quotation->expires_at?->toDateString(),
             'days_until_expiry' => $this->daysUntilExpiry,
             'message' => __('Quotation #:number expires in :days days', [
                 'number' => $this->quotation->quotation_number ?? $this->quotation->id,

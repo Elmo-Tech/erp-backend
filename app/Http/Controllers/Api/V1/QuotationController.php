@@ -254,11 +254,16 @@ class QuotationController extends Controller
                 $data['discountPercentage']
             );
             
+            // Validate payment plan if provided
+            if (isset($data['paymentPlan']) && !empty($data['paymentPlan'])) {
+                $this->pricingService->validatePaymentPlan($data['paymentPlan']);
+            }
+            
             // Convert estimations to snake_case for database storage
             $snakeCaseEstimations = $this->pricingService->convertEstimationsToSnakeCase($data['estimations']);
             
-            // Create quotation with calculated final price
-            $quotation = Quotation::create([
+            // Prepare quotation data
+            $quotationData = [
                 'lead_id' => $data['leadId'],
                 'estimations' => $snakeCaseEstimations,
                 'hourly_rate' => $data['hourlyRate'],
@@ -266,7 +271,12 @@ class QuotationController extends Controller
                 'final_price' => $pricingBreakdown['finalPrice'],
                 'currency' => $data['currency'],
                 'status' => $data['status'] ?? 'draft',
-            ]);
+                'expires_at' => isset($data['expiryDate']) ? $data['expiryDate'] : null,
+                'payment_plan' => isset($data['paymentPlan']) ? $data['paymentPlan'] : null,
+            ];
+            
+            // Create quotation with calculated final price
+            $quotation = Quotation::create($quotationData);
             
             return ApiResponse::success(
                 new QuotationResource($quotation->load('lead')),
@@ -506,6 +516,21 @@ class QuotationController extends Controller
             
             if (isset($data['status'])) {
                 $updateData['status'] = $data['status'];
+            }
+            
+            if (isset($data['expiryDate'])) {
+                $updateData['expires_at'] = $data['expiryDate'];
+            }
+            
+            if (isset($data['paymentPlan'])) {
+                if (!empty($data['paymentPlan'])) {
+                    $this->pricingService->validatePaymentPlan($data['paymentPlan']);
+                }
+                $updateData['payment_plan'] = $data['paymentPlan'];
+            }
+            
+            if (isset($data['rejectionReason'])) {
+                $updateData['rejection_reason'] = $data['rejectionReason'];
             }
             
             // Handle pricing-related updates
@@ -763,7 +788,6 @@ class QuotationController extends Controller
 
         if ($validated['status'] === 'rejected') {
             $updateData['rejection_reason'] = $validated['rejectionReason'] ?? null;
-            $updateData['rejection_notes'] = $validated['rejectionNotes'] ?? null;
         }
 
         $quotation->update($updateData);
@@ -772,6 +796,113 @@ class QuotationController extends Controller
             new QuotationResource($quotation->fresh()->load('lead')),
             __('quotations.status_updated')
         );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/quotations/validate-payment-plan",
+     *     operationId="validatePaymentPlan",
+     *     tags={"Quotations"},
+     *     summary="Validate payment plan structure",
+     *     description="Validate payment plan percentages and structure without saving",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"paymentPlan", "finalPrice"},
+     *             @OA\Property(
+     *                 property="paymentPlan",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="milestone", type="string", example="Sign Contract"),
+     *                     @OA\Property(property="percentage", type="number", example=50)
+     *                 )
+     *             ),
+     *             @OA\Property(property="finalPrice", type="number", example=10000.00)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Payment plan validated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Payment plan validated successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="isValid", type="boolean", example=true),
+     *                 @OA\Property(
+     *                     property="paymentBreakdown",
+     *                     type="object",
+     *                     @OA\Property(
+     *                         property="payments",
+     *                         type="array",
+     *                         @OA\Items(
+     *                             @OA\Property(property="milestone", type="string", example="Sign Contract"),
+     *                             @OA\Property(property="percentage", type="number", example=50),
+     *                             @OA\Property(property="amount", type="number", example=5000.00),
+     *                             @OA\Property(property="currency", type="string", example="USD")
+     *                         )
+     *                     ),
+     *                     @OA\Property(property="totalAmount", type="number", example=10000.00),
+     *                     @OA\Property(property="totalPercentage", type="number", example=100)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Payment plan validation failed",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Payment plan validation failed"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="paymentPlan",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="Total payment plan percentage must equal 100%")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function validatePaymentPlan(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'paymentPlan' => ['required', 'array'],
+            'paymentPlan.*.milestone' => ['required', 'string', 'max:255'],
+            'paymentPlan.*.percentage' => ['required', 'numeric', 'between:0.01,100'],
+            'finalPrice' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        try {
+            $this->pricingService->validatePaymentPlan($validated['paymentPlan']);
+            
+            $paymentBreakdown = $this->pricingService->calculatePaymentAmounts(
+                $validated['finalPrice'],
+                $validated['paymentPlan']
+            );
+
+            return ApiResponse::success([
+                'isValid' => true,
+                'paymentBreakdown' => $paymentBreakdown,
+            ], 'Payment plan validated successfully');
+
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::validationError([
+                'paymentPlan' => [$e->getMessage()]
+            ], 'Payment plan validation failed');
+        }
     }
 
     /**
@@ -789,12 +920,12 @@ class QuotationController extends Controller
     {
         $days = $request->input('days', 3);
 
-        $quotations = Quotation::whereNotNull('expiry_date')
+        $quotations = Quotation::whereNotNull('expires_at')
             ->whereIn('status', ['sent', 'viewed', 'negotiation'])
-            ->where('expiry_date', '>=', now())
-            ->where('expiry_date', '<=', now()->addDays($days))
+            ->where('expires_at', '>=', now())
+            ->where('expires_at', '<=', now()->addDays($days))
             ->with('lead')
-            ->orderBy('expiry_date')
+            ->orderBy('expires_at')
             ->paginate(10);
 
         return ApiResponse::success(
@@ -815,11 +946,11 @@ class QuotationController extends Controller
      */
     public function overdue(): JsonResponse
     {
-        $quotations = Quotation::whereNotNull('expiry_date')
+        $quotations = Quotation::whereNotNull('expires_at')
             ->whereIn('status', ['sent', 'viewed', 'negotiation'])
-            ->where('expiry_date', '<', now())
+            ->where('expires_at', '<', now())
             ->with('lead')
-            ->orderBy('expiry_date', 'desc')
+            ->orderBy('expires_at', 'desc')
             ->paginate(10);
 
         return ApiResponse::success(

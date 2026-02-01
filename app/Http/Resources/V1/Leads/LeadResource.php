@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1\Leads;
 
+use App\Http\Resources\V1\Activity\ActivityResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -21,6 +22,7 @@ class LeadResource extends JsonResource
             'industrySector' => $this->industry_sector?->value ?? '',
             'industrySectorLabel' => $this->industry_sector?->label() ?? '',
             'industrySectorIcon' => $this->industry_sector?->icon() ?? '',
+            'contactPreferences' => $this->contact_preferences ?? [],
             'source' => $this->source?->value ?? '',
             'sourceLabel' => $this->source?->label() ?? '',
             'referenceType' => $this->reference_type?->value ?? '',
@@ -69,6 +71,7 @@ class LeadResource extends JsonResource
             
             // Relations (when loaded)
             'activities' => LeadActivityResource::collection($this->whenLoaded('activities')),
+            'allActivities' => ActivityResource::collection($this->whenLoaded('allActivities')),
             'meetings' => LeadMeetingResource::collection($this->whenLoaded('meetings')),
             'quotationsCount' => $this->whenLoaded('quotations', fn() => $this->quotations->count()),
             'proposalsCount' => $this->whenLoaded('proposals', fn() => $this->proposals->count()),

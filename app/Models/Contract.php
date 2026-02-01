@@ -7,7 +7,6 @@ use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Contract extends Model
 {
@@ -62,14 +61,20 @@ class Contract extends Model
         return $this->belongsTo(ContractTemplate::class, 'template_id');
     }
 
-    public function milestones(): HasMany
+    /**
+     * Check if contract is signed
+     */
+    public function isSigned(): bool
     {
-        return $this->hasMany(ContractMilestone::class)->orderBy('sort_order');
+        return $this->status === ContractStatus::SIGNED;
     }
 
-    public function handover(): HasMany
+    /**
+     * Check if contract can be signed
+     */
+    public function canBeSigned(): bool
     {
-        return $this->hasMany(ProjectHandover::class);
+        return in_array($this->status, [ContractStatus::DRAFT, ContractStatus::PENDING_SIGNATURE]);
     }
 
     /**

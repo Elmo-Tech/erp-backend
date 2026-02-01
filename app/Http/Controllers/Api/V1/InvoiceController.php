@@ -2,101 +2,85 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\InvoiceStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\V1\Invoices\StoreInvoiceRequest;
-use App\Http\Requests\V1\Invoices\UpdateInvoiceRequest;
-use App\Http\Resources\V1\Invoices\InvoiceCollection;
-use App\Http\Resources\V1\Invoices\InvoiceResource;
+use App\Http\Requests\V1\Invoice\CreateInvoiceRequest;
+use App\Http\Requests\V1\Invoice\MarkAsPaidRequest;
+use App\Http\Requests\V1\Invoice\UpdateInvoiceRequest;
+use App\Http\Resources\V1\Invoice\InvoiceCollection;
+use App\Http\Resources\V1\Invoice\InvoiceResource;
 use App\Models\Invoice;
 use App\Models\Project;
-use App\Services\Client\AuditLogService;
-use App\Services\Client\InvoiceService;
-use Carbon\Carbon;
+use App\Services\AuditService;
+use App\Services\BillingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use OpenApi\Annotations as OA;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * @OA\Tag(
+ *     name="Invoices",
+ *     description="Invoice management endpoints"
+ * )
+ */
 class InvoiceController extends Controller
 {
     public function __construct(
-        private InvoiceService $invoiceService,
-        private AuditLogService $auditLogService
+        private BillingService $billingService,
+        private AuditService $auditService
     ) {
-        // Middleware is applied at route level: auth:sanctum, locale
+        $this->middleware(['auth:sanctum', 'locale']);
     }
 
     /**
      * @OA\Get(
      *     path="/api/v1/invoices",
-     *     operationId="getInvoices",
+     *     summary="Get paginated list of invoices",
      *     tags={"Invoices"},
-     *     summary="Get all invoices with pagination and filtering",
-     *     description="Retrieve a paginated list of invoices with optional filtering by status, project_id, and date range",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
-     *     ),
-     *     @OA\Parameter(
-     *         name="filter[status]",
-     *         in="query",
-     *         description="Filter invoices by status",
-     *         @OA\Schema(type="string", enum={"draft", "sent", "paid", "overdue", "cancelled"})
-     *     ),
-     *     @OA\Parameter(
-     *         name="filter[projectId]",
-     *         in="query",
-     *         description="Filter invoices by project ID",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Parameter(
-     *         name="filter[dateFrom]",
-     *         in="query",
-     *         description="Filter invoices created from this date (YYYY-MM-DD)",
-     *         @OA\Schema(type="string", format="date", example="2025-01-01")
-     *     ),
-     *     @OA\Parameter(
-     *         name="filter[dateTo]",
-     *         in="query",
-     *         description="Filter invoices created up to this date (YYYY-MM-DD)",
-     *         @OA\Schema(type="string", format="date", example="2025-12-31")
-     *     ),
-     *     @OA\Parameter(
-     *         name="filter[dueDateFrom]",
-     *         in="query",
-     *         description="Filter invoices with due date from this date (YYYY-MM-DD)",
-     *         @OA\Schema(type="string", format="date", example="2025-01-01")
-     *     ),
-     *     @OA\Parameter(
-     *         name="filter[dueDateTo]",
-     *         in="query",
-     *         description="Filter invoices with due date up to this date (YYYY-MM-DD)",
-     *         @OA\Schema(type="string", format="date", example="2025-12-31")
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
      *     @OA\Parameter(
      *         name="filter[search]",
      *         in="query",
-     *         description="Search invoices by invoice number",
+     *         description="Search in invoice number, milestone name, or notes",
      *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[status]",
+     *         in="query",
+     *         description="Filter by invoice status",
+     *         @OA\Schema(type="string", enum={"draft", "sent", "paid", "overdue", "cancelled"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[project_id]",
+     *         in="query",
+     *         description="Filter by project ID",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[contract_id]",
+     *         in="query",
+     *         description="Filter by contract ID",
+     *         @OA\Schema(type="integer")
      *     ),
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
-     *         description="Page number for pagination",
-     *         @OA\Schema(type="integer", minimum=1, example=1)
+     *         description="Page number",
+     *         @OA\Schema(type="integer", default=1)
      *     ),
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
-     *         description="Number of items per page",
-     *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
+     *         description="Items per page",
+     *         @OA\Schema(type="integer", default=10)
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -115,97 +99,61 @@ class InvoiceController extends Controller
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
-     *                     @OA\Property(property="total", type="integer", example=100),
-     *                     @OA\Property(property="count", type="integer", example=15),
-     *                     @OA\Property(property="perPage", type="integer", example=15),
-     *                     @OA\Property(property="currentPage", type="integer", example=1),
-     *                     @OA\Property(property="totalPages", type="integer", example=7)
+     *                     @OA\Property(property="total", type="integer"),
+     *                     @OA\Property(property="count", type="integer"),
+     *                     @OA\Property(property="perPage", type="integer"),
+     *                     @OA\Property(property="currentPage", type="integer"),
+     *                     @OA\Property(property="totalPages", type="integer")
      *                 )
      *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Forbidden - User does not have admin permissions",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Access denied")
      *         )
      *     )
      * )
      */
     public function index(Request $request): JsonResponse
     {
-        // Log admin data access
-        $this->auditLogService->log('admin_invoices_viewed');
-
-        // Use withoutGlobalScopes to bypass ClientScope for admin access
         $invoices = QueryBuilder::for(Invoice::class)
-            ->withoutGlobalScopes() // Admin can see all invoices
-            ->with(['project']) // Load project relationship
+            ->with(['project', 'contract', 'createdBy', 'updatedBy'])
             ->allowedFilters([
-                'status',
-                AllowedFilter::exact('project_id', 'project_id')->ignore(null),
-                AllowedFilter::callback('projectId', function ($query, $value) {
-                    $query->where('project_id', $value);
-                }),
-                AllowedFilter::callback('search', function ($query, $value) {
-                    $query->where('invoice_number', 'like', "%{$value}%");
-                }),
-                AllowedFilter::callback('dateFrom', function ($query, $value) {
-                    $query->whereDate('created_at', '>=', $value);
-                }),
-                AllowedFilter::callback('dateTo', function ($query, $value) {
-                    $query->whereDate('created_at', '<=', $value);
-                }),
-                AllowedFilter::callback('dueDateFrom', function ($query, $value) {
-                    $query->whereDate('due_date', '>=', $value);
-                }),
-                AllowedFilter::callback('dueDateTo', function ($query, $value) {
-                    $query->whereDate('due_date', '<=', $value);
-                }),
+                AllowedFilter::partial('search', 'invoice_number'),
+                AllowedFilter::partial('search', 'milestone_name'),
+                AllowedFilter::partial('search', 'notes'),
+                AllowedFilter::exact('status'),
+                AllowedFilter::exact('project_id'),
+                AllowedFilter::exact('contract_id'),
             ])
             ->defaultSort('-created_at')
-            ->paginate($request->get('perPage', 15));
+            ->allowedSorts(['created_at', 'due_date', 'amount', 'status'])
+            ->paginate($request->get('perPage', 10));
 
         return ApiResponse::success(
             new InvoiceCollection($invoices),
-            'Invoices retrieved successfully'
+            __('messages.invoices_retrieved')
         );
     }
 
     /**
      * @OA\Post(
      *     path="/api/v1/invoices",
-     *     operationId="createInvoice",
-     *     tags={"Invoices"},
      *     summary="Create a new invoice",
-     *     description="Create a new invoice for a project with auto-generated invoice number",
+     *     tags={"Invoices"},
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"projectId", "amount", "dueDate"},
      *             @OA\Property(property="projectId", type="integer", example=1),
+     *             @OA\Property(property="contractId", type="integer", example=1),
+     *             @OA\Property(property="milestoneName", type="string", example="Project Kickoff"),
      *             @OA\Property(property="amount", type="number", format="float", example=5000.00),
      *             @OA\Property(property="currency", type="string", example="USD"),
-     *             @OA\Property(property="dueDate", type="string", format="date", example="2025-02-15"),
-     *             @OA\Property(property="notes", type="string", example="Payment for project milestone 1")
+     *             @OA\Property(property="dueDate", type="string", format="date", example="2026-03-01"),
+     *             @OA\Property(property="notes", type="string", example="Invoice for project kickoff milestone")
      *         )
      *     ),
      *     @OA\Response(
@@ -216,74 +164,61 @@ class InvoiceController extends Controller
      *             @OA\Property(property="message", type="string", example="Invoice created successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
      *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Validation failed for invoice creation"),
-     *             @OA\Property(property="errors", type="object")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Forbidden - User does not have admin permissions",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Access denied")
-     *         )
      *     )
      * )
      */
-    public function store(StoreInvoiceRequest $request): JsonResponse
+    public function store(CreateInvoiceRequest $request): JsonResponse
     {
-        return DB::transaction(function () use ($request) {
-            $data = $request->validated();
+        $data = $request->validated();
 
-            // Find the project
-            $project = Project::withoutGlobalScopes()->findOrFail($data['projectId']);
+        $invoice = Invoice::create([
+            'project_id' => $data['projectId'],
+            'contract_id' => $data['contractId'] ?? null,
+            'milestone_name' => $data['milestoneName'] ?? null,
+            'invoice_number' => Invoice::generateInvoiceNumber(),
+            'amount' => $data['amount'],
+            'currency' => $data['currency'],
+            'status' => InvoiceStatus::DRAFT,
+            'due_date' => $data['dueDate'],
+            'notes' => $data['notes'] ?? null,
+            'created_by' => auth()->id(),
+        ]);
 
-            // Create invoice using service
-            $invoice = $this->invoiceService->createInvoice($project, $data);
+        // Log the creation
+        $this->auditService->logInvoiceEvent(
+            action: 'created',
+            invoice: $invoice,
+            metadata: [
+                'amount' => $invoice->amount,
+                'currency' => $invoice->currency,
+                'milestone_name' => $invoice->milestone_name,
+            ]
+        );
 
-            return ApiResponse::success(
-                new InvoiceResource($invoice->load(['project'])),
-                'Invoice created successfully',
-                201
-            );
-        });
+        return ApiResponse::success(
+            new InvoiceResource($invoice->load(['project', 'contract', 'createdBy'])),
+            __('messages.invoice_created'),
+            201
+        );
     }
 
     /**
      * @OA\Get(
      *     path="/api/v1/invoices/{id}",
-     *     operationId="getInvoice",
+     *     summary="Get invoice details",
      *     tags={"Invoices"},
-     *     summary="Get a single invoice",
-     *     description="Retrieve a specific invoice by ID with related project data",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="Invoice ID",
-     *         @OA\Schema(type="integer", example=1)
+     *         @OA\Schema(type="integer")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -293,79 +228,43 @@ class InvoiceController extends Controller
      *             @OA\Property(property="message", type="string", example="Invoice retrieved successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
      *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Invoice not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Invoice not found")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Forbidden - User does not have admin permissions",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Access denied")
-     *         )
      *     )
      * )
      */
-    public function show(int $id): JsonResponse
+    public function show(Invoice $invoice): JsonResponse
     {
-        // Use withoutGlobalScopes to bypass ClientScope for admin access
-        $invoice = Invoice::withoutGlobalScopes()
-            ->with(['project'])
-            ->findOrFail($id);
-
-        // Log admin data access
-        $this->auditLogService->log('admin_invoice_viewed', $invoice);
+        $invoice->load(['project', 'contract', 'createdBy', 'updatedBy']);
 
         return ApiResponse::success(
             new InvoiceResource($invoice),
-            'Invoice retrieved successfully'
+            __('messages.invoice_retrieved')
         );
     }
 
     /**
      * @OA\Put(
      *     path="/api/v1/invoices/{id}",
-     *     operationId="updateInvoice",
+     *     summary="Update invoice",
      *     tags={"Invoices"},
-     *     summary="Update an existing invoice",
-     *     description="Update an invoice with new data and audit trail",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="Invoice ID",
-     *         @OA\Schema(type="integer", example=1)
+     *         @OA\Schema(type="integer")
      *     ),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             @OA\Property(property="amount", type="number", format="float", example=6000.00),
-     *             @OA\Property(property="currency", type="string", example="USD"),
-     *             @OA\Property(property="status", type="string", enum={"draft", "sent", "paid", "overdue", "cancelled"}, example="sent"),
-     *             @OA\Property(property="dueDate", type="string", format="date", example="2025-03-15"),
-     *             @OA\Property(property="notes", type="string", example="Updated payment terms")
+     *             @OA\Property(property="amount", type="number", format="float", example=5500.00),
+     *             @OA\Property(property="dueDate", type="string", format="date", example="2026-03-15"),
+     *             @OA\Property(property="notes", type="string", example="Updated invoice notes")
      *         )
      *     ),
      *     @OA\Response(
@@ -376,142 +275,273 @@ class InvoiceController extends Controller
      *             @OA\Property(property="message", type="string", example="Invoice updated successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
      *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Validation failed for invoice update"),
-     *             @OA\Property(property="errors", type="object")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Invoice not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Invoice not found")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Forbidden - User does not have admin permissions",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Access denied")
-     *         )
      *     )
      * )
      */
-    public function update(UpdateInvoiceRequest $request, int $id): JsonResponse
+    public function update(UpdateInvoiceRequest $request, Invoice $invoice): JsonResponse
     {
-        return DB::transaction(function () use ($request, $id) {
-            // Use withoutGlobalScopes to bypass ClientScope for admin access
-            $invoice = Invoice::withoutGlobalScopes()->findOrFail($id);
-            
-            $data = $request->validated();
+        $data = $request->validated();
 
-            // Update invoice
-            $invoice->update($data);
+        $oldData = $invoice->toArray();
 
-            // Log the update action
-            $this->auditLogService->log('admin_invoice_updated', $invoice, [
-                'updated_fields' => array_keys($data),
-                'updated_data' => $data,
-            ]);
+        $invoice->update([
+            'amount' => $data['amount'] ?? $invoice->amount,
+            'due_date' => $data['dueDate'] ?? $invoice->due_date,
+            'notes' => $data['notes'] ?? $invoice->notes,
+            'updated_by' => auth()->id(),
+        ]);
 
-            return ApiResponse::success(
-                new InvoiceResource($invoice->fresh()->load(['project'])),
-                'Invoice updated successfully'
-            );
-        });
+        // Log the update
+        $this->auditService->logInvoiceEvent(
+            action: 'updated',
+            invoice: $invoice,
+            metadata: [
+                'old_data' => $oldData,
+                'new_data' => $invoice->fresh()->toArray(),
+            ]
+        );
+
+        return ApiResponse::success(
+            new InvoiceResource($invoice->load(['project', 'contract', 'createdBy', 'updatedBy'])),
+            __('messages.invoice_updated')
+        );
     }
 
     /**
-     * @OA\Delete(
-     *     path="/api/v1/invoices/{id}",
-     *     operationId="deleteInvoice",
+     * @OA\Post(
+     *     path="/api/v1/invoices/{id}/send",
+     *     summary="Send invoice to client",
      *     tags={"Invoices"},
-     *     summary="Delete an invoice",
-     *     description="Delete a specific invoice by ID",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
-     *         description="Language preference",
-     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="Invoice ID",
-     *         @OA\Schema(type="integer", example=1)
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Invoice sent successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Invoice sent successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
+     *         )
+     *     )
+     * )
+     */
+    public function send(Invoice $invoice): JsonResponse
+    {
+        $updatedInvoice = $this->billingService->sendInvoice($invoice);
+
+        return ApiResponse::success(
+            new InvoiceResource($updatedInvoice->load(['project', 'contract', 'createdBy', 'updatedBy'])),
+            __('messages.invoice_sent')
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/invoices/{id}/mark-paid",
+     *     summary="Mark invoice as paid",
+     *     tags={"Invoices"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="paymentMethod", type="string", example="bank_transfer"),
+     *             @OA\Property(property="transactionId", type="string", example="TXN123456"),
+     *             @OA\Property(property="paymentNotes", type="string", example="Payment received via bank transfer")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Invoice marked as paid successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Invoice marked as paid successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
+     *         )
+     *     )
+     * )
+     */
+    public function markAsPaid(MarkAsPaidRequest $request, Invoice $invoice): JsonResponse
+    {
+        $paymentDetails = $request->validated();
+
+        $updatedInvoice = $this->billingService->markAsPaid($invoice, $paymentDetails);
+
+        return ApiResponse::success(
+            new InvoiceResource($updatedInvoice->load(['project', 'contract', 'createdBy', 'updatedBy'])),
+            __('messages.invoice_marked_paid')
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/projects/{id}/generate-milestone-invoice",
+     *     summary="Generate invoice for project milestone",
+     *     tags={"Invoices"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="milestoneName", type="string", example="UI/UX Completion", enum={"Project Kickoff", "UI/UX Completion", "Development Completion", "Final Delivery"})
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Milestone invoice generated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Milestone invoice generated successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
+     *         )
+     *     )
+     * )
+     */
+    public function generateMilestoneInvoice(Request $request, Project $project): JsonResponse
+    {
+        $request->validate([
+            'milestoneName' => 'required|string|in:Project Kickoff,UI/UX Completion,Development Completion,Final Delivery'
+        ]);
+
+        $invoice = $this->billingService->generateForMilestone($project, $request->milestoneName);
+
+        return ApiResponse::success(
+            new InvoiceResource($invoice->load(['project', 'contract', 'createdBy'])),
+            __('messages.milestone_invoice_generated'),
+            201
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/projects/{id}/generate-pending-invoices",
+     *     summary="Generate all pending milestone invoices for project",
+     *     tags={"Invoices"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Pending invoices generated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Pending invoices generated successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="invoices",
+     *                     type="array",
+     *                     @OA\Items(ref="#/components/schemas/InvoiceResource")
+     *                 ),
+     *                 @OA\Property(property="count", type="integer", example=2)
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function generatePendingInvoices(Project $project): JsonResponse
+    {
+        $invoices = $this->billingService->generatePendingInvoices($project);
+
+        return ApiResponse::success([
+            'invoices' => InvoiceResource::collection(collect($invoices)->load(['project', 'contract', 'createdBy'])),
+            'count' => count($invoices)
+        ], __('messages.pending_invoices_generated'), 201);
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/invoices/{id}",
+     *     summary="Delete invoice",
+     *     tags={"Invoices"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
      *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Invoice deleted successfully",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Invoice deleted successfully"),
-     *             @OA\Property(property="data", type="null")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Invoice not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Invoice not found")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Unauthorized")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Forbidden - User does not have admin permissions",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Access denied")
+     *             @OA\Property(property="message", type="string", example="Invoice deleted successfully")
      *         )
      *     )
      * )
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Invoice $invoice): JsonResponse
     {
-        return DB::transaction(function () use ($id) {
-            // Use withoutGlobalScopes to bypass ClientScope for admin access
-            $invoice = Invoice::withoutGlobalScopes()->findOrFail($id);
+        // Only allow deletion of draft invoices
+        if ($invoice->status !== InvoiceStatus::DRAFT) {
+            return ApiResponse::error(__('messages.cannot_delete_non_draft_invoice'), 422);
+        }
 
-            // Log the deletion action before deleting
-            $this->auditLogService->log('admin_invoice_deleted', $invoice, [
+        // Log the deletion before deleting
+        $this->auditService->logInvoiceEvent(
+            action: 'deleted',
+            invoice: $invoice,
+            metadata: [
                 'invoice_number' => $invoice->invoice_number,
                 'amount' => $invoice->amount,
-                'project_id' => $invoice->project_id,
-            ]);
+                'milestone_name' => $invoice->milestone_name,
+            ],
+            severity: 'warning'
+        );
 
-            $invoice->delete();
+        $invoice->delete();
 
-            return ApiResponse::success(
-                null,
-                'Invoice deleted successfully'
-            );
-        });
+        return ApiResponse::success(null, __('messages.invoice_deleted'));
     }
 }

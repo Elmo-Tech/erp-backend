@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\InvoiceStatus;
+use App\Models\Contract;
 use App\Scopes\ClientScope;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,11 +16,14 @@ class Invoice extends Model
 
     protected $fillable = [
         'project_id',
+        'contract_id',
+        'milestone_name',
         'invoice_number',
         'amount',
         'currency',
         'status',
         'due_date',
+        'sent_at',
         'paid_at',
         'notes',
         'created_by',
@@ -32,6 +36,7 @@ class Invoice extends Model
             'amount' => 'decimal:2',
             'status' => InvoiceStatus::class,
             'due_date' => 'date',
+            'sent_at' => 'datetime',
             'paid_at' => 'datetime',
         ];
     }
@@ -48,6 +53,14 @@ class Invoice extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Get the contract that owns the invoice.
+     */
+    public function contract(): BelongsTo
+    {
+        return $this->belongsTo(Contract::class);
     }
 
     /**

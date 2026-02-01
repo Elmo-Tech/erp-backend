@@ -48,6 +48,23 @@ return [
     'invoice_created_from_milestone' => 'Invoice created from milestone successfully',
     'invoice_linked_to_milestone' => 'Invoice linked to milestone successfully',
     'milestone_already_has_invoice' => 'Milestone already has an invoice linked',
+    
+    // Invoices
+    'invoices_retrieved' => 'Invoices retrieved successfully',
+    'invoice_retrieved' => 'Invoice retrieved successfully',
+    'invoice_created' => 'Invoice created successfully',
+    'invoice_updated' => 'Invoice updated successfully',
+    'invoice_deleted' => 'Invoice deleted successfully',
+    'invoice_sent' => 'Invoice sent successfully',
+    'invoice_marked_paid' => 'Invoice marked as paid successfully',
+    'milestone_invoice_generated' => 'Milestone invoice generated successfully',
+    'pending_invoices_generated' => 'Pending invoices generated successfully',
+    'cannot_delete_non_draft_invoice' => 'Only draft invoices can be deleted',
+    
+    // Audit Logs
+    'audit_logs_retrieved' => 'Audit logs retrieved successfully',
+    'audit_log_retrieved' => 'Audit log retrieved successfully',
+    'audit_stats_retrieved' => 'Audit statistics retrieved successfully',
 
     // Tasks
     'task_status_updated' => 'Task status updated successfully',
@@ -109,4 +126,29 @@ return [
     'admin_deliverable_reset' => 'Deliverable reset to pending status successfully',
     'admin_deliverable_approved' => 'Deliverable force approved successfully',
     'admin_deliverable_rejected' => 'Deliverable force rejected successfully',
+    
+    // Activities
+    'activities_retrieved' => 'Activities retrieved successfully',
+    'activity_created' => 'Activity created successfully',
+    'activity_retrieved' => 'Activity retrieved successfully',
+    'activity_updated' => 'Activity updated successfully',
+    'activity_completed' => 'Activity marked as complete successfully',
+    'activity_deleted' => 'Activity deleted successfully',
+
+    // Contracts
+    'contracts' => [
+        'retrieved' => 'Contracts retrieved successfully',
+        'generated' => 'Contract generated successfully',
+        'signed' => 'Contract signed successfully',
+        'status_updated' => 'Contract status updated successfully',
+        'already_exists' => 'Contract already exists for this quotation',
+    ],
+
+    // Analytics
+    'sales_performance_retrieved' => 'Sales performance metrics retrieved successfully',
+    'rejection_analysis_retrieved' => 'Rejection analysis retrieved successfully',
+    'financial_forecast_retrieved' => 'Financial forecast retrieved successfully',
+    'follow_up_radar_retrieved' => 'Follow-up radar retrieved successfully',
+    'dashboard_summary_retrieved' => 'Dashboard summary retrieved successfully',
+    'analytics_cache_cleared' => 'Analytics cache cleared successfully',
 ];

@@ -53,6 +53,11 @@ class StoreQuotationRequest extends FormRequest
             // Dates
             'expiryDate' => ['nullable', 'date', 'after:today'],
             
+            // Payment Plan
+            'paymentPlan' => ['nullable', 'array'],
+            'paymentPlan.*.milestone' => ['required_with:paymentPlan', 'string', 'max:255'],
+            'paymentPlan.*.percentage' => ['required_with:paymentPlan', 'numeric', 'between:0.01,100'],
+            
             // Notes
             'notes' => ['nullable', 'string'],
             'termsConditions' => ['nullable', 'string'],
@@ -71,6 +76,9 @@ class StoreQuotationRequest extends FormRequest
             'items.*.estimatedHours.required_with' => __('validation.required', ['attribute' => 'estimatedHours']),
             'overrideReason.required_with' => __('quotations.override_reason_required'),
             'expiryDate.after' => __('quotations.expiry_must_be_future'),
+            'paymentPlan.*.milestone.required_with' => __('validation.required', ['attribute' => 'milestone']),
+            'paymentPlan.*.percentage.required_with' => __('validation.required', ['attribute' => 'percentage']),
+            'paymentPlan.*.percentage.between' => __('quotations.payment_percentage_invalid'),
         ];
     }
 

@@ -31,6 +31,7 @@ class Lead extends Model implements Trackable
         'country',
         'timezone_offset',
         'industry_sector',
+        'contact_preferences',
         'source',
         'reference_type',
         'reference_id',
@@ -60,6 +61,7 @@ class Lead extends Model implements Trackable
             'priority' => LeadPriority::class,
             'industry_sector' => IndustrySector::class,
             'lead_temperature' => LeadTemperature::class,
+            'contact_preferences' => 'array',
             'expected_budget' => 'decimal:2',
             'expected_close_date' => 'date',
             'last_contact_at' => 'datetime',
@@ -139,6 +141,14 @@ class Lead extends Model implements Trackable
     public function activities(): HasMany
     {
         return $this->hasMany(LeadActivity::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get all polymorphic activities for this lead.
+     */
+    public function allActivities(): MorphMany
+    {
+        return $this->morphMany(Activity::class, 'subject')->orderBy('created_at', 'desc');
     }
 
     /**

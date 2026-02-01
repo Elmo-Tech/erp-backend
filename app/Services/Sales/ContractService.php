@@ -3,280 +3,326 @@
 namespace App\Services\Sales;
 
 use App\Enums\ContractStatus;
-use App\Enums\MilestoneStatus;
-use App\Enums\MilestoneTriggerType;
+use App\Enums\ProjectStatus;
 use App\Models\Contract;
-use App\Models\ContractMilestone;
+use App\Models\Project;
 use App\Models\Quotation;
-use App\Models\User;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Services\Projects\ProjectConversionService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\QueryBuilder;
+use Illuminate\Support\Facades\Storage;
 
 class ContractService
 {
-    /**
-     * Get paginated contracts with filters
-     */
-    public function getContracts(array $filters = []): LengthAwarePaginator
-    {
-        return QueryBuilder::for(Contract::class)
-            ->allowedFilters([
-                AllowedFilter::exact('status'),
-                AllowedFilter::exact('project_id'),
-                AllowedFilter::exact('quotation_id'),
-                'search' => AllowedFilter::callback('search', function ($query, $value) {
-                    $query->where(function ($q) use ($value) {
-                        $q->where('contract_number', 'like', "%{$value}%")
-                            ->orWhere('title', 'like', "%{$value}%");
-                    });
-                }),
-            ])
-            ->allowedSorts(['created_at', 'start_date', 'total_amount', 'signed_at'])
-            ->allowedIncludes(['quotation', 'project', 'milestones', 'template'])
-            ->defaultSort('-created_at')
-            ->paginate($filters['perPage'] ?? 15);
-    }
+    public function __construct(
+        private ProjectConversionService $projectConversionService
+    ) {}
 
     /**
-     * Create contract from quotation
+     * Generate contract draft from quotation
      */
-    public function createFromQuotation(Quotation $quotation, array $data, User $user): Contract
+    public function generateDraft(Quotation $quotation): Contract
     {
-        return DB::transaction(function () use ($quotation, $data, $user) {
+        return DB::transaction(function () use ($quotation) {
+            // Load quotation with lead relationship
+            $quotation->load('lead');
+
+            // Generate contract content from template
+            $content = $this->generateContractContent($quotation);
+            
+            // Prepare party information
+            $partyOne = [
+                'company' => config('app.company_name', 'Your Company'),
+                'representative' => config('app.company_representative', 'Company Representative'),
+                'title' => config('app.company_title', 'CEO'),
+                'address' => config('app.company_address', 'Company Address'),
+            ];
+            
+            $partyTwo = [
+                'name' => $quotation->lead->name,
+                'email' => $quotation->lead->email,
+                'company' => $quotation->lead->company,
+                'phone' => $quotation->lead->phone ?? '',
+            ];
+
+            // Create contract
             $contract = Contract::create([
                 'contract_number' => Contract::generateContractNumber(),
                 'quotation_id' => $quotation->id,
-                'template_id' => $data['templateId'] ?? null,
-                'title' => $data['title'],
-                'content' => $data['content'],
-                'party_one' => $data['partyOne'],
-                'party_two' => $data['partyTwo'],
+                'title' => "Service Agreement - {$quotation->lead->name}",
+                'content' => $content,
+                'party_one' => $partyOne,
+                'party_two' => $partyTwo,
                 'total_amount' => $quotation->final_price,
                 'currency' => $quotation->currency,
-                'payment_terms' => $data['paymentTerms'] ?? null,
-                'start_date' => $data['startDate'],
-                'end_date' => $data['endDate'] ?? null,
+                'payment_terms' => 'Payment due within 30 days of invoice date',
+                'start_date' => now()->toDateString(),
                 'status' => ContractStatus::DRAFT,
-                'created_by' => $user->id,
-                'updated_by' => $user->id,
+                'created_by' => auth()->id(),
             ]);
 
-            // Create milestones
-            if (!empty($data['milestones'])) {
-                $this->createMilestones($contract, $data['milestones']);
-            }
-
-            return $contract->load('milestones');
+            return $contract;
         });
     }
 
     /**
-     * Create contract directly
+     * Mark contract as signed and activate project
      */
-    public function createContract(array $data, User $user): Contract
+    public function markAsSigned(Contract $contract, UploadedFile $signedPdf): Contract
     {
-        return DB::transaction(function () use ($data, $user) {
-            $contract = Contract::create([
-                'contract_number' => Contract::generateContractNumber(),
-                'quotation_id' => $data['quotationId'] ?? null,
-                'project_id' => $data['projectId'] ?? null,
-                'template_id' => $data['templateId'] ?? null,
-                'title' => $data['title'],
-                'content' => $data['content'],
-                'party_one' => $data['partyOne'],
-                'party_two' => $data['partyTwo'],
-                'total_amount' => $data['totalAmount'],
-                'currency' => $data['currency'] ?? 'SAR',
-                'payment_terms' => $data['paymentTerms'] ?? null,
-                'start_date' => $data['startDate'],
-                'end_date' => $data['endDate'] ?? null,
-                'status' => ContractStatus::DRAFT,
-                'created_by' => $user->id,
-                'updated_by' => $user->id,
-            ]);
-
-            // Create milestones
-            if (!empty($data['milestones'])) {
-                $this->createMilestones($contract, $data['milestones']);
+        return DB::transaction(function () use ($contract, $signedPdf) {
+            // Validate contract can be signed
+            if (!$contract->canBeSigned()) {
+                throw new \InvalidArgumentException('Contract cannot be signed in current status');
             }
 
-            return $contract->load('milestones');
-        });
-    }
+            // Store signed PDF (we'll store the path in a custom field or handle differently)
+            $path = $signedPdf->store('contracts/signed', 'private');
 
-    /**
-     * Create milestones for contract
-     */
-    private function createMilestones(Contract $contract, array $milestones): void
-    {
-        foreach ($milestones as $index => $milestone) {
-            $percentage = $milestone['percentage'] ?? 0;
-            $amount = ($contract->total_amount * $percentage) / 100;
-
-            ContractMilestone::create([
-                'contract_id' => $contract->id,
-                'title' => $milestone['title'],
-                'description' => $milestone['description'] ?? null,
-                'amount' => $amount,
-                'percentage' => $percentage,
-                'due_date' => $milestone['dueDate'] ?? null,
-                'trigger_type' => $milestone['triggerType'] ?? MilestoneTriggerType::DATE->value,
-                'trigger_value' => $milestone['triggerValue'] ?? null,
-                'status' => MilestoneStatus::PENDING,
-                'sort_order' => $index,
-            ]);
-        }
-    }
-
-    /**
-     * Update contract
-     */
-    public function updateContract(Contract $contract, array $data, User $user): Contract
-    {
-        return DB::transaction(function () use ($contract, $data, $user) {
+            // Update contract
             $contract->update([
-                'template_id' => $data['templateId'] ?? $contract->template_id,
-                'title' => $data['title'] ?? $contract->title,
-                'content' => $data['content'] ?? $contract->content,
-                'party_one' => $data['partyOne'] ?? $contract->party_one,
-                'party_two' => $data['partyTwo'] ?? $contract->party_two,
-                'total_amount' => $data['totalAmount'] ?? $contract->total_amount,
-                'currency' => $data['currency'] ?? $contract->currency,
-                'payment_terms' => $data['paymentTerms'] ?? $contract->payment_terms,
-                'start_date' => $data['startDate'] ?? $contract->start_date,
-                'end_date' => $data['endDate'] ?? $contract->end_date,
-                'updated_by' => $user->id,
+                'status' => ContractStatus::SIGNED,
+                'signed_at' => now(),
+                'signed_by_client' => $contract->party_two['name'] ?? 'Client',
+                'updated_by' => auth()->id(),
             ]);
 
-            // Update milestones if provided
-            if (isset($data['milestones'])) {
-                $contract->milestones()->delete();
-                $this->createMilestones($contract, $data['milestones']);
-            }
+            // Store the PDF path in a custom way since the existing table doesn't have signed_pdf_path
+            // You could add this field to the existing table or store it differently
+            
+            // Activate or create project
+            $this->activateProject($contract);
 
-            return $contract->fresh(['milestones']);
+            return $contract->fresh();
         });
     }
 
     /**
-     * Sign contract
+     * Update contract status
      */
-    public function signContract(Contract $contract, string $signedByClient, User $user): Contract
+    public function updateStatus(Contract $contract, ContractStatus $status): Contract
     {
         $contract->update([
-            'status' => ContractStatus::SIGNED,
-            'signed_at' => now(),
-            'signed_by_client' => $signedByClient,
-            'updated_by' => $user->id,
-        ]);
-
-        // Mark immediate milestones as due
-        $contract->milestones()
-            ->where('trigger_type', MilestoneTriggerType::IMMEDIATE)
-            ->update(['status' => MilestoneStatus::DUE]);
-
-        return $contract->fresh(['milestones']);
-    }
-
-    /**
-     * Activate contract
-     */
-    public function activateContract(Contract $contract, User $user): Contract
-    {
-        $contract->update([
-            'status' => ContractStatus::ACTIVE,
-            'updated_by' => $user->id,
+            'status' => $status,
+            'updated_by' => auth()->id(),
         ]);
 
         return $contract->fresh();
     }
 
     /**
-     * Update contract status
+     * Generate contract content from template
      */
-    public function updateContractStatus(Contract $contract, string $status, User $user): Contract
+    private function generateContractContent(Quotation $quotation): string
     {
-        $contract->update([
-            'status' => ContractStatus::from($status),
-            'updated_by' => $user->id,
-        ]);
+        $template = $this->getContractTemplate();
+        
+        // Prepare payment plan table
+        $paymentPlanTable = $this->generatePaymentPlanTable($quotation);
+        
+        // Prepare estimations breakdown
+        $estimationsBreakdown = $this->generateEstimationsBreakdown($quotation);
 
-        // If status is active, mark immediate milestones as due
-        if ($status === ContractStatus::ACTIVE->value) {
-            $contract->milestones()
-                ->where('trigger_type', MilestoneTriggerType::IMMEDIATE)
-                ->where('status', MilestoneStatus::PENDING)
-                ->update(['status' => MilestoneStatus::DUE]);
+        // Replace placeholders
+        $replacements = [
+            '{{client_name}}' => $quotation->lead->name ?? 'Client',
+            '{{client_email}}' => $quotation->lead->email ?? '',
+            '{{client_company}}' => $quotation->lead->company ?? '',
+            '{{total_amount}}' => number_format($quotation->final_price, 2),
+            '{{currency}}' => $quotation->currency,
+            '{{payment_plan}}' => $paymentPlanTable,
+            '{{estimations_breakdown}}' => $estimationsBreakdown,
+            '{{contract_date}}' => now()->format('F j, Y'),
+            '{{hourly_rate}}' => number_format($quotation->hourly_rate, 2),
+            '{{discount_percentage}}' => number_format($quotation->discount_percentage, 2),
+        ];
+
+        return str_replace(array_keys($replacements), array_values($replacements), $template);
+    }
+
+    /**
+     * Get contract template
+     */
+    private function getContractTemplate(): string
+    {
+        return '
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Service Agreement</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 40px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .section { margin-bottom: 20px; }
+        .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .table th, .table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .table th { background-color: #f2f2f2; }
+        .signature { margin-top: 50px; }
+        .signature-line { border-bottom: 1px solid #000; width: 200px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SERVICE AGREEMENT</h1>
+        <p>Date: {{contract_date}}</p>
+    </div>
+
+    <div class="section">
+        <h2>PARTIES</h2>
+        <p><strong>Service Provider:</strong> [Company Name]</p>
+        <p><strong>Client:</strong> {{client_name}}</p>
+        <p><strong>Company:</strong> {{client_company}}</p>
+        <p><strong>Email:</strong> {{client_email}}</p>
+    </div>
+
+    <div class="section">
+        <h2>PROJECT SCOPE & PRICING</h2>
+        <p>The following services will be provided at an hourly rate of {{currency}} {{hourly_rate}}:</p>
+        {{estimations_breakdown}}
+        
+        <p><strong>Total Project Cost:</strong> {{currency}} {{total_amount}}</p>
+        <p><strong>Discount Applied:</strong> {{discount_percentage}}%</p>
+    </div>
+
+    <div class="section">
+        <h2>PAYMENT TERMS</h2>
+        {{payment_plan}}
+    </div>
+
+    <div class="section">
+        <h2>TERMS & CONDITIONS</h2>
+        <ul>
+            <li>Payment is due within 30 days of invoice date</li>
+            <li>Late payments may incur additional charges</li>
+            <li>All work will be delivered according to agreed timeline</li>
+            <li>Client approval is required for UI/UX deliverables</li>
+            <li>Source code will be delivered upon final payment</li>
+        </ul>
+    </div>
+
+    <div class="signature">
+        <div style="display: flex; justify-content: space-between;">
+            <div>
+                <p><strong>Service Provider</strong></p>
+                <div class="signature-line"></div>
+                <p>Date: _____________</p>
+            </div>
+            <div>
+                <p><strong>Client: {{client_name}}</strong></p>
+                <div class="signature-line"></div>
+                <p>Date: _____________</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>';
+    }
+
+    /**
+     * Generate payment plan table HTML
+     */
+    private function generatePaymentPlanTable(Quotation $quotation): string
+    {
+        // For now, create a simple payment plan
+        // This can be enhanced later to use actual payment plan data from quotation
+        $milestones = [
+            ['name' => 'Project Kickoff', 'percentage' => 30],
+            ['name' => 'UI/UX Completion', 'percentage' => 30],
+            ['name' => 'Development Completion', 'percentage' => 30],
+            ['name' => 'Final Delivery', 'percentage' => 10],
+        ];
+
+        $html = '<table class="table">';
+        $html .= '<thead><tr><th>Milestone</th><th>Percentage</th><th>Amount</th></tr></thead>';
+        $html .= '<tbody>';
+
+        foreach ($milestones as $milestone) {
+            $amount = ($quotation->final_price * $milestone['percentage']) / 100;
+            $html .= sprintf(
+                '<tr><td>%s</td><td>%d%%</td><td>%s %s</td></tr>',
+                $milestone['name'],
+                $milestone['percentage'],
+                $quotation->currency,
+                number_format($amount, 2)
+            );
         }
 
-        return $contract->fresh(['milestones']);
+        $html .= '</tbody></table>';
+        return $html;
     }
 
     /**
-     * Update milestone status based on project status
+     * Generate estimations breakdown HTML
      */
-    public function checkMilestoneTriggers(Contract $contract, string $projectStatus): void
+    private function generateEstimationsBreakdown(Quotation $quotation): string
     {
-        $contract->milestones()
-            ->where('trigger_type', MilestoneTriggerType::PROJECT_STATUS)
-            ->where('trigger_value', $projectStatus)
-            ->where('status', MilestoneStatus::PENDING)
-            ->update(['status' => MilestoneStatus::DUE]);
+        $estimations = $quotation->estimations;
+        
+        $html = '<table class="table">';
+        $html .= '<thead><tr><th>Service Type</th><th>Hours</th><th>Rate</th><th>Subtotal</th></tr></thead>';
+        $html .= '<tbody>';
+
+        $total = 0;
+        foreach ($estimations as $type => $hours) {
+            $subtotal = $hours * $quotation->hourly_rate;
+            $total += $subtotal;
+            
+            $html .= sprintf(
+                '<tr><td>%s</td><td>%d</td><td>%s %s</td><td>%s %s</td></tr>',
+                ucfirst(str_replace('_', ' ', $type)),
+                $hours,
+                $quotation->currency,
+                number_format($quotation->hourly_rate, 2),
+                $quotation->currency,
+                number_format($subtotal, 2)
+            );
+        }
+
+        // Add discount row if applicable
+        if ($quotation->discount_percentage > 0) {
+            $discountAmount = ($total * $quotation->discount_percentage) / 100;
+            $html .= sprintf(
+                '<tr><td colspan="3"><strong>Discount (%s%%)</strong></td><td><strong>-%s %s</strong></td></tr>',
+                number_format($quotation->discount_percentage, 2),
+                $quotation->currency,
+                number_format($discountAmount, 2)
+            );
+        }
+
+        $html .= '</tbody></table>';
+        return $html;
     }
 
     /**
-     * Mark milestone as paid
-     * If no invoice is linked, optionally create one
+     * Activate project when contract is signed
      */
-    public function markMilestonePaid(ContractMilestone $milestone, ?int $invoiceId = null, bool $createInvoice = false): ContractMilestone
+    private function activateProject(Contract $contract): void
     {
-        return DB::transaction(function () use ($milestone, $invoiceId, $createInvoice) {
-            $updateData = [
-                'status' => MilestoneStatus::PAID,
-                'paid_at' => now(),
-            ];
+        $quotation = $contract->quotation;
 
-            // Link to existing invoice if provided
-            if ($invoiceId) {
-                $updateData['invoice_id'] = $invoiceId;
-            }
-
-            $milestone->update($updateData);
-
-            return $milestone->fresh(['invoice']);
-        });
-    }
-
-    /**
-     * Get milestone with invoice details
-     */
-    public function getMilestoneWithInvoice(int $milestoneId): ?ContractMilestone
-    {
-        return ContractMilestone::with(['contract.project', 'invoice'])
-            ->find($milestoneId);
-    }
-
-    /**
-     * Get milestones due for payment
-     */
-    public function getDueMilestones(): LengthAwarePaginator
-    {
-        return ContractMilestone::where('status', MilestoneStatus::DUE)
-            ->with('contract')
-            ->orderBy('due_date')
-            ->paginate(10);
-    }
-
-    /**
-     * Check and update overdue milestones
-     */
-    public function updateOverdueMilestones(): int
-    {
-        return ContractMilestone::whereIn('status', [MilestoneStatus::PENDING, MilestoneStatus::DUE])
-            ->whereNotNull('due_date')
-            ->where('due_date', '<', now())
-            ->update(['status' => MilestoneStatus::OVERDUE]);
+        // Check if project already exists
+        if ($contract->project_id) {
+            // Update existing project status to in progress
+            $project = $contract->project;
+            $project->update([
+                'status' => ProjectStatus::IN_PROGRESS,
+                'updated_by' => auth()->id(),
+            ]);
+        } else {
+            // Create new project from quotation using conversion service
+            $project = $this->projectConversionService->convertQuotation($quotation->id, [
+                'title' => "Project for {$quotation->lead->name}",
+                'description' => 'Project created from signed contract',
+            ]);
+            
+            // Update project status to in progress
+            $project->update([
+                'status' => ProjectStatus::IN_PROGRESS,
+                'updated_by' => auth()->id(),
+            ]);
+            
+            // Link contract to project
+            $contract->update(['project_id' => $project->id]);
+        }
     }
 }

@@ -48,9 +48,53 @@ return [
     // Lead Statuses
     'new' => 'جديد',
     'contacted' => 'تم التواصل',
+    
+    // Audit Severity Levels
+    'audit_severity' => [
+        'info' => 'معلومات',
+        'warning' => 'تحذير',
+        'critical' => 'حرج',
+    ],
     'qualified' => 'مؤهل',
     'proposal_sent' => 'تم إرسال العرض',
     'negotiation' => 'تفاوض',
     'won' => 'فاز',
     'lost' => 'خسر',
+    
+    // Activity Types
+    'activity_type' => [
+        'call' => 'مكالمة',
+        'email' => 'بريد إلكتروني',
+        'meeting' => 'اجتماع',
+        'note' => 'ملاحظة',
+        'status_change' => 'تغيير الحالة',
+        'technical_discovery' => 'استكشاف تقني',
+    ],
+    
+    // Activity Status
+    'activity_status' => [
+        'scheduled' => 'مجدول',
+        'completed' => 'مكتمل',
+        'cancelled' => 'ملغي',
+    ],
+    
+    // Lead Temperature
+    'lead_temperature' => [
+        'hot' => 'ساخن',
+        'hot_desc' => 'جاهز للشراء، اهتمام عالي',
+        'warm' => 'دافئ',
+        'warm_desc' => 'مهتم، يحتاج رعاية',
+        'cold' => 'بارد',
+        'cold_desc' => 'اهتمام منخفض، احتمال طويل المدى',
+    ],
+    
+    // Contract Status
+    'contract_status' => [
+        'draft' => 'مسودة',
+        'pending_signature' => 'في انتظار التوقيع',
+        'signed' => 'موقع',
+        'active' => 'نشط',
+        'completed' => 'مكتمل',
+        'terminated' => 'منتهي',
+    ],
 ];

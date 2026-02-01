@@ -12,4 +12,12 @@ return [
     'not_found' => 'عرض السعر غير موجود',
     'already_sent' => 'تم إرسال عرض السعر بالفعل',
     'cannot_send' => 'لا يمكن إرسال عرض السعر في الحالة الحالية',
+    
+    // Payment Plan
+    'payment_percentage_invalid' => 'يجب أن تكون نسبة الدفع بين 0.01 و 100',
+    'payment_plan_validated' => 'تم التحقق من خطة الدفع بنجاح',
+    'payment_plan_invalid' => 'فشل في التحقق من خطة الدفع',
+    'items_or_estimations_required' => 'يجب توفير العناصر أو التقديرات',
+    'override_reason_required' => 'سبب التجاوز مطلوب عند تجاوز السعر',
+    'expiry_must_be_future' => 'يجب أن يكون تاريخ الانتهاء في المستقبل',
 ];

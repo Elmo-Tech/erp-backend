@@ -48,9 +48,53 @@ return [
     // Lead Statuses
     'new' => 'New',
     'contacted' => 'Contacted',
+    
+    // Audit Severity Levels
+    'audit_severity' => [
+        'info' => 'Information',
+        'warning' => 'Warning',
+        'critical' => 'Critical',
+    ],
     'qualified' => 'Qualified',
     'proposal_sent' => 'Proposal Sent',
     'negotiation' => 'Negotiation',
     'won' => 'Won',
     'lost' => 'Lost',
+    
+    // Activity Types
+    'activity_type' => [
+        'call' => 'Call',
+        'email' => 'Email',
+        'meeting' => 'Meeting',
+        'note' => 'Note',
+        'status_change' => 'Status Change',
+        'technical_discovery' => 'Technical Discovery',
+    ],
+    
+    // Activity Status
+    'activity_status' => [
+        'scheduled' => 'Scheduled',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+    ],
+    
+    // Lead Temperature
+    'lead_temperature' => [
+        'hot' => 'Hot',
+        'hot_desc' => 'Ready to buy, high interest',
+        'warm' => 'Warm',
+        'warm_desc' => 'Interested, needs nurturing',
+        'cold' => 'Cold',
+        'cold_desc' => 'Low interest, long-term prospect',
+    ],
+    
+    // Contract Status
+    'contract_status' => [
+        'draft' => 'Draft',
+        'pending_signature' => 'Pending Signature',
+        'signed' => 'Signed',
+        'active' => 'Active',
+        'completed' => 'Completed',
+        'terminated' => 'Terminated',
+    ],
 ];

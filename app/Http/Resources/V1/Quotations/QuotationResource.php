@@ -51,7 +51,20 @@ class QuotationResource extends JsonResource
             'finalPrice' => (float) ($this->final_price ?? 0.0),
             'currency' => $this->currency ?? '',
             'status' => $this->status?->value ?? '',
+            'expiresAt' => $this->expires_at?->toISOString() ?? null,
+            'paymentPlan' => $this->payment_plan ?? null,
+            'rejectionReason' => $this->rejection_reason ?? null,
             'pricingBreakdown' => $pricingBreakdown,
+            'paymentBreakdown' => $this->when($this->payment_plan, function () use ($pricingService) {
+                try {
+                    return $pricingService->calculatePaymentAmounts(
+                        (float) $this->final_price,
+                        $this->payment_plan
+                    );
+                } catch (\Exception $e) {
+                    return null;
+                }
+            }),
             'lead' => $this->whenLoaded('lead', function () {
                 return new LeadResource($this->lead);
             }),
