@@ -136,7 +136,7 @@ class ProjectController extends Controller
                     $query->where('title', 'like', "%{$value}%");
                 }),
             ])
-            ->orderByDesc('is_pinned')
+            ->orderByRaw('CASE WHEN pinned_projects.id IS NOT NULL THEN 0 ELSE 1 END')
             ->orderBy('projects.created_at', 'desc')
             ->paginate($request->get('perPage', 15));
 
