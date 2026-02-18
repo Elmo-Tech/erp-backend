@@ -235,6 +235,11 @@ Route::prefix('v1')->group(function () {
     // Project CRUD Routes
     Route::apiResource('projects', ProjectController::class);
     
+    // Pinned Projects Routes
+    Route::get('projects/pinned', [ProjectController::class, 'pinned'])->name('projects.pinned');
+    Route::post('projects/{project}/pin', [ProjectController::class, 'pin'])->name('projects.pin');
+    Route::delete('projects/{project}/pin', [ProjectController::class, 'unpin'])->name('projects.unpin');
+    
     // Project Status Update Route (flexible status transitions)
     Route::patch('projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.update-status');
     

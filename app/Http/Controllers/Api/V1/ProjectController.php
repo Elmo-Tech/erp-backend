@@ -853,4 +853,210 @@ class ProjectController extends Controller
             );
         });
     }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/projects/pinned",
+     *     operationId="getPinnedProjects",
+     *     tags={"Projects"},
+     *     summary="Get pinned projects for the current user",
+     *     description="Retrieve all projects pinned by the authenticated user",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Pinned projects retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Pinned projects retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="projects",
+     *                     type="array",
+     *                     @OA\Items(ref="#/components/schemas/ProjectResource")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function pinned(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $pinnedProjects = $user->pinnedProjects()
+            ->with(['client', 'quotation'])
+            ->orderByPivot('created_at', 'desc')
+            ->get();
+
+        return ApiResponse::success(
+            ['projects' => ProjectResource::collection($pinnedProjects)],
+            'Pinned projects retrieved successfully'
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/projects/{id}/pin",
+     *     operationId="pinProject",
+     *     tags={"Projects"},
+     *     summary="Pin a project",
+     *     description="Pin a project for the authenticated user",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Project ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Project pinned successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Project pinned successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Project already pinned",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Project is already pinned")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Project not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Project not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function pin(Request $request, Project $project): JsonResponse
+    {
+        $user = $request->user();
+
+        // Check if already pinned
+        if ($project->isPinnedBy($user->id)) {
+            return ApiResponse::error('Project is already pinned', 400);
+        }
+
+        // Pin the project
+        $user->pinnedProjects()->attach($project->id);
+
+        return ApiResponse::success(
+            new ProjectResource($project->load(['client', 'quotation'])),
+            'Project pinned successfully'
+        );
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/projects/{id}/pin",
+     *     operationId="unpinProject",
+     *     tags={"Projects"},
+     *     summary="Unpin a project",
+     *     description="Unpin a project for the authenticated user",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Project ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Project unpinned successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Project unpinned successfully"),
+     *             @OA\Property(property="data", type="null")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Project not pinned",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Project is not pinned")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Project not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Project not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
+    public function unpin(Request $request, Project $project): JsonResponse
+    {
+        $user = $request->user();
+
+        // Check if not pinned
+        if (!$project->isPinnedBy($user->id)) {
+            return ApiResponse::error('Project is not pinned', 400);
+        }
+
+        // Unpin the project
+        $user->pinnedProjects()->detach($project->id);
+
+        return ApiResponse::success(
+            null,
+            'Project unpinned successfully'
+        );
+    }
 }

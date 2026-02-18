@@ -208,4 +208,25 @@ class Project extends Model implements Trackable
     {
         return $this->title;
     }
+
+    /**
+     * Get the users who have pinned this project
+     */
+    public function pinnedByUsers()
+    {
+        return $this->belongsToMany(User::class, 'pinned_projects')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if this project is pinned by a specific user
+     */
+    public function isPinnedBy(?int $userId): bool
+    {
+        if (!$userId) {
+            return false;
+        }
+        
+        return $this->pinnedByUsers()->where('user_id', $userId)->exists();
+    }
 }

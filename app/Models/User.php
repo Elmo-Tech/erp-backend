@@ -334,4 +334,13 @@ class User extends Authenticatable
     {
         return $this->hasMany(Lead::class, 'tech_lead_id');
     }
+
+    /**
+     * Get the projects pinned by this user
+     */
+    public function pinnedProjects()
+    {
+        return $this->belongsToMany(Project::class, 'pinned_projects')
+            ->withTimestamps();
+    }
 }

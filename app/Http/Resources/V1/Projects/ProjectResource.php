@@ -36,6 +36,7 @@ class ProjectResource extends JsonResource
             'autoApprovalJobId' => $this->auto_approval_job_id ?? '',
             'progress' => (float) ($this->progress ?? 0),
             'totalTimeSpent' => (int) ($this->total_time_spent ?? 0),
+            'isPinned' => $this->isPinnedBy($user?->id),
             'client' => $this->whenLoaded('client', function () {
                 return [
                     'clientId' => $this->client->id,
