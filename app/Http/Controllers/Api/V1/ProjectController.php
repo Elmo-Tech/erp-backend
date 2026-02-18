@@ -117,8 +117,15 @@ class ProjectController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         $projects = QueryBuilder::for(Project::class)
             ->with(['client', 'quotation'])
+            ->leftJoin('pinned_projects', function ($join) use ($user) {
+                $join->on('projects.id', '=', 'pinned_projects.project_id')
+                    ->where('pinned_projects.user_id', '=', $user?->id);
+            })
+            ->select('projects.*', 'pinned_projects.id as is_pinned')
             ->allowedFilters([
                 'status',
                 AllowedFilter::exact('client_id', 'client_id')->ignore(null),
@@ -129,7 +136,8 @@ class ProjectController extends Controller
                     $query->where('title', 'like', "%{$value}%");
                 }),
             ])
-            ->defaultSort('-created_at')
+            ->orderByDesc('is_pinned')
+            ->orderBy('projects.created_at', 'desc')
             ->paginate($request->get('perPage', 15));
 
         return ApiResponse::success(
