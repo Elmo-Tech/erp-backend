@@ -74,9 +74,7 @@ return new class extends Migration
 
         // Invoices table indexes
         Schema::table('invoices', function (Blueprint $table) {
-            // Composite index for client's invoices filtered by status
-            $table->index(['client_id', 'status'], 'idx_invoices_client_status');
-            
+            // Note: invoices table has project_id, not client_id
             // Composite index for project's invoices filtered by status
             $table->index(['project_id', 'status'], 'idx_invoices_project_status');
             
@@ -86,8 +84,7 @@ return new class extends Migration
             // Index for status filtering
             $table->index('status', 'idx_invoices_status');
             
-            // Index for issue date queries
-            $table->index('issue_date', 'idx_invoices_issue_date');
+            // Note: issue_date column doesn't exist in invoices table
         });
 
         // Leads table indexes
@@ -119,8 +116,7 @@ return new class extends Migration
             // Index for status filtering
             $table->index('status', 'idx_quotations_status');
             
-            // Index for expiry date queries
-            $table->index('expiry_date', 'idx_quotations_expiry_date');
+            // Note: expiry_date column doesn't exist in base quotations table
             
             // Index for created_by
             $table->index('created_by', 'idx_quotations_created_by');
@@ -131,8 +127,9 @@ return new class extends Migration
             // Index for quotation relationship
             $table->index('quotation_id', 'idx_contracts_quotation');
             
-            // Index for client relationship
-            $table->index('client_id', 'idx_contracts_client');
+            // Note: contracts table has quotation_id and project_id, not client_id
+            // Index for project relationship
+            $table->index('project_id', 'idx_contracts_project');
             
             // Index for status filtering
             $table->index('status', 'idx_contracts_status');
@@ -213,11 +210,13 @@ return new class extends Migration
             // Index for assigned_to
             $table->index('assigned_to', 'idx_activities_assigned_to');
             
+            // Note: activities table has subject_type/subject_id, not related_to_type/related_to_id
             // Composite index for polymorphic relationship
-            $table->index(['related_to_type', 'related_to_id'], 'idx_activities_related_to');
+            $table->index(['subject_type', 'subject_id'], 'idx_activities_subject');
             
-            // Index for due date queries
-            $table->index('due_date', 'idx_activities_due_date');
+            // Note: activities table has scheduled_at, not due_date
+            // Index for scheduled date queries
+            $table->index('scheduled_at', 'idx_activities_scheduled_at');
         });
     }
 
@@ -260,11 +259,9 @@ return new class extends Migration
 
         // Invoices table
         Schema::table('invoices', function (Blueprint $table) {
-            $table->dropIndex('idx_invoices_client_status');
             $table->dropIndex('idx_invoices_project_status');
             $table->dropIndex('idx_invoices_due_date');
             $table->dropIndex('idx_invoices_status');
-            $table->dropIndex('idx_invoices_issue_date');
         });
 
         // Leads table
@@ -281,14 +278,13 @@ return new class extends Migration
         Schema::table('quotations', function (Blueprint $table) {
             $table->dropIndex('idx_quotations_lead');
             $table->dropIndex('idx_quotations_status');
-            $table->dropIndex('idx_quotations_expiry_date');
             $table->dropIndex('idx_quotations_created_by');
         });
 
         // Contracts table
         Schema::table('contracts', function (Blueprint $table) {
             $table->dropIndex('idx_contracts_quotation');
-            $table->dropIndex('idx_contracts_client');
+            $table->dropIndex('idx_contracts_project');
             $table->dropIndex('idx_contracts_status');
             $table->dropIndex('idx_contracts_start_date');
             $table->dropIndex('idx_contracts_end_date');
@@ -334,8 +330,8 @@ return new class extends Migration
             $table->dropIndex('idx_activities_type');
             $table->dropIndex('idx_activities_status');
             $table->dropIndex('idx_activities_assigned_to');
-            $table->dropIndex('idx_activities_related_to');
-            $table->dropIndex('idx_activities_due_date');
+            $table->dropIndex('idx_activities_subject');
+            $table->dropIndex('idx_activities_scheduled_at');
         });
     }
 };
