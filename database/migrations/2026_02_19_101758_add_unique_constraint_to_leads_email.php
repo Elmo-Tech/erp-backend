@@ -34,11 +34,11 @@ return new class extends Migration
     {
         // Find all duplicate emails
         $duplicates = DB::table('leads')
-            ->select('email', DB::raw('COUNT(*) as count'))
+            ->select('email', DB::raw('COUNT(*) as email_count'))
             ->whereNotNull('email')
             ->where('email', '!=', '')
             ->groupBy('email')
-            ->having('count', '>', 1)
+            ->havingRaw('COUNT(*) > 1')
             ->get();
 
         foreach ($duplicates as $duplicate) {
