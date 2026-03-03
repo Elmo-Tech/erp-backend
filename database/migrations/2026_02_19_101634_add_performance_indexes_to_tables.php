@@ -95,8 +95,9 @@ return new class extends Migration
             // Index for priority filtering
             $table->index('priority', 'idx_leads_priority');
             
+            // Note: leads table has 'lead_temperature', not 'temperature'
             // Index for temperature filtering
-            $table->index('temperature', 'idx_leads_temperature');
+            $table->index('lead_temperature', 'idx_leads_lead_temperature');
             
             // Index for created_by (sales rep)
             $table->index('created_by', 'idx_leads_created_by');
@@ -104,8 +105,9 @@ return new class extends Migration
             // Index for tech_lead_id
             $table->index('tech_lead_id', 'idx_leads_tech_lead');
             
+            // Note: leads table has 'next_follow_up_at', not 'follow_up_date'
             // Index for follow_up_date
-            $table->index('follow_up_date', 'idx_leads_follow_up_date');
+            $table->index('next_follow_up_at', 'idx_leads_next_follow_up_at');
         });
 
         // Quotations table indexes
@@ -268,10 +270,10 @@ return new class extends Migration
         Schema::table('leads', function (Blueprint $table) {
             $table->dropIndex('idx_leads_status');
             $table->dropIndex('idx_leads_priority');
-            $table->dropIndex('idx_leads_temperature');
+            $table->dropIndex('idx_leads_lead_temperature');
             $table->dropIndex('idx_leads_created_by');
             $table->dropIndex('idx_leads_tech_lead');
-            $table->dropIndex('idx_leads_follow_up_date');
+            $table->dropIndex('idx_leads_next_follow_up_at');
         });
 
         // Quotations table
