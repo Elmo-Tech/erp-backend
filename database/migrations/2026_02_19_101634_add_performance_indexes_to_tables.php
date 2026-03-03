@@ -182,8 +182,9 @@ return new class extends Migration
             // Index for type filtering
             $table->index('type', 'idx_point_transactions_type');
             
+            // Note: point_transactions table has 'source_type/source_id', not 'reference_type/reference_id'
             // Composite index for polymorphic relationship
-            $table->index(['reference_type', 'reference_id'], 'idx_point_transactions_reference');
+            $table->index(['source_type', 'source_id'], 'idx_point_transactions_source');
             
             // Index for date queries
             $table->index('created_at', 'idx_point_transactions_created_at');
@@ -316,7 +317,7 @@ return new class extends Migration
         Schema::table('point_transactions', function (Blueprint $table) {
             $table->dropIndex('idx_point_transactions_user');
             $table->dropIndex('idx_point_transactions_type');
-            $table->dropIndex('idx_point_transactions_reference');
+            $table->dropIndex('idx_point_transactions_source');
             $table->dropIndex('idx_point_transactions_created_at');
         });
 
