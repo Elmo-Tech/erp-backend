@@ -140,9 +140,7 @@ return new class extends Migration
                 if (!$this->indexExists('invoices', 'invoices_status_index')) {
                     $table->index('status', 'invoices_status_index');
                 }
-                if (!$this->indexExists('invoices', 'invoices_client_id_index')) {
-                    $table->index('client_id', 'invoices_client_id_index');
-                }
+                // Note: invoices table has project_id, not client_id
                 if (!$this->indexExists('invoices', 'invoices_project_id_index')) {
                     $table->index('project_id', 'invoices_project_id_index');
                 }
@@ -161,12 +159,11 @@ return new class extends Migration
                 if (!$this->indexExists('quotations', 'quotations_status_index')) {
                     $table->index('status', 'quotations_status_index');
                 }
-                if (!$this->indexExists('quotations', 'quotations_client_id_index')) {
-                    $table->index('client_id', 'quotations_client_id_index');
+                // Note: quotations table has lead_id, not client_id
+                if (!$this->indexExists('quotations', 'quotations_lead_id_index')) {
+                    $table->index('lead_id', 'quotations_lead_id_index');
                 }
-                if (!$this->indexExists('quotations', 'quotations_valid_until_index')) {
-                    $table->index('valid_until', 'quotations_valid_until_index');
-                }
+                // Note: valid_until column doesn't exist in base quotations table
             });
         }
 
@@ -179,8 +176,12 @@ return new class extends Migration
                 if (!$this->indexExists('contracts', 'contracts_status_index')) {
                     $table->index('status', 'contracts_status_index');
                 }
-                if (!$this->indexExists('contracts', 'contracts_client_id_index')) {
-                    $table->index('client_id', 'contracts_client_id_index');
+                // Note: contracts table has quotation_id and project_id, not client_id
+                if (!$this->indexExists('contracts', 'contracts_quotation_id_index')) {
+                    $table->index('quotation_id', 'contracts_quotation_id_index');
+                }
+                if (!$this->indexExists('contracts', 'contracts_project_id_index')) {
+                    $table->index('project_id', 'contracts_project_id_index');
                 }
                 if (!$this->indexExists('contracts', 'contracts_start_date_index')) {
                     $table->index('start_date', 'contracts_start_date_index');
@@ -200,8 +201,8 @@ return new class extends Migration
                 if (!$this->indexExists('proposals', 'proposals_status_index')) {
                     $table->index('status', 'proposals_status_index');
                 }
-                if (!$this->indexExists('proposals', 'proposals_client_id_index')) {
-                    $table->index('client_id', 'proposals_client_id_index');
+                if (!$this->indexExists('proposals', 'proposals_lead_id_index')) {
+                    $table->index('lead_id', 'proposals_lead_id_index');
                 }
             });
         }
@@ -417,9 +418,6 @@ return new class extends Migration
                 if ($this->indexExists('invoices', 'invoices_status_index')) {
                     $table->dropIndex('invoices_status_index');
                 }
-                if ($this->indexExists('invoices', 'invoices_client_id_index')) {
-                    $table->dropIndex('invoices_client_id_index');
-                }
                 if ($this->indexExists('invoices', 'invoices_project_id_index')) {
                     $table->dropIndex('invoices_project_id_index');
                 }
@@ -438,11 +436,8 @@ return new class extends Migration
                 if ($this->indexExists('quotations', 'quotations_status_index')) {
                     $table->dropIndex('quotations_status_index');
                 }
-                if ($this->indexExists('quotations', 'quotations_client_id_index')) {
-                    $table->dropIndex('quotations_client_id_index');
-                }
-                if ($this->indexExists('quotations', 'quotations_valid_until_index')) {
-                    $table->dropIndex('quotations_valid_until_index');
+                if ($this->indexExists('quotations', 'quotations_lead_id_index')) {
+                    $table->dropIndex('quotations_lead_id_index');
                 }
             });
         }
@@ -456,8 +451,11 @@ return new class extends Migration
                 if ($this->indexExists('contracts', 'contracts_status_index')) {
                     $table->dropIndex('contracts_status_index');
                 }
-                if ($this->indexExists('contracts', 'contracts_client_id_index')) {
-                    $table->dropIndex('contracts_client_id_index');
+                if ($this->indexExists('contracts', 'contracts_quotation_id_index')) {
+                    $table->dropIndex('contracts_quotation_id_index');
+                }
+                if ($this->indexExists('contracts', 'contracts_project_id_index')) {
+                    $table->dropIndex('contracts_project_id_index');
                 }
                 if ($this->indexExists('contracts', 'contracts_start_date_index')) {
                     $table->dropIndex('contracts_start_date_index');
@@ -477,8 +475,8 @@ return new class extends Migration
                 if ($this->indexExists('proposals', 'proposals_status_index')) {
                     $table->dropIndex('proposals_status_index');
                 }
-                if ($this->indexExists('proposals', 'proposals_client_id_index')) {
-                    $table->dropIndex('proposals_client_id_index');
+                if ($this->indexExists('proposals', 'proposals_lead_id_index')) {
+                    $table->dropIndex('proposals_lead_id_index');
                 }
             });
         }
