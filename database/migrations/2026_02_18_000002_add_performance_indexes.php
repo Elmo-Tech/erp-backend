@@ -127,9 +127,7 @@ return new class extends Migration
                 if (!$this->indexExists('clients', 'clients_status_index')) {
                     $table->index('status', 'clients_status_index');
                 }
-                if (!$this->indexExists('clients', 'clients_industry_index')) {
-                    $table->index('industry', 'clients_industry_index');
-                }
+                // Note: 'industry' column doesn't exist in clients table
             });
         }
 
@@ -406,9 +404,7 @@ return new class extends Migration
                 if ($this->indexExists('clients', 'clients_status_index')) {
                     $table->dropIndex('clients_status_index');
                 }
-                if ($this->indexExists('clients', 'clients_industry_index')) {
-                    $table->dropIndex('clients_industry_index');
-                }
+                // Note: 'industry' column doesn't exist in clients table
             });
         }
 
