@@ -112,9 +112,6 @@ return new class extends Migration
                 if (!$this->indexExists('leads', 'leads_priority_index')) {
                     $table->index('priority', 'leads_priority_index');
                 }
-                if (!$this->indexExists('leads', 'leads_assigned_to_index')) {
-                    $table->index('assigned_to', 'leads_assigned_to_index');
-                }
                 if (!$this->indexExists('leads', 'leads_client_id_index')) {
                     $table->index('client_id', 'leads_client_id_index');
                 }
@@ -393,9 +390,6 @@ return new class extends Migration
                 }
                 if ($this->indexExists('leads', 'leads_priority_index')) {
                     $table->dropIndex('leads_priority_index');
-                }
-                if ($this->indexExists('leads', 'leads_assigned_to_index')) {
-                    $table->dropIndex('leads_assigned_to_index');
                 }
                 if ($this->indexExists('leads', 'leads_client_id_index')) {
                     $table->dropIndex('leads_client_id_index');
