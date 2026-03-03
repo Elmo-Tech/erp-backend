@@ -129,7 +129,18 @@ class QuotationController extends Controller
             ->with('lead')
             ->allowedFilters([
                 'status',
-                AllowedFilter::exact('lead_id')
+                AllowedFilter::exact('lead_id'),
+                'search' => AllowedFilter::callback('search', function ($query, $value) {
+                    $query->where(function ($q) use ($value) {
+                        $q->where('quotation_number', 'like', "%{$value}%")
+                            ->orWhereHas('lead', function ($leadQuery) use ($value) {
+                                $leadQuery->where('name', 'like', "%{$value}%")
+                                    ->orWhere('company', 'like', "%{$value}%")
+                                    ->orWhere('email', 'like', "%{$value}%");
+                            });
+                    });
+                }),
+                AllowedFilter::scope('expiring_in'),
             ])
             ->defaultSort('-created_at')
             ->paginate($request->get('perPage', 15));

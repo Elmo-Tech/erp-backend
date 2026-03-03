@@ -65,13 +65,30 @@ Route::prefix('v1')->group(function () {
     Route::get('/health', HealthController::class)->name('api.v1.health');
 
     // Authentication Routes
+    // Security: Rate limiting applied to prevent brute force attacks
+    // Registration is disabled by default - use admin panel to create users
     Route::prefix('auth')->group(function () {
-        Route::post('login', [AuthController::class, 'login'])->name('auth.login');
-        Route::post('register', [AuthController::class, 'register'])->name('auth.register');
+        // Login with rate limiting (5 attempts per minute)
+        Route::post('login', [AuthController::class, 'login'])
+            ->middleware('throttle:5,1')
+            ->name('auth.login');
+        
+        // Registration disabled for security - users created via admin panel
+        // To enable registration, uncomment the line below and add throttle middleware
+        // Route::post('register', [AuthController::class, 'register'])
+        //     ->middleware('throttle:3,1')
+        //     ->name('auth.register');
+        
+        // Protected auth routes
         Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('profile', [AuthController::class, 'profile'])->name('auth.profile');
         Route::put('profile', [AuthController::class, 'updateProfile'])->name('auth.profile.update');
         Route::post('profile/avatar', [AuthController::class, 'updateAvatar'])->name('auth.profile.avatar');
+        
+        // Password change route (authenticated users only)
+        Route::post('change-password', [AuthController::class, 'changePassword'])
+            ->middleware('auth:sanctum')
+            ->name('auth.change-password');
     });
 
     // Sales & Pricing Engine Routes
@@ -222,6 +239,9 @@ Route::prefix('v1')->group(function () {
     Route::get('attendance/all', [AttendanceController::class, 'all'])->name('attendance.all');
     Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
     Route::put('attendance/{id}', [AttendanceController::class, 'update'])->name('attendance.update');
+    Route::post('attendance/{id}/deduction', [AttendanceController::class, 'addDeduction'])->name('attendance.add-deduction');
+    Route::post('attendance/{id}/grace-day', [AttendanceController::class, 'markGraceDay'])->name('attendance.mark-grace-day');
+    Route::delete('attendance/{id}/grace-day', [AttendanceController::class, 'removeGraceDay'])->name('attendance.remove-grace-day');
 
     // Employee Management Routes
     Route::apiResource('employees', EmployeeController::class)->except(['destroy']);
@@ -272,6 +292,19 @@ Route::prefix('v1')->group(function () {
     
     // Task CRUD Routes
     Route::apiResource('tasks', TaskController::class);
+    
+    // Task Dependencies Routes
+    Route::get('tasks/{task}/dependencies', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'index'])->name('tasks.dependencies.index');
+    Route::post('tasks/{task}/dependencies', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'store'])->name('tasks.dependencies.store');
+    Route::delete('task-dependencies/{dependency}', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'destroy'])->name('task-dependencies.destroy');
+    
+    // Task Templates Routes
+    Route::apiResource('task-templates', \App\Http\Controllers\Api\V1\TaskTemplateController::class);
+    Route::post('task-templates/{template}/instantiate', [\App\Http\Controllers\Api\V1\TaskTemplateController::class, 'instantiate'])->name('task-templates.instantiate');
+    
+    // Recurring Tasks Routes
+    Route::apiResource('recurring-tasks', \App\Http\Controllers\Api\V1\RecurringTaskController::class);
+    Route::post('recurring-tasks/{config}/generate', [\App\Http\Controllers\Api\V1\RecurringTaskController::class, 'generate'])->name('recurring-tasks.generate');
     
     // Task Status Update Route (flexible status transitions)
     Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
@@ -484,5 +517,36 @@ Route::prefix('v1')->group(function () {
         Route::get('proposals', [ExportController::class, 'exportProposals'])->name('export.proposals');
         Route::get('quotations', [ExportController::class, 'exportQuotations'])->name('export.quotations');
         Route::get('sales-report', [ExportController::class, 'salesReport'])->name('export.sales-report');
+    });
+
+    // HR Deductions & Rewards Routes
+    Route::prefix('hr')->middleware(['auth:sanctum', 'locale'])->group(function () {
+        // Deduction Types Routes
+        Route::apiResource('deduction-types', \App\Http\Controllers\Api\V1\HR\DeductionTypeController::class);
+        
+        // Reward Types Routes
+        Route::apiResource('reward-types', \App\Http\Controllers\Api\V1\HR\RewardTypeController::class);
+        Route::post('reward-types/{reward_type}/calculate', [\App\Http\Controllers\Api\V1\HR\RewardTypeController::class, 'calculate'])->name('hr.reward-types.calculate');
+        
+        // Employee Deductions Routes
+        Route::apiResource('employee-deductions', \App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class);
+        Route::post('employee-deductions/{employeeDeduction}/approve', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'approve'])->name('hr.employee-deductions.approve');
+        Route::post('employee-deductions/{employeeDeduction}/reject', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'reject'])->name('hr.employee-deductions.reject');
+        Route::get('employee-deductions-summary', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'summary'])->name('hr.employee-deductions.summary');
+        Route::post('employee-deductions/bulk-from-attendance', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'bulkFromAttendance'])->name('hr.employee-deductions.bulk-from-attendance');
+        
+        // Employee Rewards Routes
+        Route::apiResource('employee-rewards', \App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class);
+        Route::post('employee-rewards/{employeeReward}/approve', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'approve'])->name('hr.employee-rewards.approve');
+        Route::post('employee-rewards/{employeeReward}/reject', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'reject'])->name('hr.employee-rewards.reject');
+        Route::post('employee-rewards/{employeeReward}/mark-paid', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'markAsPaid'])->name('hr.employee-rewards.mark-paid');
+        Route::get('employee-rewards-summary', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'summary'])->name('hr.employee-rewards.summary');
+        Route::post('employee-rewards/from-points', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'fromPoints'])->name('hr.employee-rewards.from-points');
+        Route::post('employee-rewards/bulk-from-evaluation', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'bulkFromEvaluation'])->name('hr.employee-rewards.bulk-from-evaluation');
+        
+        // Salary Adjustments Routes
+        Route::get('salary-adjustments', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'index'])->name('hr.salary-adjustments.index');
+        Route::get('salary-adjustments/{salaryAdjustment}', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'show'])->name('hr.salary-adjustments.show');
+        Route::get('salary-adjustments-payroll-summary', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'payrollSummary'])->name('hr.salary-adjustments.payroll-summary');
     });
 });

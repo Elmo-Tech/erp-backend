@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
@@ -16,7 +17,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -224,11 +225,21 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the projects where this user is the client
+     * Get the client profile associated with this user (if user is a client)
      */
-    public function projects()
+    public function client()
     {
-        return $this->hasMany(Project::class, 'client_id');
+        return $this->hasOne(Client::class, 'user_id');
+    }
+
+    /**
+     * Get the projects where this user is a team member
+     */
+    public function teamProjects()
+    {
+        return $this->belongsToMany(Project::class, 'project_members', 'user_id', 'project_id')
+            ->withPivot('role', 'joined_at')
+            ->withTimestamps();
     }
 
     /**

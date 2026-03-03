@@ -17,10 +17,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lead extends Model implements Trackable
 {
-    use HasFactory, HasCreatedUpdatedBy, HasAuditTrail;
+    use HasFactory, HasCreatedUpdatedBy, HasAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'name',

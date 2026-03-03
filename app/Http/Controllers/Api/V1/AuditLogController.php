@@ -25,8 +25,8 @@ class AuditLogController extends Controller
         private AuditService $auditService
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
-        // TODO: Add permission middleware for admin only access
-        // $this->middleware('permission:view_audit_logs');
+        // Security: Only admin role can access audit logs
+        $this->middleware('role:admin');
     }
 
     /**

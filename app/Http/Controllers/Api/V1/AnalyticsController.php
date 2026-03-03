@@ -20,8 +20,8 @@ class AnalyticsController extends Controller
         private AnalyticsService $analyticsService
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
-        // TODO: Add permission middleware for admin/manager only access
-        // $this->middleware('permission:view_analytics');
+        // Security: Only admin and manager roles can access analytics
+        $this->middleware('role:admin|manager');
     }
 
     /**

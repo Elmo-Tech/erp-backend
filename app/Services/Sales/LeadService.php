@@ -27,6 +27,10 @@ class LeadService
                 AllowedFilter::exact('priority'),
                 AllowedFilter::exact('reference_type'),
                 AllowedFilter::exact('reference_id'),
+                AllowedFilter::exact('assigned_to'),
+                'assignedTo' => AllowedFilter::callback('assignedTo', function ($query, $value) {
+                    $query->where('assigned_to', $value);
+                }),
                 AllowedFilter::scope('needs_follow_up'),
                 AllowedFilter::scope('active'),
                 'search' => AllowedFilter::callback('search', function ($query, $value) {

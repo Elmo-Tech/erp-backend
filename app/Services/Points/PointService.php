@@ -3,6 +3,7 @@
 namespace App\Services\Points;
 
 use App\Enums\PointTransactionType;
+use App\Models\PointPeriod;
 use App\Models\PointTransaction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -57,6 +58,13 @@ class PointService
         bool $notify = true
     ): PointTransaction {
         return DB::transaction(function () use ($user, $points, $type, $source, $reason, $notify) {
+            // Get active period
+            $activePeriod = PointPeriod::getActivePeriod();
+            
+            if (!$activePeriod) {
+                throw new \Exception('No active point period found. Please create a period first.');
+            }
+            
             // Update user's total points
             $user->increment('total_points', $points);
             $user->refresh();
@@ -66,6 +74,7 @@ class PointService
 
             $transaction = PointTransaction::create([
                 'user_id' => $user->id,
+                'period_id' => $activePeriod->id,
                 'points' => $points,
                 'type' => $type,
                 'source_type' => $source ? get_class($source) : null,
@@ -137,3 +146,54 @@ class PointService
         return $total;
     }
 }
+
+    /**
+     * Get points for a specific period
+     */
+    public function getUserPointsForPeriod(User $user, PointPeriod $period): int
+    {
+        return $period->getUserPoints($user->id);
+    }
+
+    /**
+     * Get leaderboard for current period
+     */
+    public function getCurrentPeriodLeaderboard(int $limit = 10): array
+    {
+        $activePeriod = PointPeriod::getActivePeriod();
+        
+        if (!$activePeriod) {
+            return [];
+        }
+        
+        return $activePeriod->getLeaderboard($limit);
+    }
+
+    /**
+     * Get all periods with user's performance
+     */
+    public function getUserPeriodHistory(User $user): array
+    {
+        $periods = PointPeriod::closed()
+            ->orderBy('end_date', 'desc')
+            ->get();
+        
+        return $periods->map(function ($period) use ($user) {
+            $points = $period->getUserPoints($user->id);
+            $transactions = $period->transactions()
+                ->where('user_id', $user->id)
+                ->get();
+            
+            return [
+                'periodId' => $period->id,
+                'periodName' => $period->name,
+                'startDate' => $period->start_date->format('Y-m-d'),
+                'endDate' => $period->end_date->format('Y-m-d'),
+                'closedAt' => $period->closed_at?->format('Y-m-d H:i:s'),
+                'totalPoints' => $points,
+                'transactionCount' => $transactions->count(),
+                'pointsEarned' => $transactions->where('points', '>', 0)->sum('points'),
+                'pointsDeducted' => abs($transactions->where('points', '<', 0)->sum('points')),
+            ];
+        })->toArray();
+    }

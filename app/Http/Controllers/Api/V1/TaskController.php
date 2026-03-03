@@ -86,6 +86,24 @@ class TaskController extends Controller
      *         @OA\Schema(type="string")
      *     ),
      *     @OA\Parameter(
+     *         name="filter[type]",
+     *         in="query",
+     *         description="Filter tasks by type",
+     *         @OA\Schema(type="string", enum={"task", "bug", "feature", "improvement"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[priority]",
+     *         in="query",
+     *         description="Filter tasks by priority",
+     *         @OA\Schema(type="string", enum={"low", "medium", "high", "urgent"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[tagId]",
+     *         in="query",
+     *         description="Filter tasks by tag ID",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number for pagination",
@@ -157,6 +175,21 @@ class TaskController extends Controller
 
         if ($request->has('filter.search')) {
             $filters['search'] = $request->input('filter.search');
+        }
+
+        // Handle type filter
+        if ($request->has('filter.type')) {
+            $filters['type'] = $request->input('filter.type');
+        }
+
+        // Handle priority filter
+        if ($request->has('filter.priority')) {
+            $filters['priority'] = $request->input('filter.priority');
+        }
+
+        // Handle tagId filter
+        if ($request->has('filter.tagId')) {
+            $filters['tagId'] = $request->input('filter.tagId');
         }
 
         $perPage = $request->get('perPage', 15);

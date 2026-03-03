@@ -14,10 +14,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Quotation extends Model implements Trackable
 {
-    use HasFactory, HasCreatedUpdatedBy, HasAuditTrail;
+    use HasFactory, HasCreatedUpdatedBy, HasAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'quotation_number',

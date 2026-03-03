@@ -17,10 +17,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model implements Trackable
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
 
     protected $fillable = [
         'project_id',
@@ -42,6 +43,10 @@ class Task extends Model implements Trackable
         'reopen_count',
         'completed_at',
         'delay_days',
+        'recurring_config_id',
+        'template_id',
+        'occurrence_number',
+        'is_recurring_instance',
         'created_by',
         'updated_by',
     ];
@@ -61,6 +66,8 @@ class Task extends Model implements Trackable
             'start_date' => 'date',
             'completed_at' => 'datetime',
             'sprint_number' => 'integer',
+            'occurrence_number' => 'integer',
+            'is_recurring_instance' => 'boolean',
         ];
     }
 
@@ -162,6 +169,38 @@ class Task extends Model implements Trackable
         return $this->morphMany(TimeEntry::class, 'trackable');
     }
 
+    /**
+     * Get task dependencies (tasks this task depends on)
+     */
+    public function dependencies(): HasMany
+    {
+        return $this->hasMany(TaskDependency::class, 'task_id');
+    }
+
+    /**
+     * Get tasks that are blocked by this task
+     */
+    public function blockedBy(): HasMany
+    {
+        return $this->hasMany(TaskDependency::class, 'depends_on_task_id');
+    }
+
+    /**
+     * Get the template this task was created from
+     */
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(TaskTemplate::class, 'template_id');
+    }
+
+    /**
+     * Get the recurring configuration for this task
+     */
+    public function recurringConfig(): BelongsTo
+    {
+        return $this->belongsTo(RecurringTaskConfig::class, 'recurring_config_id');
+    }
+
     public function codeReviews(): HasMany
     {
         return $this->hasMany(CodeReview::class);
@@ -185,6 +224,122 @@ class Task extends Model implements Trackable
     public function approvedDeliverables(): HasMany
     {
         return $this->deliverables()->byStatus(DeliverableStatus::APPROVED);
+    }
+
+    /**
+     * Get tasks that depend on this task
+     */
+    public function dependentTasks(): HasMany
+    {
+        return $this->hasMany(TaskDependency::class, 'depends_on_task_id');
+    }
+
+    /**
+     * Get tasks that block this task
+     */
+    public function blockingTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class, 'task_dependencies', 'task_id', 'depends_on_task_id')
+            ->withPivot(['dependency_type', 'lag_days'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get tasks that are blocked by this task
+     */
+    public function blockedTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class, 'task_dependencies', 'depends_on_task_id', 'task_id')
+            ->withPivot(['dependency_type', 'lag_days'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get generated task instances if this is a recurring template
+     */
+    public function recurringInstances(): HasMany
+    {
+        return $this->hasMany(Task::class, 'recurring_config_id');
+    }
+
+    /**
+     * Get checklists for this task
+     */
+    public function checklists(): HasMany
+    {
+        return $this->hasMany(TaskChecklist::class)->orderBy('position');
+    }
+
+    /**
+     * Get labels for this task
+     */
+    public function labels(): BelongsToMany
+    {
+        return $this->belongsToMany(TaskLabel::class, 'task_label_task')->withTimestamps();
+    }
+
+    /**
+     * Get time estimate history
+     */
+    public function timeEstimates(): HasMany
+    {
+        return $this->hasMany(TaskTimeEstimate::class);
+    }
+
+    /**
+     * Check if all dependencies are satisfied
+     */
+    public function areDependenciesSatisfied(): bool
+    {
+        return $this->dependencies()->get()->every(fn($dep) => $dep->isSatisfied());
+    }
+
+    /**
+     * Get unsatisfied dependencies
+     */
+    public function getUnsatisfiedDependencies()
+    {
+        return $this->dependencies()->get()->filter(fn($dep) => !$dep->isSatisfied());
+    }
+
+    /**
+     * Check if task can start based on dependencies
+     */
+    public function canStart(): bool
+    {
+        return $this->areDependenciesSatisfied();
+    }
+
+    /**
+     * Get the earliest possible start date based on dependencies
+     */
+    public function getEarliestStartDate(): ?\Carbon\Carbon
+    {
+        $dates = $this->dependencies()
+            ->get()
+            ->map(fn($dep) => $dep->getAvailableStartDate())
+            ->filter();
+
+        return $dates->isEmpty() ? null : $dates->max();
+    }
+
+    /**
+     * Get checklist completion percentage
+     */
+    public function getChecklistCompletionAttribute(): float
+    {
+        $checklists = $this->checklists;
+        if ($checklists->isEmpty()) {
+            return 0;
+        }
+
+        $totalItems = $checklists->sum(fn($list) => $list->items()->count());
+        if ($totalItems === 0) {
+            return 0;
+        }
+
+        $completedItems = $checklists->sum(fn($list) => $list->items()->where('is_completed', true)->count());
+        return round(($completedItems / $totalItems) * 100, 1);
     }
 
     public function getTrackableDisplayName(): string

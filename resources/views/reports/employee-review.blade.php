@@ -465,6 +465,102 @@
     </div>
     @endif
 
+    @if(isset($tasks) && !empty($tasks['recentTasks']))
+    <h3 class="arabic-text" style="font-size: 14px; margin-bottom: 10px; margin-top: 20px;">{{ trans('employee_review.Task Details') }}</h3>
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <table>
+            <thead style="background: #f1f5f9;">
+                <tr>
+                    <th class="arabic-text">{{ trans('employee_review.Task') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Project') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Status') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Priority') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Due Date') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Completed') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Delivery Status') }}</th>
+                    <th class="text-center arabic-text">{{ trans('employee_review.Time Spent') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @php
+                    $recentTasksArray = is_array($tasks['recentTasks']) ? $tasks['recentTasks'] : $tasks['recentTasks']->toArray();
+                    $limitedTasks = array_slice($recentTasksArray, 0, 15);
+                @endphp
+                @foreach($limitedTasks as $task)
+                <tr>
+                    <td class="font-bold arabic-text">{{ Str::limit($task['title'] ?? 'N/A', 30) }}</td>
+                    <td class="text-secondary arabic-text">{{ Str::limit($task['projectTitle'] ?? 'N/A', 15) }}</td>
+                    <td>
+                        @php
+                            $statusKey = strtolower(str_replace(' ', '_', $task['status'] ?? ''));
+                            $translatedStatus = trans('enums.' . $statusKey);
+                            if ($translatedStatus === 'enums.' . $statusKey) $translatedStatus = $task['status'] ?? 'N/A';
+                            $statusClass = $task['status'] === 'completed' ? 'bg-success' : ($task['status'] === 'in_progress' ? 'bg-warning' : 'bg-danger');
+                        @endphp
+                        <span class="badge {{ $statusClass }} arabic-text">{{ $translatedStatus }}</span>
+                    </td>
+                    <td>
+                        @php
+                            $priorityKey = strtolower($task['priority'] ?? '');
+                            $priorityClass = $priorityKey === 'high' ? 'bg-danger' : ($priorityKey === 'medium' ? 'bg-warning' : 'bg-success');
+                        @endphp
+                        <span class="badge {{ $priorityClass }} arabic-text">{{ $priorityKey }}</span>
+                    </td>
+                    <td class="text-secondary">
+                        @if(isset($task['dueDate']) && $task['dueDate'])
+                            {{ \Carbon\Carbon::parse($task['dueDate'])->format('M j, Y') }}
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td class="text-secondary">
+                        @if(isset($task['completedAt']) && $task['completedAt'])
+                            {{ \Carbon\Carbon::parse($task['completedAt'])->format('M j, Y') }}
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td>
+                        @php
+                            $delayDays = $task['delayDays'] ?? 0;
+                            $isOverdue = $task['isOverdue'] ?? false;
+                            if ($task['status'] === 'completed') {
+                                if ($delayDays > 0) {
+                                    $deliveryStatus = trans('employee_review.Late') . ' (' . $delayDays . ' days)';
+                                    $deliveryClass = 'bg-warning';
+                                } else {
+                                    $deliveryStatus = trans('employee_review.On Time');
+                                    $deliveryClass = 'bg-success';
+                                }
+                            } elseif ($isOverdue) {
+                                $deliveryStatus = trans('employee_review.Overdue');
+                                $deliveryClass = 'bg-danger';
+                            } else {
+                                $deliveryStatus = trans('employee_review.In Progress');
+                                $deliveryClass = 'bg-warning';
+                            }
+                        @endphp
+                        <span class="badge {{ $deliveryClass }} arabic-text">{{ $deliveryStatus }}</span>
+                    </td>
+                    <td class="text-center font-bold text-brand">
+                        @php
+                            // Get time spent from task or estimate
+                            $timeSpent = 0;
+                            if (isset($task['totalTimeSpent'])) {
+                                $timeSpent = $task['totalTimeSpent'];
+                            } elseif (isset($task['estimatedHours'])) {
+                                $timeSpent = $task['estimatedHours'];
+                            }
+                            echo number_format($timeSpent, 1) . 'h';
+                        @endphp
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+
     @if(!empty($points['transactions']) && count($points['transactions']) > 0)
     <h3 class="arabic-text" style="font-size: 14px; margin-bottom: 10px; margin-top: 20px;">{{ trans('employee_review.Recent Point Transactions') }}</h3>
     <div class="card" style="padding: 0; overflow: hidden;">

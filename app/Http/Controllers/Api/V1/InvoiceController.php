@@ -121,6 +121,12 @@ class InvoiceController extends Controller
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('project_id'),
                 AllowedFilter::exact('contract_id'),
+                AllowedFilter::callback('dateFrom', function ($query, $value) {
+                    $query->where('created_at', '>=', $value);
+                }),
+                AllowedFilter::callback('dateTo', function ($query, $value) {
+                    $query->where('created_at', '<=', $value);
+                }),
             ])
             ->defaultSort('-created_at')
             ->allowedSorts(['created_at', 'due_date', 'amount', 'status'])

@@ -273,4 +273,11 @@ return [
     'Showing top 10 projects' => 'Showing top 10 projects',
     'total' => 'total',
     'No completed tasks' => 'No completed tasks',
+    'Task Details' => 'Task Details',
+    'Completed' => 'Completed',
+    'Delivery Status' => 'Delivery Status',
+    'In Progress' => 'In Progress',
+    'Overdue' => 'Overdue',
+    'Due Date' => 'Due Date',
+    'Priority' => 'Priority',
 ];

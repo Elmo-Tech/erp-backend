@@ -272,4 +272,11 @@ return [
     'Showing top 10 projects' => 'عرض أفضل 10 مشاريع',
     'total' => 'إجمالي',
     'No completed tasks' => 'لا توجد مهام مكتملة',
+    'Task Details' => 'تفاصيل المهام',
+    'Completed' => 'تاريخ الإكمال',
+    'Delivery Status' => 'حالة التسليم',
+    'In Progress' => 'قيد التنفيذ',
+    'Overdue' => 'متأخر',
+    'Due Date' => 'تاريخ الاستحقاق',
+    'Priority' => 'الأولوية',
 ];

@@ -7,6 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\HR\AttendanceResource;
 use App\Http\Resources\V1\HR\AttendanceCollection;
 use App\Models\Attendance;
+use App\Models\EmployeeDeduction;
+use App\Models\DeductionType;
+use App\Models\User;
 use App\Services\HR\AttendanceService;
 use App\Services\Sales\TimeTrackingService;
 use Carbon\Carbon;
@@ -159,6 +162,9 @@ class AttendanceController extends Controller
             'date' => $request->query('filter.date'),
         ];
 
+        // Debug: Log the received filters
+        \Log::info('Attendance filters received:', $filters);
+
         $perPage = (int) $request->query('perPage', 15);
         $attendances = $this->attendanceService->getAllAttendance($filters, $perPage);
 
@@ -201,6 +207,8 @@ class AttendanceController extends Controller
             'clockIn' => 'required|date',
             'clockOut' => 'nullable|date|after:clockIn',
             'notes' => 'nullable|string|max:500',
+            'isGraceDay' => 'nullable|boolean',
+            'deductionMinutes' => 'nullable|integer|min:0',
         ]);
 
         // Check if attendance already exists for this user on this date
@@ -214,8 +222,23 @@ class AttendanceController extends Controller
 
         $attendance = $this->attendanceService->createAttendance($validated, $request->user());
 
+        // Handle manual grace day if specified
+        if (!empty($validated['isGraceDay'])) {
+            $user = $attendance->user;
+            if ($user->hasGraceDaysRemaining()) {
+                $user->useGraceDay();
+                $attendance->update(['used_grace_day' => true]);
+            }
+        }
+
+        // Handle manual deduction if specified
+        if (!empty($validated['deductionMinutes']) && $validated['deductionMinutes'] > 0) {
+            $user = $attendance->user;
+            $this->createAttendanceDeduction($attendance, $user, $validated['deductionMinutes']);
+        }
+
         return ApiResponse::success(
-            new AttendanceResource($attendance),
+            new AttendanceResource($attendance->fresh()->load('user')),
             __('messages.attendance_created'),
             201
         );
@@ -253,5 +276,154 @@ class AttendanceController extends Controller
             new AttendanceResource($attendance),
             __('messages.attendance_updated')
         );
+    }
+
+    /**
+     * Add a deduction to an existing attendance record
+     */
+    public function addDeduction(Request $request, int $id): JsonResponse
+    {
+        if (!$request->user()->can('manage_attendance')) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+
+        $attendance = Attendance::find($id);
+
+        if (!$attendance) {
+            return ApiResponse::error(__('messages.attendance_not_found'), 404);
+        }
+
+        $validated = $request->validate([
+            'deduction_type_id' => 'required|exists:deduction_types,id',
+            'amount' => 'required|numeric|min:0',
+            'reason' => 'nullable|string|max:500',
+            'late_minutes' => 'nullable|integer|min:0',
+        ]);
+
+        $deduction = EmployeeDeduction::create([
+            'user_id' => $attendance->user_id,
+            'deduction_type_id' => $validated['deduction_type_id'],
+            'deduction_date' => $attendance->date,
+            'amount' => $validated['amount'],
+            'reason' => $validated['reason'] ?? 'Manual deduction from attendance',
+            'status' => EmployeeDeduction::STATUS_APPROVED,
+            'attendance_id' => $attendance->id,
+            'late_minutes' => $validated['late_minutes'] ?? 0,
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
+        ]);
+
+        // Update attendance record with deduction minutes
+        if (!empty($validated['late_minutes'])) {
+            $attendance->update([
+                'deduction_minutes' => ($attendance->deduction_minutes ?? 0) + $validated['late_minutes']
+            ]);
+        }
+
+        return ApiResponse::success(
+            new \App\Http\Resources\V1\HR\EmployeeDeductionResource($deduction->load(['user', 'deductionType'])),
+            'Deduction added successfully',
+            201
+        );
+    }
+
+    /**
+     * Mark attendance as grace day
+     */
+    public function markGraceDay(Request $request, int $id): JsonResponse
+    {
+        if (!$request->user()->can('manage_attendance')) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+
+        $attendance = Attendance::find($id);
+
+        if (!$attendance) {
+            return ApiResponse::error(__('messages.attendance_not_found'), 404);
+        }
+
+        $user = $attendance->user;
+
+        // Check if user has grace days remaining
+        if (!$user->hasGraceDaysRemaining()) {
+            return ApiResponse::error('No grace days remaining for this employee', 422);
+        }
+
+        // Use a grace day
+        $user->useGraceDay();
+        $attendance->update(['used_grace_day' => true]);
+
+        return ApiResponse::success(
+            new AttendanceResource($attendance->fresh()->load('user')),
+            'Grace day marked successfully'
+        );
+    }
+
+    /**
+     * Remove grace day from attendance
+     */
+    public function removeGraceDay(Request $request, int $id): JsonResponse
+    {
+        if (!$request->user()->can('manage_attendance')) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+
+        $attendance = Attendance::find($id);
+
+        if (!$attendance) {
+            return ApiResponse::error(__('messages.attendance_not_found'), 404);
+        }
+
+        if (!$attendance->used_grace_day) {
+            return ApiResponse::error('This attendance record does not use a grace day', 422);
+        }
+
+        $user = $attendance->user;
+        
+        // Restore the grace day
+        $user->restoreGraceDay();
+        $attendance->update(['used_grace_day' => false]);
+
+        return ApiResponse::success(
+            new AttendanceResource($attendance->fresh()->load('user')),
+            'Grace day removed successfully'
+        );
+    }
+
+    /**
+     * Create a deduction record for attendance
+     */
+    protected function createAttendanceDeduction(Attendance $attendance, User $user, int $deductionMinutes): EmployeeDeduction
+    {
+        // Get or create a default deduction type for attendance
+        $deductionType = DeductionType::where('name', 'Attendance Deduction')->first();
+        
+        if (!$deductionType) {
+            $deductionType = DeductionType::create([
+                'name' => 'Attendance Deduction',
+                'description' => 'Deduction for attendance violations',
+                'is_active' => true,
+            ]);
+        }
+
+        // Calculate amount based on user's hourly rate
+        $hourlyRate = 0;
+        if ($user->salary && $user->work_hours_per_day) {
+            $hourlyRate = $user->salary / (30 * $user->work_hours_per_day);
+        }
+        $amount = ($deductionMinutes / 60) * $hourlyRate;
+
+        return EmployeeDeduction::create([
+            'user_id' => $user->id,
+            'deduction_type_id' => $deductionType->id,
+            'deduction_date' => $attendance->date,
+            'amount' => round($amount, 2),
+            'reason' => 'Manual attendance deduction',
+            'status' => EmployeeDeduction::STATUS_APPROVED,
+            'attendance_id' => $attendance->id,
+            'late_minutes' => $deductionMinutes,
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
+        ]);
     }
 }

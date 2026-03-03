@@ -70,18 +70,21 @@ class ClientPortalAccessController extends Controller
 
         $user = $this->conversionService->createPortalAccess($client, $password);
 
-        // Send welcome email with credentials
+        // Send welcome email with password setup link (NOT the actual password)
         if ($sendEmail) {
-            $user->notify(new ClientPortalAccessCreated($client, $password));
+            // Generate password reset link instead of sending password
+            $user->notify(new ClientPortalAccessCreated($client, null));
         }
 
+        // Security: Do NOT return password in API response
         return ApiResponse::success([
             'client' => new ClientResource($client->fresh()),
             'portalUrl' => config('app.frontend_url') . '/client',
             'credentials' => [
                 'email' => $client->email,
-                'password' => $password,
+                'passwordSet' => $request->has('password'),
                 'passwordGenerated' => !$request->has('password'),
+                // Password is NOT returned for security - user must use reset link or provided password
             ],
         ], __('Portal access created successfully'));
     }

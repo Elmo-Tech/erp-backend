@@ -129,21 +129,28 @@ class AttendanceService
      */
     public function getAllAttendance(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
+        \Log::info('AttendanceService getAllAttendance called with filters:', $filters);
+
         $query = Attendance::with('user');
 
         if (!empty($filters['userId'])) {
-            $query->where('user_id', $filters['userId']);
+            $userId = is_numeric($filters['userId']) ? (int) $filters['userId'] : $filters['userId'];
+            \Log::info('Applying userId filter:', ['userId' => $userId, 'original' => $filters['userId'], 'type' => gettype($userId)]);
+            $query->where('user_id', $userId);
         }
 
         if (!empty($filters['startDate'])) {
+            \Log::info('Applying startDate filter:', ['startDate' => $filters['startDate']]);
             $query->where('date', '>=', $filters['startDate']);
         }
 
         if (!empty($filters['endDate'])) {
+            \Log::info('Applying endDate filter:', ['endDate' => $filters['endDate']]);
             $query->where('date', '<=', $filters['endDate']);
         }
 
         if (!empty($filters['date'])) {
+            \Log::info('Applying date filter:', ['date' => $filters['date']]);
             $query->where('date', $filters['date']);
         }
 

@@ -435,4 +435,78 @@ class AuthController extends Controller
             'avatar' => $user->avatar,
         ], 'Avatar updated successfully');
     }
+
+    #[OA\Post(
+        path: '/api/v1/auth/change-password',
+        summary: 'Change user password',
+        description: 'Change the authenticated user password. Requires current password verification.',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['current_password', 'new_password', 'new_password_confirmation'],
+                properties: [
+                    new OA\Property(property: 'current_password', type: 'string', format: 'password', example: 'current_password123'),
+                    new OA\Property(property: 'new_password', type: 'string', format: 'password', example: 'NewSecureP@ss123'),
+                    new OA\Property(property: 'new_password_confirmation', type: 'string', format: 'password', example: 'NewSecureP@ss123'),
+                ]
+            )
+        ),
+        tags: ['Authentication'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Password changed successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Password changed successfully'),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error or incorrect current password',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: false),
+                        new OA\Property(property: 'message', type: 'string', example: 'Current password is incorrect'),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'new_password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
+            ],
+        ], [
+            'new_password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+            'new_password.confirmed' => 'Password confirmation does not match.',
+        ]);
+
+        $user = $request->user();
+
+        // Verify current password
+        if (!Hash::check($request->current_password, $user->password)) {
+            return ApiResponse::error('Current password is incorrect', [], 422);
+        }
+
+        // Update password
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        // Revoke all other tokens (optional - for security)
+        // $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
+
+        return ApiResponse::success([], 'Password changed successfully');
+    }
 }

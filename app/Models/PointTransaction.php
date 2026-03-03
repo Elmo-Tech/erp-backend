@@ -35,6 +35,14 @@ class PointTransaction extends Model
     }
 
     /**
+     * Get the period this transaction belongs to
+     */
+    public function period(): BelongsTo
+    {
+        return $this->belongsTo(PointPeriod::class, 'period_id');
+    }
+
+    /**
      * Get the user that owns this transaction
      */
     public function user(): BelongsTo

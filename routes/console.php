@@ -16,6 +16,12 @@ Artisan::command('inspire', function () {
 // Requirements: 18.1, 18.5
 Schedule::job(new MarkOverdueInvoicesJob)->daily();
 
+// Generate recurring tasks daily at 00:05 (after midnight)
+Schedule::job(new \App\Jobs\GenerateRecurringTasksJob)
+    ->dailyAt('00:05')
+    ->withoutOverlapping()
+    ->onOneServer();
+
 // Check for expiring quotations daily at 8 AM (3-day warning)
 Schedule::job(new CheckQuotationExpiryJob)->dailyAt('08:00')->withoutOverlapping();
 

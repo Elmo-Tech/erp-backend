@@ -40,9 +40,12 @@ return [
     | considered expired. This will override any values set in the token's
     | "expires_at" attribute, but first-party sessions are not affected.
     |
+    | Security: Tokens expire after 24 hours (1440 minutes) by default.
+    | This can be overridden via SANCTUM_TOKEN_EXPIRATION env variable.
+    |
     */
 
-    'expiration' => null,
+    'expiration' => env('SANCTUM_TOKEN_EXPIRATION', 1440),
 
     /*
     |--------------------------------------------------------------------------

@@ -184,7 +184,9 @@ class EmployeeReviewService
         $query = Task::whereHas('assignees', function ($q) use ($user) {
             $q->where('user_id', $user->id)
               ->where('is_primary', true); // Only primary assignees
-        })->with(['project:id,title']);
+        })->with(['project:id,title', 'timeEntries' => function ($q) use ($user) {
+            $q->where('user_id', $user->id)->whereNotNull('end_time');
+        }]);
 
         if (!empty($filters['dateFrom'])) {
             $query->whereDate('created_at', '>=', $filters['dateFrom']);
@@ -205,8 +207,13 @@ class EmployeeReviewService
             return $tasks->count();
         });
 
-        // Get tasks with bounces
+        // Get tasks with bounces and detailed time info
         $tasksWithBounces = $tasks->where('reopen_count', '>', 0)->map(function ($task) {
+            // Get time entries for this task
+            $timeEntries = $task->timeEntries ?? collect([]);
+            $startTime = $timeEntries->min('start_time');
+            $endTime = $timeEntries->max('end_time');
+            
             return [
                 'taskId' => $task->id,
                 'title' => $task->title,
@@ -220,11 +227,19 @@ class EmployeeReviewService
                 'completedAt' => $task->completed_at?->format('Y-m-d\TH:i:s'),
                 'delayDays' => $task->delay_days,
                 'isOverdue' => $task->isOverdue(),
+                // إضافة معلومات الوقت
+                'startedAt' => $startTime ? \Carbon\Carbon::parse($startTime)->format('Y-m-d H:i') : null,
+                'endedAt' => $endTime ? \Carbon\Carbon::parse($endTime)->format('Y-m-d H:i') : null,
             ];
         })->values();
 
-        // Recent tasks
-        $recentTasks = $tasks->sortByDesc('updated_at')->take(10)->map(function ($task) {
+        // Recent tasks with detailed time info
+        $recentTasks = $tasks->sortByDesc('updated_at')->take(15)->map(function ($task) {
+            // Get time entries for this task
+            $timeEntries = $task->timeEntries ?? collect([]);
+            $startTime = $timeEntries->min('start_time');
+            $endTime = $timeEntries->max('end_time');
+            
             return [
                 'taskId' => $task->id,
                 'title' => $task->title,
@@ -238,6 +253,10 @@ class EmployeeReviewService
                 'completedAt' => $task->completed_at?->format('Y-m-d\TH:i:s'),
                 'delayDays' => $task->delay_days,
                 'isOverdue' => $task->isOverdue(),
+                // إضافة معلومات الوقت
+                'startedAt' => $startTime ? \Carbon\Carbon::parse($startTime)->format('Y-m-d H:i') : null,
+                'endedAt' => $endTime ? \Carbon\Carbon::parse($endTime)->format('Y-m-d H:i') : null,
+                'totalTimeSpent' => round($task->total_time_spent / 60, 2),
             ];
         })->values();
 
