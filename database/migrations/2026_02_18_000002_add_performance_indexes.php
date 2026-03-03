@@ -219,8 +219,9 @@ return new class extends Migration
                 if (!$this->indexExists('activities', 'activities_type_index')) {
                     $table->index('type', 'activities_type_index');
                 }
-                if (!$this->indexExists('activities', 'activities_user_id_index')) {
-                    $table->index('user_id', 'activities_user_id_index');
+                // Note: activities table has 'assigned_to', not 'user_id'
+                if (!$this->indexExists('activities', 'activities_assigned_to_index')) {
+                    $table->index('assigned_to', 'activities_assigned_to_index');
                 }
             });
         }
@@ -231,44 +232,12 @@ return new class extends Migration
                 if (!$this->indexExists('time_entries', 'time_entries_user_id_index')) {
                     $table->index('user_id', 'time_entries_user_id_index');
                 }
-                if (!$this->indexExists('time_entries', 'time_entries_project_id_index')) {
-                    $table->index('project_id', 'time_entries_project_id_index');
+                // Note: time_entries is polymorphic with trackable_id/trackable_type, not project_id/task_id
+                if (!$this->indexExists('time_entries', 'time_entries_trackable_type_trackable_id_index')) {
+                    $table->index(['trackable_type', 'trackable_id'], 'time_entries_trackable_type_trackable_id_index');
                 }
-                if (!$this->indexExists('time_entries', 'time_entries_task_id_index')) {
-                    $table->index('task_id', 'time_entries_task_id_index');
-                }
-                if (!$this->indexExists('time_entries', 'time_entries_date_index')) {
-                    $table->index('date', 'time_entries_date_index');
-                }
-            });
-        }
-
-        // Milestones table indexes
-        if (Schema::hasTable('milestones')) {
-            Schema::table('milestones', function (Blueprint $table) {
-                if (!$this->indexExists('milestones', 'milestones_project_id_index')) {
-                    $table->index('project_id', 'milestones_project_id_index');
-                }
-                if (!$this->indexExists('milestones', 'milestones_status_index')) {
-                    $table->index('status', 'milestones_status_index');
-                }
-                if (!$this->indexExists('milestones', 'milestones_due_date_index')) {
-                    $table->index('due_date', 'milestones_due_date_index');
-                }
-            });
-        }
-
-        // Task deliverables table indexes
-        if (Schema::hasTable('task_deliverables')) {
-            Schema::table('task_deliverables', function (Blueprint $table) {
-                if (!$this->indexExists('task_deliverables', 'task_deliverables_task_id_index')) {
-                    $table->index('task_id', 'task_deliverables_task_id_index');
-                }
-                if (!$this->indexExists('task_deliverables', 'task_deliverables_status_index')) {
-                    $table->index('status', 'task_deliverables_status_index');
-                }
-                if (!$this->indexExists('task_deliverables', 'task_deliverables_submitted_by_index')) {
-                    $table->index('submitted_by', 'task_deliverables_submitted_by_index');
+                if (!$this->indexExists('time_entries', 'time_entries_start_time_index')) {
+                    $table->index('start_time', 'time_entries_start_time_index');
                 }
             });
         }
@@ -493,8 +462,8 @@ return new class extends Migration
                 if ($this->indexExists('activities', 'activities_type_index')) {
                     $table->dropIndex('activities_type_index');
                 }
-                if ($this->indexExists('activities', 'activities_user_id_index')) {
-                    $table->dropIndex('activities_user_id_index');
+                if ($this->indexExists('activities', 'activities_assigned_to_index')) {
+                    $table->dropIndex('activities_assigned_to_index');
                 }
             });
         }
@@ -505,44 +474,11 @@ return new class extends Migration
                 if ($this->indexExists('time_entries', 'time_entries_user_id_index')) {
                     $table->dropIndex('time_entries_user_id_index');
                 }
-                if ($this->indexExists('time_entries', 'time_entries_project_id_index')) {
-                    $table->dropIndex('time_entries_project_id_index');
+                if ($this->indexExists('time_entries', 'time_entries_trackable_type_trackable_id_index')) {
+                    $table->dropIndex('time_entries_trackable_type_trackable_id_index');
                 }
-                if ($this->indexExists('time_entries', 'time_entries_task_id_index')) {
-                    $table->dropIndex('time_entries_task_id_index');
-                }
-                if ($this->indexExists('time_entries', 'time_entries_date_index')) {
-                    $table->dropIndex('time_entries_date_index');
-                }
-            });
-        }
-
-        // Milestones
-        if (Schema::hasTable('milestones')) {
-            Schema::table('milestones', function (Blueprint $table) {
-                if ($this->indexExists('milestones', 'milestones_project_id_index')) {
-                    $table->dropIndex('milestones_project_id_index');
-                }
-                if ($this->indexExists('milestones', 'milestones_status_index')) {
-                    $table->dropIndex('milestones_status_index');
-                }
-                if ($this->indexExists('milestones', 'milestones_due_date_index')) {
-                    $table->dropIndex('milestones_due_date_index');
-                }
-            });
-        }
-
-        // Task deliverables
-        if (Schema::hasTable('task_deliverables')) {
-            Schema::table('task_deliverables', function (Blueprint $table) {
-                if ($this->indexExists('task_deliverables', 'task_deliverables_task_id_index')) {
-                    $table->dropIndex('task_deliverables_task_id_index');
-                }
-                if ($this->indexExists('task_deliverables', 'task_deliverables_status_index')) {
-                    $table->dropIndex('task_deliverables_status_index');
-                }
-                if ($this->indexExists('task_deliverables', 'task_deliverables_submitted_by_index')) {
-                    $table->dropIndex('task_deliverables_submitted_by_index');
+                if ($this->indexExists('time_entries', 'time_entries_start_time_index')) {
+                    $table->dropIndex('time_entries_start_time_index');
                 }
             });
         }
