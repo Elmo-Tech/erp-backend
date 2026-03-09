@@ -647,20 +647,42 @@ class TaskController extends Controller
      *     operationId="addTaskAssignee",
      *     tags={"Tasks"},
      *     summary="Add an assignee to a task",
-     *     description="Add an assignee to any task. For Main/Weekly tasks, requires manage_task_team permission. For Subtasks, team is inherited from Main Task (view-only).",
+     *     description="Add a team member to any task type. When adding to Main Task, propagates to Weekly Tasks only (not Subtasks). Weekly/Subtasks can be managed independently. Requires manage_task_team permission.",
      *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="task",
+     *         in="path",
+     *         required=true,
+     *         description="Task ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
      *             required={"userId", "role"},
-     *             @OA\Property(property="userId", type="integer"),
-     *             @OA\Property(property="role", type="string", enum={"developer", "reviewer", "lead"}),
-     *             @OA\Property(property="isPrimary", type="boolean")
+     *             @OA\Property(property="userId", type="integer", example=2),
+     *             @OA\Property(property="role", type="string", enum={"developer", "reviewer", "lead"}, example="developer"),
+     *             @OA\Property(property="isPrimary", type="boolean", example=true)
      *         )
      *     ),
-     *     @OA\Response(response=201, description="Assignee added successfully"),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Assignee added successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Assignee added successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/TaskAssigneeResource")
+     *         )
+     *     ),
      *     @OA\Response(response=400, description="User not in team or already assigned"),
-     *     @OA\Response(response=403, description="Unauthorized to manage team on this task type")
+     *     @OA\Response(response=403, description="Unauthorized to manage team")
      * )
      */
     public function addAssignee(AddAssigneeRequest $request, Task $task): JsonResponse
@@ -704,10 +726,38 @@ class TaskController extends Controller
      *     operationId="removeTaskAssignee",
      *     tags={"Tasks"},
      *     summary="Remove an assignee from a task",
-     *     description="Remove an assignee from Main/Weekly tasks. Requires manage_task_team permission. Subtasks inherit team from Main Task (view-only).",
+     *     description="Remove an assignee from any task type. When removing from Main Task, also removes from Weekly Tasks only (not Subtasks). Weekly/Subtasks can be managed independently. Requires manage_task_team permission.",
      *     security={{"sanctum":{}}},
-     *     @OA\Response(response=200, description="Assignee removed successfully"),
-     *     @OA\Response(response=403, description="Unauthorized to manage team on this task type"),
+     *     @OA\Parameter(
+     *         name="Accept-Language",
+     *         in="header",
+     *         required=true,
+     *         description="Language preference",
+     *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
+     *     ),
+     *     @OA\Parameter(
+     *         name="task",
+     *         in="path",
+     *         required=true,
+     *         description="Task ID",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         required=true,
+     *         description="User ID to remove",
+     *         @OA\Schema(type="integer", example=2)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Assignee removed successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Assignee removed successfully")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Unauthorized to manage team"),
      *     @OA\Response(response=404, description="Assignee not found")
      * )
      */

@@ -200,8 +200,10 @@ class TaskPolicy
      * Determine whether the user can manage team members (assignees) on a task.
      * 
      * Rules:
-     * - Main/Weekly Tasks: Only Admin/Super Admin or users with manage_task_team permission
-     * - Subtasks: Any user can manage (but team is view-only inherited from Main Task)
+     * - All task types (Main/Weekly/Subtask): Admin/Super Admin or users with manage_task_team permission can add/remove members
+     * - When adding to Main Task: propagates to Weekly Tasks only
+     * - When removing from Main Task: removes from Weekly Tasks only
+     * - Weekly/Subtasks: can be managed independently
      */
     public function manageTeam(User $user, Task $task): bool
     {
@@ -215,14 +217,8 @@ class TaskPolicy
             return true;
         }
 
-        // For Main and Weekly tasks, require specific permission
-        if ($task->type === TaskType::MAIN || $task->type === TaskType::WEEKLY) {
-            return $user->can('manage_task_team');
-        }
-
-        // For Subtasks, team is inherited and view-only
-        // No one can add/remove team members on subtasks (they inherit from Main Task)
-        return false;
+        // For all task types, require manage_task_team permission
+        return $user->can('manage_task_team');
     }
 
     /**

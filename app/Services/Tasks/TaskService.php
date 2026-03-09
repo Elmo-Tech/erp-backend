@@ -77,6 +77,9 @@ class TaskService
             $query->where('title', 'like', '%' . $filters['search'] . '%');
         }
 
+        // Use distinct to prevent duplicate results when joining with assignees
+        $query->distinct();
+
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
     }
 
@@ -487,19 +490,27 @@ class TaskService
     }
 
     /**
-     * Propagate an assignee to all child tasks recursively.
+     * Propagate an assignee to Weekly Tasks only (not Subtasks).
+     * When adding to Main Task → propagate to Weekly Tasks only
+     * When adding to Weekly Task → do NOT propagate to Subtasks
      */
     private function propagateAssigneeToChildren(Task $task, int $userId, string $role, bool $isPrimary, User $performer): void
     {
-        $children = $task->children()->get();
+        // Only propagate if this is a Main Task
+        if ($task->type !== TaskType::MAIN) {
+            return;
+        }
 
-        foreach ($children as $child) {
-            // Check if assignee already exists on child
-            $existingAssignee = $child->assignees()->where('user_id', $userId)->first();
+        // Get only Weekly Tasks (direct children of Main Task)
+        $weeklyTasks = $task->children()->where('type', TaskType::WEEKLY)->get();
+
+        foreach ($weeklyTasks as $weeklyTask) {
+            // Check if assignee already exists on weekly task
+            $existingAssignee = $weeklyTask->assignees()->where('user_id', $userId)->first();
             
             if (!$existingAssignee) {
                 TaskAssignee::create([
-                    'task_id' => $child->id,
+                    'task_id' => $weeklyTask->id,
                     'user_id' => $userId,
                     'role' => $role,
                     'is_primary' => $isPrimary,
@@ -507,21 +518,20 @@ class TaskService
                     'updated_by' => $performer->id,
                 ]);
             }
-
-            // Recursively propagate to grandchildren
-            $this->propagateAssigneeToChildren($child, $userId, $role, $isPrimary, $performer);
         }
     }
 
     /**
      * Remove an assignee from a task.
-     * - Main Tasks: Removes from task and all children
+     * - Can remove from ANY task type (Main/Weekly/Subtask)
+     * - Main Tasks: Also removes from Weekly Tasks only (not Subtasks)
      * - Weekly/Subtasks: Only removes from this specific task
      *
      * @throws \InvalidArgumentException
      */
     public function removeAssignee(Task $task, int $userId, User $performer): bool
-    {        $assignee = $task->assignees()->where('user_id', $userId)->first();
+    {        
+        $assignee = $task->assignees()->where('user_id', $userId)->first();
         if (!$assignee) {
             return false;
         }
@@ -535,24 +545,23 @@ class TaskService
             'metadata' => ['assignee_id' => $userId, 'assignee_name' => $user->name],
         ]);
 
-        // For Main Tasks, also remove from all children
+        // For Main Tasks, also remove from Weekly Tasks only
         if ($task->type === TaskType::MAIN) {
-            $this->removeAssigneeFromChildren($task, $userId);
+            $this->removeAssigneeFromWeeklyTasks($task, $userId);
         }
 
         return $assignee->delete();
     }
 
     /**
-     * Remove an assignee from all child tasks recursively.
+     * Remove an assignee from Weekly Tasks only (not Subtasks).
      */
-    private function removeAssigneeFromChildren(Task $task, int $userId): void
+    private function removeAssigneeFromWeeklyTasks(Task $task, int $userId): void
     {
-        $children = $task->children()->get();
+        $weeklyTasks = $task->children()->where('type', TaskType::WEEKLY)->get();
 
-        foreach ($children as $child) {
-            $child->assignees()->where('user_id', $userId)->delete();
-            $this->removeAssigneeFromChildren($child, $userId);
+        foreach ($weeklyTasks as $weeklyTask) {
+            $weeklyTask->assignees()->where('user_id', $userId)->delete();
         }
     }
 
