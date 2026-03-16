@@ -748,10 +748,12 @@ class EmployeeReviewService
 
         // Add PointTransactions (automatic system)
         foreach ($pointTransactions as $pt) {
+            $transactionTypeLabel = $this->getPointTransactionTypeLabel($pt);
+
             $allTransactions->push([
                 'transactionId' => 'pt_' . $pt->id,
                 'points' => $pt->points,
-                'type' => $pt->type->label(),
+                'type' => $transactionTypeLabel,
                 'reason' => $pt->reason ?? '',
                 'createdAt' => $pt->created_at->format('Y-m-d\TH:i:s'),
                 'createdBy' => $pt->createdBy?->name ?? 'System',
@@ -788,19 +790,19 @@ class EmployeeReviewService
         });
 
         // Breakdown by source (automatic vs manual) based on type
-        $automaticCount = $allPeriodTransactions->filter(fn($t) => !str_starts_with($t->type->label(), 'Manual'))->count();
-        $manualCount = $allPeriodTransactions->filter(fn($t) => str_starts_with($t->type->label(), 'Manual'))->count();
+        $automaticCount = $allPeriodTransactions->filter(fn($t) => !$this->isManualPointTransaction($t))->count();
+        $manualCount = $allPeriodTransactions->filter(fn($t) => $this->isManualPointTransaction($t))->count();
         
         $bySource = [
             'automatic' => [
                 'count' => $automaticCount,
-                'earned' => $allPeriodTransactions->filter(fn($t) => !str_starts_with($t->type->label(), 'Manual'))->where('points', '>', 0)->sum('points'),
-                'deducted' => abs($allPeriodTransactions->filter(fn($t) => !str_starts_with($t->type->label(), 'Manual'))->where('points', '<', 0)->sum('points')),
+                'earned' => $allPeriodTransactions->filter(fn($t) => !$this->isManualPointTransaction($t))->where('points', '>', 0)->sum('points'),
+                'deducted' => abs($allPeriodTransactions->filter(fn($t) => !$this->isManualPointTransaction($t))->where('points', '<', 0)->sum('points')),
             ],
             'manual' => [
                 'count' => $manualCount,
-                'earned' => $allPeriodTransactions->filter(fn($t) => str_starts_with($t->type->label(), 'Manual'))->where('points', '>', 0)->sum('points'),
-                'deducted' => abs($allPeriodTransactions->filter(fn($t) => str_starts_with($t->type->label(), 'Manual'))->where('points', '<', 0)->sum('points')),
+                'earned' => $allPeriodTransactions->filter(fn($t) => $this->isManualPointTransaction($t))->where('points', '>', 0)->sum('points'),
+                'deducted' => abs($allPeriodTransactions->filter(fn($t) => $this->isManualPointTransaction($t))->where('points', '<', 0)->sum('points')),
             ],
         ];
 
@@ -869,6 +871,48 @@ class EmployeeReviewService
             Carbon::now()->subMonths(2)->startOfDay(),
             Carbon::now()->endOfDay(),
         ];
+    }
+
+    /**
+     * Safely resolve a point transaction type label across enum, string, and legacy values.
+     */
+    private function getPointTransactionTypeLabel(PointTransaction $transaction): string
+    {
+        $type = $transaction->type;
+
+        if ($type instanceof PointTransactionType) {
+            return $type->label();
+        }
+
+        if (is_string($type) || is_int($type)) {
+            $enum = PointTransactionType::tryFrom((string) $type);
+
+            if ($enum instanceof PointTransactionType) {
+                return $enum->label();
+            }
+        }
+
+        $rawType = $transaction->getRawOriginal('type');
+
+        if (is_string($rawType) || is_int($rawType)) {
+            $enum = PointTransactionType::tryFrom((string) $rawType);
+
+            if ($enum instanceof PointTransactionType) {
+                return $enum->label();
+            }
+
+            return (string) $rawType;
+        }
+
+        return 'Unknown';
+    }
+
+    /**
+     * Detect manual point transactions without assuming the cast is always a valid enum.
+     */
+    private function isManualPointTransaction(PointTransaction $transaction): bool
+    {
+        return str_starts_with($this->getPointTransactionTypeLabel($transaction), 'Manual');
     }
 
     /**
