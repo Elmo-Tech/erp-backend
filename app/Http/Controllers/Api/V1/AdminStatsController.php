@@ -13,6 +13,7 @@ use App\Services\Reporting\UserPerformanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
+use Throwable;
 
 class AdminStatsController extends Controller
 {
@@ -855,16 +856,33 @@ class AdminStatsController extends Controller
                 ['dateRange' => [$e->getMessage()]],
                 'Invalid date range'
             );
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             \Log::error('Employee Review Error', [
                 'userId' => $userId,
+                'filters' => $filters ?? [],
+                'exception' => $e::class,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return ApiResponse::error(
-                'Failed to retrieve employee review: ' . $e->getMessage(),
-                500
-            );
+
+            if ($request->boolean('debug') || config('app.debug')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to retrieve employee review',
+                    'debug' => [
+                        'exception' => $e::class,
+                        'error' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'filters' => $filters ?? [],
+                        'trace' => collect($e->getTrace())->take(10)->values(),
+                    ],
+                ], 500);
+            }
+
+            return ApiResponse::error('Failed to retrieve employee review: ' . $e->getMessage(), 500);
         }
     }
 
@@ -1017,7 +1035,7 @@ class AdminStatsController extends Controller
                 
                 return $this->pdfService->downloadPdf('reports.employee-review', $reviewData, $fileName, $pdfOptions);
                 
-            } catch (\Exception $pdfException) {
+            } catch (Throwable $pdfException) {
                 // Log the error for debugging
                 \Log::error('Employee Review PDF Export Failed', [
                     'user_id' => $userId,
@@ -1026,7 +1044,7 @@ class AdminStatsController extends Controller
                     'trace' => $pdfException->getTraceAsString()
                 ]);
                 
-                throw new \Exception('PDF generation failed: ' . $pdfException->getMessage());
+                throw new \RuntimeException('PDF generation failed: ' . $pdfException->getMessage(), previous: $pdfException);
             }
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -1034,11 +1052,33 @@ class AdminStatsController extends Controller
                 'User not found',
                 404
             );
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to export employee review: ' . $e->getMessage(),
-                500
-            );
+        } catch (Throwable $e) {
+            \Log::error('Employee Review Export Error', [
+                'userId' => $userId,
+                'filters' => $filters ?? [],
+                'exception' => $e::class,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            if ($request->boolean('debug') || config('app.debug')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to export employee review',
+                    'debug' => [
+                        'exception' => $e::class,
+                        'error' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'filters' => $filters ?? [],
+                        'trace' => collect($e->getTrace())->take(10)->values(),
+                    ],
+                ], 500);
+            }
+
+            return ApiResponse::error('Failed to export employee review: ' . $e->getMessage(), 500);
         }
     }
 
