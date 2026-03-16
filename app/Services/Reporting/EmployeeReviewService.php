@@ -12,6 +12,7 @@ use App\Enums\PointTransactionType;
 use App\Enums\TaskStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
@@ -440,7 +441,7 @@ class EmployeeReviewService
     /**
      * Apply optional date-from/date-to filters to a specific timestamp column.
      */
-    private function applyDateRangeConstraint(Builder $query, string $column, array $filters): void
+    private function applyDateRangeConstraint(Builder|Relation $query, string $column, array $filters): void
     {
         if (!empty($filters['dateFrom'])) {
             $query->whereDate($column, '>=', $filters['dateFrom']);
