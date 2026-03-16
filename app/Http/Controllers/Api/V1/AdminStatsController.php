@@ -285,7 +285,6 @@ class AdminStatsController extends Controller
             if ($request->has('dateTo')) {
                 $filters['dateTo'] = $request->get('dateTo');
             }
-
             // Extract sorting parameters
             $sortBy = $request->get('sortBy', 'profit');
             $sortDirection = $request->get('sortDirection', 'desc');
@@ -438,7 +437,6 @@ class AdminStatsController extends Controller
             if ($request->has('dateTo')) {
                 $filters['dateTo'] = $request->get('dateTo');
             }
-
             $limit = (int) $request->get('limit', 10);
 
             // Get quality overview
@@ -820,6 +818,12 @@ class AdminStatsController extends Controller
             if ($request->has('dateTo')) {
                 $filters['dateTo'] = $request->get('dateTo');
             }
+            if ($request->has('page')) {
+                $filters['page'] = (int) $request->get('page');
+            }
+            if ($request->has('perPage')) {
+                $filters['perPage'] = (int) $request->get('perPage');
+            }
 
             // Add debug logging
             \Log::info('Employee Review Request', [
@@ -966,6 +970,12 @@ class AdminStatsController extends Controller
             }
             if ($request->has('dateTo')) {
                 $filters['dateTo'] = $request->get('dateTo');
+            }
+            if ($request->has('page')) {
+                $filters['page'] = (int) $request->get('page');
+            }
+            if ($request->has('perPage')) {
+                $filters['perPage'] = (int) $request->get('perPage');
             }
 
             // Get locale from request header (Accept-Language)

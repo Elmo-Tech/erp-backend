@@ -189,8 +189,14 @@ return [
     // New translations for project and weekly sections
     'Project-wise Breakdown' => 'Project-wise Breakdown',
     'Project Name' => 'Project Name',
+    'Project Stage' => 'Project Stage',
+    'Worked Tasks' => 'Worked Tasks',
+    'On Time Deliveries' => 'On Time Deliveries',
+    'Late Deliveries' => 'Late Deliveries',
     'Total Hours' => 'Total Hours',
     'Key Deliverables' => 'Key Deliverables',
+    'Worked Hours' => 'Worked Hours',
+    'Last Activity' => 'Last Activity',
     'Showing top 10 projects' => 'Showing top 10 projects',
     'total' => 'total',
     

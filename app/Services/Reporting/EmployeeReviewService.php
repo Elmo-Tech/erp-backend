@@ -9,12 +9,21 @@ use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use App\Enums\PointTransactionType;
+use App\Enums\TaskStatus;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
 class EmployeeReviewService
 {
+    /**
+     * Cache filtered primary tasks per request to keep the reporting sections aligned.
+     *
+     * @var array<string, \Illuminate\Support\Collection<int, \App\Models\Task>>
+     */
+    private array $primaryTasksCache = [];
+
     private function buildPointSignature(
         int $userId,
         int $points,
@@ -63,7 +72,7 @@ class EmployeeReviewService
         $trends = $this->getProductivityTrends($user, $filters);
 
         // Generate project breakdown for Blade template
-        $projectBreakdown = $this->getProjectBreakdown($user, $filters);
+        $projectBreakdown = $projects['projects'] ?? [];
         
         // Generate weekly statistics for Blade template
         $weeklyStats = $this->getWeeklyStatistics($user, $filters);
@@ -180,192 +189,45 @@ class EmployeeReviewService
      */
     private function getTasksData(User $user, array $filters): array
     {
-        // Get tasks assigned to user as PRIMARY assignee only
-        $query = Task::whereHas('assignees', function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->where('is_primary', true); // Only primary assignees
-        })->with(['project:id,title', 'timeEntries' => function ($q) use ($user) {
-            $q->where('user_id', $user->id)->whereNotNull('end_time');
-        }]);
+        $tasks = $this->getPrimaryTasksForPeriod($user, $filters);
 
-        if (!empty($filters['dateFrom'])) {
-            $query->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $query->whereDate('created_at', '<=', $filters['dateTo']);
-        }
+        $byStatus = $tasks->groupBy(fn (Task $task) => $task->status?->value ?? 'unknown')
+            ->map(fn (Collection $groupedTasks) => $groupedTasks->count());
 
-        $tasks = $query->get();
+        $byPriority = $tasks->groupBy(fn (Task $task) => $task->priority?->value ?? 'none')
+            ->map(fn (Collection $groupedTasks) => $groupedTasks->count());
 
-        // Group by status
-        $byStatus = $tasks->groupBy('status')->map(function ($tasks) {
-            return $tasks->count();
-        });
+        $periodTasks = $tasks
+            ->map(fn (Task $task) => $this->formatTaskForReport($task))
+            ->sortByDesc(function (array $task) {
+                return $task['activityDate'] ?? $task['updatedAt'] ?? $task['createdAt'] ?? '';
+            })
+            ->values();
 
-        // Group by priority
-        $byPriority = $tasks->groupBy('priority')->map(function ($tasks) {
-            return $tasks->count();
-        });
-
-        // Get tasks with bounces and detailed time info
-        $tasksWithBounces = $tasks->where('reopen_count', '>', 0)->map(function ($task) {
-            // Get time entries for this task
-            $timeEntries = $task->timeEntries ?? collect([]);
-            $startTime = $timeEntries->min('start_time');
-            $endTime = $timeEntries->max('end_time');
-            
-            return [
-                'taskId' => $task->id,
-                'title' => $task->title,
-                'projectTitle' => $task->project?->title,
-                'status' => $task->status?->value ?? '',
-                'reopenCount' => $task->reopen_count,
-                'estimatedHours' => $task->estimated_hours,
-                'totalTimeSpent' => round($task->total_time_spent / 60, 2),
-                // إضافة معلومات التسليم
-                'dueDate' => $task->due_date?->format('Y-m-d'),
-                'completedAt' => $task->completed_at?->format('Y-m-d\TH:i:s'),
-                'delayDays' => $task->delay_days,
-                'isOverdue' => $task->isOverdue(),
-                // إضافة معلومات الوقت
-                'startedAt' => $startTime ? \Carbon\Carbon::parse($startTime)->format('Y-m-d H:i') : null,
-                'endedAt' => $endTime ? \Carbon\Carbon::parse($endTime)->format('Y-m-d H:i') : null,
-            ];
-        })->values();
-
-        // Recent tasks with detailed time info
-        $recentTasks = $tasks->sortByDesc('updated_at')->take(15)->map(function ($task) {
-            // Get time entries for this task
-            $timeEntries = $task->timeEntries ?? collect([]);
-            $startTime = $timeEntries->min('start_time');
-            $endTime = $timeEntries->max('end_time');
-            
-            return [
-                'taskId' => $task->id,
-                'title' => $task->title,
-                'projectTitle' => $task->project?->title,
-                'status' => $task->status?->value ?? '',
-                'priority' => $task->priority?->value ?? '',
-                'createdAt' => $task->created_at->format('Y-m-d'),
-                'updatedAt' => $task->updated_at->format('Y-m-d'),
-                // إضافة معلومات التسليم
-                'dueDate' => $task->due_date?->format('Y-m-d'),
-                'completedAt' => $task->completed_at?->format('Y-m-d\TH:i:s'),
-                'delayDays' => $task->delay_days,
-                'isOverdue' => $task->isOverdue(),
-                // إضافة معلومات الوقت
-                'startedAt' => $startTime ? \Carbon\Carbon::parse($startTime)->format('Y-m-d H:i') : null,
-                'endedAt' => $endTime ? \Carbon\Carbon::parse($endTime)->format('Y-m-d H:i') : null,
-                'totalTimeSpent' => round($task->total_time_spent / 60, 2),
-            ];
-        })->values();
+        $tasksWithBounces = $periodTasks
+            ->filter(fn (array $task) => ($task['reopenCount'] ?? 0) > 0)
+            ->values();
 
         return [
             'total' => $tasks->count(),
-            'completed' => $tasks->where('status', 'completed')->count(),
-            'inProgress' => $tasks->where('status', 'in_progress')->count(),
+            'completed' => $tasks->filter(fn (Task $task) => $task->status === TaskStatus::COMPLETED)->count(),
+            'inProgress' => $tasks->filter(fn (Task $task) => $task->status?->value === TaskStatus::IN_PROGRESS->value)->count(),
             'byStatus' => $byStatus,
             'byPriority' => $byPriority,
             'tasksWithBounces' => $tasksWithBounces,
-            'recentTasks' => $recentTasks,
+            'recentTasks' => $periodTasks->take(15)->values(),
+            'periodTasks' => $periodTasks,
             'totalBounces' => $tasks->sum('reopen_count'),
         ];
     }
 
     /**
      * Get project breakdown for Blade template.
-     * Returns array with structure: ['name', 'totalHours', 'keyDeliverables']
+     * Returns the same grouped project data shown in the API.
      */
     private function getProjectBreakdown(User $user, array $filters): array
     {
-        // Get projects where user worked on tasks
-        $query = Project::whereHas('tasks.assignees', function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->where('is_primary', true);
-        })->with(['client:id,name', 'tasks.assignees' => function ($q) use ($user) {
-            $q->where('user_id', $user->id)->where('is_primary', true);
-        }]);
-
-        if (!empty($filters['dateFrom'])) {
-            $query->whereHas('tasks.timeEntries', function ($q) use ($filters) {
-                $q->whereDate('start_time', '>=', $filters['dateFrom']);
-            });
-        }
-        if (!empty($filters['dateTo'])) {
-            $query->whereHas('tasks.timeEntries', function ($q) use ($filters) {
-                $q->whereDate('start_time', '<=', $filters['dateTo']);
-            });
-        }
-
-        $projects = $query->get();
-
-        // Debug logging
-        // \Log::info('Project Breakdown Debug', [
-        //     'user_id' => $user->id,
-        //     'projects_found' => $projects->count(),
-        //     'project_ids' => $projects->pluck('id')->toArray(),
-        //     'filters' => $filters
-        // ]);
-
-        $result = $projects->map(function ($project) use ($user, $filters) {
-            // Get user's time on this project
-            $timeQuery = TimeEntry::where('user_id', $user->id)
-                ->where('trackable_type', 'App\\Models\\Task')
-                ->whereHas('trackable', function ($q) use ($project) {
-                    $q->where('project_id', $project->id);
-                });
-
-            if (!empty($filters['dateFrom'])) {
-                $timeQuery->whereDate('start_time', '>=', $filters['dateFrom']);
-            }
-            if (!empty($filters['dateTo'])) {
-                $timeQuery->whereDate('start_time', '<=', $filters['dateTo']);
-            }
-
-            $totalMinutes = $timeQuery->sum('duration_minutes');
-            $totalHours = round($totalMinutes / 60, 1);
-
-            // Debug time calculation
-            // \Log::info('Project Time Calculation', [
-            //     'project_id' => $project->id,
-            //     'project_title' => $project->title,
-            //     'user_id' => $user->id,
-            //     'total_minutes' => $totalMinutes,
-            //     'total_hours' => $totalHours
-            // ]);
-
-            // Get key deliverables (completed tasks)
-            $completedTasks = Task::where('project_id', $project->id)
-                ->where('status', 'completed')
-                ->whereHas('assignees', function ($q) use ($user) {
-                    $q->where('user_id', $user->id)->where('is_primary', true);
-                })
-                ->limit(3)
-                ->pluck('title')
-                ->toArray();
-
-            $keyDeliverables = !empty($completedTasks) 
-                ? implode(', ', $completedTasks)
-                : 'No completed tasks';
-
-            return [
-                'name' => $project->title ?? 'Untitled Project',
-                'totalHours' => $totalHours,
-                'keyDeliverables' => $keyDeliverables,
-            ];
-        })->filter(function ($project) {
-            // Include all projects where user is assigned, even with 0 hours
-            return true; // Don't filter out projects with 0 hours for debugging
-        })->sortByDesc('totalHours')->values()->toArray();
-
-        // Debug final result
-        // \Log::info('Project Breakdown Result', [
-        //     'user_id' => $user->id,
-        //     'result_count' => count($result),
-        //     'result' => $result
-        // ]);
-
-        return $result;
+        return $this->getProjectsData($user, $filters)['projects'] ?? [];
     }
 
     /**
@@ -464,60 +326,206 @@ class EmployeeReviewService
      */
     private function getProjectsData(User $user, array $filters): array
     {
-        // Get projects where user is a member
-        $query = Project::whereHas('members', function ($q) use ($user) {
-            $q->where('user_id', $user->id);
-        })->with(['client:id,name']);
+        $tasks = $this->getPrimaryTasksForPeriod($user, $filters);
 
+        $projects = $tasks
+            ->filter(fn (Task $task) => $task->project !== null)
+            ->groupBy('project_id')
+            ->map(function (Collection $projectTasks) {
+                /** @var Task $firstTask */
+                $firstTask = $projectTasks->first();
+                $project = $firstTask->project;
+
+                $completedTasks = $projectTasks->filter(fn (Task $task) => $task->status === TaskStatus::COMPLETED);
+                $onTimeDeliveries = $completedTasks->filter(fn (Task $task) => ($task->delay_days ?? 0) <= 0)->count();
+                $lateDeliveries = $completedTasks->filter(fn (Task $task) => ($task->delay_days ?? 0) > 0)->count();
+                $userMinutes = $projectTasks->sum(fn (Task $task) => $this->calculateTaskMinutesFromEntries($task));
+
+                $deliverables = $completedTasks
+                    ->sortByDesc('completed_at')
+                    ->pluck('title')
+                    ->filter()
+                    ->take(3)
+                    ->implode(', ');
+
+                return [
+                    'projectId' => $project->id,
+                    'title' => $project->title,
+                    'name' => $project->title,
+                    'clientName' => $project->client?->name,
+                    'status' => $project->status?->value ?? '',
+                    'userTimeSpent' => round($userMinutes / 60, 2),
+                    'totalHours' => round($userMinutes / 60, 2),
+                    'totalTasks' => $projectTasks->count(),
+                    'completedTasks' => $completedTasks->count(),
+                    'inProgressTasks' => $projectTasks->filter(fn (Task $task) => $task->status?->value === TaskStatus::IN_PROGRESS->value)->count(),
+                    'onTimeDeliveries' => $onTimeDeliveries,
+                    'lateDeliveries' => $lateDeliveries,
+                    'keyDeliverables' => $deliverables !== '' ? $deliverables : 'No completed tasks',
+                ];
+            })
+            ->sortByDesc('userTimeSpent')
+            ->values();
+
+        return [
+            'total' => $projects->count(),
+            'active' => $projects->filter(fn (array $project) => $project['status'] === 'in_progress')->count(),
+            'completed' => $projects->filter(fn (array $project) => $project['status'] === 'completed')->count(),
+            'projects' => $projects,
+        ];
+    }
+
+    /**
+     * Get the primary tasks relevant to the selected reporting period.
+     */
+    private function getPrimaryTasksForPeriod(User $user, array $filters): Collection
+    {
+        $cacheKey = implode('|', [
+            $user->id,
+            $filters['dateFrom'] ?? '',
+            $filters['dateTo'] ?? '',
+        ]);
+
+        if (isset($this->primaryTasksCache[$cacheKey])) {
+            return $this->primaryTasksCache[$cacheKey];
+        }
+
+        $query = Task::whereHas('assignees', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+                ->where('is_primary', true);
+        })->with([
+            'project:id,title,status,client_id',
+            'project.client:id,name',
+            'timeEntries' => function ($q) use ($user, $filters) {
+                $q->where('user_id', $user->id)
+                    ->whereNotNull('end_time');
+
+                $this->applyDateRangeConstraint($q, 'start_time', $filters);
+            },
+        ]);
+
+        $this->applyTaskPeriodFilter($query, $user, $filters);
+
+        return $this->primaryTasksCache[$cacheKey] = $query
+            ->orderByDesc('updated_at')
+            ->get();
+    }
+
+    /**
+     * Limit tasks to the selected reporting period using activity dates and delivery dates.
+     */
+    private function applyTaskPeriodFilter(Builder $query, User $user, array $filters): void
+    {
+        if (empty($filters['dateFrom']) && empty($filters['dateTo'])) {
+            return;
+        }
+
+        $query->where(function (Builder $nestedQuery) use ($user, $filters) {
+            $this->applyDateRangeConstraint($nestedQuery, 'created_at', $filters);
+
+            $nestedQuery->orWhere(function (Builder $completedQuery) use ($filters) {
+                $completedQuery->whereNotNull('completed_at');
+                $this->applyDateRangeConstraint($completedQuery, 'completed_at', $filters);
+            });
+
+            $nestedQuery->orWhereHas('timeEntries', function (Builder $timeEntriesQuery) use ($user, $filters) {
+                $timeEntriesQuery->where('user_id', $user->id)
+                    ->whereNotNull('end_time');
+
+                $this->applyDateRangeConstraint($timeEntriesQuery, 'start_time', $filters);
+            });
+        });
+    }
+
+    /**
+     * Apply optional date-from/date-to filters to a specific timestamp column.
+     */
+    private function applyDateRangeConstraint(Builder $query, string $column, array $filters): void
+    {
         if (!empty($filters['dateFrom'])) {
-            $query->whereDate('created_at', '>=', $filters['dateFrom']);
+            $query->whereDate($column, '>=', $filters['dateFrom']);
         }
+
         if (!empty($filters['dateTo'])) {
-            $query->whereDate('created_at', '<=', $filters['dateTo']);
+            $query->whereDate($column, '<=', $filters['dateTo']);
         }
+    }
 
-        $projects = $query->get();
+    /**
+     * Convert a task model into the reporting payload used by the API and PDF.
+     */
+    private function formatTaskForReport(Task $task): array
+    {
+        $timeEntries = $task->timeEntries ?? collect([]);
+        $startTime = $timeEntries->min('start_time');
+        $endTime = $timeEntries->max('end_time');
+        $periodMinutes = $this->calculateTaskMinutesFromEntries($task);
+        $deliveryStatus = $this->getTaskDeliveryStatus($task);
+        $activityDate = $endTime ?? $startTime ?? $task->completed_at ?? $task->updated_at ?? $task->created_at;
 
-        // Debug logging
-        // \Log::info('Projects Data Debug', [
-        //     'user_id' => $user->id,
-        //     'total_projects_found' => $projects->count(),
-        //     'filters' => $filters,
-        //     'project_ids' => $projects->pluck('id')->toArray()
-        // ]);
+        return [
+            'taskId' => $task->id,
+            'projectId' => $task->project_id,
+            'title' => $task->title,
+            'projectTitle' => $task->project?->title,
+            'status' => $task->status?->value ?? '',
+            'priority' => $task->priority?->value ?? '',
+            'reopenCount' => $task->reopen_count,
+            'estimatedHours' => $task->estimated_hours,
+            'totalTimeSpent' => round($periodMinutes / 60, 2),
+            'loggedHours' => round($periodMinutes / 60, 2),
+            'overallTaskHours' => round(($task->total_time_spent ?? 0) / 60, 2),
+            'dueDate' => $task->due_date?->format('Y-m-d'),
+            'completedAt' => $task->completed_at?->format('Y-m-d\TH:i:s'),
+            'delayDays' => $task->delay_days,
+            'isOverdue' => $task->isOverdue(),
+            'startedAt' => $startTime ? Carbon::parse($startTime)->format('Y-m-d H:i') : null,
+            'endedAt' => $endTime ? Carbon::parse($endTime)->format('Y-m-d H:i') : null,
+            'createdAt' => $task->created_at?->format('Y-m-d'),
+            'updatedAt' => $task->updated_at?->format('Y-m-d'),
+            'activityDate' => $activityDate ? Carbon::parse($activityDate)->format('Y-m-d\TH:i:s') : null,
+            'deliveryStatus' => $deliveryStatus['status'],
+            'deliveryStatusLabel' => $deliveryStatus['label'],
+            'deliveredOnTime' => $deliveryStatus['deliveredOnTime'],
+        ];
+    }
 
-        $projectsList = $projects->map(function ($project) use ($user) {
-            // Get user's time on this project
-            $userTime = TimeEntry::where('user_id', $user->id)
-                ->where('trackable_type', 'App\\Models\\Task')
-                ->whereHas('trackable', function ($q) use ($project) {
-                    $q->where('project_id', $project->id);
-                })
-                ->sum('duration_minutes');
+    /**
+     * Sum the currently loaded time entries for a task.
+     */
+    private function calculateTaskMinutesFromEntries(Task $task): int
+    {
+        return (int) ($task->timeEntries?->sum('duration_minutes') ?? 0);
+    }
+
+    /**
+     * Build a normalized delivery status for tasks shown in the report.
+     */
+    private function getTaskDeliveryStatus(Task $task): array
+    {
+        if ($task->status === TaskStatus::COMPLETED) {
+            $delayDays = $task->delay_days ?? 0;
 
             return [
-                'projectId' => $project->id,
-                'title' => $project->title,
-                'clientName' => $project->client?->name,
-                'status' => $project->status?->value ?? '',
-                'userTimeSpent' => round($userTime / 60, 2),
+                'status' => $delayDays > 0 ? 'late' : 'on_time',
+                'label' => $delayDays > 0 ? "Late by {$delayDays} days" : 'On Time',
+                'deliveredOnTime' => $delayDays <= 0,
             ];
-        })->values();
+        }
 
-        $result = [
-            'total' => $projects->count(),
-            'active' => $projects->where('status', 'in_progress')->count(),
-            'completed' => $projects->where('status', 'completed')->count(),
-            'projects' => $projectsList,
+        if ($task->isOverdue()) {
+            return [
+                'status' => 'overdue',
+                'label' => 'Overdue',
+                'deliveredOnTime' => false,
+            ];
+        }
+
+        return [
+            'status' => 'in_progress',
+            'label' => 'In Progress',
+            'deliveredOnTime' => null,
         ];
-
-        // Debug the final result
-        // \Log::info('Projects Data Result', [
-        //     'user_id' => $user->id,
-        //     'result' => $result
-        // ]);
-
-        return $result;
     }
 
     /**
@@ -636,25 +644,14 @@ class EmployeeReviewService
      */
     private function calculateTaskCompletionRate(User $user, array $filters): float
     {
-        $query = Task::whereHas('assignees', function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->where('is_primary', true); // Only primary assignees
-        });
-
-        if (!empty($filters['dateFrom'])) {
-            $query->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $query->whereDate('created_at', '<=', $filters['dateTo']);
-        }
-
-        $totalTasks = $query->count();
+        $tasks = $this->getPrimaryTasksForPeriod($user, $filters);
+        $totalTasks = $tasks->count();
 
         if ($totalTasks === 0) {
             return 0.0;
         }
 
-        $completedTasks = (clone $query)->where('status', 'completed')->count();
+        $completedTasks = $tasks->filter(fn (Task $task) => $task->status === TaskStatus::COMPLETED)->count();
 
         return ($completedTasks / $totalTasks) * 100;
     }
@@ -665,19 +662,7 @@ class EmployeeReviewService
      */
     private function calculateAverageBounceRate(User $user, array $filters): float
     {
-        $query = Task::whereHas('assignees', function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->where('is_primary', true); // Only primary assignees
-        });
-
-        if (!empty($filters['dateFrom'])) {
-            $query->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $query->whereDate('created_at', '<=', $filters['dateTo']);
-        }
-
-        $tasks = $query->get();
+        $tasks = $this->getPrimaryTasksForPeriod($user, $filters);
 
         if ($tasks->count() === 0) {
             return 0.0;
@@ -730,14 +715,10 @@ class EmployeeReviewService
      */
     private function getPointsData(User $user, array $filters): array
     {
-        // Get automatic points from PointTransaction table
-        $pointTransactionQuery = PointTransaction::where('user_id', $user->id);
-        if (!empty($filters['dateFrom'])) {
-            $pointTransactionQuery->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $pointTransactionQuery->whereDate('created_at', '<=', $filters['dateTo']);
-        }
+        [$pointsWindowFrom, $pointsWindowTo] = $this->getPointsWindow();
+
+        $pointTransactionQuery = PointTransaction::where('user_id', $user->id)
+            ->whereBetween('created_at', [$pointsWindowFrom, $pointsWindowTo]);
         
         // Get total count
         $totalCount = (clone $pointTransactionQuery)->count();
@@ -752,11 +733,11 @@ class EmployeeReviewService
                 ->get();
             
             $page = 1;
-            $perPage = $totalCount;
+            $perPage = max($totalCount, 1);
         } else {
             // For API: Apply pagination (default 50 per page)
-            $page = $filters['page'] ?? 1;
-            $perPage = $filters['perPage'] ?? 50;
+            $page = (int) ($filters['page'] ?? 1);
+            $perPage = max((int) ($filters['perPage'] ?? 50), 1);
             $pointTransactions = $pointTransactionQuery->with('createdBy')
                 ->orderBy('created_at', 'desc')
                 ->paginate($perPage, ['*'], 'page', $page);
@@ -785,16 +766,9 @@ class EmployeeReviewService
         // Sort all transactions by creation date (newest first)
         $sortedTransactions = $allTransactions->sortByDesc('rawCreatedAt')->values();
 
-        // Calculate statistics from ALL transactions in the period (not just current page)
-        // For accurate stats, we need to query all transactions again
-        $allPeriodTransactions = PointTransaction::where('user_id', $user->id);
-        if (!empty($filters['dateFrom'])) {
-            $allPeriodTransactions->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $allPeriodTransactions->whereDate('created_at', '<=', $filters['dateTo']);
-        }
-        $allPeriodTransactions = $allPeriodTransactions->get();
+        $allPeriodTransactions = PointTransaction::where('user_id', $user->id)
+            ->whereBetween('created_at', [$pointsWindowFrom, $pointsWindowTo])
+            ->get();
         
         $pointsEarned = $allPeriodTransactions->where('points', '>', 0)->sum('points');
         $pointsDeducted = abs($allPeriodTransactions->where('points', '<', 0)->sum('points'));
@@ -850,6 +824,10 @@ class EmployeeReviewService
                 'showing' => $allTransactions->count(),
             ],
             'monthlyBreakdown' => $monthlyBreakdown,
+            'window' => [
+                'dateFrom' => $pointsWindowFrom->format('Y-m-d'),
+                'dateTo' => $pointsWindowTo->format('Y-m-d'),
+            ],
             'bySource' => $bySource,
             'summary' => [
                 'totalTransactions' => $totalCount,
@@ -864,15 +842,10 @@ class EmployeeReviewService
      */
     private function calculatePointsStats(User $user, array $filters): array
     {
-        // Get from PointTransaction (automatic system)
-        $pointTransactionQuery = PointTransaction::where('user_id', $user->id);
-        if (!empty($filters['dateFrom'])) {
-            $pointTransactionQuery->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $pointTransactionQuery->whereDate('created_at', '<=', $filters['dateTo']);
-        }
-        $pointTransactions = $pointTransactionQuery->get();
+        [$pointsWindowFrom, $pointsWindowTo] = $this->getPointsWindow();
+        $pointTransactions = PointTransaction::where('user_id', $user->id)
+            ->whereBetween('created_at', [$pointsWindowFrom, $pointsWindowTo])
+            ->get();
 
         // Calculate totals from PointTransaction only
         $totalEarned = $pointTransactions->where('points', '>', 0)->sum('points');
@@ -882,6 +855,19 @@ class EmployeeReviewService
             'earned' => $totalEarned,
             'deducted' => $totalDeducted,
             'net' => $totalEarned - $totalDeducted,
+        ];
+    }
+
+    /**
+     * Get the rolling two-month window used for all points views in the report.
+     *
+     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}
+     */
+    private function getPointsWindow(): array
+    {
+        return [
+            Carbon::now()->subMonths(2)->startOfDay(),
+            Carbon::now()->endOfDay(),
         ];
     }
 
@@ -1071,19 +1057,7 @@ class EmployeeReviewService
      */
     private function getQualityMetrics(User $user, array $filters): array
     {
-        $query = Task::whereHas('assignees', function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-              ->where('is_primary', true);
-        });
-
-        if (!empty($filters['dateFrom'])) {
-            $query->whereDate('created_at', '>=', $filters['dateFrom']);
-        }
-        if (!empty($filters['dateTo'])) {
-            $query->whereDate('created_at', '<=', $filters['dateTo']);
-        }
-
-        $tasks = $query->get();
+        $tasks = $this->getPrimaryTasksForPeriod($user, $filters);
         
         if ($tasks->isEmpty()) {
             return [
@@ -1196,4 +1170,3 @@ class EmployeeReviewService
         return $result;
     }
 }
-

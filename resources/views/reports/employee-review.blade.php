@@ -465,7 +465,7 @@
     </div>
     @endif
 
-    @if(isset($tasks) && !empty($tasks['recentTasks']))
+    @if(isset($tasks) && !empty($tasks['periodTasks']))
     <h3 class="arabic-text" style="font-size: 14px; margin-bottom: 10px; margin-top: 20px;">{{ trans('employee_review.Task Details') }}</h3>
     <div class="card" style="padding: 0; overflow: hidden;">
         <table>
@@ -475,16 +475,17 @@
                     <th class="arabic-text">{{ trans('employee_review.Project') }}</th>
                     <th class="arabic-text">{{ trans('employee_review.Status') }}</th>
                     <th class="arabic-text">{{ trans('employee_review.Priority') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Worked Hours') }}</th>
                     <th class="arabic-text">{{ trans('employee_review.Due Date') }}</th>
                     <th class="arabic-text">{{ trans('employee_review.Completed') }}</th>
                     <th class="arabic-text">{{ trans('employee_review.Delivery Status') }}</th>
-                    <th class="text-center arabic-text">{{ trans('employee_review.Time Spent') }}</th>
+                    <th class="text-center arabic-text">{{ trans('employee_review.Last Activity') }}</th>
                 </tr>
             </thead>
             <tbody>
                 @php
-                    $recentTasksArray = is_array($tasks['recentTasks']) ? $tasks['recentTasks'] : $tasks['recentTasks']->toArray();
-                    $limitedTasks = array_slice($recentTasksArray, 0, 15);
+                    $recentTasksArray = is_array($tasks['periodTasks'] ?? null) ? $tasks['periodTasks'] : (($tasks['periodTasks'] ?? collect())->toArray());
+                    $limitedTasks = array_slice($recentTasksArray, 0, 20);
                 @endphp
                 @foreach($limitedTasks as $task)
                 <tr>
@@ -506,6 +507,7 @@
                         @endphp
                         <span class="badge {{ $priorityClass }} arabic-text">{{ $priorityKey }}</span>
                     </td>
+                    <td class="text-center font-bold text-brand">{{ number_format($task['loggedHours'] ?? $task['totalTimeSpent'] ?? 0, 1) }}h</td>
                     <td class="text-secondary">
                         @if(isset($task['dueDate']) && $task['dueDate'])
                             {{ \Carbon\Carbon::parse($task['dueDate'])->format('M j, Y') }}
@@ -524,7 +526,21 @@
                         @php
                             $delayDays = $task['delayDays'] ?? 0;
                             $isOverdue = $task['isOverdue'] ?? false;
-                            if ($task['status'] === 'completed') {
+                            if (!empty($task['deliveryStatus'])) {
+                                if (($task['deliveryStatus'] ?? '') === 'late') {
+                                    $deliveryStatus = trans('employee_review.Late') . ' (' . ($delayDays ?: 0) . ' days)';
+                                    $deliveryClass = 'bg-warning';
+                                } elseif (($task['deliveryStatus'] ?? '') === 'on_time') {
+                                    $deliveryStatus = trans('employee_review.On Time');
+                                    $deliveryClass = 'bg-success';
+                                } elseif (($task['deliveryStatus'] ?? '') === 'overdue') {
+                                    $deliveryStatus = trans('employee_review.Overdue');
+                                    $deliveryClass = 'bg-danger';
+                                } else {
+                                    $deliveryStatus = trans('employee_review.In Progress');
+                                    $deliveryClass = 'bg-warning';
+                                }
+                            } elseif ($task['status'] === 'completed') {
                                 if ($delayDays > 0) {
                                     $deliveryStatus = trans('employee_review.Late') . ' (' . $delayDays . ' days)';
                                     $deliveryClass = 'bg-warning';
@@ -542,18 +558,7 @@
                         @endphp
                         <span class="badge {{ $deliveryClass }} arabic-text">{{ $deliveryStatus }}</span>
                     </td>
-                    <td class="text-center font-bold text-brand">
-                        @php
-                            // Get time spent from task or estimate
-                            $timeSpent = 0;
-                            if (isset($task['totalTimeSpent'])) {
-                                $timeSpent = $task['totalTimeSpent'];
-                            } elseif (isset($task['estimatedHours'])) {
-                                $timeSpent = $task['estimatedHours'];
-                            }
-                            echo number_format($timeSpent, 1) . 'h';
-                        @endphp
-                    </td>
+                    <td class="text-center text-secondary">{{ $task['endedAt'] ?? $task['updatedAt'] ?? '-' }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -562,7 +567,14 @@
     @endif
 
     @if(!empty($points['transactions']) && count($points['transactions']) > 0)
-    <h3 class="arabic-text" style="font-size: 14px; margin-bottom: 10px; margin-top: 20px;">{{ trans('employee_review.Recent Point Transactions') }}</h3>
+    <h3 class="arabic-text" style="font-size: 14px; margin-bottom: 10px; margin-top: 20px;">
+        {{ trans('employee_review.Recent Point Transactions') }}
+        @if(isset($points['window']))
+            <span style="font-size: 10px; color: var(--secondary);">
+                ({{ $points['window']['dateFrom'] ?? '' }} {{ trans('employee_review.to') }} {{ $points['window']['dateTo'] ?? '' }})
+            </span>
+        @endif
+    </h3>
     <div class="card" style="padding: 0; overflow: hidden;">
         <table>
             <thead style="background: #f1f5f9;">
@@ -610,8 +622,11 @@
             <thead>
                 <tr>
                     <th class="arabic-text">{{ trans('employee_review.Project Name') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Project Stage') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Worked Tasks') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.On Time Deliveries') }}</th>
+                    <th class="arabic-text">{{ trans('employee_review.Late Deliveries') }}</th>
                     <th class="arabic-text">{{ trans('employee_review.Total Hours') }}</th>
-                    <th class="arabic-text">{{ trans('employee_review.Key Deliverables') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -620,9 +635,12 @@
                 @endphp
                 @foreach(array_slice($projectsArray, 0, 10) as $project)
                 <tr>
-                    <td class="font-bold arabic-text">{{ Str::limit($project['name'] ?? 'N/A', 40) }}</td>
-                    <td class="text-center font-bold text-brand">{{ number_format($project['totalHours'] ?? 0, 1) }}h</td>
-                    <td class="text-secondary arabic-text">{{ Str::limit($project['keyDeliverables'] ?? trans('employee_review.N/A'), 60) }}</td>
+                    <td class="font-bold arabic-text">{{ Str::limit($project['name'] ?? $project['title'] ?? 'N/A', 40) }}</td>
+                    <td class="text-secondary arabic-text">{{ str_replace('_', ' ', $project['status'] ?? 'n/a') }}</td>
+                    <td class="text-center font-bold">{{ $project['totalTasks'] ?? 0 }}</td>
+                    <td class="text-center font-bold text-success">{{ $project['onTimeDeliveries'] ?? 0 }}</td>
+                    <td class="text-center font-bold text-warning">{{ $project['lateDeliveries'] ?? 0 }}</td>
+                    <td class="text-center font-bold text-brand">{{ number_format($project['totalHours'] ?? $project['userTimeSpent'] ?? 0, 1) }}h</td>
                 </tr>
                 @endforeach
             </tbody>

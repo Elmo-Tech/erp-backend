@@ -188,8 +188,14 @@ return [
     // New translations for project and weekly sections
     'Project-wise Breakdown' => 'التفصيل حسب المشروع',
     'Project Name' => 'اسم المشروع',
+    'Project Stage' => 'مرحلة المشروع',
+    'Worked Tasks' => 'المهام التي تم العمل عليها',
+    'On Time Deliveries' => 'التسليمات في المعاد',
+    'Late Deliveries' => 'التسليمات المتأخرة',
     'Total Hours' => 'إجمالي الساعات',
     'Key Deliverables' => 'المخرجات الرئيسية',
+    'Worked Hours' => 'ساعات العمل',
+    'Last Activity' => 'آخر نشاط',
     'Showing top 10 projects' => 'عرض أفضل 10 مشاريع',
     'total' => 'إجمالي',
     
