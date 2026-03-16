@@ -191,10 +191,10 @@ class EmployeeReviewService
     {
         $tasks = $this->getPrimaryTasksForPeriod($user, $filters);
 
-        $byStatus = $tasks->groupBy(fn (Task $task) => $task->status?->value ?? 'unknown')
+        $byStatus = $tasks->groupBy(fn (Task $task) => $this->getTaskStatusValue($task) ?? 'unknown')
             ->map(fn (Collection $groupedTasks) => $groupedTasks->count());
 
-        $byPriority = $tasks->groupBy(fn (Task $task) => $task->priority?->value ?? 'none')
+        $byPriority = $tasks->groupBy(fn (Task $task) => $this->getTaskPriorityValue($task) ?? 'none')
             ->map(fn (Collection $groupedTasks) => $groupedTasks->count());
 
         $periodTasks = $tasks
@@ -210,8 +210,8 @@ class EmployeeReviewService
 
         return [
             'total' => $tasks->count(),
-            'completed' => $tasks->filter(fn (Task $task) => $task->status === TaskStatus::COMPLETED)->count(),
-            'inProgress' => $tasks->filter(fn (Task $task) => $task->status?->value === TaskStatus::IN_PROGRESS->value)->count(),
+            'completed' => $tasks->filter(fn (Task $task) => $this->getTaskStatusValue($task) === TaskStatus::COMPLETED->value)->count(),
+            'inProgress' => $tasks->filter(fn (Task $task) => $this->getTaskStatusValue($task) === TaskStatus::IN_PROGRESS->value)->count(),
             'byStatus' => $byStatus,
             'byPriority' => $byPriority,
             'tasksWithBounces' => $tasksWithBounces,
@@ -336,7 +336,7 @@ class EmployeeReviewService
                 $firstTask = $projectTasks->first();
                 $project = $firstTask->project;
 
-                $completedTasks = $projectTasks->filter(fn (Task $task) => $task->status === TaskStatus::COMPLETED);
+                $completedTasks = $projectTasks->filter(fn (Task $task) => $this->getTaskStatusValue($task) === TaskStatus::COMPLETED->value);
                 $onTimeDeliveries = $completedTasks->filter(fn (Task $task) => ($task->delay_days ?? 0) <= 0)->count();
                 $lateDeliveries = $completedTasks->filter(fn (Task $task) => ($task->delay_days ?? 0) > 0)->count();
                 $userMinutes = $projectTasks->sum(fn (Task $task) => $this->calculateTaskMinutesFromEntries($task));
@@ -353,12 +353,12 @@ class EmployeeReviewService
                     'title' => $project->title,
                     'name' => $project->title,
                     'clientName' => $project->client?->name,
-                    'status' => $project->status?->value ?? '',
+                    'status' => $this->getEnumBackedValue($project->status) ?? '',
                     'userTimeSpent' => round($userMinutes / 60, 2),
                     'totalHours' => round($userMinutes / 60, 2),
                     'totalTasks' => $projectTasks->count(),
                     'completedTasks' => $completedTasks->count(),
-                    'inProgressTasks' => $projectTasks->filter(fn (Task $task) => $task->status?->value === TaskStatus::IN_PROGRESS->value)->count(),
+                    'inProgressTasks' => $projectTasks->filter(fn (Task $task) => $this->getTaskStatusValue($task) === TaskStatus::IN_PROGRESS->value)->count(),
                     'onTimeDeliveries' => $onTimeDeliveries,
                     'lateDeliveries' => $lateDeliveries,
                     'keyDeliverables' => $deliverables !== '' ? $deliverables : 'No completed tasks',
@@ -468,8 +468,8 @@ class EmployeeReviewService
             'projectId' => $task->project_id,
             'title' => $task->title,
             'projectTitle' => $task->project?->title,
-            'status' => $task->status?->value ?? '',
-            'priority' => $task->priority?->value ?? '',
+            'status' => $this->getTaskStatusValue($task) ?? '',
+            'priority' => $this->getTaskPriorityValue($task) ?? '',
             'reopenCount' => $task->reopen_count,
             'estimatedHours' => $task->estimated_hours,
             'totalTimeSpent' => round($periodMinutes / 60, 2),
@@ -503,7 +503,7 @@ class EmployeeReviewService
      */
     private function getTaskDeliveryStatus(Task $task): array
     {
-        if ($task->status === TaskStatus::COMPLETED) {
+        if ($this->getTaskStatusValue($task) === TaskStatus::COMPLETED->value) {
             $delayDays = $task->delay_days ?? 0;
 
             return [
@@ -526,6 +526,42 @@ class EmployeeReviewService
             'label' => 'In Progress',
             'deliveredOnTime' => null,
         ];
+    }
+
+    /**
+     * Safely normalize a backed enum or raw scalar to its stored value.
+     */
+    private function getEnumBackedValue(mixed $value): string|int|null
+    {
+        if ($value instanceof \BackedEnum) {
+            return $value->value;
+        }
+
+        if (is_string($value) || is_int($value)) {
+            return $value;
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize task status regardless of whether the attribute is enum or plain string.
+     */
+    private function getTaskStatusValue(Task $task): ?string
+    {
+        $status = $this->getEnumBackedValue($task->status);
+
+        return is_string($status) ? $status : null;
+    }
+
+    /**
+     * Normalize task priority regardless of whether the attribute is enum or plain string.
+     */
+    private function getTaskPriorityValue(Task $task): ?string
+    {
+        $priority = $this->getEnumBackedValue($task->priority);
+
+        return is_string($priority) ? $priority : null;
     }
 
     /**
@@ -651,7 +687,7 @@ class EmployeeReviewService
             return 0.0;
         }
 
-        $completedTasks = $tasks->filter(fn (Task $task) => $task->status === TaskStatus::COMPLETED)->count();
+        $completedTasks = $tasks->filter(fn (Task $task) => $this->getTaskStatusValue($task) === TaskStatus::COMPLETED->value)->count();
 
         return ($completedTasks / $totalTasks) * 100;
     }
