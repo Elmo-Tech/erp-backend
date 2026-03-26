@@ -69,18 +69,15 @@ class PricingService
                 // Markup: add to price (client pays)
                 $commissionAmount = $afterDiscount * ($commissionPercentage / 100);
                 $finalPrice = $afterDiscount + $commissionAmount;
-            } else {
-                // Margin: deduct from profit (company pays)
-                $commissionAmount = $afterDiscount * ($commissionPercentage / 100);
-                // Final price stays the same, commission is internal
+            } elseif ($commissionType === CommissionType::MARGIN->value) {
+                // Margin: increase the client price to preserve the requested margin.
+                $commissionAmount = $afterDiscount - ($afterDiscount / (1 + ($commissionPercentage / 100)));
+                $finalPrice = $afterDiscount + $commissionAmount;
             }
         }
 
         // Calculate profit margin
         $profitMargin = $finalPrice - $internalCost;
-        if ($commissionType === CommissionType::MARGIN->value) {
-            $profitMargin -= $commissionAmount;
-        }
 
         return [
             'items' => $processedItems,

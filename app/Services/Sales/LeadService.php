@@ -185,8 +185,16 @@ class LeadService
     /**
      * Update lead status
      */
-    public function updateStatus(Lead $lead, string $status, User $user, ?string $lossReason = null): Lead
-    {
+    public function updateStatus(
+        Lead $lead,
+        string $status,
+        User $user,
+        ?string $lossReason = null,
+        ?int $meetingId = null,
+        ?string $outcome = null,
+        ?string $feedback = null,
+        ?int $teamLeadId = null
+    ): Lead {
         $oldStatus = $lead->status;
 
         $updateData = [
@@ -199,6 +207,23 @@ class LeadService
         }
 
         $lead->update($updateData);
+
+        // Update meeting record if meetingId is provided and status indicates meeting completion
+        if ($meetingId && $status === LeadStatus::MEETING_COMPLETED->value) {
+            $meeting = LeadMeeting::find($meetingId);
+            if (!$meeting) {
+                \Log::warning("Meeting {$meetingId} not found for lead {$lead->id}");
+            } elseif ($meeting->lead_id !== $lead->id) {
+                \Log::warning("Meeting {$meetingId} does not belong to lead {$lead->id}");
+            } else {
+                $meeting->update([
+                    'outcome' => $outcome,
+                    'feedback' => $feedback,
+                    'team_lead_id' => $teamLeadId,
+                    'updated_by' => $user->id,
+                ]);
+            }
+        }
 
         $this->logStatusChange($lead, $oldStatus, $lead->status, $user);
 

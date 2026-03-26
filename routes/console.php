@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\CheckQuotationExpiryJob;
+use App\Jobs\CheckSubscriptionRenewalJob;
 use App\Jobs\MarkOverdueInvoicesJob;
 use App\Jobs\SendActivityRemindersJob;
 use App\Jobs\SendExpiryWarningsJob;
@@ -24,6 +25,10 @@ Schedule::job(new \App\Jobs\GenerateRecurringTasksJob)
 
 // Check for expiring quotations daily at 8 AM (3-day warning)
 Schedule::job(new CheckQuotationExpiryJob)->dailyAt('08:00')->withoutOverlapping();
+
+// Check for subscription renewals daily at 7 AM
+// Sends reminders at 30, 7, and 1 day before expiry
+Schedule::job(new CheckSubscriptionRenewalJob)->dailyAt('07:00')->withoutOverlapping();
 
 // Send activity reminders every 5 minutes
 Schedule::job(new SendActivityRemindersJob)->everyFiveMinutes()->withoutOverlapping();

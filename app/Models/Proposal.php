@@ -18,6 +18,7 @@ class Proposal extends Model
 
     protected $fillable = [
         'proposal_number',
+        'file_number',
         'lead_id',
         'template_id',
         'title',
@@ -33,6 +34,9 @@ class Proposal extends Model
         'rejection_notes',
         'is_fast_track',
         'fast_track_reason',
+        'is_skipped',
+        'skip_reason',
+        'task_id',
         'internal_notes',
         'created_by',
         'updated_by',
@@ -47,6 +51,7 @@ class Proposal extends Model
             'sent_at' => 'datetime',
             'viewed_at' => 'datetime',
             'is_fast_track' => 'boolean',
+            'is_skipped' => 'boolean',
         ];
     }
 
@@ -64,6 +69,14 @@ class Proposal extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(ProposalTemplate::class, 'template_id');
+    }
+
+    /**
+     * Get the task linked to this proposal (for scheduled follow-up tasks).
+     */
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(Task::class);
     }
 
     /**
@@ -134,5 +147,24 @@ class Proposal extends Model
             : 1;
 
         return sprintf('PR-%s-%04d', $year, $sequence);
+    }
+
+    /**
+     * Generate unique file number for proposal.
+     * Format: PV-YEAR-FILENUMBER (e.g., PV-2026-0001)
+     */
+    public static function generateFileNumber(): string
+    {
+        $year = date('Y');
+        $lastProposal = self::whereYear('created_at', $year)
+            ->whereNotNull('file_number')
+            ->orderBy('file_number', 'desc')
+            ->first();
+
+        $sequence = $lastProposal && $lastProposal->file_number
+            ? (int) substr($lastProposal->file_number, -4) + 1
+            : 1;
+
+        return sprintf('PV-%s-%04d', $year, $sequence);
     }
 }

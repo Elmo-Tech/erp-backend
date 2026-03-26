@@ -105,6 +105,12 @@ php artisan reverb:start --host=0.0.0.0 --port=8080 &
 REVERB_PID=$!
 print_success "Reverb WebSocket started (PID: $REVERB_PID)"
 
+# تشغيل الـ Scheduler في الخلفية (للمهام المجدولة وتذكيرات الـ SaaS)
+print_status "Starting Task Scheduler..."
+php artisan schedule:work &
+SCHEDULE_PID=$!
+print_success "Task Scheduler started (PID: $SCHEDULE_PID)"
+
 # 7. Health check
 print_status "Performing health checks..."
 sleep 2  # Give services time to start
@@ -122,6 +128,12 @@ else
     print_error "Reverb WebSocket failed to start"
 fi
 
+if kill -0 $SCHEDULE_PID 2>/dev/null; then
+    print_success "Task Scheduler is running"
+else
+    print_error "Task Scheduler failed to start"
+fi
+
 # 8. Final status
 echo ""
 print_success "✅ Application startup completed!"
@@ -132,6 +144,7 @@ echo "  • Caches: Optimized"
 echo "  • API Docs: Generated"
 echo "  • Queue Worker: Running (PID: $QUEUE_PID)"
 echo "  • WebSocket: Running (PID: $REVERB_PID)"
+echo "  • Task Scheduler: Running (PID: $SCHEDULE_PID)"
 echo ""
 
 # 9. Start Main Server (تشغيل السيرفر الرئيسي - لازم يكون آخر واحد)
@@ -143,6 +156,7 @@ cleanup() {
     print_warning "Shutting down services..."
     kill $QUEUE_PID 2>/dev/null || true
     kill $REVERB_PID 2>/dev/null || true
+    kill $SCHEDULE_PID 2>/dev/null || true
     print_success "All services stopped"
     exit 0
 }

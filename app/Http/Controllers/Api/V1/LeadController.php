@@ -194,11 +194,17 @@ class LeadController extends Controller
      */
     public function updateStatus(UpdateLeadStatusRequest $request, Lead $lead): JsonResponse
     {
+        $validated = $request->validated();
+
         $lead = $this->leadService->updateStatus(
             $lead,
-            $request->validated()['status'],
+            $validated['status'],
             $request->user(),
-            $request->validated()['lossReason'] ?? null
+            $validated['lossReason'] ?? null,
+            $validated['meetingId'] ?? null,
+            $validated['outcome'] ?? null,
+            $validated['feedback'] ?? null,
+            $validated['teamLeadId'] ?? null
         );
 
         return ApiResponse::success(

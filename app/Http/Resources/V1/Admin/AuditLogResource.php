@@ -2,8 +2,7 @@
 
 namespace App\Http\Resources\V1\Admin;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\V1\AuditLog\AuditLogResource as BaseAuditLogResource;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -28,39 +27,6 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'isSensitive', type: 'boolean', example: true, description: 'Indicates if this is a security-sensitive action'),
     ]
 )]
-class AuditLogResource extends JsonResource
+class AuditLogResource extends BaseAuditLogResource
 {
-    /**
-     * Security-sensitive actions that should be highlighted in the UI.
-     */
-    private const SENSITIVE_ACTIONS = [
-        'update_internal_cost',
-        'update_role_permissions',
-        'create_role',
-        'delete_role',
-        'view_profitability',
-        'forbidden_access_attempt',
-    ];
-
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(Request $request): array
-    {
-        return [
-            'auditLogId' => $this->id,
-            'userId' => $this->user_id,
-            'userName' => $this->user?->name ?? 'Unknown User',
-            'action' => $this->action ?? "",
-            'auditableType' => $this->auditable_type ?? null,
-            'auditableId' => $this->auditable_id,
-            'ipAddress' => $this->ip_address ?? "",
-            'userAgent' => $this->user_agent ?? "",
-            'metadata' => $this->metadata ?? [],
-            'createdAt' => $this->created_at?->toISOString() ?? "",
-            'isSensitive' => in_array($this->action, self::SENSITIVE_ACTIONS),
-        ];
-    }
 }

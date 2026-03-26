@@ -207,7 +207,7 @@ class DeliverablePointsAndNotificationsTest extends TestCase
     }
 
     /** @test */
-    public function it_creates_both_point_transaction_and_user_point_records()
+    public function it_creates_point_transaction_records_for_deliverable_reviews()
     {
         // First submit the deliverable
         $this->deliverable->update([
@@ -234,13 +234,8 @@ class DeliverablePointsAndNotificationsTest extends TestCase
             'type' => PointTransactionType::DELIVERABLE_APPROVED->value,
         ]);
         
-        // Assert UserPoint was created for backward compatibility
-        $this->assertDatabaseHas('user_points', [
-            'user_id' => $this->developer->id,
-            'points_change' => 4,
-            'type' => 'automatic',
-            'transaction_type' => PointTransactionType::DELIVERABLE_APPROVED->value,
-        ]);
+        // Unified points now persist only through point_transactions.
+        $this->assertDatabaseCount('point_transactions', 1);
     }
 
     /** @test */

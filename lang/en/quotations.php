@@ -13,6 +13,12 @@ return [
     'already_sent' => 'Quotation has already been sent',
     'cannot_send' => 'Quotation cannot be sent in current status',
     
+    // Validation
+    'validation_failed' => 'Quotation validation failed',
+    'milestones_required' => 'At least one milestone is required',
+    'at_least_one_milestone' => 'At least one milestone must be provided',
+    'milestones_must_equal_100' => 'The sum of milestone percentages must equal 100%. Current total: :total%',
+    
     // Payment Plan
     'payment_percentage_invalid' => 'Payment percentage must be between 0.01 and 100',
     'payment_plan_validated' => 'Payment plan validated successfully',

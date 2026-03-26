@@ -5,6 +5,7 @@ namespace App\Services\Sales;
 use App\Enums\ClientStatus;
 use App\Enums\LeadStatus;
 use App\Models\Client;
+use App\Models\Contract;
 use App\Models\Lead;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +44,51 @@ class LeadConversionService
                 'client_id' => $client->id,
                 'converted_at' => now(),
                 'converted_by' => $convertedBy->id,
+                'status' => LeadStatus::WON,
+            ]);
+
+            return $client;
+        });
+    }
+
+    /**
+     * Convert a lead to client when contract is signed
+     * This is called automatically when a contract is signed
+     *
+     * @param Lead $lead The lead to convert
+     * @param Contract $contract The signed contract
+     * @param User $user The user performing the conversion
+     * @return Client
+     */
+    public function convertLeadToClient(Lead $lead, Contract $contract, User $user): Client
+    {
+        return DB::transaction(function () use ($lead, $contract, $user) {
+            // Check if lead already converted
+            if ($lead->client_id) {
+                return Client::find($lead->client_id);
+            }
+
+            // Create client from lead data
+            $client = Client::create([
+                'name' => $lead->name,
+                'email' => $lead->email,
+                'phone' => $lead->phone,
+                'company' => $lead->company,
+                'country' => $lead->country,
+                'status' => ClientStatus::ACTIVE,
+                'lead_id' => $lead->id,
+            ]);
+
+            // Update the contract with the new client_id
+            $contract->update([
+                'client_id' => $client->id,
+            ]);
+
+            // Update lead with conversion info
+            $lead->update([
+                'client_id' => $client->id,
+                'converted_at' => now(),
+                'converted_by' => $user->id,
                 'status' => LeadStatus::WON,
             ]);
 

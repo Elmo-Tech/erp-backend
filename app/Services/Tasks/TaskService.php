@@ -418,11 +418,6 @@ class TaskService
         // Log status change
         if (isset($data['status']) && $oldStatus !== $data['status']) {
             TaskActivity::logStatusChange($task, $user, $oldStatus ?? 'none', $data['status']);
-            
-            // Check for reopen (testing -> in_progress)
-            if ($oldStatus === TaskStatus::TESTING->value && $data['status'] === TaskStatus::IN_PROGRESS->value) {
-                $task->increment('reopen_count');
-            }
         }
 
         // Update tags
@@ -794,10 +789,8 @@ class TaskService
      */
     private function handleStatusTransition(Task $task, TaskStatus $oldStatus, TaskStatus $newStatus, User $user): void
     {
-        // If moving from Testing back to In Progress, increment reopen count (bug bounce)
+        // Reopen counting is handled centrally by TaskObserver to avoid double increments.
         if ($oldStatus === TaskStatus::TESTING && $newStatus === TaskStatus::IN_PROGRESS) {
-            $task->increment('reopen_count');
-            
             TaskActivity::logComment(
                 $task,
                 $user,

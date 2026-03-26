@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class FlexibleStatusUpdateTest extends TestCase
@@ -19,7 +20,9 @@ class FlexibleStatusUpdateTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Role::firstOrCreate(['name' => 'admin']);
         $this->user = User::factory()->create();
+        $this->user->assignRole('admin');
     }
 
     /** @test */

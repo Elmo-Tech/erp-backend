@@ -12,7 +12,7 @@ use App\Http\Controllers\Api\V1\ChangeRequestController;
 use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
 use App\Http\Controllers\Api\V1\Client\ClientProjectController;
 use App\Http\Controllers\Api\V1\ClientController;
-use App\Http\Controllers\ContractController;
+use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -159,11 +159,19 @@ Route::prefix('v1')->group(function () {
     Route::get('quotations-overdue', [QuotationController::class, 'overdue'])->name('quotations.overdue');
 
     // Contract Management Routes
+    Route::get('contracts/milestones/due', [ContractController::class, 'dueMilestones'])->name('contracts.milestones.due');
+    Route::patch('contracts/milestones/{milestone}/paid', [ContractController::class, 'markMilestonePaid'])->name('contracts.milestones.paid');
+    Route::post('contracts', [ContractController::class, 'store'])->name('contracts.store');
+    Route::post('contracts/from-quotation/{quotation}', [ContractController::class, 'createFromQuotation'])->name('contracts.create-from-quotation');
+    Route::post('quotations/{quotation}/contract', [ContractController::class, 'createFromQuotation'])->name('contracts.generate-from-quotation');
+    Route::post('contracts/{contract}/sign', [ContractController::class, 'sign'])->name('contracts.sign');
+    Route::patch('contracts/{contract}/sign', [ContractController::class, 'signPatch'])->name('contracts.sign.patch');
+    Route::post('contracts/{contract}/activate', [ContractController::class, 'activate'])->name('contracts.activate');
+    Route::patch('contracts/{contract}/status', [ContractController::class, 'updateStatus'])->name('contracts.update-status');
     Route::get('contracts', [ContractController::class, 'index'])->name('contracts.index');
     Route::get('contracts/{contract}', [ContractController::class, 'show'])->name('contracts.show');
-    Route::post('quotations/{quotationId}/contract', [ContractController::class, 'generateFromQuotation'])->name('contracts.generate-from-quotation');
-    Route::post('contracts/{contract}/sign', [ContractController::class, 'sign'])->name('contracts.sign');
-    Route::patch('contracts/{contract}/status', [ContractController::class, 'updateStatus'])->name('contracts.update-status');
+    Route::put('contracts/{contract}', [ContractController::class, 'update'])->name('contracts.update');
+    Route::delete('contracts/{contract}', [ContractController::class, 'destroy'])->name('contracts.destroy');
 
     // Change Request Routes
     Route::get('projects/{project}/change-requests', [ChangeRequestController::class, 'index'])->name('change-requests.index');
@@ -421,8 +429,9 @@ Route::prefix('v1')->group(function () {
 
         // Admin Audit Log Routes
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
-        Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('admin.audit-logs.show');
+        Route::get('audit-logs/action-types', [AuditLogController::class, 'actionTypes'])->name('admin.audit-logs.action-types');
         Route::get('audit-logs/stats', [AuditLogController::class, 'stats'])->name('admin.audit-logs.stats');
+        Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('admin.audit-logs.show');
 
         // Admin Deliverable Management Routes (Full Control)
         Route::prefix('deliverables')->group(function () {

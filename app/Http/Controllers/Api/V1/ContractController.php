@@ -8,6 +8,7 @@ use App\Http\Requests\V1\Contracts\StoreContractRequest;
 use App\Http\Requests\V1\Contracts\UpdateContractRequest;
 use App\Http\Requests\V1\Contracts\SignContractRequest;
 use App\Http\Resources\V1\Contracts\ContractCollection;
+use App\Http\Resources\V1\Contracts\ContractMilestoneResource;
 use App\Http\Resources\V1\Contracts\ContractResource;
 use App\Models\Contract;
 use App\Models\ContractMilestone;
@@ -163,6 +164,43 @@ class ContractController extends Controller
     }
 
     /**
+     * @OA\Patch(
+     *     path="/api/v1/contracts/{id}/sign",
+     *     operationId="signContractPatch",
+     *     tags={"Contracts"},
+     *     summary="Sign a contract (PATCH method)",
+     *     description="Mark contract as signed and auto-convert lead to client",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="signedByClient", type="string", description="Name of person signing on behalf of client"),
+     *             @OA\Property(property="signedPdf", type="file", description="Signed PDF file (optional)")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Contract signed and lead converted to client successfully")
+     * )
+     */
+    public function signPatch(Request $request, Contract $contract): JsonResponse
+    {
+        $validated = $request->validate([
+            'signedByClient' => 'nullable|string|max:255',
+            'signedPdf' => 'nullable|file|mimes:pdf|max:10240',
+        ]);
+
+        $contract = $this->contractService->markAsSigned(
+            $contract,
+            $validated,
+            $request->user()
+        );
+
+        return ApiResponse::success(
+            new ContractResource($contract),
+            __('contracts.signed_and_lead_converted')
+        );
+    }
+
+    /**
      * @OA\Post(
      *     path="/api/v1/contracts/{id}/activate",
      *     operationId="activateContract",
@@ -234,7 +272,9 @@ class ContractController extends Controller
     {
         $milestones = $this->contractService->getDueMilestones();
 
-        return ApiResponse::success($milestones, __('contracts.milestones_retrieved'));
+        return ApiResponse::success([
+            'milestones' => ContractMilestoneResource::collection($milestones),
+        ], __('contracts.milestones_retrieved'));
     }
 
     /**
@@ -254,7 +294,10 @@ class ContractController extends Controller
             $request->input('invoiceId')
         );
 
-        return ApiResponse::success($milestone, __('contracts.milestone_paid'));
+        return ApiResponse::success(
+            new ContractMilestoneResource($milestone),
+            __('contracts.milestone_paid')
+        );
     }
 
     /**

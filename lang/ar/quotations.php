@@ -13,6 +13,12 @@ return [
     'already_sent' => 'تم إرسال عرض السعر بالفعل',
     'cannot_send' => 'لا يمكن إرسال عرض السعر في الحالة الحالية',
     
+    // Validation
+    'validation_failed' => 'فشل التحقق من عرض السعر',
+    'milestones_required' => 'يجب توفير مرحلة دفع واحدة على الأقل',
+    'at_least_one_milestone' => 'يجب توفير مرحلة دفع واحدة على الأقل',
+    'milestones_must_equal_100' => 'يجب أن يساوي مجموع نسب المراحل 100%. المجموع الحالي: :total%',
+    
     // Payment Plan
     'payment_percentage_invalid' => 'يجب أن تكون نسبة الدفع بين 0.01 و 100',
     'payment_plan_validated' => 'تم التحقق من خطة الدفع بنجاح',

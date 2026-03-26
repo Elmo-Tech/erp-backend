@@ -25,8 +25,6 @@ class AuditLogController extends Controller
         private AuditService $auditService
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
-        // Security: Only admin role can access audit logs
-        $this->middleware('role:admin');
     }
 
     /**
@@ -119,13 +117,26 @@ class AuditLogController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        if (!$request->user()?->can('view_audit_logs')) {
+            return ApiResponse::forbidden('You do not have permission to view audit logs');
+        }
+
         $auditLogs = QueryBuilder::for(AuditLog::class)
             ->with(['user', 'auditable'])
             ->allowedFilters([
                 AllowedFilter::exact('event_type'),
                 AllowedFilter::exact('severity'),
                 AllowedFilter::exact('user_id'),
+                AllowedFilter::exact('auditable_id'),
                 AllowedFilter::partial('action'),
+                AllowedFilter::callback('search', function ($query, $value) {
+                    $query->where(function ($searchQuery) use ($value) {
+                        $searchQuery
+                            ->where('action', 'like', "%{$value}%")
+                            ->orWhere('ip_address', 'like', "%{$value}%")
+                            ->orWhere('user_agent', 'like', "%{$value}%");
+                    });
+                }),
                 AllowedFilter::callback('date_from', function ($query, $value) {
                     $query->whereDate('created_at', '>=', $value);
                 }),
@@ -139,8 +150,25 @@ class AuditLogController extends Controller
 
         return ApiResponse::success(
             new AuditLogCollection($auditLogs),
-            __('messages.audit_logs_retrieved')
+            'Audit logs retrieved successfully'
         );
+    }
+
+    public function actionTypes(Request $request): JsonResponse
+    {
+        if (!$request->user()?->can('view_audit_logs')) {
+            return ApiResponse::forbidden('You do not have permission to view audit logs');
+        }
+
+        $actionTypes = AuditLog::query()
+            ->select('action')
+            ->distinct()
+            ->orderBy('action')
+            ->pluck('action')
+            ->values()
+            ->toArray();
+
+        return ApiResponse::success($actionTypes, 'Audit log action types retrieved successfully');
     }
 
     /**
@@ -174,11 +202,15 @@ class AuditLogController extends Controller
      */
     public function show(AuditLog $auditLog): JsonResponse
     {
+        if (!request()->user()?->can('view_audit_logs')) {
+            return ApiResponse::forbidden('You do not have permission to view audit logs');
+        }
+
         $auditLog->load(['user', 'auditable']);
 
         return ApiResponse::success(
             new AuditLogResource($auditLog),
-            __('messages.audit_log_retrieved')
+            'Audit log retrieved successfully'
         );
     }
 
@@ -239,6 +271,10 @@ class AuditLogController extends Controller
      */
     public function stats(Request $request): JsonResponse
     {
+        if (!$request->user()?->can('view_audit_logs')) {
+            return ApiResponse::forbidden('You do not have permission to view audit logs');
+        }
+
         $days = $request->get('days', 30);
         $fromDate = now()->subDays($days);
 

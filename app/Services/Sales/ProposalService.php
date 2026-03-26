@@ -3,9 +3,15 @@
 namespace App\Services\Sales;
 
 use App\Enums\LeadStatus;
+use App\Enums\ProposalActionType;
 use App\Enums\ProposalStatus;
+use App\Enums\TaskCategory;
+use App\Enums\TaskPriority;
+use App\Enums\TaskStatus;
+use App\Enums\TaskType;
 use App\Models\Lead;
 use App\Models\Proposal;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
@@ -21,17 +27,19 @@ class ProposalService
     public function getProposals(array $filters = []): LengthAwarePaginator
     {
         return QueryBuilder::for(Proposal::class)
-            ->with(['lead', 'template'])
+            ->with(['lead', 'template', 'task'])
             ->allowedFilters([
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('lead_id'),
                 AllowedFilter::exact('is_fast_track'),
+                AllowedFilter::exact('is_skipped'),
                 AllowedFilter::scope('expiring_in'),
                 AllowedFilter::scope('active'),
                 'search' => AllowedFilter::callback('search', function ($query, $value) {
                     $query->where(function ($q) use ($value) {
                         $q->where('title', 'like', "%{$value}%")
                             ->orWhere('proposal_number', 'like', "%{$value}%")
+                            ->orWhere('file_number', 'like', "%{$value}%")
                             ->orWhereHas('lead', function ($leadQuery) use ($value) {
                                 $leadQuery->where('name', 'like', "%{$value}%")
                                     ->orWhere('company', 'like', "%{$value}%");
@@ -40,35 +48,131 @@ class ProposalService
                 }),
             ])
             ->allowedSorts(['created_at', 'expiry_date', 'submission_date'])
-            ->allowedIncludes(['lead', 'template', 'quotations'])
+            ->allowedIncludes(['lead', 'template', 'quotations', 'task'])
             ->defaultSort('-created_at')
             ->paginate($filters['perPage'] ?? 15);
     }
 
     /**
-     * Create a new proposal
+     * Create a new proposal with support for three paths:
+     * 1. Skip path: Mark proposal as skipped with reason
+     * 2. Schedule path: Create proposal with follow-up task
+     * 3. Upload path: Create proposal with file upload
+     * 4. Draft path: Create draft proposal without special actions
      */
     public function createProposal(array $data, User $user): Proposal
     {
+        $actionType = $data['actionType'] ?? ProposalActionType::DRAFT->value;
+
+        // Generate proposal number and file number
+        $proposalNumber = Proposal::generateProposalNumber();
+        $fileNumber = Proposal::generateFileNumber();
+
+        // Calculate expiry_date from expiryDays if provided, otherwise use expiryDate or default to 10 days
+        $expiryDate = null;
+        if (!empty($data['expiryDays'])) {
+            $expiryDate = now()->addDays($data['expiryDays']);
+        } elseif (!empty($data['expiryDate'])) {
+            $expiryDate = $data['expiryDate'];
+        } else {
+            // Default to 10 days for non-skipped proposals
+            $expiryDate = now()->addDays(10);
+        }
+
+        // Skip path should not have expiry_date (or set to null)
+        if ($actionType === ProposalActionType::SKIP->value) {
+            $expiryDate = null;
+        }
+
         $proposalData = [
-            'proposal_number' => Proposal::generateProposalNumber(),
+            'proposal_number' => $proposalNumber,
+            'file_number' => $fileNumber,
             'lead_id' => $data['leadId'],
             'template_id' => $data['templateId'] ?? null,
             'title' => $data['title'],
             'content' => $data['content'] ?? null,
             'status' => ProposalStatus::DRAFT,
-            'expiry_date' => $data['expiryDate'] ?? now()->addDays(10),
+            'expiry_date' => $expiryDate,
             'internal_notes' => $data['internalNotes'] ?? null,
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ];
 
+        // Handle different action types
+        switch ($actionType) {
+            case ProposalActionType::SKIP->value:
+                // Skip path: Mark proposal as skipped
+                $proposalData['is_skipped'] = true;
+                $proposalData['skip_reason'] = $data['skipReason'];
+                $proposalData['status'] = ProposalStatus::REJECTED;
+                break;
+
+            case ProposalActionType::SCHEDULE->value:
+                // Schedule path: Create proposal with follow-up task
+                $proposalData['status'] = ProposalStatus::SENT;
+                $proposalData['sent_at'] = now();
+                $proposalData['submission_date'] = now();
+                break;
+
+            case ProposalActionType::UPLOAD->value:
+                // Upload path: File will be uploaded separately
+                $proposalData['status'] = ProposalStatus::DRAFT;
+                break;
+
+            case ProposalActionType::DRAFT->value:
+            default:
+                // Draft path: Just create as draft
+                $proposalData['status'] = ProposalStatus::DRAFT;
+                break;
+        }
+
         $proposal = Proposal::create($proposalData);
 
-        // Update lead status to proposal
-        $this->updateLeadStatusToProposal($proposal->lead_id);
+        // Handle schedule path: Create follow-up task
+        if ($actionType === ProposalActionType::SCHEDULE->value) {
+            $task = $this->createFollowUpTask($proposal, $data, $user);
+            $proposal->update(['task_id' => $task->id]);
+            $proposal = $proposal->fresh();
+        }
 
-        return $proposal;
+        // Handle upload path: Upload file if provided
+        if ($actionType === ProposalActionType::UPLOAD->value && isset($data['file']) && $data['file'] instanceof UploadedFile) {
+            $this->uploadFile($proposal, $data['file'], $user);
+            $proposal = $proposal->fresh();
+        }
+
+        // Update lead status to proposal (if not skipped)
+        if ($actionType !== ProposalActionType::SKIP->value) {
+            $this->updateLeadStatusToProposal($proposal->lead_id);
+        } else {
+            // If skipped, mark lead as not interested or follow up needed
+            $this->updateLeadStatusForSkippedProposal($proposal->lead_id);
+        }
+
+        return $proposal->load(['lead', 'task']);
+    }
+
+    /**
+     * Create a follow-up task for a proposal (schedule path)
+     */
+    private function createFollowUpTask(Proposal $proposal, array $data, User $user): Task
+    {
+        $taskData = [
+            'project_id' => null, // No project yet, will be created upon proposal approval
+            'assigned_to' => $data['taskAssignedTo'],
+            'title' => $data['taskTitle'] ?? 'Follow up on proposal: ' . $proposal->title,
+            'description' => 'Follow up task for proposal: ' . $proposal->proposal_number . "\n\n" . ($proposal->content ?? ''),
+            'status' => TaskStatus::TODO,
+            'type' => TaskType::TASK,
+            'priority' => TaskPriority::MEDIUM,
+            'task_category' => TaskCategory::FOLLOWUP,
+            'due_date' => $data['taskDueDate'],
+            'start_date' => now(),
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ];
+
+        return Task::create($taskData);
     }
 
     /**
@@ -176,6 +280,7 @@ class ProposalService
     {
         $proposal = Proposal::create([
             'proposal_number' => Proposal::generateProposalNumber(),
+            'file_number' => Proposal::generateFileNumber(),
             'lead_id' => $data['leadId'],
             'title' => $data['title'] ?? 'Fast Track - ' . ($data['projectName'] ?? 'Project'),
             'status' => ProposalStatus::APPROVED,
@@ -209,6 +314,20 @@ class ProposalService
         $lead = Lead::find($leadId);
         if ($lead && $lead->status === LeadStatus::QUALIFIED) {
             $lead->update(['status' => LeadStatus::PROPOSAL]);
+        }
+    }
+
+    /**
+     * Update lead status when proposal is skipped
+     * Lead stays at current status since skip could mean various things
+     */
+    private function updateLeadStatusForSkippedProposal(int $leadId): void
+    {
+        $lead = Lead::find($leadId);
+        if ($lead) {
+            // When proposal is skipped, we could optionally update lead status
+            // For now, keep the lead at its current status
+            // The skip_reason is stored in the proposal for reference
         }
     }
 }

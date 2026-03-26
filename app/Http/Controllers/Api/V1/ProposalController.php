@@ -79,13 +79,20 @@ class ProposalController extends Controller
     public function store(StoreProposalRequest $request): JsonResponse
     {
         return DB::transaction(function () use ($request) {
+            $validatedData = $request->validated();
+            
+            // Handle file upload if present (for upload path)
+            if ($request->hasFile('file')) {
+                $validatedData['file'] = $request->file('file');
+            }
+            
             $proposal = $this->proposalService->createProposal(
-                $request->validated(),
+                $validatedData,
                 $request->user()
             );
 
             return ApiResponse::success(
-                new ProposalResource($proposal->load('lead')),
+                new ProposalResource($proposal->load(['lead', 'task'])),
                 __('proposals.created'),
                 201
             );

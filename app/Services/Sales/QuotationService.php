@@ -2,9 +2,11 @@
 
 namespace App\Services\Sales;
 
+use App\Enums\CommissionType;
 use App\Enums\QuotationStatus;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
+use App\Models\QuotationMilestone;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +33,7 @@ class QuotationService
                 'search' => AllowedFilter::callback('search', function ($query, $value) {
                     $query->where(function ($q) use ($value) {
                         $q->where('quotation_number', 'like', "%{$value}%")
+                            ->orWhere('file_number', 'like', "%{$value}%")
                             ->orWhereHas('lead', function ($q) use ($value) {
                                 $q->where('name', 'like', "%{$value}%")
                                     ->orWhere('company', 'like', "%{$value}%");
@@ -39,43 +42,109 @@ class QuotationService
                 }),
             ])
             ->allowedSorts(['created_at', 'final_price', 'expiry_date', 'sent_at'])
-            ->allowedIncludes(['lead', 'items', 'template', 'commissionUser', 'contract'])
+            ->allowedIncludes(['lead', 'items', 'milestones', 'template', 'commissionUser', 'contract', 'task'])
             ->defaultSort('-created_at')
             ->paginate($filters['perPage'] ?? 15);
     }
 
     /**
-     * Create a new quotation with items
+     * Create a new quotation with items and milestones
      */
     public function createQuotation(array $data, User $user): Quotation
     {
         return DB::transaction(function () use ($data, $user) {
-            // Calculate pricing from items
-            $pricing = $this->pricingService->calculateFromItems(
-                $data['items'] ?? [],
-                $data['discountPercentage'] ?? 0,
-                $data['commissionType'] ?? null,
-                $data['commissionPercentage'] ?? 0
-            );
+            // Calculate expiry date from expiryDays
+            $expiryDate = isset($data['expiryDays']) 
+                ? now()->addDays($data['expiryDays'])->toDateString() 
+                : ($data['expiryDate'] ?? null);
+
+            // Generate quotation number
+            $fileNumber = $data['fileNumber'] ?? null;
+            $quotationNumber = Quotation::generateQuotationNumber($fileNumber);
+
+            // Calculate pricing from items or basePrice
+            $basePrice = $data['basePrice'] ?? 0;
+            
+            if (!empty($data['items'])) {
+                // Calculate from items
+                $pricing = $this->pricingService->calculateFromItems(
+                    $data['items'],
+                    $data['discountPercentage'] ?? 0,
+                    $data['commissionType'] ?? null,
+                    $data['commissionPercentage'] ?? 0
+                );
+                $finalPrice = $data['overridePrice'] ?? $pricing['finalPrice'];
+                $discountPercentage = $pricing['discountPercentage'];
+                $discountAmount = $pricing['discountAmount'];
+            } else {
+                // Calculate from basePrice with discount
+                $discountType = $data['discountType'] ?? 'percent';
+                $discountValue = $data['discountValue'] ?? 0;
+                
+                if ($discountType === 'percent') {
+                    $discountAmount = $basePrice * ($discountValue / 100);
+                } else {
+                    $discountAmount = $discountValue;
+                }
+                
+                $finalPrice = $basePrice - $discountAmount;
+                $discountPercentage = $basePrice > 0 ? ($discountAmount / $basePrice) * 100 : 0;
+            }
+
+            // Calculate commission
+            $commissionType = $data['commissionType'] ?? null;
+            $commissionValue = $data['commissionValue'] ?? 0;
+            $commissionCalculation = $data['commissionCalculation'] ?? 'add';
+            
+            $commissionAmount = 0;
+            $commissionPercentage = 0;
+            
+            if ($commissionType && $commissionValue > 0) {
+                if ($commissionType === CommissionType::MARKUP->value || $commissionType === 'percent') {
+                    $commissionPercentage = $commissionValue;
+                    $commissionAmount = $finalPrice * ($commissionValue / 100);
+                } elseif ($commissionType === CommissionType::MARGIN->value) {
+                    $commissionPercentage = $commissionValue;
+                    $commissionAmount = $finalPrice - ($finalPrice / (1 + ($commissionValue / 100)));
+                } else {
+                    $commissionAmount = $commissionValue;
+                    $commissionPercentage = $finalPrice > 0 ? ($commissionValue / $finalPrice) * 100 : 0;
+                }
+                
+                $finalPrice = $finalPrice + $commissionAmount;
+
+                if ($commissionCalculation === 'deduct') {
+                    $finalPrice = $finalPrice - (2 * $commissionAmount);
+                    $commissionAmount = -$commissionAmount;
+                }
+            }
+
+            // Internal cost calculation (optional - assume 0 for now)
+            $internalCost = $data['internalCost'] ?? 0;
+            $profitMargin = $finalPrice > 0 ? (($finalPrice - $internalCost) / $finalPrice) * 100 : 0;
 
             // Create quotation
             $quotation = Quotation::create([
-                'quotation_number' => Quotation::generateQuotationNumber(),
+                'quotation_number' => $quotationNumber,
+                'file_number' => $fileNumber,
                 'lead_id' => $data['leadId'],
+                'proposal_id' => $data['proposalId'] ?? null,
                 'template_id' => $data['templateId'] ?? null,
-                'estimations' => $data['estimations'] ?? null, // Legacy support
+                'task_id' => $data['taskId'] ?? null,
+                'scope_description' => $data['title'] ?? null,
+                'estimations' => $data['estimations'] ?? null,
                 'hourly_rate' => $data['hourlyRate'] ?? 0,
-                'discount_percentage' => $pricing['discountPercentage'],
-                'final_price' => $data['overridePrice'] ?? $pricing['finalPrice'],
+                'discount_percentage' => $discountPercentage,
+                'final_price' => $finalPrice,
                 'currency' => $data['currency'] ?? 'SAR',
-                'status' => QuotationStatus::DRAFT,
-                'expiry_date' => $data['expiryDate'] ?? null,
-                'commission_type' => $pricing['commissionType'],
-                'commission_percentage' => $pricing['commissionPercentage'],
-                'commission_amount' => $pricing['commissionAmount'],
+                'status' => $data['status'] ?? QuotationStatus::DRAFT,
+                'expiry_date' => $expiryDate,
+                'commission_type' => $commissionType,
+                'commission_percentage' => $commissionPercentage,
+                'commission_amount' => $commissionAmount,
                 'commission_user_id' => $data['commissionUserId'] ?? null,
-                'internal_cost' => $pricing['internalCost'],
-                'profit_margin' => $pricing['profitMargin'],
+                'internal_cost' => $internalCost,
+                'profit_margin' => $profitMargin,
                 'override_price' => $data['overridePrice'] ?? null,
                 'override_reason' => $data['overrideReason'] ?? null,
                 'notes' => $data['notes'] ?? null,
@@ -84,21 +153,43 @@ class QuotationService
                 'updated_by' => $user->id,
             ]);
 
-            // Create items
-            foreach ($pricing['items'] as $index => $item) {
-                QuotationItem::create([
-                    'quotation_id' => $quotation->id,
-                    'resource_type' => $item['resourceType'],
-                    'description' => $item['description'],
-                    'estimated_hours' => $item['estimatedHours'],
-                    'hourly_rate' => $item['hourlyRate'],
-                    'internal_hourly_cost' => $item['internalHourlyCost'],
-                    'subtotal' => $item['subtotal'],
-                    'sort_order' => $index,
-                ]);
+            // Create items (if provided)
+            if (!empty($data['items'])) {
+                foreach ($data['items'] as $index => $item) {
+                    QuotationItem::create([
+                        'quotation_id' => $quotation->id,
+                        'resource_type' => $item['resourceType'],
+                        'description' => $item['description'],
+                        'estimated_hours' => $item['estimatedHours'],
+                        'hourly_rate' => $item['hourlyRate'],
+                        'internal_hourly_cost' => $item['internalHourlyCost'] ?? 0,
+                        'subtotal' => $item['estimatedHours'] * $item['hourlyRate'],
+                        'sort_order' => $index,
+                    ]);
+                }
             }
 
-            return $quotation->load('items', 'lead');
+            // Create milestones (required)
+            $milestones = $data['milestones'] ?? [];
+            
+            if (!empty($milestones)) {
+                foreach ($milestones as $index => $milestone) {
+                    // Calculate amount based on final price and percentage
+                    $milestoneAmount = $finalPrice * ($milestone['percentage'] / 100);
+                    
+                    QuotationMilestone::create([
+                        'quotation_id' => $quotation->id,
+                        'name' => $milestone['name'],
+                        'percentage' => $milestone['percentage'],
+                        'amount' => round($milestoneAmount, 2),
+                        'due_date' => $milestone['dueDate'] ?? null,
+                        'description' => $milestone['description'] ?? null,
+                        'display_order' => $index,
+                    ]);
+                }
+            }
+
+            return $quotation->load(['items', 'milestones', 'lead']);
         });
     }
 
@@ -144,9 +235,32 @@ class QuotationService
                 ]);
             }
 
+            // Update milestones if provided
+            if (isset($data['milestones'])) {
+                $quotation->milestones()->delete();
+                
+                $finalPrice = $quotation->fresh()->final_price;
+                
+                foreach ($data['milestones'] as $index => $milestone) {
+                    $milestoneAmount = $finalPrice * ($milestone['percentage'] / 100);
+                    
+                    QuotationMilestone::create([
+                        'quotation_id' => $quotation->id,
+                        'name' => $milestone['name'],
+                        'percentage' => $milestone['percentage'],
+                        'amount' => round($milestoneAmount, 2),
+                        'due_date' => $milestone['dueDate'] ?? null,
+                        'description' => $milestone['description'] ?? null,
+                        'display_order' => $index,
+                    ]);
+                }
+            }
+
             // Update other fields
             $quotation->update([
+                'file_number' => $data['fileNumber'] ?? $quotation->file_number,
                 'template_id' => $data['templateId'] ?? $quotation->template_id,
+                'task_id' => $data['taskId'] ?? $quotation->task_id,
                 'currency' => $data['currency'] ?? $quotation->currency,
                 'expiry_date' => $data['expiryDate'] ?? $quotation->expiry_date,
                 'commission_user_id' => $data['commissionUserId'] ?? $quotation->commission_user_id,
@@ -154,10 +268,12 @@ class QuotationService
                 'override_reason' => $data['overrideReason'] ?? $quotation->override_reason,
                 'notes' => $data['notes'] ?? $quotation->notes,
                 'terms_conditions' => $data['termsConditions'] ?? $quotation->terms_conditions,
+                'needs_revision' => $data['needsRevision'] ?? $quotation->needs_revision,
+                'revision_notes' => $data['revisionNotes'] ?? $quotation->revision_notes,
                 'updated_by' => $user->id,
             ]);
 
-            return $quotation->fresh(['items', 'lead']);
+            return $quotation->fresh(['items', 'milestones', 'lead']);
         });
     }
 
@@ -218,12 +334,41 @@ class QuotationService
     }
 
     /**
+     * Mark quotation as needing revision
+     */
+    public function markForRevision(Quotation $quotation, string $revisionNotes, User $user): Quotation
+    {
+        $quotation->update([
+            'needs_revision' => true,
+            'revision_notes' => $revisionNotes,
+            'status' => QuotationStatus::DRAFT,
+            'updated_by' => $user->id,
+        ]);
+
+        return $quotation->fresh();
+    }
+
+    /**
+     * Clear revision flag
+     */
+    public function clearRevision(Quotation $quotation, User $user): Quotation
+    {
+        $quotation->update([
+            'needs_revision' => false,
+            'revision_notes' => null,
+            'updated_by' => $user->id,
+        ]);
+
+        return $quotation->fresh();
+    }
+
+    /**
      * Get expiring quotations
      */
     public function getExpiringQuotations(int $days = 3): LengthAwarePaginator
     {
         return Quotation::expiringIn($days)
-            ->with('lead')
+            ->with('lead', 'milestones')
             ->orderBy('expiry_date')
             ->paginate(10);
     }
@@ -233,11 +378,36 @@ class QuotationService
      */
     public function calculatePricing(array $data): array
     {
-        return $this->pricingService->calculateFromItems(
-            $data['items'] ?? [],
-            $data['discountPercentage'] ?? 0,
-            $data['commissionType'] ?? null,
-            $data['commissionPercentage'] ?? 0
-        );
+        $basePrice = $data['basePrice'] ?? 0;
+        
+        if (!empty($data['items'])) {
+            return $this->pricingService->calculateFromItems(
+                $data['items'],
+                $data['discountPercentage'] ?? 0,
+                $data['commissionType'] ?? null,
+                $data['commissionPercentage'] ?? 0
+            );
+        }
+        
+        // Calculate from base price
+        $discountType = $data['discountType'] ?? 'percent';
+        $discountValue = $data['discountValue'] ?? 0;
+        
+        if ($discountType === 'percent') {
+            $discountAmount = $basePrice * ($discountValue / 100);
+        } else {
+            $discountAmount = $discountValue;
+        }
+        
+        $finalPrice = $basePrice - $discountAmount;
+        
+        return [
+            'basePrice' => $basePrice,
+            'discountType' => $discountType,
+            'discountValue' => $discountValue,
+            'discountAmount' => $discountAmount,
+            'discountPercentage' => $basePrice > 0 ? ($discountAmount / $basePrice) * 100 : 0,
+            'finalPrice' => $finalPrice,
+        ];
     }
 }

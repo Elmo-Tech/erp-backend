@@ -39,75 +39,36 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class AuditLogResource extends JsonResource
 {
+    private const SENSITIVE_ACTIONS = [
+        'update_internal_cost',
+        'bulk_update_internal_cost',
+        'update_role_permissions',
+        'create_role',
+        'delete_role',
+        'view_profitability',
+        'forbidden_access_attempt',
+    ];
+
     /**
      * Transform the resource into an array.
      */
     public function toArray(Request $request): array
     {
         return [
-            'auditLogId' => $this->id,
+            'id' => $this->id,
             'userId' => $this->user_id,
-            'eventType' => $this->event_type ?? '',
+            'userName' => $this->user?->name ?? 'Unknown User',
             'action' => $this->action,
+            'eventType' => $this->event_type ?? '',
             'severity' => $this->severity ?? 'info',
-            'severityLabel' => __('enums.audit_severity.' . ($this->severity ?? 'info')),
-            'severityColor' => $this->getSeverityColor(),
             'description' => $this->description ?? '',
             'auditableType' => $this->auditable_type ?? '',
             'auditableId' => $this->auditable_id,
             'ipAddress' => $this->ip_address ?? '',
             'userAgent' => $this->user_agent ?? '',
             'metadata' => $this->metadata ?? [],
-            
-            // Relationships
-            'user' => $this->when($this->relationLoaded('user') && $this->user, function () {
-                return [
-                    'userId' => $this->user->id,
-                    'name' => $this->user->name,
-                    'email' => $this->user->email,
-                ];
-            }),
-            
-            'auditable' => $this->when($this->relationLoaded('auditable') && $this->auditable, function () {
-                return [
-                    'type' => class_basename($this->auditable_type),
-                    'id' => $this->auditable_id,
-                    'identifier' => $this->getAuditableIdentifier(),
-                ];
-            }),
-            
-            'createdAt' => $this->created_at->toISOString(),
+            'createdAt' => $this->created_at?->toISOString() ?? '',
+            'isSensitive' => in_array($this->action, self::SENSITIVE_ACTIONS, true),
         ];
-    }
-
-    /**
-     * Get severity color for UI display
-     */
-    private function getSeverityColor(): string
-    {
-        return match ($this->severity ?? 'info') {
-            'info' => 'default',
-            'warning' => 'warning',
-            'critical' => 'destructive',
-            default => 'default',
-        };
-    }
-
-    /**
-     * Get auditable entity identifier for display
-     */
-    private function getAuditableIdentifier(): string
-    {
-        if (!$this->auditable) {
-            return '';
-        }
-
-        return match (class_basename($this->auditable_type)) {
-            'Invoice' => $this->auditable->invoice_number ?? "Invoice #{$this->auditable_id}",
-            'Contract' => $this->auditable->contract_number ?? "Contract #{$this->auditable_id}",
-            'Project' => $this->auditable->name ?? "Project #{$this->auditable_id}",
-            'User' => $this->auditable->name ?? "User #{$this->auditable_id}",
-            default => "{$this->auditable_type} #{$this->auditable_id}",
-        };
     }
 }

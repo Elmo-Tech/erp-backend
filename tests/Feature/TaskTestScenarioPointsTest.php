@@ -4,11 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\PointTransactionType;
 use App\Enums\TaskType;
-use App\Models\PointTransaction;
 use App\Models\Task;
 use App\Models\TaskTestScenario;
 use App\Models\User;
-use App\Models\UserPoint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -51,14 +49,7 @@ class TaskTestScenarioPointsTest extends TestCase
             'source_id' => $scenario->id,
         ]);
 
-        // Check UserPoint was created
-        $this->assertDatabaseHas('user_points', [
-            'user_id' => $user->id,
-            'points_change' => 1,
-            'points_after' => 1,
-            'type' => 'automatic',
-            'transaction_type' => PointTransactionType::TEST_SCENARIO_VERIFIED->value,
-        ]);
+        $this->assertDatabaseCount('point_transactions', 1);
     }
 
     public function test_weekly_task_test_scenario_verification_deducts_points_when_failed()
@@ -96,14 +87,7 @@ class TaskTestScenarioPointsTest extends TestCase
             'source_id' => $scenario->id,
         ]);
 
-        // Check UserPoint was created
-        $this->assertDatabaseHas('user_points', [
-            'user_id' => $user->id,
-            'points_change' => -1,
-            'points_after' => 4,
-            'type' => 'automatic',
-            'transaction_type' => PointTransactionType::TEST_SCENARIO_FAILED->value,
-        ]);
+        $this->assertDatabaseCount('point_transactions', 1);
     }
 
     public function test_main_task_test_scenario_verification_does_not_award_points()

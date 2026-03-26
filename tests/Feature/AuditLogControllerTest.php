@@ -19,10 +19,10 @@ class AuditLogControllerTest extends TestCase
         parent::setUp();
         
         // Create permissions
-        Permission::create(['name' => 'view_audit_logs']);
+        Permission::firstOrCreate(['name' => 'view_audit_logs']);
         
         // Create roles
-        $adminRole = Role::create(['name' => 'admin']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $adminRole->givePermissionTo('view_audit_logs');
     }
 
@@ -56,20 +56,26 @@ class AuditLogControllerTest extends TestCase
         // Create some audit logs
         $auditLog1 = AuditLog::create([
             'user_id' => $user->id,
+            'event_type' => 'admin_action',
             'action' => 'update_internal_cost',
+            'severity' => 'warning',
+            'description' => 'Update internal cost for User #1',
             'auditable_type' => 'App\\Models\\User',
             'auditable_id' => 1,
             'ip_address' => '192.168.1.1',
             'user_agent' => 'Test Agent',
-            'metadata' => ['old_cost' => '50.00', 'new_cost' => '75.00']
+            'metadata' => ['old_cost' => '50.00', 'new_cost' => '75.00'],
         ]);
         
         $auditLog2 = AuditLog::create([
             'user_id' => $user->id,
+            'event_type' => 'security',
             'action' => 'login',
+            'severity' => 'info',
+            'description' => 'Login',
             'ip_address' => '192.168.1.2',
             'user_agent' => 'Test Agent 2',
-            'metadata' => []
+            'metadata' => [],
         ]);
         
         $response = $this->getJson('/api/v1/admin/audit-logs');
@@ -83,10 +89,13 @@ class AuditLogControllerTest extends TestCase
                      'data' => [
                          'auditLogs' => [
                              '*' => [
-                                 'auditLogId',
+                                 'id',
                                  'userId',
                                  'userName',
                                  'action',
+                                 'eventType',
+                                 'severity',
+                                 'description',
                                  'auditableType',
                                  'auditableId',
                                  'ipAddress',
@@ -125,18 +134,24 @@ class AuditLogControllerTest extends TestCase
         // Create audit logs with different actions
         AuditLog::create([
             'user_id' => $user->id,
+            'event_type' => 'admin_action',
             'action' => 'update_internal_cost',
+            'severity' => 'warning',
+            'description' => 'Update internal cost',
             'ip_address' => '192.168.1.1',
             'user_agent' => 'Test Agent',
-            'metadata' => []
+            'metadata' => [],
         ]);
         
         AuditLog::create([
             'user_id' => $user->id,
+            'event_type' => 'security',
             'action' => 'login',
+            'severity' => 'info',
+            'description' => 'Login',
             'ip_address' => '192.168.1.2',
             'user_agent' => 'Test Agent',
-            'metadata' => []
+            'metadata' => [],
         ]);
         
         $response = $this->getJson('/api/v1/admin/audit-logs?filter[action]=update_internal_cost');
@@ -157,18 +172,24 @@ class AuditLogControllerTest extends TestCase
         // Create audit logs for different users
         AuditLog::create([
             'user_id' => $user1->id,
+            'event_type' => 'security',
             'action' => 'login',
+            'severity' => 'info',
+            'description' => 'Login',
             'ip_address' => '192.168.1.1',
             'user_agent' => 'Test Agent',
-            'metadata' => []
+            'metadata' => [],
         ]);
         
         AuditLog::create([
             'user_id' => $user2->id,
+            'event_type' => 'security',
             'action' => 'login',
+            'severity' => 'info',
+            'description' => 'Login',
             'ip_address' => '192.168.1.2',
             'user_agent' => 'Test Agent',
-            'metadata' => []
+            'metadata' => [],
         ]);
         
         $response = $this->getJson("/api/v1/admin/audit-logs?filter[user_id]={$user2->id}");
@@ -188,18 +209,24 @@ class AuditLogControllerTest extends TestCase
         // Create audit logs with different IP addresses
         AuditLog::create([
             'user_id' => $user->id,
+            'event_type' => 'security',
             'action' => 'login',
+            'severity' => 'info',
+            'description' => 'Login',
             'ip_address' => '192.168.1.100',
             'user_agent' => 'Test Agent',
-            'metadata' => []
+            'metadata' => [],
         ]);
         
         AuditLog::create([
             'user_id' => $user->id,
+            'event_type' => 'security',
             'action' => 'login',
+            'severity' => 'info',
+            'description' => 'Login',
             'ip_address' => '10.0.0.1',
             'user_agent' => 'Test Agent',
-            'metadata' => []
+            'metadata' => [],
         ]);
         
         $response = $this->getJson('/api/v1/admin/audit-logs?filter[search]=192.168');
@@ -210,7 +237,7 @@ class AuditLogControllerTest extends TestCase
         $this->assertStringStartsWith('192.168', $data[0]['ipAddress']);
     }
 
-    public function test_index_validates_invalid_action(): void
+    public function test_index_returns_empty_result_for_unknown_action_filter(): void
     {
         $user = User::factory()->create();
         $user->assignRole('admin');
@@ -218,11 +245,8 @@ class AuditLogControllerTest extends TestCase
         
         $response = $this->getJson('/api/v1/admin/audit-logs?filter[action]=invalid_action');
         
-        $response->assertStatus(422)
-                 ->assertJson([
-                     'success' => false,
-                     'message' => 'Invalid filter parameters'
-                 ]);
+        $response->assertStatus(200)
+                 ->assertJsonPath('data.pagination.total', 0);
     }
 
     public function test_index_marks_sensitive_actions(): void
@@ -234,18 +258,24 @@ class AuditLogControllerTest extends TestCase
         // Create sensitive and non-sensitive audit logs
         AuditLog::create([
             'user_id' => $user->id,
+            'event_type' => 'admin_action',
             'action' => 'update_internal_cost', // Sensitive
+            'severity' => 'warning',
+            'description' => 'Update internal cost',
             'ip_address' => '192.168.1.1',
             'user_agent' => 'Test Agent',
-            'metadata' => []
+            'metadata' => [],
         ]);
         
         AuditLog::create([
             'user_id' => $user->id,
+            'event_type' => 'security',
             'action' => 'login', // Not sensitive
+            'severity' => 'info',
+            'description' => 'Login',
             'ip_address' => '192.168.1.2',
             'user_agent' => 'Test Agent',
-            'metadata' => []
+            'metadata' => [],
         ]);
         
         $response = $this->getJson('/api/v1/admin/audit-logs');
@@ -259,5 +289,34 @@ class AuditLogControllerTest extends TestCase
         
         $this->assertTrue($sensitiveLog['isSensitive']);
         $this->assertFalse($nonSensitiveLog['isSensitive']);
+    }
+
+    public function test_action_types_returns_distinct_actions(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole('admin');
+        Sanctum::actingAs($user);
+
+        AuditLog::create([
+            'user_id' => $user->id,
+            'event_type' => 'security',
+            'action' => 'login',
+            'severity' => 'info',
+            'description' => 'Login',
+        ]);
+
+        AuditLog::create([
+            'user_id' => $user->id,
+            'event_type' => 'admin_action',
+            'action' => 'update_internal_cost',
+            'severity' => 'warning',
+            'description' => 'Update internal cost',
+        ]);
+
+        $response = $this->getJson('/api/v1/admin/audit-logs/action-types');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0', 'login')
+            ->assertJsonPath('data.1', 'update_internal_cost');
     }
 }

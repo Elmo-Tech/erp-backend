@@ -824,31 +824,43 @@ class ProjectController extends Controller
      *     )
      * )
      */
-    public function updateStatus(UpdateProjectStatusRequest $request, Project $project): JsonResponse
+    public function updateStatus(UpdateProjectStatusRequest $request, int $project): JsonResponse
     {
-        return DB::transaction(function () use ($request, $project) {
+        $projectModel = Project::withoutGlobalScopes()
+            ->with(['client', 'quotation'])
+            ->find($project);
+
+        if (!$projectModel) {
+            return ApiResponse::notFound('Project not found');
+        }
+
+        if (!$request->user()?->can('update', $projectModel)) {
+            return ApiResponse::forbidden('You do not have permission to update this project');
+        }
+
+        return DB::transaction(function () use ($request, $projectModel) {
             $data = $request->validated();
-            $oldStatus = $project->status;
+            $oldStatus = $projectModel->status;
             $newStatus = ProjectStatus::from($data['status']);
             $reason = $data['reason'] ?? null;
 
             // Check if status is actually changing
             if ($oldStatus === $newStatus) {
                 return ApiResponse::success(
-                    new ProjectResource($project->load(['client', 'quotation'])),
+                    new ProjectResource($projectModel),
                     'Project status is already ' . $newStatus->label()
                 );
             }
 
             // Update project status
-            $project->update([
+            $projectModel->update([
                 'status' => $newStatus,
                 'previous_status' => $oldStatus,
             ]);
 
             // Record history
             $this->historyService->recordChange(
-                $project,
+                $projectModel,
                 'status',
                 $oldStatus->value,
                 $newStatus->value,
@@ -856,7 +868,7 @@ class ProjectController extends Controller
             );
 
             return ApiResponse::success(
-                new ProjectResource($project->fresh()->load(['client', 'quotation'])),
+                new ProjectResource($projectModel->fresh()->load(['client', 'quotation'])),
                 __('messages.project_status_updated')
             );
         });

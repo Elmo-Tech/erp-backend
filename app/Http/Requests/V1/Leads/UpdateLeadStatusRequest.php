@@ -22,6 +22,10 @@ class UpdateLeadStatusRequest extends FormRequest
         return [
             'status' => ['required', Rule::enum(LeadStatus::class)],
             'lossReason' => ['nullable', 'required_if:status,lost', Rule::enum(RejectionReason::class)],
+            'meetingId' => ['nullable', 'integer', 'exists:lead_meetings,id'],
+            'outcome' => ['required_if:status,meeting_completed', 'nullable', 'string', 'max:1000'],
+            'feedback' => ['required_if:status,meeting_completed', 'nullable', 'string', 'min:20', 'max:5000'],
+            'teamLeadId' => ['nullable', 'integer', 'exists:users,id'],
         ];
     }
 
@@ -30,6 +34,8 @@ class UpdateLeadStatusRequest extends FormRequest
         return [
             'status.required' => __('validation.required', ['attribute' => 'status']),
             'lossReason.required_if' => __('leads.loss_reason_required'),
+            'outcome.required_if' => __('validation.required', ['attribute' => 'outcome']),
+            'feedback.required_if' => __('validation.required', ['attribute' => 'feedback']),
         ];
     }
 

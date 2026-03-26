@@ -22,6 +22,7 @@ class Quotation extends Model implements Trackable
 
     protected $fillable = [
         'quotation_number',
+        'file_number',
         'lead_id',
         'proposal_id',
         'template_id',
@@ -37,6 +38,9 @@ class Quotation extends Model implements Trackable
         'viewed_at',
         'rejection_reason',
         'rejection_notes',
+        'needs_revision',
+        'revision_notes',
+        'task_id',
         'commission_type',
         'commission_percentage',
         'commission_amount',
@@ -71,6 +75,7 @@ class Quotation extends Model implements Trackable
             'internal_cost' => 'decimal:2',
             'profit_margin' => 'decimal:2',
             'override_price' => 'decimal:2',
+            'needs_revision' => 'boolean',
         ];
     }
 
@@ -97,6 +102,16 @@ class Quotation extends Model implements Trackable
     public function items(): HasMany
     {
         return $this->hasMany(QuotationItem::class)->orderBy('sort_order');
+    }
+
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(QuotationMilestone::class)->orderBy('display_order');
+    }
+
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(Task::class);
     }
 
     public function contract(): HasOne
@@ -134,10 +149,18 @@ class Quotation extends Model implements Trackable
 
     /**
      * Generate unique quotation number
+     * Format: QV-YEAR-FILENUMBER
      */
-    public static function generateQuotationNumber(): string
+    public static function generateQuotationNumber(?string $fileNumber = null): string
     {
         $year = date('Y');
+        
+        // If file number is provided, use it in the format
+        if ($fileNumber) {
+            return sprintf('QV-%s-%s', $year, $fileNumber);
+        }
+        
+        // Otherwise generate sequence number
         $lastQuotation = self::whereYear('created_at', $year)
             ->orderBy('id', 'desc')
             ->first();
@@ -146,6 +169,6 @@ class Quotation extends Model implements Trackable
             ? (int) substr($lastQuotation->quotation_number, -4) + 1
             : 1;
 
-        return sprintf('QT-%s-%04d', $year, $sequence);
+        return sprintf('QV-%s-%04d', $year, $sequence);
     }
 }

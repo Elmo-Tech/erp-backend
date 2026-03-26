@@ -7,19 +7,23 @@ use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Contract extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasFactory, HasCreatedUpdatedBy;
 
     protected $fillable = [
         'contract_number',
+        'file_number',
         'quotation_id',
         'project_id',
         'template_id',
+        'task_id',
+        'client_id',
         'title',
         'content',
+        'deliverables',
         'party_one',
         'party_two',
         'total_amount',
@@ -27,6 +31,9 @@ class Contract extends Model
         'payment_terms',
         'start_date',
         'end_date',
+        'expiry_date',
+        'preparation_deadline',
+        'project_duration',
         'signed_at',
         'signed_by_client',
         'status',
@@ -39,9 +46,12 @@ class Contract extends Model
         return [
             'party_one' => 'array',
             'party_two' => 'array',
+            'deliverables' => 'array',
             'total_amount' => 'decimal:2',
             'start_date' => 'date',
             'end_date' => 'date',
+            'expiry_date' => 'date',
+            'preparation_deadline' => 'date',
             'signed_at' => 'datetime',
             'status' => ContractStatus::class,
         ];
@@ -62,6 +72,24 @@ class Contract extends Model
         return $this->belongsTo(ContractTemplate::class, 'template_id');
     }
 
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(Task::class);
+    }
+
+    /**
+     * Get the client for this contract
+     */
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(ContractMilestone::class)->orderBy('sort_order');
+    }
+
     /**
      * Check if contract is signed
      */
@@ -79,17 +107,51 @@ class Contract extends Model
     }
 
     /**
-     * Generate unique contract number
+     * Check if contract is expired
      */
-    public static function generateContractNumber(): string
+    public function isExpired(): bool
+    {
+        return $this->expiry_date && $this->expiry_date->isPast();
+    }
+
+    /**
+     * Generate unique contract number
+     * Format: CV-YEAR-FILENUMBER (e.g., CV-2026-0001)
+     * 
+     * @param string|null $fileNumber Optional file number to include in the contract number
+     * @return string
+     */
+    public static function generateContractNumber(?string $fileNumber = null): string
     {
         $year = date('Y');
+        
+        // If file number is provided, use it
+        if ($fileNumber) {
+            return sprintf('CV-%s-%s', $year, $fileNumber);
+        }
+        
+        // Otherwise generate sequence number
         $lastContract = self::whereYear('created_at', $year)
             ->orderBy('id', 'desc')
             ->first();
 
-        $sequence = $lastContract ? (int) substr($lastContract->contract_number, -4) + 1 : 1;
+        $sequence = $lastContract && $lastContract->contract_number
+            ? (int) substr($lastContract->contract_number, -4) + 1
+            : 1;
 
-        return sprintf('CT-%s-%04d', $year, $sequence);
+        return sprintf('CV-%s-%04d', $year, $sequence);
+    }
+
+    /**
+     * Calculate expiry date from start date and expiry days
+     * 
+     * @param \Carbon\Carbon|\DateTime|string $startDate
+     * @param int $expiryDays
+     * @return \Carbon\Carbon
+     */
+    public static function calculateExpiryDate($startDate, int $expiryDays): \Carbon\Carbon
+    {
+        $start = \Carbon\Carbon::parse($startDate);
+        return $start->addDays($expiryDays);
     }
 }
