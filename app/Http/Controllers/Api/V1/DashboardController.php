@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Invoice;
 use App\Models\Lead;
+use App\Models\PointTransaction;
 use App\Models\Project;
 use App\Models\Quotation;
 use App\Models\Task;
@@ -257,6 +258,7 @@ class DashboardController extends Controller
             });
 
         $recentActivities = $this->getRecentActivitiesForTeam($teamMemberIds);
+        $pointsCycle = $this->getCurrentPointsCycleSummary($user);
 
         return ApiResponse::success([
             'role' => 'manager',
@@ -269,6 +271,7 @@ class DashboardController extends Controller
                 'teamHoursChange' => $teamHoursChange,
                 'teamMembers' => $teamMembersCount,
             ],
+            'pointsCycle' => $pointsCycle,
             'recentTasks' => $recentTasks,
             'recentActivities' => $recentActivities,
         ], 'Dashboard overview retrieved successfully');
@@ -349,6 +352,7 @@ class DashboardController extends Controller
 
         // My Recent Activities
         $myRecentActivities = $this->getRecentActivitiesForUser($userId);
+        $pointsCycle = $this->getCurrentPointsCycleSummary($user);
 
         return ApiResponse::success([
             'role' => 'developer',
@@ -363,9 +367,45 @@ class DashboardController extends Controller
                 'clockedIn' => $clockedIn,
                 'todayHours' => round($todayHours, 1),
             ],
+            'pointsCycle' => $pointsCycle,
             'recentTasks' => $myRecentTasks,
             'recentActivities' => $myRecentActivities,
         ], 'Dashboard overview retrieved successfully');
+    }
+
+    /**
+     * Get the current bi-monthly points cycle summary.
+     * Cycles are fixed to odd-month windows: Jan-Feb, Mar-Apr, May-Jun, etc.
+     */
+    private function getCurrentPointsCycleSummary(User $user): array
+    {
+        $now = Carbon::now();
+        $cycleStartMonth = $now->month % 2 === 1 ? $now->month : $now->month - 1;
+
+        $startDate = Carbon::create($now->year, $cycleStartMonth, 1)->startOfMonth();
+        $endDate = $startDate->copy()->addMonth()->endOfMonth();
+
+        $transactions = PointTransaction::where('user_id', $user->id)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get();
+
+        $earnedPoints = (int) $transactions->where('points', '>', 0)->sum('points');
+        $deductedPoints = (int) abs($transactions->where('points', '<', 0)->sum('points'));
+
+        return [
+            'label' => sprintf(
+                '%s-%s %s',
+                $startDate->translatedFormat('M'),
+                $endDate->translatedFormat('M'),
+                $endDate->translatedFormat('Y')
+            ),
+            'startDate' => $startDate->toDateString(),
+            'endDate' => $endDate->toDateString(),
+            'netPoints' => $earnedPoints - $deductedPoints,
+            'earnedPoints' => $earnedPoints,
+            'deductedPoints' => $deductedPoints,
+            'transactionCount' => $transactions->count(),
+        ];
     }
 
     /**
