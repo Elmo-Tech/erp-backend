@@ -68,16 +68,22 @@ class TaskActivity extends Model
     /**
      * Create a status change activity.
      */
-    public static function logStatusChange(Task $task, User $user, string $oldStatus, string $newStatus): self
+    public static function logStatusChange(Task $task, User $user, string $oldStatus, string $newStatus, ?string $reason = null): self
     {
+        $description = "Changed status from {$oldStatus} to {$newStatus}";
+        if ($reason) {
+            $description .= " ({$reason})";
+        }
+
         return self::create([
             'task_id' => $task->id,
             'user_id' => $user->id,
             'type' => self::TYPE_STATUS_CHANGE,
-            'description' => "Changed status from {$oldStatus} to {$newStatus}",
+            'description' => $description,
             'metadata' => [
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
+                'reason' => $reason,
             ],
         ]);
     }

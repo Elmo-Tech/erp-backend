@@ -17,6 +17,10 @@ use Illuminate\Database\Eloquent\Collection;
 
 class TaskService
 {
+    public function __construct(
+        private TaskNotificationService $taskNotificationService
+    ) {}
+
     /**
      * Get all tasks with optional filtering and pagination.
      */
@@ -222,6 +226,7 @@ class TaskService
             'priority' => $data['priority'] ?? TaskPriority::MEDIUM->value,
             'task_category' => $data['taskCategory'] ?? null,
             'due_date' => $data['dueDate'] ?? null,
+            'expected_resolution_date' => $data['expectedResolutionDate'] ?? null,
             'start_date' => $data['startDate'] ?? null,
             'sprint_number' => $data['sprintNumber'] ?? null,
             'estimated_hours' => $data['estimatedHours'] ?? null,
@@ -321,6 +326,14 @@ class TaskService
             'description' => 'Created task',
         ]);
 
+        $task->loadMissing(['assignees.user', 'project', 'createdBy']);
+        $assignedUsers = $task->assignees
+            ->map(fn ($assignee) => $assignee->user)
+            ->filter(fn ($assigneeUser) => $assigneeUser instanceof User)
+            ->values();
+
+        $this->taskNotificationService->sendTaskAssigned($task, $user, $assignedUsers);
+
         return $task->load(['assignee', 'project', 'parent', 'children', 'tags', 'assignees.user']);
     }
 
@@ -401,6 +414,7 @@ class TaskService
             'priority' => 'priority',
             'taskCategory' => 'task_category',
             'dueDate' => 'due_date',
+            'expectedResolutionDate' => 'expected_resolution_date',
             'startDate' => 'start_date',
             'sprintNumber' => 'sprint_number',
             'estimatedHours' => 'estimated_hours',
@@ -415,9 +429,14 @@ class TaskService
 
         $task->update($updateData);
 
+        if (array_key_exists('assignedTo', $data) && !empty($data['assignedTo'])) {
+            $this->ensureAssignedUserExistsOnTask($task, (int) $data['assignedTo'], $user);
+        }
+
         // Log status change
         if (isset($data['status']) && $oldStatus !== $data['status']) {
             TaskActivity::logStatusChange($task, $user, $oldStatus ?? 'none', $data['status']);
+            $this->taskNotificationService->sendTaskStatusChanged($task, $user, $oldStatus ?? 'none', $data['status']);
         }
 
         // Update tags
@@ -477,6 +496,12 @@ class TaskService
 
         $user = User::find($userId);
         TaskActivity::logAssigneeAdded($task, $performer, $user, $role);
+
+        $this->taskNotificationService->sendTaskAssigned(
+            $task->loadMissing(['project', 'assignees.user', 'createdBy']),
+            $performer,
+            collect([$user])->filter(fn ($assigneeUser) => $assigneeUser instanceof User)
+        );
 
         // Propagate assignee to all child tasks (Weekly and Subtasks)
         $this->propagateAssigneeToChildren($task, $userId, $role, $isPrimary, $performer);
@@ -646,7 +671,10 @@ class TaskService
      */
     public function addComment(Task $task, User $user, string $comment, bool $isInternal = false): TaskActivity
     {
-        return TaskActivity::logComment($task, $user, $comment, $isInternal);
+        $activity = TaskActivity::logComment($task, $user, $comment, $isInternal);
+        $this->taskNotificationService->sendTaskCommentAdded($task, $user, $comment, $isInternal);
+
+        return $activity;
     }
 
     /**
@@ -778,6 +806,14 @@ class TaskService
             $reason
         );
 
+        $this->taskNotificationService->sendTaskStatusChanged(
+            $task,
+            $user,
+            $oldStatus->value,
+            $newStatus->value,
+            $reason
+        );
+
         // Handle special status transitions
         $this->handleStatusTransition($task, $oldStatus, $newStatus, $user);
 
@@ -886,5 +922,40 @@ class TaskService
 
         // Update task status to completed
         return $this->updateTaskStatus($task, TaskStatus::COMPLETED->value, $user, $reason);
+    }
+
+    private function ensureAssignedUserExistsOnTask(Task $task, int $assignedUserId, User $actor): void
+    {
+        $existingAssignee = $task->assignees()->where('user_id', $assignedUserId)->first();
+        if ($existingAssignee) {
+            if (!$existingAssignee->is_primary) {
+                $existingAssignee->update([
+                    'is_primary' => true,
+                    'updated_by' => $actor->id,
+                ]);
+            }
+            return;
+        }
+
+        $assignedUser = User::find($assignedUserId);
+        if (!$assignedUser) {
+            return;
+        }
+
+        TaskAssignee::create([
+            'task_id' => $task->id,
+            'user_id' => $assignedUserId,
+            'role' => 'developer',
+            'is_primary' => true,
+            'created_by' => $actor->id,
+            'updated_by' => $actor->id,
+        ]);
+
+        TaskActivity::logAssigneeAdded($task, $actor, $assignedUser, 'developer');
+        $this->taskNotificationService->sendTaskAssigned(
+            $task->loadMissing(['project', 'assignees.user', 'createdBy']),
+            $actor,
+            collect([$assignedUser])
+        );
     }
 }
