@@ -30,14 +30,11 @@ class CodeReviewObserver
      *
      * This method is called when a code review status changes.
      * It handles point awards/deductions based on the review outcome.
-     *
-     * @param CodeReview $codeReview
-     * @return void
      */
     public function updated(CodeReview $codeReview): void
     {
         // Only process if status is being changed
-        if (!$codeReview->isDirty('status')) {
+        if (! $codeReview->isDirty('status')) {
             return;
         }
 

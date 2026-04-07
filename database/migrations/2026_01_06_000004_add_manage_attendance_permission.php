@@ -19,13 +19,13 @@ return new class extends Migration
 
         // Assign to super-admin role
         $superAdmin = Role::where('name', 'super-admin')->first();
-        if ($superAdmin && !$superAdmin->hasPermissionTo('manage_attendance')) {
+        if ($superAdmin && ! $superAdmin->hasPermissionTo('manage_attendance')) {
             $superAdmin->givePermissionTo($permission);
         }
 
         // Assign to admin role
         $admin = Role::where('name', 'admin')->first();
-        if ($admin && !$admin->hasPermissionTo('manage_attendance')) {
+        if ($admin && ! $admin->hasPermissionTo('manage_attendance')) {
             $admin->givePermissionTo($permission);
         }
     }

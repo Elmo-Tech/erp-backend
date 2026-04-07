@@ -2,24 +2,33 @@
 
 use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\Admin\AdminDeliverableController;
-use App\Http\Controllers\Api\V1\AdminStatsController;
 use App\Http\Controllers\Api\V1\AdminRoleController;
+use App\Http\Controllers\Api\V1\AdminStatsController;
 use App\Http\Controllers\Api\V1\AdminUserController;
-use App\Http\Controllers\Api\V1\AuditLogController;
+use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AttendanceController;
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChangeRequestController;
 use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
 use App\Http\Controllers\Api\V1\Client\ClientProjectController;
 use App\Http\Controllers\Api\V1\ClientController;
+use App\Http\Controllers\Api\V1\CodeReviewController;
 use App\Http\Controllers\Api\V1\ContractController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EmployeeController;
+use App\Http\Controllers\Api\V1\EnumController;
+use App\Http\Controllers\Api\V1\ExportController;
+use App\Http\Controllers\Api\V1\GlobalSearchController;
 use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\InnovationLogController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\LeadHistoryController;
+use App\Http\Controllers\Api\V1\MilestoneController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PerformanceEvaluationController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectFileController;
 use App\Http\Controllers\Api\V1\ProjectHistoryController;
@@ -28,21 +37,12 @@ use App\Http\Controllers\Api\V1\ProjectWikiController;
 use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\SalesAnalyticsController;
+use App\Http\Controllers\Api\V1\SalesDashboardController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TaskDeliverableController;
 use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use App\Http\Controllers\Api\V1\UserController;
-use App\Http\Controllers\Api\V1\DashboardController;
-use App\Http\Controllers\Api\V1\PerformanceEvaluationController;
-use App\Http\Controllers\Api\V1\CodeReviewController;
-use App\Http\Controllers\Api\V1\MilestoneController;
-use App\Http\Controllers\Api\V1\InnovationLogController;
-use App\Http\Controllers\Api\V1\EnumController;
-use App\Http\Controllers\Api\V1\ExportController;
-use App\Http\Controllers\Api\V1\GlobalSearchController;
-use App\Http\Controllers\Api\V1\SalesDashboardController;
-use App\Http\Controllers\Api\V1\AnalyticsController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -72,19 +72,19 @@ Route::prefix('v1')->group(function () {
         Route::post('login', [AuthController::class, 'login'])
             ->middleware('throttle:5,1')
             ->name('auth.login');
-        
+
         // Registration disabled for security - users created via admin panel
         // To enable registration, uncomment the line below and add throttle middleware
         // Route::post('register', [AuthController::class, 'register'])
         //     ->middleware('throttle:3,1')
         //     ->name('auth.register');
-        
+
         // Protected auth routes
         Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('profile', [AuthController::class, 'profile'])->name('auth.profile');
         Route::put('profile', [AuthController::class, 'updateProfile'])->name('auth.profile.update');
         Route::post('profile/avatar', [AuthController::class, 'updateAvatar'])->name('auth.profile.avatar');
-        
+
         // Password change route (authenticated users only)
         Route::post('change-password', [AuthController::class, 'changePassword'])
             ->middleware('auth:sanctum')
@@ -93,7 +93,7 @@ Route::prefix('v1')->group(function () {
 
     // Sales & Pricing Engine Routes
     // All routes have auth:sanctum and locale middleware applied in controllers
-    
+
     // Lead Management Routes
     Route::apiResource('leads', LeadController::class);
     Route::get('leads-kanban', [LeadController::class, 'kanban'])->name('leads.kanban');
@@ -104,25 +104,25 @@ Route::prefix('v1')->group(function () {
     Route::get('leads/{lead}/meetings', [LeadController::class, 'meetings'])->name('leads.meetings');
     Route::post('leads/{lead}/meetings', [LeadController::class, 'scheduleMeeting'])->name('leads.schedule-meeting');
     Route::put('leads/{lead}/meetings/{meeting}', [LeadController::class, 'updateMeeting'])->name('leads.update-meeting');
-    
+
     // Lead Conversion Routes
     Route::get('leads/{lead}/can-convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'canConvert'])->name('leads.can-convert');
     Route::post('leads/{lead}/convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'convert'])->name('leads.convert');
-    
+
     // Activity Management Routes
     Route::apiResource('activities', ActivityController::class);
     Route::post('activities/{activity}/complete', [ActivityController::class, 'complete'])->name('activities.complete');
     Route::post('activities/{activity}/cancel', [ActivityController::class, 'cancel'])->name('activities.cancel');
-    
+
     // Meeting Management Routes
     Route::get('meetings', [ActivityController::class, 'meetings'])->name('meetings.index');
     Route::post('meetings/{meeting}/complete', [ActivityController::class, 'completeMeeting'])->name('meetings.complete');
     Route::post('meetings/{meeting}/cancel', [ActivityController::class, 'cancelMeeting'])->name('meetings.cancel');
-    
+
     // Schedule Routes
     Route::get('schedule/today', [ActivityController::class, 'todaySchedule'])->name('schedule.today');
     Route::get('schedule/upcoming', [ActivityController::class, 'upcomingSchedule'])->name('schedule.upcoming');
-    
+
     // Audit Trail Routes
     Route::get('leads/{lead}/history', [LeadHistoryController::class, 'leadHistory'])->name('leads.history');
     Route::get('leads/{lead}/full-history', [LeadHistoryController::class, 'leadFullHistory'])->name('leads.full-history');
@@ -131,15 +131,15 @@ Route::prefix('v1')->group(function () {
     Route::get('quotations/{quotation}/history', [LeadHistoryController::class, 'quotationHistory'])->name('quotations.history');
     Route::get('audit/recent', [LeadHistoryController::class, 'recentActivity'])->name('audit.recent');
     Route::get('audit/user/{userId}', [LeadHistoryController::class, 'userActivity'])->name('audit.user');
-    
+
     // Client Management Routes
     Route::apiResource('clients', ClientController::class);
-    
+
     // Client Portal Access Routes
     Route::post('clients/{client}/portal-access', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'create'])->name('clients.portal-access.create');
     Route::delete('clients/{client}/portal-access', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'revoke'])->name('clients.portal-access.revoke');
     Route::post('clients/{client}/portal-access/reset-password', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'resetPassword'])->name('clients.portal-access.reset-password');
-    
+
     // Proposal Management Routes (Technical Proposals)
     Route::apiResource('proposals', ProposalController::class);
     Route::post('proposals/fast-track', [ProposalController::class, 'fastTrack'])->name('proposals.fast-track');
@@ -148,7 +148,7 @@ Route::prefix('v1')->group(function () {
     Route::post('proposals/{proposal}/approve', [ProposalController::class, 'approve'])->name('proposals.approve');
     Route::post('proposals/{proposal}/reject', [ProposalController::class, 'reject'])->name('proposals.reject');
     Route::get('proposals-expiring', [ProposalController::class, 'expiring'])->name('proposals.expiring');
-    
+
     // Quotation Management Routes (Price Quotes)
     Route::apiResource('quotations', QuotationController::class);
     Route::post('quotations/calculate', [QuotationController::class, 'calculate'])->name('quotations.calculate');
@@ -200,7 +200,7 @@ Route::prefix('v1')->group(function () {
         Route::put('proposals/{template}', [TemplateController::class, 'updateProposalTemplate'])->name('templates.proposals.update');
         Route::delete('proposals/{template}', [TemplateController::class, 'destroyProposalTemplate'])->name('templates.proposals.destroy');
         Route::post('proposals/{template}/generate', [TemplateController::class, 'generateProposal'])->name('templates.proposals.generate');
-        
+
         Route::get('contracts', [TemplateController::class, 'contractTemplates'])->name('templates.contracts.index');
         Route::post('contracts', [TemplateController::class, 'storeContractTemplate'])->name('templates.contracts.store');
         Route::put('contracts/{template}', [TemplateController::class, 'updateContractTemplate'])->name('templates.contracts.update');
@@ -259,90 +259,90 @@ Route::prefix('v1')->group(function () {
 
     // Project Management Routes
     // All routes have auth:sanctum and locale middleware applied in controllers
-    
+
     // Project CRUD Routes
     Route::apiResource('projects', ProjectController::class);
-    
+
     // Pinned Projects Routes
     Route::get('projects/pinned', [ProjectController::class, 'pinned'])->name('projects.pinned');
     Route::post('projects/{project}/pin', [ProjectController::class, 'pin'])->name('projects.pin');
     Route::delete('projects/{project}/pin', [ProjectController::class, 'unpin'])->name('projects.unpin');
-    
+
     // Project Status Update Route (flexible status transitions)
     Route::patch('projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.update-status');
-    
+
     // Project Conversion Route (convert quotation to project)
     Route::post('projects/convert', [ProjectController::class, 'convert'])->name('projects.convert');
-    
+
     // Direct Project Creation Route (create project for client without quotation)
     Route::post('projects/direct', [ProjectController::class, 'storeDirect'])->name('projects.store-direct');
-    
+
     // Project UI Approval Route (manual approval of UI/UX deliverables)
     Route::post('projects/{project}/approve-ui', [ProjectController::class, 'approveUI'])->name('projects.approve-ui');
-    
+
     // Project History Route (audit trail)
     Route::get('projects/{project}/history', [ProjectHistoryController::class, 'index'])->name('projects.history');
-    
+
     // Project Wiki Routes (nested resource)
     Route::apiResource('projects.wikis', ProjectWikiController::class);
-    
+
     // Project Files Routes
     Route::apiResource('projects.files', ProjectFileController::class);
-    
+
     // Project Members Routes
     Route::apiResource('projects.members', ProjectMemberController::class)->except(['show']);
 
     // Task Management Routes
     // All routes have auth:sanctum and locale middleware applied in controller
-    
+
     // My Assigned Tasks Route (tasks where user is team member) - MUST be before apiResource
     Route::get('tasks/my-assigned', [TaskController::class, 'myAssignedTasks'])->name('tasks.my-assigned');
-    
+
     // Task CRUD Routes
     Route::apiResource('tasks', TaskController::class);
-    
+
     // Task Dependencies Routes
     Route::get('tasks/{task}/dependencies', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'index'])->name('tasks.dependencies.index');
     Route::post('tasks/{task}/dependencies', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'store'])->name('tasks.dependencies.store');
     Route::delete('task-dependencies/{dependency}', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'destroy'])->name('task-dependencies.destroy');
-    
+
     // Task Templates Routes
     Route::apiResource('task-templates', \App\Http\Controllers\Api\V1\TaskTemplateController::class);
     Route::post('task-templates/{template}/instantiate', [\App\Http\Controllers\Api\V1\TaskTemplateController::class, 'instantiate'])->name('task-templates.instantiate');
-    
+
     // Recurring Tasks Routes
     Route::apiResource('recurring-tasks', \App\Http\Controllers\Api\V1\RecurringTaskController::class);
     Route::post('recurring-tasks/{config}/generate', [\App\Http\Controllers\Api\V1\RecurringTaskController::class, 'generate'])->name('recurring-tasks.generate');
-    
+
     // Task Status Update Route (flexible status transitions)
     Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
-    
+
     // Task Mark Complete Route (with timeline validation)
     Route::post('tasks/{task}/mark-complete', [TaskController::class, 'markComplete'])->name('tasks.mark-complete');
-    
+
     // Task Children Route (for lazy loading hierarchy)
     Route::get('tasks/{task}/children', [TaskController::class, 'children'])->name('tasks.children');
-    
+
     // Task Assignees Routes
     Route::post('tasks/{task}/assignees', [TaskController::class, 'addAssignee'])->name('tasks.assignees.add');
     Route::delete('tasks/{task}/assignees/{userId}', [TaskController::class, 'removeAssignee'])->name('tasks.assignees.remove');
-    
+
     // Task Test Scenarios Routes
     Route::get('tasks/{task}/test-scenarios', [TaskController::class, 'testScenarios'])->name('tasks.test-scenarios.index');
     Route::post('tasks/{task}/test-scenarios', [TaskController::class, 'addTestScenario'])->name('tasks.test-scenarios.add');
     Route::post('test-scenarios/{scenario}/complete', [TaskController::class, 'completeTestScenario'])->name('test-scenarios.complete');
     Route::post('test-scenarios/{scenario}/verify', [TaskController::class, 'verifyTestScenario'])->name('test-scenarios.verify');
-    
+
     // Task Activities & Comments Routes
     Route::get('tasks/{task}/activities', [TaskController::class, 'activities'])->name('tasks.activities');
     Route::post('tasks/{task}/comments', [TaskController::class, 'addComment'])->name('tasks.comments.add');
-    
+
     // Tags Route
     Route::get('tags', [TaskController::class, 'tags'])->name('tags.index');
-    
+
     // Project Tasks Route (get tasks for a specific project with hierarchy)
     Route::get('projects/{projectId}/tasks', [TaskController::class, 'projectTasks'])->name('projects.tasks');
-    
+
     // Project Points Summary Route
     Route::get('projects/{projectId}/points-summary', [TaskController::class, 'pointsSummary'])->name('projects.points-summary');
 
@@ -364,7 +364,7 @@ Route::prefix('v1')->group(function () {
         Route::get('projects', [ClientProjectController::class, 'index'])->name('client.projects.index');
         Route::get('projects/{project}', [ClientProjectController::class, 'show'])->name('client.projects.show');
         Route::post('projects/{project}/approve-ui', [ClientProjectController::class, 'approveUI'])->name('client.projects.approve-ui');
-        
+
         // Client Invoice Routes
         Route::get('invoices', [ClientInvoiceController::class, 'index'])->name('client.invoices.index');
         Route::get('invoices/{invoice}', [ClientInvoiceController::class, 'show'])->name('client.invoices.show');
@@ -451,7 +451,7 @@ Route::prefix('v1')->group(function () {
         Route::post('periods', [PerformanceEvaluationController::class, 'createPeriod'])->name('performance.periods.store');
         Route::post('periods/{periodId}/activate', [PerformanceEvaluationController::class, 'activatePeriod'])->name('performance.periods.activate');
         Route::get('periods/{periodId}/bonuses', [PerformanceEvaluationController::class, 'periodBonuses'])->name('performance.periods.bonuses');
-        
+
         // Evaluations
         Route::get('evaluations', [PerformanceEvaluationController::class, 'index'])->name('performance.evaluations.index');
         Route::get('evaluations/{id}', [PerformanceEvaluationController::class, 'show'])->name('performance.evaluations.show');
@@ -532,18 +532,18 @@ Route::prefix('v1')->group(function () {
     Route::prefix('hr')->middleware(['auth:sanctum', 'locale'])->group(function () {
         // Deduction Types Routes
         Route::apiResource('deduction-types', \App\Http\Controllers\Api\V1\HR\DeductionTypeController::class);
-        
+
         // Reward Types Routes
         Route::apiResource('reward-types', \App\Http\Controllers\Api\V1\HR\RewardTypeController::class);
         Route::post('reward-types/{reward_type}/calculate', [\App\Http\Controllers\Api\V1\HR\RewardTypeController::class, 'calculate'])->name('hr.reward-types.calculate');
-        
+
         // Employee Deductions Routes
         Route::apiResource('employee-deductions', \App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class);
         Route::post('employee-deductions/{employeeDeduction}/approve', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'approve'])->name('hr.employee-deductions.approve');
         Route::post('employee-deductions/{employeeDeduction}/reject', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'reject'])->name('hr.employee-deductions.reject');
         Route::get('employee-deductions-summary', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'summary'])->name('hr.employee-deductions.summary');
         Route::post('employee-deductions/bulk-from-attendance', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'bulkFromAttendance'])->name('hr.employee-deductions.bulk-from-attendance');
-        
+
         // Employee Rewards Routes
         Route::apiResource('employee-rewards', \App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class);
         Route::post('employee-rewards/{employeeReward}/approve', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'approve'])->name('hr.employee-rewards.approve');
@@ -552,7 +552,7 @@ Route::prefix('v1')->group(function () {
         Route::get('employee-rewards-summary', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'summary'])->name('hr.employee-rewards.summary');
         Route::post('employee-rewards/from-points', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'fromPoints'])->name('hr.employee-rewards.from-points');
         Route::post('employee-rewards/bulk-from-evaluation', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'bulkFromEvaluation'])->name('hr.employee-rewards.bulk-from-evaluation');
-        
+
         // Salary Adjustments Routes
         Route::get('salary-adjustments', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'index'])->name('hr.salary-adjustments.index');
         Route::get('salary-adjustments/{salaryAdjustment}', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'show'])->name('hr.salary-adjustments.show');

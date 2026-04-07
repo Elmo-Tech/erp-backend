@@ -9,7 +9,7 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
+     *
      * Point Periods: Track bi-monthly point cycles for bonus calculations
      * - Each period is 2 months
      * - At period close, user points are archived and reset to 0
@@ -27,25 +27,25 @@ return new class extends Migration
             $table->foreignId('closed_by')->nullable()->constrained('users');
             $table->text('notes')->nullable();
             $table->timestamps();
-            
+
             // Indexes
             $table->index('is_active');
             $table->index(['start_date', 'end_date']);
         });
-        
+
         // Add period_id to point_transactions
         Schema::table('point_transactions', function (Blueprint $table) {
             $table->foreignId('period_id')->nullable()->after('user_id')->constrained('point_periods')->nullOnDelete();
             $table->index('period_id');
         });
-        
+
         // Create initial active period (current month + next month)
         $now = now();
         $startDate = $now->copy()->startOfMonth();
         $endDate = $now->copy()->addMonth()->endOfMonth();
-        
+
         DB::table('point_periods')->insert([
-            'name' => $startDate->format('M') . '-' . $endDate->format('M Y'),
+            'name' => $startDate->format('M').'-'.$endDate->format('M Y'),
             'start_date' => $startDate,
             'end_date' => $endDate,
             'is_active' => true,
@@ -64,7 +64,7 @@ return new class extends Migration
             $table->dropIndex(['period_id']);
             $table->dropColumn('period_id');
         });
-        
+
         Schema::dropIfExists('point_periods');
     }
 };

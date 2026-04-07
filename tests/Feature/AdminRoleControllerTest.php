@@ -13,6 +13,7 @@ class AdminRoleControllerTest extends TestCase
     use RefreshDatabase;
 
     protected User $adminUser;
+
     protected User $regularUser;
 
     protected function setUp(): void
@@ -54,9 +55,9 @@ class AdminRoleControllerTest extends TestCase
                         'isProtected',
                         'permissions',
                         'createdAt',
-                        'updatedAt'
-                    ]
-                ]
+                        'updatedAt',
+                    ],
+                ],
             ]);
     }
 
@@ -69,7 +70,7 @@ class AdminRoleControllerTest extends TestCase
         $response->assertStatus(403)
             ->assertJson([
                 'success' => false,
-                'message' => 'You do not have permission to manage roles'
+                'message' => 'You do not have permission to manage roles',
             ]);
     }
 
@@ -92,8 +93,8 @@ class AdminRoleControllerTest extends TestCase
                     'isProtected',
                     'permissions',
                     'createdAt',
-                    'updatedAt'
-                ]
+                    'updatedAt',
+                ],
             ]);
     }
 
@@ -101,7 +102,7 @@ class AdminRoleControllerTest extends TestCase
     {
         $roleData = [
             'name' => 'new-test-role',
-            'permissions' => ['test_permission']
+            'permissions' => ['test_permission'],
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -119,8 +120,8 @@ class AdminRoleControllerTest extends TestCase
                     'isProtected',
                     'permissions',
                     'createdAt',
-                    'updatedAt'
-                ]
+                    'updatedAt',
+                ],
             ]);
 
         $this->assertDatabaseHas('roles', ['name' => 'new-test-role']);
@@ -130,7 +131,7 @@ class AdminRoleControllerTest extends TestCase
     {
         $roleData = [
             'name' => 'test-role', // Already exists
-            'permissions' => []
+            'permissions' => [],
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -145,7 +146,7 @@ class AdminRoleControllerTest extends TestCase
     {
         $roleData = [
             'name' => 'admin', // Protected name
-            'permissions' => []
+            'permissions' => [],
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -160,10 +161,10 @@ class AdminRoleControllerTest extends TestCase
     {
         // Create a fresh role for this test
         $role = Role::create(['name' => 'update-test-role']);
-        
+
         $updateData = [
             'name' => 'updated-test-role',
-            'permissions' => ['test_permission']
+            'permissions' => ['test_permission'],
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -181,8 +182,8 @@ class AdminRoleControllerTest extends TestCase
                     'isProtected',
                     'permissions',
                     'createdAt',
-                    'updatedAt'
-                ]
+                    'updatedAt',
+                ],
             ]);
 
         $this->assertDatabaseHas('roles', ['id' => $role->id, 'name' => 'updated-test-role']);
@@ -191,10 +192,10 @@ class AdminRoleControllerTest extends TestCase
     public function test_update_prevents_modifying_protected_roles(): void
     {
         $adminRole = Role::where('name', 'admin')->first();
-        
+
         $updateData = [
             'name' => 'modified-admin',
-            'permissions' => []
+            'permissions' => [],
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -217,7 +218,7 @@ class AdminRoleControllerTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Role deleted successfully'
+                'message' => 'Role deleted successfully',
             ]);
 
         $this->assertDatabaseMissing('roles', ['id' => $role->id]);
@@ -255,9 +256,9 @@ class AdminRoleControllerTest extends TestCase
                         'group',
                         'description',
                         'createdAt',
-                        'updatedAt'
-                    ]
-                ]
+                        'updatedAt',
+                    ],
+                ],
             ]);
     }
 
@@ -270,7 +271,7 @@ class AdminRoleControllerTest extends TestCase
         $response->assertStatus(403)
             ->assertJson([
                 'success' => false,
-                'message' => 'You do not have permission to manage roles'
+                'message' => 'You do not have permission to manage roles',
             ]);
     }
 }

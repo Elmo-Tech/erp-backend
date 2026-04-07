@@ -2,19 +2,17 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Tasks\CreateTaskDeliverableRequest;
-use App\Http\Requests\V1\Tasks\UpdateTaskDeliverableRequest;
-use App\Http\Requests\V1\Tasks\SubmitTaskDeliverableRequest;
 use App\Http\Requests\V1\Tasks\ReviewTaskDeliverableRequest;
+use App\Http\Requests\V1\Tasks\SubmitTaskDeliverableRequest;
+use App\Http\Requests\V1\Tasks\UpdateTaskDeliverableRequest;
 use App\Http\Resources\V1\Tasks\TaskDeliverableResource;
 use App\Models\Task;
 use App\Models\TaskDeliverable;
 use App\Services\Tasks\DeliverableService;
-use App\Helpers\ApiResponse;
-use App\Enums\DeliverableStatus;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Tag(
@@ -38,22 +36,29 @@ class TaskDeliverableController extends Controller
      *     operationId="getTaskDeliverables",
      *     tags={"Task Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="taskId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task deliverables retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task deliverables retrieved successfully"),
      *             @OA\Property(
@@ -62,7 +67,9 @@ class TaskDeliverableController extends Controller
      *                 @OA\Property(
      *                     property="deliverables",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="deliverableId", type="integer", example=1),
      *                         @OA\Property(property="taskId", type="integer", example=1),
      *                         @OA\Property(property="title", type="string", example="User Interface Design"),
@@ -90,10 +97,13 @@ class TaskDeliverableController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Task not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Task not found")
      *         )
@@ -103,7 +113,7 @@ class TaskDeliverableController extends Controller
     public function index(int $taskId): JsonResponse
     {
         $task = Task::findOrFail($taskId);
-        
+
         $deliverables = $task->deliverables()
             ->with('reviewer')
             ->orderBy('order')
@@ -111,7 +121,7 @@ class TaskDeliverableController extends Controller
             ->get();
 
         return ApiResponse::success([
-            'deliverables' => TaskDeliverableResource::collection($deliverables)
+            'deliverables' => TaskDeliverableResource::collection($deliverables),
         ], __('messages.deliverables_retrieved'));
     }
 
@@ -123,21 +133,28 @@ class TaskDeliverableController extends Controller
      *     operationId="createTaskDeliverable",
      *     tags={"Task Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="taskId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="title", type="string", example="User Interface Design"),
      *             @OA\Property(property="description", type="string", example="Create mockups for the login page"),
      *             @OA\Property(property="acceptanceCriteria", type="string", example="Must include responsive design"),
@@ -145,10 +162,13 @@ class TaskDeliverableController extends Controller
      *             @OA\Property(property="order", type="integer", example=1)
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Deliverable created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Deliverable created successfully"),
      *             @OA\Property(
@@ -158,10 +178,13 @@ class TaskDeliverableController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed"),
      *             @OA\Property(
@@ -176,12 +199,12 @@ class TaskDeliverableController extends Controller
     public function store(CreateTaskDeliverableRequest $request, int $taskId): JsonResponse
     {
         $task = Task::findOrFail($taskId);
-        
+
         try {
             $deliverable = $this->deliverableService->createDeliverable($task, $request->validated());
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($deliverable)
+                'deliverable' => new TaskDeliverableResource($deliverable),
             ], __('messages.deliverable_created'), 201);
         } catch (\InvalidArgumentException $e) {
             return ApiResponse::error($e->getMessage(), 400);
@@ -196,28 +219,37 @@ class TaskDeliverableController extends Controller
      *     operationId="getTaskDeliverable",
      *     tags={"Task Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="taskId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Deliverable retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Deliverable retrieved successfully"),
      *             @OA\Property(
@@ -235,7 +267,7 @@ class TaskDeliverableController extends Controller
         $deliverable = $task->deliverables()->with('reviewer')->findOrFail($deliverableId);
 
         return ApiResponse::success([
-            'deliverable' => new TaskDeliverableResource($deliverable)
+            'deliverable' => new TaskDeliverableResource($deliverable),
         ], __('messages.deliverable_retrieved'));
     }
 
@@ -247,27 +279,36 @@ class TaskDeliverableController extends Controller
      *     operationId="updateTaskDeliverable",
      *     tags={"Task Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="taskId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="title", type="string", example="Updated UI Design"),
      *             @OA\Property(property="description", type="string", example="Updated description"),
      *             @OA\Property(property="acceptanceCriteria", type="string", example="Updated criteria"),
@@ -275,6 +316,7 @@ class TaskDeliverableController extends Controller
      *             @OA\Property(property="order", type="integer", example=2)
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Deliverable updated successfully"
@@ -294,7 +336,7 @@ class TaskDeliverableController extends Controller
             $updatedDeliverable = $this->deliverableService->updateDeliverable($deliverable, $request->validated());
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($updatedDeliverable)
+                'deliverable' => new TaskDeliverableResource($updatedDeliverable),
             ], __('messages.deliverable_updated'));
         } catch (\InvalidArgumentException $e) {
             return ApiResponse::error($e->getMessage(), 400);
@@ -309,24 +351,31 @@ class TaskDeliverableController extends Controller
      *     operationId="deleteTaskDeliverable",
      *     tags={"Task Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="taskId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Deliverable deleted successfully"
@@ -362,30 +411,40 @@ class TaskDeliverableController extends Controller
      *     operationId="submitTaskDeliverable",
      *     tags={"Task Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="taskId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=false,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="submissionNotes", type="string", example="Completed as requested with additional improvements")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Deliverable submitted successfully"
@@ -403,13 +462,13 @@ class TaskDeliverableController extends Controller
 
         try {
             $submittedDeliverable = $this->deliverableService->submitDeliverable(
-                $deliverable, 
-                auth()->user(), 
+                $deliverable,
+                auth()->user(),
                 $request->validated()
             );
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($submittedDeliverable)
+                'deliverable' => new TaskDeliverableResource($submittedDeliverable),
             ], __('messages.deliverable_submitted'));
         } catch (\InvalidArgumentException $e) {
             return ApiResponse::error($e->getMessage(), 400);
@@ -424,32 +483,42 @@ class TaskDeliverableController extends Controller
      *     operationId="reviewTaskDeliverable",
      *     tags={"Task Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="taskId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="status", type="string", enum={"approved", "rejected"}, example="approved"),
      *             @OA\Property(property="reviewNotes", type="string", example="Great work, meets all requirements"),
      *             @OA\Property(property="pointsAwarded", type="integer", example=10)
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Deliverable reviewed successfully"
@@ -487,7 +556,7 @@ class TaskDeliverableController extends Controller
             }
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($reviewedDeliverable)
+                'deliverable' => new TaskDeliverableResource($reviewedDeliverable),
             ], __('messages.deliverable_reviewed'));
         } catch (\InvalidArgumentException $e) {
             return ApiResponse::error($e->getMessage(), 400);

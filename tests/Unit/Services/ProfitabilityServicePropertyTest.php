@@ -14,7 +14,7 @@ use Tests\TestCase;
 
 /**
  * Property-Based Tests for ProfitabilityService
- * 
+ *
  * Feature: monitoring-profitability-admin, Property 1: Profitability Calculation Formula Correctness
  * Feature: monitoring-profitability-admin, Property 2: Profit Decimal Precision
  * Feature: monitoring-profitability-admin, Property 3: Profit Margin Formula Correctness
@@ -23,23 +23,23 @@ use Tests\TestCase;
  */
 class ProfitabilityServicePropertyTest extends TestCase
 {
-    use TestTrait, RefreshDatabase;
+    use RefreshDatabase, TestTrait;
 
     private ProfitabilityService $profitabilityService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->profitabilityService = new ProfitabilityService();
+        $this->profitabilityService = new ProfitabilityService;
     }
 
     /**
      * Property 1: Profitability Calculation Formula Correctness
-     * 
-     * For any project with time entries, the calculated profit SHALL equal: 
-     * Budget - Sum(TimeEntry Duration in Hours × User Internal Hourly Cost), 
+     *
+     * For any project with time entries, the calculated profit SHALL equal:
+     * Budget - Sum(TimeEntry Duration in Hours × User Internal Hourly Cost),
      * where duration in hours = duration_minutes / 60.
-     * 
+     *
      * **Validates: Requirements 1.1, 1.2**
      */
     public function test_profitability_calculation_formula_correctness(): void
@@ -55,12 +55,12 @@ class ProfitabilityServicePropertyTest extends TestCase
             ->then(function ($budget, $numEntries, $internalCost, $durationMinutes) {
                 // Create project with specific budget
                 $project = Project::factory()->create(['budget' => $budget]);
-                
+
                 // Create user with specific internal cost
                 $user = User::factory()->create(['internal_hourly_cost' => $internalCost]);
-                
+
                 $totalCostExpected = 0;
-                
+
                 // Create time entries for the project
                 for ($i = 0; $i < $numEntries; $i++) {
                     TimeEntry::factory()->create([
@@ -70,22 +70,22 @@ class ProfitabilityServicePropertyTest extends TestCase
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(), // Ensure it's completed
                     ]);
-                    
+
                     $totalCostExpected += ($durationMinutes / 60) * $internalCost;
                 }
-                
+
                 // Calculate profitability
                 $result = $this->profitabilityService->calculateProjectProfitability($project);
-                
+
                 // Verify formula: Budget - Sum(Duration Hours × Internal Cost)
                 $expectedProfit = $budget - $totalCostExpected;
-                
-                $this->assertEquals(round($totalCostExpected, 2), $result['totalCost'], 
+
+                $this->assertEquals(round($totalCostExpected, 2), $result['totalCost'],
                     'Total cost should equal sum of (duration_minutes / 60) × internal_hourly_cost');
-                
-                $this->assertEquals(round($expectedProfit, 2), $result['profit'], 
+
+                $this->assertEquals(round($expectedProfit, 2), $result['profit'],
                     'Profit should equal budget - total cost');
-                
+
                 $this->assertEquals($project->id, $result['projectId']);
                 $this->assertEquals($project->title, $result['title']);
                 $this->assertEquals(round($budget, 2), $result['budget']);
@@ -94,10 +94,10 @@ class ProfitabilityServicePropertyTest extends TestCase
 
     /**
      * Property 2: Profit Decimal Precision
-     * 
-     * For any profitability calculation result, the profit value SHALL be 
+     *
+     * For any profitability calculation result, the profit value SHALL be
      * a decimal with exactly 2 decimal places (rounded).
-     * 
+     *
      * **Validates: Requirements 1.4**
      */
     public function test_profit_decimal_precision(): void
@@ -113,10 +113,10 @@ class ProfitabilityServicePropertyTest extends TestCase
             ->then(function ($budget, $numEntries, $internalCost, $durationMinutes) {
                 // Add decimal precision to internal cost
                 $internalCostDecimal = $internalCost + 0.33;
-                
+
                 $project = Project::factory()->create(['budget' => $budget]);
                 $user = User::factory()->create(['internal_hourly_cost' => $internalCostDecimal]);
-                
+
                 // Create time entries that will result in decimal calculations
                 for ($i = 0; $i < $numEntries; $i++) {
                     TimeEntry::factory()->create([
@@ -127,19 +127,19 @@ class ProfitabilityServicePropertyTest extends TestCase
                         'end_time' => now(),
                     ]);
                 }
-                
+
                 $result = $this->profitabilityService->calculateProjectProfitability($project);
-                
+
                 // Verify all monetary values have exactly 2 decimal places
                 $this->assertMatchesRegularExpression('/^\d+\.\d{2}$/', (string) $result['budget'],
                     'Budget should have exactly 2 decimal places');
-                
+
                 $this->assertMatchesRegularExpression('/^\d+\.\d{2}$/', (string) $result['totalCost'],
                     'Total cost should have exactly 2 decimal places');
-                
+
                 $this->assertMatchesRegularExpression('/^-?\d+\.\d{2}$/', (string) $result['profit'],
                     'Profit should have exactly 2 decimal places');
-                
+
                 $this->assertMatchesRegularExpression('/^-?\d+\.\d{2}$/', (string) $result['profitMargin'],
                     'Profit margin should have exactly 2 decimal places');
             });
@@ -147,10 +147,10 @@ class ProfitabilityServicePropertyTest extends TestCase
 
     /**
      * Property 3: Profit Margin Formula Correctness
-     * 
-     * For any project with a non-zero budget, the profit margin percentage 
+     *
+     * For any project with a non-zero budget, the profit margin percentage
      * SHALL equal: (Profit / Budget) × 100.
-     * 
+     *
      * **Validates: Requirements 1.5**
      */
     public function test_profit_margin_formula_correctness(): void
@@ -166,7 +166,7 @@ class ProfitabilityServicePropertyTest extends TestCase
             ->then(function ($budget, $numEntries, $internalCost, $durationMinutes) {
                 $project = Project::factory()->create(['budget' => $budget]);
                 $user = User::factory()->create(['internal_hourly_cost' => $internalCost]);
-                
+
                 $totalCost = 0;
                 for ($i = 0; $i < $numEntries; $i++) {
                     TimeEntry::factory()->create([
@@ -176,19 +176,19 @@ class ProfitabilityServicePropertyTest extends TestCase
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(),
                     ]);
-                    
+
                     $totalCost += ($durationMinutes / 60) * $internalCost;
                 }
-                
+
                 $result = $this->profitabilityService->calculateProjectProfitability($project);
-                
+
                 // Calculate expected profit margin: (Profit / Budget) × 100
                 $profit = $budget - $totalCost;
                 $expectedMargin = ($profit / $budget) * 100;
-                
+
                 $this->assertEquals(round($expectedMargin, 2), $result['profitMargin'],
                     'Profit margin should equal (profit / budget) × 100');
-                
+
                 // Verify margin is within reasonable bounds
                 $this->assertGreaterThanOrEqual(-10000, $result['profitMargin'],
                     'Profit margin should not be unreasonably negative');
@@ -199,11 +199,11 @@ class ProfitabilityServicePropertyTest extends TestCase
 
     /**
      * Property 4: Time Entry Aggregation Completeness
-     * 
+     *
      * For any project, the total cost calculation SHALL include all time entries from:
      * - Time entries directly tracked on the project (trackable_type = Project)
      * - Time entries tracked on all tasks belonging to the project (trackable_type = Task AND task.project_id = project.id)
-     * 
+     *
      * **Validates: Requirements 1.6, 1.7**
      */
     public function test_time_entry_aggregation_completeness(): void
@@ -221,9 +221,9 @@ class ProfitabilityServicePropertyTest extends TestCase
             ->then(function ($budget, $projectEntries, $numTasks, $taskEntries, $internalCost, $durationMinutes) {
                 $project = Project::factory()->create(['budget' => $budget]);
                 $user = User::factory()->create(['internal_hourly_cost' => $internalCost]);
-                
+
                 $expectedTotalCost = 0;
-                
+
                 // Create direct project time entries
                 for ($i = 0; $i < $projectEntries; $i++) {
                     TimeEntry::factory()->create([
@@ -233,14 +233,14 @@ class ProfitabilityServicePropertyTest extends TestCase
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(),
                     ]);
-                    
+
                     $expectedTotalCost += ($durationMinutes / 60) * $internalCost;
                 }
-                
+
                 // Create tasks and their time entries
                 for ($t = 0; $t < $numTasks; $t++) {
                     $task = Task::factory()->create(['project_id' => $project->id]);
-                    
+
                     for ($e = 0; $e < $taskEntries; $e++) {
                         TimeEntry::factory()->create([
                             'user_id' => $user->id,
@@ -249,11 +249,11 @@ class ProfitabilityServicePropertyTest extends TestCase
                             'duration_minutes' => $durationMinutes,
                             'end_time' => now(),
                         ]);
-                        
+
                         $expectedTotalCost += ($durationMinutes / 60) * $internalCost;
                     }
                 }
-                
+
                 // Create a time entry for a different project (should not be included)
                 $otherProject = Project::factory()->create();
                 TimeEntry::factory()->create([
@@ -263,16 +263,16 @@ class ProfitabilityServicePropertyTest extends TestCase
                     'duration_minutes' => $durationMinutes,
                     'end_time' => now(),
                 ]);
-                
+
                 $result = $this->profitabilityService->calculateProjectProfitability($project);
-                
+
                 $this->assertEquals(round($expectedTotalCost, 2), $result['totalCost'],
                     'Total cost should include all project and task time entries, but exclude other projects');
-                
+
                 // Verify the calculation includes both project and task entries
                 $totalEntries = $projectEntries + ($numTasks * $taskEntries);
                 $expectedCostFromFormula = $totalEntries * ($durationMinutes / 60) * $internalCost;
-                
+
                 $this->assertEquals(round($expectedCostFromFormula, 2), $result['totalCost'],
                     'Total cost should equal sum of all relevant time entries');
             });
@@ -280,10 +280,10 @@ class ProfitabilityServicePropertyTest extends TestCase
 
     /**
      * Property 1: Profitability Calculation Formula Correctness - Null Internal Cost Handling
-     * 
+     *
      * For any project with time entries where users have null internal_hourly_cost,
      * the system SHALL use default value (0) and calculate correctly.
-     * 
+     *
      * **Validates: Requirements 1.3**
      */
     public function test_profitability_calculation_with_null_internal_cost(): void
@@ -297,10 +297,10 @@ class ProfitabilityServicePropertyTest extends TestCase
             )
             ->then(function ($budget, $numEntries, $durationMinutes) {
                 $project = Project::factory()->create(['budget' => $budget]);
-                
+
                 // Create user with null internal_hourly_cost
                 $user = User::factory()->create(['internal_hourly_cost' => null]);
-                
+
                 // Create time entries
                 for ($i = 0; $i < $numEntries; $i++) {
                     TimeEntry::factory()->create([
@@ -311,16 +311,16 @@ class ProfitabilityServicePropertyTest extends TestCase
                         'end_time' => now(),
                     ]);
                 }
-                
+
                 $result = $this->profitabilityService->calculateProjectProfitability($project);
-                
+
                 // With null internal cost (defaults to 0), total cost should be 0
                 $this->assertEquals(0.0, $result['totalCost'],
                     'Total cost should be 0 when all users have null internal_hourly_cost');
-                
+
                 $this->assertEquals(round($budget, 2), $result['profit'],
                     'Profit should equal budget when total cost is 0');
-                
+
                 $this->assertEquals(100.0, $result['profitMargin'],
                     'Profit margin should be 100% when total cost is 0');
             });
@@ -328,10 +328,10 @@ class ProfitabilityServicePropertyTest extends TestCase
 
     /**
      * Property 2: Profit Decimal Precision - Zero Budget Edge Case
-     * 
-     * When project budget is zero, profit margin calculation SHALL handle 
+     *
+     * When project budget is zero, profit margin calculation SHALL handle
      * division by zero gracefully and return 0.
-     * 
+     *
      * **Validates: Requirements 1.5**
      */
     public function test_profit_margin_with_zero_budget(): void
@@ -347,7 +347,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                 // Create project with zero budget
                 $project = Project::factory()->create(['budget' => 0]);
                 $user = User::factory()->create(['internal_hourly_cost' => $internalCost]);
-                
+
                 for ($i = 0; $i < $numEntries; $i++) {
                     TimeEntry::factory()->create([
                         'user_id' => $user->id,
@@ -357,15 +357,15 @@ class ProfitabilityServicePropertyTest extends TestCase
                         'end_time' => now(),
                     ]);
                 }
-                
+
                 $result = $this->profitabilityService->calculateProjectProfitability($project);
-                
+
                 $this->assertEquals(0.0, $result['budget'],
                     'Budget should be 0');
-                
+
                 $this->assertEquals(0.0, $result['profitMargin'],
                     'Profit margin should be 0 when budget is 0 (avoiding division by zero)');
-                
+
                 // Profit should be negative (0 - total cost)
                 $this->assertLessThan(0, $result['profit'],
                     'Profit should be negative when budget is 0 and there are costs');
@@ -374,11 +374,11 @@ class ProfitabilityServicePropertyTest extends TestCase
 
     /**
      * Property 4: Time Entry Aggregation Completeness - Active Time Entries Exclusion
-     * 
-     * For any project, only completed time entries (with end_time) SHALL be 
-     * included in cost calculations. Active time entries (end_time = null) 
+     *
+     * For any project, only completed time entries (with end_time) SHALL be
+     * included in cost calculations. Active time entries (end_time = null)
      * SHALL be excluded.
-     * 
+     *
      * **Validates: Requirements 1.6, 1.7**
      */
     public function test_time_entry_aggregation_excludes_active_entries(): void
@@ -395,9 +395,9 @@ class ProfitabilityServicePropertyTest extends TestCase
             ->then(function ($budget, $completedEntries, $activeEntries, $internalCost, $durationMinutes) {
                 $project = Project::factory()->create(['budget' => $budget]);
                 $user = User::factory()->create(['internal_hourly_cost' => $internalCost]);
-                
+
                 $expectedTotalCost = 0;
-                
+
                 // Create completed time entries (should be included)
                 for ($i = 0; $i < $completedEntries; $i++) {
                     TimeEntry::factory()->create([
@@ -407,10 +407,10 @@ class ProfitabilityServicePropertyTest extends TestCase
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(), // Completed
                     ]);
-                    
+
                     $expectedTotalCost += ($durationMinutes / 60) * $internalCost;
                 }
-                
+
                 // Create active time entries (should be excluded)
                 for ($i = 0; $i < $activeEntries; $i++) {
                     TimeEntry::factory()->create([
@@ -421,26 +421,26 @@ class ProfitabilityServicePropertyTest extends TestCase
                         'end_time' => null, // Active (not completed)
                     ]);
                 }
-                
+
                 $result = $this->profitabilityService->calculateProjectProfitability($project);
-                
+
                 $this->assertEquals(round($expectedTotalCost, 2), $result['totalCost'],
                     'Total cost should only include completed time entries, excluding active ones');
-                
+
                 // Verify that active entries are not included by checking the count
                 $totalTimeEntries = TimeEntry::where('trackable_type', Project::class)
                     ->where('trackable_id', $project->id)
                     ->count();
-                
+
                 $this->assertEquals($completedEntries + $activeEntries, $totalTimeEntries,
                     'Total time entries should include both completed and active');
-                
+
                 // But only completed entries should affect cost
                 $completedTimeEntries = TimeEntry::where('trackable_type', Project::class)
                     ->where('trackable_id', $project->id)
                     ->whereNotNull('end_time')
                     ->count();
-                
+
                 $this->assertEquals($completedEntries, $completedTimeEntries,
                     'Only completed entries should be counted for cost calculation');
             });

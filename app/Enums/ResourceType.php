@@ -14,7 +14,7 @@ enum ResourceType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::BACKEND => __('enums.resource_type.backend'),
             self::FRONTEND => __('enums.resource_type.frontend'),
             self::UI_UX => __('enums.resource_type.ui_ux'),

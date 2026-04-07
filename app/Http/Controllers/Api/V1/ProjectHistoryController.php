@@ -27,30 +27,39 @@ class ProjectHistoryController extends Controller
      *     summary="Get project change history",
      *     description="Retrieve the audit trail of changes for a specific project with optional field filtering. Requires view_project_history permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="projectId",
      *         in="path",
      *         required=true,
      *         description="Project ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[fieldName]",
      *         in="query",
      *         description="Filter history by field name (e.g., status, budget, deadline)",
+     *
      *         @OA\Schema(type="string", example="status")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="History retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="History retrieved successfully"),
      *             @OA\Property(
@@ -59,7 +68,9 @@ class ProjectHistoryController extends Controller
      *                 @OA\Property(
      *                     property="histories",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="historyId", type="integer", example=1),
      *                         @OA\Property(property="projectId", type="integer", example=1),
      *                         @OA\Property(property="fieldName", type="string", example="status"),
@@ -81,26 +92,35 @@ class ProjectHistoryController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - No permission to view history",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to view project history.")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Project not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -111,7 +131,7 @@ class ProjectHistoryController extends Controller
     {
         // Check permission to view project history
         $user = $request->user();
-        if (!$user->can('view_project_history')) {
+        if (! $user->can('view_project_history')) {
             return ApiResponse::error(
                 __('messages.no_permission_view_history'),
                 403

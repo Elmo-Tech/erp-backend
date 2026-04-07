@@ -4,7 +4,6 @@ namespace App\Services\Reporting;
 
 use App\Enums\LeadStatus;
 use App\Enums\QuotationStatus;
-use App\Models\Contract;
 use App\Models\ContractMilestone;
 use App\Models\Lead;
 use App\Models\Quotation;
@@ -174,7 +173,7 @@ class SalesAnalyticsService
             ->sum('amount');
 
         return [
-            'milestonesDue' => $milestonesDue->take(10)->map(fn($m) => [
+            'milestonesDue' => $milestonesDue->take(10)->map(fn ($m) => [
                 'milestoneId' => $m->id,
                 'contractId' => $m->contract_id,
                 'projectName' => $m->contract->title ?? '',
@@ -214,7 +213,7 @@ class SalesAnalyticsService
             ->where('status', QuotationStatus::REJECTED)
             ->whereNotNull('rejection_reason')
             ->groupBy('rejection_reason')
-            ->map(fn($group) => $group->count())
+            ->map(fn ($group) => $group->count())
             ->toArray();
 
         return [

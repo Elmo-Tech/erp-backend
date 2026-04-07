@@ -9,9 +9,9 @@ class TaskCollection extends ResourceCollection
 {
     /**
      * Transform the resource collection into an array.
-     * 
+     *
      * Follows existing collection pattern with pagination support.
-     * 
+     *
      * Requirements: 8.4
      *
      * @return array<string, mixed>

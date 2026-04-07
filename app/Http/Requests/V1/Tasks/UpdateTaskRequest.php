@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\V1\Tasks;
 
+use App\Enums\TaskCategory;
+use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Enums\TaskPriority;
-use App\Enums\TaskCategory;
 use App\Helpers\ApiResponse;
 use App\Models\Task;
 use Illuminate\Contracts\Validation\Validator;
@@ -17,7 +17,7 @@ class UpdateTaskRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
-     * 
+     *
      * Authorization rules based on permissions:
      * - edit_main_tasks: Can edit main tasks
      * - edit_weekly_tasks: Can edit weekly tasks
@@ -28,16 +28,16 @@ class UpdateTaskRequest extends FormRequest
     {
         $user = $this->user();
         $task = $this->route('task');
-        
-        if (!$task instanceof Task) {
+
+        if (! $task instanceof Task) {
             return false;
         }
-        
+
         // Admin and Super Admin can edit any task type
         if ($user->hasRole(['admin', 'super-admin'])) {
             return true;
         }
-        
+
         // Check specific permission based on task type
         return match ($task->type) {
             TaskType::MAIN => $user->can('edit_main_tasks'),
@@ -79,8 +79,6 @@ class UpdateTaskRequest extends FormRequest
 
     /**
      * Configure the validator instance.
-     *
-     * @param Validator $validator
      */
     public function withValidator(Validator $validator): void
     {
@@ -97,17 +95,17 @@ class UpdateTaskRequest extends FormRequest
      */
     private function validateParentBelongsToSameProject(Validator $validator): void
     {
-        if (!$this->filled('parentId')) {
+        if (! $this->filled('parentId')) {
             return;
         }
 
         $task = $this->route('task');
-        if (!$task instanceof Task) {
+        if (! $task instanceof Task) {
             return;
         }
 
         $parentTask = Task::find($this->input('parentId'));
-        
+
         if ($parentTask && $parentTask->project_id !== $task->project_id) {
             $validator->errors()->add(
                 'parentId',
@@ -122,7 +120,7 @@ class UpdateTaskRequest extends FormRequest
     private function validateTaskTypeHierarchy(Validator $validator): void
     {
         $task = $this->route('task');
-        if (!$task instanceof Task) {
+        if (! $task instanceof Task) {
             return;
         }
 
@@ -130,12 +128,12 @@ class UpdateTaskRequest extends FormRequest
         $type = $this->filled('type') ? $this->input('type') : $task->type?->value;
         $parentId = $this->filled('parentId') ? $this->input('parentId') : $task->parent_id;
 
-        if (!$type) {
+        if (! $type) {
             return;
         }
 
         $taskType = TaskType::tryFrom($type);
-        if (!$taskType) {
+        if (! $taskType) {
             return;
         }
 
@@ -145,33 +143,35 @@ class UpdateTaskRequest extends FormRequest
                 'type',
                 'Main tasks cannot have a parent task.'
             );
+
             return;
         }
 
         // WEEKLY and SUBTASK must have a parent
-        if (in_array($taskType, [TaskType::WEEKLY, TaskType::SUBTASK]) && !$parentId) {
+        if (in_array($taskType, [TaskType::WEEKLY, TaskType::SUBTASK]) && ! $parentId) {
             $validator->errors()->add(
                 'parentId',
-                $taskType->label() . ' must have a parent task.'
+                $taskType->label().' must have a parent task.'
             );
+
             return;
         }
 
         // Validate parent type matches expected hierarchy
         if ($parentId) {
             $parentTask = Task::find($parentId);
-            if (!$parentTask) {
+            if (! $parentTask) {
                 return;
             }
 
             $allowedChildTypes = $parentTask->type->allowedChildTypes();
-            
-            if (!in_array($taskType, $allowedChildTypes)) {
-                $expectedTypes = array_map(fn($t) => $t->label(), $allowedChildTypes);
+
+            if (! in_array($taskType, $allowedChildTypes)) {
+                $expectedTypes = array_map(fn ($t) => $t->label(), $allowedChildTypes);
                 $validator->errors()->add(
                     'type',
-                    'A ' . $parentTask->type->label() . ' can only have ' . 
-                    (empty($expectedTypes) ? 'no children' : implode(' or ', $expectedTypes)) . ' as children.'
+                    'A '.$parentTask->type->label().' can only have '.
+                    (empty($expectedTypes) ? 'no children' : implode(' or ', $expectedTypes)).' as children.'
                 );
             }
         }
@@ -182,12 +182,12 @@ class UpdateTaskRequest extends FormRequest
      */
     private function validateStatusTransition(Validator $validator): void
     {
-        if (!$this->filled('status')) {
+        if (! $this->filled('status')) {
             return;
         }
 
         $task = $this->route('task');
-        if (!$task instanceof Task) {
+        if (! $task instanceof Task) {
             return;
         }
 
@@ -203,15 +203,15 @@ class UpdateTaskRequest extends FormRequest
             return;
         }
 
-        if (!$currentStatus->canTransitionTo($newStatus)) {
+        if (! $currentStatus->canTransitionTo($newStatus)) {
             $allowedTransitions = array_map(
-                fn(TaskStatus $s) => $s->value,
+                fn (TaskStatus $s) => $s->value,
                 $currentStatus->allowedTransitions()
             );
 
             $allowedList = empty($allowedTransitions)
                 ? 'No transitions allowed from this status.'
-                : 'Allowed transitions: ' . implode(', ', $allowedTransitions);
+                : 'Allowed transitions: '.implode(', ', $allowedTransitions);
 
             $validator->errors()->add(
                 'status',
@@ -225,12 +225,12 @@ class UpdateTaskRequest extends FormRequest
      */
     private function validateNoCircularReference(Validator $validator): void
     {
-        if (!$this->filled('parentId')) {
+        if (! $this->filled('parentId')) {
             return;
         }
 
         $task = $this->route('task');
-        if (!$task instanceof Task) {
+        if (! $task instanceof Task) {
             return;
         }
 
@@ -242,12 +242,13 @@ class UpdateTaskRequest extends FormRequest
                 'parentId',
                 'A task cannot be its own parent.'
             );
+
             return;
         }
 
         // Check if the proposed parent is a descendant of this task
         $descendantIds = $this->getAllDescendantIds($task);
-        
+
         if (in_array($parentId, $descendantIds, true)) {
             $validator->errors()->add(
                 'parentId',
@@ -259,7 +260,6 @@ class UpdateTaskRequest extends FormRequest
     /**
      * Get all descendant task IDs recursively.
      *
-     * @param Task $task
      * @return array<int>
      */
     private function getAllDescendantIds(Task $task): array
@@ -312,7 +312,6 @@ class UpdateTaskRequest extends FormRequest
     /**
      * Handle a failed validation attempt.
      *
-     * @param Validator $validator
      * @throws HttpResponseException
      */
     protected function failedValidation(Validator $validator): void
@@ -333,9 +332,9 @@ class UpdateTaskRequest extends FormRequest
     protected function failedAuthorization(): void
     {
         $task = $this->route('task');
-        
+
         $message = 'You do not have permission to edit this task.';
-        
+
         if ($task instanceof Task) {
             $message = match ($task->type) {
                 TaskType::MAIN => 'You do not have permission to edit main tasks.',
@@ -344,7 +343,7 @@ class UpdateTaskRequest extends FormRequest
                 default => 'You do not have permission to edit this task.',
             };
         }
-        
+
         throw new HttpResponseException(
             ApiResponse::error($message, 403)
         );

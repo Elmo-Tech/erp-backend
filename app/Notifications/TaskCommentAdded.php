@@ -28,8 +28,8 @@ class TaskCommentAdded extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $projectName = $this->task->project?->title ?? __('No Project');
-        $commentPreview = strlen($this->comment) > 150 
-            ? substr($this->comment, 0, 150) . '...' 
+        $commentPreview = strlen($this->comment) > 150
+            ? substr($this->comment, 0, 150).'...'
             : $this->comment;
 
         return (new MailMessage)
@@ -39,10 +39,10 @@ class TaskCommentAdded extends Notification implements ShouldQueue
                 'commenter' => $this->commenterName,
                 'task' => $this->task->title,
             ]))
-            ->line('**' . __('Task Details:') . '**')
+            ->line('**'.__('Task Details:').'**')
             ->line(__('Task: :title', ['title' => $this->task->title]))
             ->line(__('Project: :project', ['project' => $projectName]))
-            ->line('**' . __('Comment:') . '**')
+            ->line('**'.__('Comment:').'**')
             ->line($commentPreview)
             ->action(__('View Task'), url("/dashboard/tasks/{$this->task->id}"))
             ->line(__('Click the button above to view the full comment and reply.'));
@@ -59,8 +59,8 @@ class TaskCommentAdded extends Notification implements ShouldQueue
             'commenter_id' => $this->commenterId,
             'commenter_name' => $this->commenterName,
             'comment' => $this->comment,
-            'comment_preview' => strlen($this->comment) > 100 
-                ? substr($this->comment, 0, 100) . '...' 
+            'comment_preview' => strlen($this->comment) > 100
+                ? substr($this->comment, 0, 100).'...'
                 : $this->comment,
             'commented_at' => now()->toISOString(),
             'message' => __(':commenter commented on task: :task', [

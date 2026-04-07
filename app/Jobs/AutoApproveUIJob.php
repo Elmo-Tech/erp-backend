@@ -28,7 +28,7 @@ class AutoApproveUIJob implements ShouldQueue
     /**
      * Create a new job instance.
      *
-     * @param int $projectId The ID of the project to auto-approve
+     * @param  int  $projectId  The ID of the project to auto-approve
      */
     public function __construct(
         public int $projectId
@@ -45,16 +45,13 @@ class AutoApproveUIJob implements ShouldQueue
      * 5. Changes status from 'ui_ux' to 'development'
      * 6. Records the auto-approval in project history
      * 7. Clears the auto_approval_job_id
-     *
-     * @param ProjectHistoryService $historyService
-     * @return void
      */
     public function handle(ProjectHistoryService $historyService): void
     {
         $project = Project::find($this->projectId);
 
         // Skip if project not found
-        if (!$project) {
+        if (! $project) {
             return;
         }
 

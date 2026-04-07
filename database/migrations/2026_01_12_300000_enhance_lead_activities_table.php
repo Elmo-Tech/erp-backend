@@ -15,18 +15,18 @@ return new class extends Migration
         Schema::table('lead_activities', function (Blueprint $table) {
             // Activity Status (scheduled, completed, cancelled)
             $table->string('status')->default('scheduled')->after('type');
-            
+
             // Cancellation reason
             $table->string('cancellation_reason')->nullable()->after('outcome');
-            
+
             // Next action planning
             $table->string('next_action')->nullable()->after('cancellation_reason');
             $table->timestamp('reminder_at')->nullable()->after('next_action');
-            
+
             // Reminder sent flag
             $table->boolean('reminder_sent')->default(false)->after('reminder_at');
             $table->boolean('outcome_reminder_sent')->default(false)->after('reminder_sent');
-            
+
             // Indexes
             $table->index('status');
             $table->index('reminder_at');
@@ -41,7 +41,7 @@ return new class extends Migration
         Schema::table('lead_activities', function (Blueprint $table) {
             $table->dropIndex(['status']);
             $table->dropIndex(['reminder_at']);
-            
+
             $table->dropColumn([
                 'status',
                 'cancellation_reason',

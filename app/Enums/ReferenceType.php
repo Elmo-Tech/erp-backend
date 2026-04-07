@@ -10,7 +10,7 @@ enum ReferenceType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::SALES_REP => __('enums.reference_type.sales_rep'),
             self::CLIENT_REFERRAL => __('enums.reference_type.client_referral'),
             self::EMPLOYEE => __('enums.reference_type.employee'),

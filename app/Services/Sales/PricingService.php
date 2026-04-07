@@ -10,10 +10,10 @@ class PricingService
     /**
      * Calculate quotation pricing from items.
      *
-     * @param array $items Quotation items [{resourceType, estimatedHours, hourlyRate, internalHourlyCost}]
-     * @param float $discountPercentage Discount percentage (0-100)
-     * @param string|null $commissionType Commission type (markup/margin)
-     * @param float $commissionPercentage Commission percentage
+     * @param  array  $items  Quotation items [{resourceType, estimatedHours, hourlyRate, internalHourlyCost}]
+     * @param  float  $discountPercentage  Discount percentage (0-100)
+     * @param  string|null  $commissionType  Commission type (markup/margin)
+     * @param  float  $commissionPercentage  Commission percentage
      * @return array Pricing breakdown
      */
     public function calculateFromItems(
@@ -99,10 +99,11 @@ class PricingService
     /**
      * Calculate quotation pricing from estimations (legacy support).
      *
-     * @param array $estimations Hour estimations in camelCase (frontendHours, backendHours, etc.)
-     * @param float $hourlyRate Rate per hour
-     * @param float $discountPercentage Discount percentage (0-100)
+     * @param  array  $estimations  Hour estimations in camelCase (frontendHours, backendHours, etc.)
+     * @param  float  $hourlyRate  Rate per hour
+     * @param  float  $discountPercentage  Discount percentage (0-100)
      * @return array Pricing breakdown with totalHours, grossPrice, discountAmount, finalPrice
+     *
      * @throws InvalidArgumentException
      */
     public function calculateQuote(array $estimations, float $hourlyRate, float $discountPercentage): array
@@ -134,7 +135,7 @@ class PricingService
         $totalHours = 0;
 
         foreach ($estimations as $key => $hours) {
-            if (!is_numeric($hours)) {
+            if (! is_numeric($hours)) {
                 throw new InvalidArgumentException("Invalid hour value for {$key}.");
             }
 
@@ -178,6 +179,7 @@ class PricingService
             $snakeKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $key));
             $converted[$snakeKey] = $value;
         }
+
         return $converted;
     }
 
@@ -191,14 +193,15 @@ class PricingService
             $camelKey = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $key))));
             $converted[$camelKey] = $value;
         }
+
         return $converted;
     }
 
     /**
      * Validate payment plan structure and percentages.
-     * 
-     * @param array $paymentPlan Array of payment milestones with percentages
-     * @return bool
+     *
+     * @param  array  $paymentPlan  Array of payment milestones with percentages
+     *
      * @throws InvalidArgumentException
      */
     public function validatePaymentPlan(array $paymentPlan): bool
@@ -212,11 +215,11 @@ class PricingService
 
         foreach ($paymentPlan as $index => $milestone) {
             // Validate structure
-            if (!is_array($milestone)) {
+            if (! is_array($milestone)) {
                 throw new InvalidArgumentException("Payment plan item at index {$index} must be an array.");
             }
 
-            if (!isset($milestone['milestone']) || !isset($milestone['percentage'])) {
+            if (! isset($milestone['milestone']) || ! isset($milestone['percentage'])) {
                 throw new InvalidArgumentException("Payment plan item at index {$index} must have 'milestone' and 'percentage' keys.");
             }
 
@@ -234,7 +237,7 @@ class PricingService
 
             // Validate percentage
             $percentage = $milestone['percentage'];
-            if (!is_numeric($percentage)) {
+            if (! is_numeric($percentage)) {
                 throw new InvalidArgumentException("Percentage at index {$index} must be numeric.");
             }
 
@@ -256,9 +259,9 @@ class PricingService
 
     /**
      * Calculate payment amounts based on final price and payment plan.
-     * 
-     * @param float $finalPrice Total quotation price
-     * @param array $paymentPlan Validated payment plan
+     *
+     * @param  float  $finalPrice  Total quotation price
+     * @param  array  $paymentPlan  Validated payment plan
      * @return array Payment breakdown with amounts
      */
     public function calculatePaymentAmounts(float $finalPrice, array $paymentPlan): array
@@ -271,7 +274,7 @@ class PricingService
         foreach ($paymentPlan as $index => $milestone) {
             $percentage = (float) $milestone['percentage'];
             $amount = round(($finalPrice * $percentage) / 100, 2);
-            
+
             $payments[] = [
                 'milestone' => $milestone['milestone'],
                 'percentage' => $percentage,

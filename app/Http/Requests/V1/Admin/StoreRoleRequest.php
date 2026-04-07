@@ -80,7 +80,6 @@ class StoreRoleRequest extends FormRequest
     /**
      * Handle a failed validation attempt.
      *
-     * @param  \Illuminate\Contracts\Validation\Validator  $validator
      * @return void
      *
      * @throws \Illuminate\Http\Exceptions\HttpResponseException
@@ -102,9 +101,9 @@ class StoreRoleRequest extends FormRequest
     {
         // Convert camelCase to snake_case for database compatibility if needed
         // In this case, we keep the role name as provided since it's a user-defined identifier
-        
+
         // Ensure permissions array is not null
-        if (!$this->has('permissions')) {
+        if (! $this->has('permissions')) {
             $this->merge(['permissions' => []]);
         }
     }
@@ -113,7 +112,6 @@ class StoreRoleRequest extends FormRequest
      * Configure the validator instance.
      *
      * @param  \Illuminate\Validation\Validator  $validator
-     * @return void
      */
     public function withValidator($validator): void
     {
@@ -122,11 +120,11 @@ class StoreRoleRequest extends FormRequest
             if ($this->has('permissions') && is_array($this->permissions)) {
                 $existingPermissions = Permission::pluck('name')->toArray();
                 $invalidPermissions = array_diff($this->permissions, $existingPermissions);
-                
-                if (!empty($invalidPermissions)) {
+
+                if (! empty($invalidPermissions)) {
                     $validator->errors()->add(
                         'permissions',
-                        'The following permissions do not exist: ' . implode(', ', $invalidPermissions)
+                        'The following permissions do not exist: '.implode(', ', $invalidPermissions)
                     );
                 }
             }
@@ -136,7 +134,7 @@ class StoreRoleRequest extends FormRequest
             if (in_array($this->name, $protectedNames)) {
                 $validator->errors()->add(
                     'name',
-                    'Cannot create a role with a protected name. Protected names: ' . implode(', ', $protectedNames)
+                    'Cannot create a role with a protected name. Protected names: '.implode(', ', $protectedNames)
                 );
             }
         });

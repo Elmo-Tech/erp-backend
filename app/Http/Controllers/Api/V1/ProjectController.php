@@ -42,47 +42,62 @@ class ProjectController extends Controller
      *     summary="Get all projects with pagination and filtering",
      *     description="Retrieve a paginated list of projects with optional filtering by status, client_id, and search",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[status]",
      *         in="query",
      *         description="Filter projects by status",
+     *
      *         @OA\Schema(type="string", enum={"draft", "active", "ui_ux", "development", "testing", "completed", "on_hold", "cancelled"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[clientId]",
      *         in="query",
      *         description="Filter projects by client ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[search]",
      *         in="query",
      *         description="Search projects by title",
+     *
      *         @OA\Schema(type="string")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number for pagination",
+     *
      *         @OA\Schema(type="integer", minimum=1, example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Number of items per page",
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Projects retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Projects retrieved successfully"),
      *             @OA\Property(
@@ -91,8 +106,10 @@ class ProjectController extends Controller
      *                 @OA\Property(
      *                     property="projects",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/ProjectResource")
      *                 ),
+     *
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
@@ -105,10 +122,13 @@ class ProjectController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -146,7 +166,6 @@ class ProjectController extends Controller
         );
     }
 
-
     /**
      * @OA\Post(
      *     path="/api/v1/projects",
@@ -155,53 +174,70 @@ class ProjectController extends Controller
      *     summary="Create a new project",
      *     description="Create a new project by converting a quotation",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"quotationId"},
+     *
      *             @OA\Property(property="quotationId", type="integer", example=1),
      *             @OA\Property(property="title", type="string", example="Website Redesign Project"),
      *             @OA\Property(property="description", type="string", example="Complete website redesign for client"),
      *             @OA\Property(property="deadline", type="string", format="date", example="2025-06-30")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Project created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Project created successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for project creation"),
      *             @OA\Property(property="errors", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Business logic error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Only accepted quotations can be converted to projects.")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -244,41 +280,54 @@ class ProjectController extends Controller
      *     summary="Get a single project",
      *     description="Retrieve a specific project by ID with related data",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Project ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Project retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Project retrieved successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Project not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -293,7 +342,6 @@ class ProjectController extends Controller
         );
     }
 
-
     /**
      * @OA\Put(
      *     path="/api/v1/projects/{id}",
@@ -302,23 +350,30 @@ class ProjectController extends Controller
      *     summary="Update an existing project",
      *     description="Update a project with history tracking for budget and deadline changes",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Project ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="title", type="string", example="Updated Project Title"),
      *             @OA\Property(property="description", type="string", example="Updated project description"),
      *             @OA\Property(property="status", type="string", enum={"draft", "active", "ui_ux", "development", "testing", "completed", "on_hold", "cancelled"}, example="active"),
@@ -327,36 +382,48 @@ class ProjectController extends Controller
      *             @OA\Property(property="reason", type="string", example="Client requested additional features")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Project updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Project updated successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for project update"),
      *             @OA\Property(property="errors", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Project not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -417,7 +484,7 @@ class ProjectController extends Controller
             }
 
             // Update project
-            if (!empty($updateData)) {
+            if (! empty($updateData)) {
                 $project->update($updateData);
             }
 
@@ -436,41 +503,54 @@ class ProjectController extends Controller
      *     summary="Delete a project",
      *     description="Delete a specific project by ID",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Project ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Project deleted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Project deleted successfully"),
      *             @OA\Property(property="data", type="null")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Project not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -487,7 +567,6 @@ class ProjectController extends Controller
         );
     }
 
-
     /**
      * @OA\Post(
      *     path="/api/v1/projects/direct",
@@ -496,17 +575,22 @@ class ProjectController extends Controller
      *     summary="Create a project directly for a client",
      *     description="Create a new project directly for a client without a quotation",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"clientId", "title", "budget"},
+     *
      *             @OA\Property(property="clientId", type="integer", example=1),
      *             @OA\Property(property="title", type="string", example="Website Development"),
      *             @OA\Property(property="description", type="string", example="Full website development project"),
@@ -515,28 +599,37 @@ class ProjectController extends Controller
      *             @OA\Property(property="status", type="string", enum={"draft", "active", "ui_ux", "development", "testing", "completed", "on_hold", "cancelled"}, example="draft")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Project created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Project created successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for project creation"),
      *             @OA\Property(property="errors", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -574,53 +667,70 @@ class ProjectController extends Controller
      *     summary="Convert a quotation to a project",
      *     description="Convert an accepted quotation into a new project",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"quotationId"},
+     *
      *             @OA\Property(property="quotationId", type="integer", example=1),
      *             @OA\Property(property="title", type="string", example="Website Redesign Project"),
      *             @OA\Property(property="description", type="string", example="Complete website redesign for client"),
      *             @OA\Property(property="deadline", type="string", format="date", example="2025-06-30")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Quotation converted to project successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Quotation converted to project successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for quotation conversion"),
      *             @OA\Property(property="errors", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Business logic error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Only accepted quotations can be converted to projects.")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -663,49 +773,65 @@ class ProjectController extends Controller
      *     summary="Manually approve UI/UX deliverables",
      *     description="Manually approve UI/UX deliverables for a project, cancelling the auto-approval job",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Project ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="UI/UX approved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="UI/UX approved successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Invalid operation",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project is not in UI/UX phase")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Project not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -766,58 +892,77 @@ class ProjectController extends Controller
      *     summary="Update project status",
      *     description="Update project status with flexible transitions - allows changing to any status directly",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Project ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"status"},
+     *
      *             @OA\Property(property="status", type="string", enum={"draft", "active", "ui_ux", "development", "testing", "completed", "on_hold", "cancelled"}, example="completed"),
      *             @OA\Property(property="reason", type="string", example="Project completed successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Project status updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Project status updated successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for project status update"),
      *             @OA\Property(property="errors", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Project not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -830,11 +975,11 @@ class ProjectController extends Controller
             ->with(['client', 'quotation'])
             ->find($project);
 
-        if (!$projectModel) {
+        if (! $projectModel) {
             return ApiResponse::notFound('Project not found');
         }
 
-        if (!$request->user()?->can('update', $projectModel)) {
+        if (! $request->user()?->can('update', $projectModel)) {
             return ApiResponse::forbidden('You do not have permission to update this project');
         }
 
@@ -848,7 +993,7 @@ class ProjectController extends Controller
             if ($oldStatus === $newStatus) {
                 return ApiResponse::success(
                     new ProjectResource($projectModel),
-                    'Project status is already ' . $newStatus->label()
+                    'Project status is already '.$newStatus->label()
                 );
             }
 
@@ -882,17 +1027,22 @@ class ProjectController extends Controller
      *     summary="Get pinned projects for the current user",
      *     description="Retrieve all projects pinned by the authenticated user",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Pinned projects retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Pinned projects retrieved successfully"),
      *             @OA\Property(
@@ -901,15 +1051,19 @@ class ProjectController extends Controller
      *                 @OA\Property(
      *                     property="projects",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/ProjectResource")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -938,49 +1092,65 @@ class ProjectController extends Controller
      *     summary="Pin a project",
      *     description="Pin a project for the authenticated user",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Project ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Project pinned successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Project pinned successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ProjectResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Project already pinned",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project is already pinned")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Project not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -1013,49 +1183,65 @@ class ProjectController extends Controller
      *     summary="Unpin a project",
      *     description="Unpin a project for the authenticated user",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Project ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Project unpinned successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Project unpinned successfully"),
      *             @OA\Property(property="data", type="null")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Project not pinned",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project is not pinned")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Project not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Project not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -1067,7 +1253,7 @@ class ProjectController extends Controller
         $user = $request->user();
 
         // Check if not pinned
-        if (!$project->isPinnedBy($user->id)) {
+        if (! $project->isPinnedBy($user->id)) {
             return ApiResponse::error('Project is not pinned', 400);
         }
 

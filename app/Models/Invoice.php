@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\InvoiceStatus;
-use App\Models\Contract;
 use App\Scopes\ClientScope;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,9 +10,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property int $project_id
+ * @property int|null $contract_id
+ * @property string $invoice_number
+ * @property float|int|string $amount
+ * @property string $currency
+ * @property InvoiceStatus $status
+ * @property \Illuminate\Support\Carbon $due_date
+ * @property \Illuminate\Support\Carbon|null $paid_at
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $updated_at
+ * @property-read Project $project
+ */
 class Invoice extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'project_id',
@@ -45,7 +58,7 @@ class Invoice extends Model
     protected static function booted(): void
     {
         // Apply ClientScope when authenticated user is a client
-        static::addGlobalScope(new ClientScope());
+        static::addGlobalScope(new ClientScope);
     }
 
     /**

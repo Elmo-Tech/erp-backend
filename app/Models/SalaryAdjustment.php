@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SalaryAdjustment extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -41,19 +41,28 @@ class SalaryAdjustment extends Model
      * Adjustment types
      */
     const TYPE_DEDUCTION = 'deduction';
+
     const TYPE_REWARD = 'reward';
+
     const TYPE_BONUS = 'bonus';
+
     const TYPE_OVERTIME = 'overtime';
+
     const TYPE_ALLOWANCE = 'allowance';
+
     const TYPE_PENALTY = 'penalty';
+
     const TYPE_ADJUSTMENT = 'adjustment';
 
     /**
      * Status constants
      */
     const STATUS_PENDING = 'pending';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_PROCESSED = 'processed';
+
     const STATUS_CANCELLED = 'cancelled';
 
     /**
@@ -156,7 +165,7 @@ class SalaryAdjustment extends Model
     /**
      * Approve the adjustment
      */
-    public function approve(int $approverId, string $notes = null): bool
+    public function approve(int $approverId, ?string $notes = null): bool
     {
         if ($this->status !== self::STATUS_PENDING) {
             return false;
@@ -199,7 +208,7 @@ class SalaryAdjustment extends Model
 
         $this->update([
             'status' => self::STATUS_CANCELLED,
-            'notes' => 'Cancelled: ' . $reason,
+            'notes' => 'Cancelled: '.$reason,
         ]);
 
         return true;
@@ -220,8 +229,8 @@ class SalaryAdjustment extends Model
             'adjustment_date' => $deduction->deduction_date,
             'payroll_month' => $deduction->deduction_date->month,
             'payroll_year' => $deduction->deduction_date->year,
-            'status' => $deduction->status === EmployeeDeduction::STATUS_APPROVED 
-                ? self::STATUS_APPROVED 
+            'status' => $deduction->status === EmployeeDeduction::STATUS_APPROVED
+                ? self::STATUS_APPROVED
                 : self::STATUS_PENDING,
             'approved_by' => $deduction->approved_by,
             'approved_at' => $deduction->approved_at,
@@ -243,8 +252,8 @@ class SalaryAdjustment extends Model
             'adjustment_date' => $reward->reward_date,
             'payroll_month' => $reward->reward_date->month,
             'payroll_year' => $reward->reward_date->year,
-            'status' => $reward->status === EmployeeReward::STATUS_APPROVED 
-                ? self::STATUS_APPROVED 
+            'status' => $reward->status === EmployeeReward::STATUS_APPROVED
+                ? self::STATUS_APPROVED
                 : self::STATUS_PENDING,
             'approved_by' => $reward->approved_by,
             'approved_at' => $reward->approved_at,

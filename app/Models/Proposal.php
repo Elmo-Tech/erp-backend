@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 class Proposal extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy, HasAuditTrail, SoftDeletes;
+    use HasAuditTrail, HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'proposal_number',

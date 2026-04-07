@@ -14,10 +14,10 @@ return new class extends Migration
     public function up(): void
     {
         // Check if proposals table exists and expiry_date column doesn't
-        if (Schema::hasTable('proposals') && !Schema::hasColumn('proposals', 'expiry_date')) {
+        if (Schema::hasTable('proposals') && ! Schema::hasColumn('proposals', 'expiry_date')) {
             Schema::table('proposals', function (Blueprint $table) {
                 $table->date('expiry_date')->nullable()->after('submission_date');
-                
+
                 // Add index for faster expiry queries
                 $table->index('expiry_date');
             });

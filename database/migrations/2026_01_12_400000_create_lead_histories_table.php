@@ -17,30 +17,30 @@ return new class extends Migration
     {
         Schema::create('lead_histories', function (Blueprint $table) {
             $table->id();
-            
+
             // Polymorphic relation (Lead, Proposal, Quotation)
             $table->morphs('auditable');
-            
+
             // Action category
             $table->string('action_type'); // status_change, data_edit, upload, activity_log
-            
+
             // Field tracking
             $table->string('field_name')->nullable();
             $table->text('old_value')->nullable();
             $table->text('new_value')->nullable();
-            
+
             // Additional context
             $table->string('description')->nullable();
             $table->text('reason')->nullable();
             $table->json('metadata')->nullable(); // Extra data like file info, etc.
-            
+
             // Who made the change
             $table->foreignId('changed_by')->nullable()->constrained('users')->nullOnDelete();
-            
+
             // IP and User Agent for security audit
             $table->string('ip_address')->nullable();
             $table->string('user_agent')->nullable();
-            
+
             $table->timestamps();
 
             // Indexes

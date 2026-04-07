@@ -8,9 +8,33 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property string|null $cr_number
+ * @property int $project_id
+ * @property int $requested_by
+ * @property string|null $title
+ * @property string|null $description
+ * @property string|null $impact_analysis
+ * @property bool $is_billable
+ * @property float|int|string|null $estimated_hours
+ * @property float|int|string|null $estimated_cost
+ * @property float|int|string|null $approved_cost
+ * @property int|null $additional_days
+ * @property ChangeRequestStatus $status
+ * @property int|null $approved_by
+ * @property \Illuminate\Support\Carbon|null $approved_at
+ * @property string|null $rejection_reason
+ * @property int|null $created_by
+ * @property int|null $updated_by
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read User $requester
+ * @property-read User|null $approver
+ */
 class ChangeRequest extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
         'cr_number',
@@ -66,6 +90,7 @@ class ChangeRequest extends Model
     public static function generateCRNumber(int $projectId): string
     {
         $count = self::where('project_id', $projectId)->count() + 1;
+
         return sprintf('CR-%d-%03d', $projectId, $count);
     }
 }

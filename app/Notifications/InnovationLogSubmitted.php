@@ -35,7 +35,7 @@ class InnovationLogSubmitted extends Notification implements ShouldQueue
             ->line(__('Impact Level: :impact', ['impact' => ucfirst($this->innovationLog->impact_level)]))
             ->when($this->innovationLog->description, function ($message) {
                 return $message->line(__('Description: :description', [
-                    'description' => substr($this->innovationLog->description, 0, 100) . '...'
+                    'description' => substr($this->innovationLog->description, 0, 100).'...',
                 ]));
             })
             ->action(__('Review Innovation'), url("/admin/innovation-logs/{$this->innovationLog->id}"))

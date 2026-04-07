@@ -6,18 +6,45 @@ namespace App\Models;
 use App\Enums\UserSpecialization;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
+/**
+ * @property int $id
+ * @property string|null $name
+ * @property string|null $email
+ * @property \Illuminate\Support\Carbon|null $email_verified_at
+ * @property string|null $avatar
+ * @property array<int, string>|null $skills
+ * @property UserSpecialization|null $specialization
+ * @property bool $is_active
+ * @property float|int|string|null $salary
+ * @property float|int|string|null $total_deductions
+ * @property int|null $work_hours_per_day
+ * @property string|null $work_start_time
+ * @property int|null $grace_days_allowed
+ * @property int|null $grace_days_used
+ * @property int|null $total_points
+ * @property float|int|string|null $internal_hourly_cost
+ * @property Carbon|null $grace_days_reset_date
+ * @property bool $is_employee
+ * @property string|null $expected_clock_out
+ * @property-read Client|null $client
+ * @property-read Client|null $clientProfile
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \Spatie\Permission\Models\Role> $roles
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -91,7 +118,7 @@ class User extends Authenticatable
     protected function avatar(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value ? Storage::disk('public')->url($value) : "",
+            get: fn ($value) => $value ? Storage::disk('public')->url($value) : '',
         );
     }
 
@@ -116,10 +143,10 @@ class User extends Authenticatable
      */
     public function getExpectedClockOutAttribute(): ?string
     {
-        if (!$this->work_start_time) {
+        if (! $this->work_start_time) {
             return null;
         }
-        
+
         return Carbon::parse($this->work_start_time)
             ->addHours($this->work_hours_per_day ?? 8)
             ->format('H:i:s');
@@ -131,6 +158,7 @@ class User extends Authenticatable
     public function hasGraceDaysRemaining(): bool
     {
         $this->resetGraceDaysIfNewMonth();
+
         return $this->grace_days_used < $this->grace_days_allowed;
     }
 
@@ -140,12 +168,13 @@ class User extends Authenticatable
     public function useGraceDay(): bool
     {
         $this->resetGraceDaysIfNewMonth();
-        
+
         if ($this->grace_days_used >= $this->grace_days_allowed) {
             return false;
         }
-        
+
         $this->increment('grace_days_used');
+
         return true;
     }
 
@@ -157,8 +186,9 @@ class User extends Authenticatable
         if ($this->grace_days_used <= 0) {
             return false;
         }
-        
+
         $this->decrement('grace_days_used');
+
         return true;
     }
 
@@ -169,8 +199,8 @@ class User extends Authenticatable
     {
         $now = Carbon::now();
         $resetDate = $this->grace_days_reset_date;
-        
-        if (!$resetDate || $resetDate->month !== $now->month || $resetDate->year !== $now->year) {
+
+        if (! $resetDate || $resetDate->month !== $now->month || $resetDate->year !== $now->year) {
             $this->update([
                 'grace_days_used' => 0,
                 'grace_days_reset_date' => $now->startOfMonth(),
@@ -227,7 +257,7 @@ class User extends Authenticatable
     /**
      * Get the client profile associated with this user (if user is a client)
      */
-    public function client()
+    public function client(): HasOne
     {
         return $this->hasOne(Client::class, 'user_id');
     }
@@ -235,7 +265,7 @@ class User extends Authenticatable
     /**
      * Get the projects where this user is a team member
      */
-    public function teamProjects()
+    public function teamProjects(): BelongsToMany
     {
         return $this->belongsToMany(Project::class, 'project_members', 'user_id', 'project_id')
             ->withPivot('role', 'joined_at')
@@ -245,7 +275,7 @@ class User extends Authenticatable
     /**
      * Get the tasks assigned to this user
      */
-    public function assignedTasks()
+    public function assignedTasks(): HasMany
     {
         return $this->hasMany(Task::class, 'assigned_to');
     }
@@ -253,7 +283,7 @@ class User extends Authenticatable
     /**
      * Get the time entries for this user
      */
-    public function timeEntries()
+    public function timeEntries(): HasMany
     {
         return $this->hasMany(TimeEntry::class);
     }
@@ -317,7 +347,7 @@ class User extends Authenticatable
     /**
      * Get the client profile linked to this user (for portal access)
      */
-    public function clientProfile()
+    public function clientProfile(): HasOne
     {
         return $this->hasOne(Client::class);
     }
@@ -327,7 +357,7 @@ class User extends Authenticatable
      */
     public function isClientPortalUser(): bool
     {
-        return !$this->is_employee && $this->clientProfile !== null;
+        return ! $this->is_employee && $this->clientProfile !== null;
     }
 
     /**

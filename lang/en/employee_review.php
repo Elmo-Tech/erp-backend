@@ -4,7 +4,7 @@ return [
     // Header
     'Employee Performance Review' => 'Employee Performance Review',
     'Generated on' => 'Generated on',
-    
+
     // Employee Information
     'Employee Information' => 'Employee Information',
     'Name' => 'Name',
@@ -16,7 +16,7 @@ return [
     'to' => 'to',
     'Present' => 'Present',
     'N/A' => 'N/A',
-    
+
     // Grace Period
     'Grace Period Status' => 'Grace Period Status',
     'Grace Period Days' => 'Grace Period Days',
@@ -27,7 +27,7 @@ return [
     'Expired' => 'Expired',
     'days' => 'days',
     '⚠️ Grace period has expired. Deductions may apply for late attendance.' => '⚠️ Grace period has expired. Deductions may apply for late attendance.',
-    
+
     // Deductions
     'Attendance Deductions' => 'Attendance Deductions',
     'Total Late Minutes' => 'Total Late Minutes',
@@ -37,7 +37,7 @@ return [
     'minutes' => 'minutes',
     '/minute' => '/minute',
     'points' => 'points',
-    
+
     // Performance Overview
     'Performance Overview' => 'Performance Overview',
     'Total Tracked Hours' => 'Total Tracked Hours',
@@ -46,27 +46,27 @@ return [
     'Average Bounce Rate' => 'Average Bounce Rate',
     'Attendance Days' => 'Attendance Days',
     'Productivity Score' => 'Productivity Score',
-    
+
     // Points Summary
     'Points Summary' => 'Points Summary',
     'Points Earned' => 'Points Earned',
     'Points Deducted' => 'Points Deducted',
     'Net Points Change' => 'Net Points Change',
-    
+
     // Tasks Summary
     'Tasks Summary' => 'Tasks Summary',
     'Total Tasks' => 'Total Tasks',
     'Completed Tasks' => 'Completed Tasks',
     'In Progress Tasks' => 'In Progress Tasks',
     'Total Bounces' => 'Total Bounces',
-    
+
     // Attendance Summary
     'Attendance Summary' => 'Attendance Summary',
     'Total Days' => 'Total Days',
     'Late Days' => 'Late Days',
     'Total Late Minutes' => 'Total Late Minutes',
     'Avg Idle Per Day (min)' => 'Avg Idle Per Day (min)',
-    
+
     // Transactions
     'Recent Point Transactions' => 'Recent Point Transactions',
     'Date' => 'Date',
@@ -75,12 +75,12 @@ return [
     'Reason' => 'Reason',
     'Created By' => 'Created By',
     'System' => 'System',
-    
+
     // Footer
     'This report was generated automatically by the Business OS system.' => 'This report was generated automatically by the Business OS system.',
     'Report ID' => 'Report ID',
     'Generated at' => 'Generated at',
-    
+
     // Additional translations for enhanced report
     'Daily Deduction Breakdown' => 'Daily Deduction Breakdown',
     'Clock In' => 'Clock In',
@@ -127,7 +127,7 @@ return [
     'Significant negative point balance warrants salary adjustment discussion.' => 'Significant negative point balance warrants salary adjustment discussion.',
     'Bonus Consideration' => 'Bonus Consideration',
     'Strong positive performance warrants bonus or salary increase consideration.' => 'Strong positive performance warrants bonus or salary increase consideration.',
-    
+
     // Salary Section
     'Monthly Salary Calculation' => 'Monthly Salary Calculation',
     'This section calculates the final monthly salary based on base salary, performance points, and attendance deductions. Each point is valued at' => 'This section calculates the final monthly salary based on base salary, performance points, and attendance deductions. Each point is valued at',
@@ -161,7 +161,7 @@ return [
     'Action Required' => 'Action Required',
     'Stable Performance' => 'Stable Performance',
     'Performance is stable. Continue monitoring.' => 'Performance is stable. Continue monitoring.',
-    
+
     // Explanations
     'What is Grace Period?' => 'What is Grace Period?',
     'Grace period explanation' => 'The grace period is a buffer time given to employees before attendance deductions are applied. During this period, late arrivals do not result in point deductions.',
@@ -185,7 +185,7 @@ return [
     'Deducted this period' => 'Deducted this period',
     'Net change this period' => 'Net change this period',
     'points/minute' => 'points/minute',
-    
+
     // New translations for project and weekly sections
     'Project-wise Breakdown' => 'Project-wise Breakdown',
     'Project Name' => 'Project Name',
@@ -199,7 +199,7 @@ return [
     'Last Activity' => 'Last Activity',
     'Showing top 10 projects' => 'Showing top 10 projects',
     'total' => 'total',
-    
+
     'Weekly Statistics' => 'Weekly Statistics',
     'Current Month' => 'Current Month',
     'Total Monthly Hours' => 'Total Monthly Hours',
@@ -208,7 +208,7 @@ return [
     'Date Range' => 'Date Range',
     'Working Days' => 'Working Days',
     'Performance' => 'Performance',
-    
+
     // Daily breakdown translations
     'Daily Breakdown' => 'Daily Breakdown',
     'Day' => 'Day',
@@ -227,14 +227,14 @@ return [
     'Present' => 'Present',
     'Late' => 'Late',
     'On time' => 'On time',
-    
+
     // Performance indicators
     'Excellent' => 'Excellent',
     'Very Good' => 'Very Good',
     'Good' => 'Good',
     'Fair' => 'Fair',
     'Poor' => 'Poor',
-    
+
     // Time indicators
     'hours' => 'hours',
     'hour' => 'hour',
@@ -242,13 +242,13 @@ return [
     'min' => 'min',
     'h' => 'h',
     'm' => 'm',
-    
+
     // Performance Indicators section
     'Performance Indicators' => 'Performance Indicators',
     // Days of the week
     'Monday' => 'Monday',
     'Tuesday' => 'Tuesday',
-    'Wednesday' => 'Wednesday', 
+    'Wednesday' => 'Wednesday',
     'Thursday' => 'Thursday',
     'Friday' => 'Friday',
     'Saturday' => 'Saturday',
@@ -273,7 +273,7 @@ return [
     'good' => 'Good',
     'needs_improvement' => 'Needs Improvement',
     'Excellent' => 'Excellent',
-    'Good' => 'Good', 
+    'Good' => 'Good',
     'Needs Improvement' => 'Needs Improvement',
     'Performance Indicators' => 'Performance Indicators',
     'Showing top 10 projects' => 'Showing top 10 projects',

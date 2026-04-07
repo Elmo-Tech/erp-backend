@@ -12,11 +12,11 @@ class InnovationLogResource extends JsonResource
         return [
             'logId' => $this->id,
             'userId' => $this->user_id,
-            'userName' => $this->whenLoaded('user', fn() => $this->user->name, ''),
+            'userName' => $this->whenLoaded('user', fn () => $this->user->name, ''),
             'projectId' => $this->project_id ?? 0,
-            'projectName' => $this->whenLoaded('project', fn() => $this->project?->name ?? '', ''),
+            'projectName' => $this->whenLoaded('project', fn () => $this->project?->name ?? '', ''),
             'taskId' => $this->task_id ?? 0,
-            'taskTitle' => $this->whenLoaded('task', fn() => $this->task?->title ?? '', ''),
+            'taskTitle' => $this->whenLoaded('task', fn () => $this->task?->title ?? '', ''),
             'toolName' => $this->tool_name ?? '',
             'category' => $this->category ?? '',
             'categoryLabel' => $this->getCategoryLabel(),
@@ -27,7 +27,7 @@ class InnovationLogResource extends JsonResource
             'timeSavedMinutes' => (int) ($this->time_saved_minutes ?? 0),
             'isVerified' => (bool) $this->is_verified,
             'verifiedBy' => $this->verified_by ?? 0,
-            'verifierName' => $this->whenLoaded('verifier', fn() => $this->verifier?->name ?? '', ''),
+            'verifierName' => $this->whenLoaded('verifier', fn () => $this->verifier?->name ?? '', ''),
             'verifiedAt' => $this->verified_at?->toISOString() ?? '',
             'createdAt' => $this->created_at?->toISOString() ?? '',
         ];

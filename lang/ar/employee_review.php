@@ -4,7 +4,7 @@ return [
     // Header
     'Employee Performance Review' => 'تقرير أداء الموظف',
     'Generated on' => 'تم إنشاؤه في',
-    
+
     // Employee Information
     'Employee Information' => 'معلومات الموظف',
     'Name' => 'الاسم',
@@ -16,7 +16,7 @@ return [
     'to' => 'إلى',
     'Present' => 'الحاضر',
     'N/A' => 'غير متاح',
-    
+
     // Grace Period
     'Grace Period Status' => 'حالة فترة السماح',
     'Grace Period Days' => 'أيام السماح',
@@ -27,7 +27,7 @@ return [
     'Expired' => 'منتهي',
     'days' => 'أيام',
     '⚠️ Grace period has expired. Deductions may apply for late attendance.' => '⚠️ انتهت فترة السماح. قد يتم تطبيق خصومات للتأخير.',
-    
+
     // Deductions
     'Attendance Deductions' => 'خصومات الحضور',
     'Total Late Minutes' => 'إجمالي دقائق التأخير',
@@ -37,7 +37,7 @@ return [
     'minutes' => 'دقيقة',
     '/minute' => '/دقيقة',
     'points' => 'نقطة',
-    
+
     // Performance Overview
     'Performance Overview' => 'نظرة عامة على الأداء',
     'Total Tracked Hours' => 'إجمالي الساعات المتتبعة',
@@ -46,26 +46,26 @@ return [
     'Average Bounce Rate' => 'متوسط معدل الإرجاع',
     'Attendance Days' => 'أيام الحضور',
     'Productivity Score' => 'نقاط الإنتاجية',
-    
+
     // Points Summary
     'Points Summary' => 'ملخص النقاط',
     'Points Earned' => 'النقاط المكتسبة',
     'Points Deducted' => 'النقاط المخصومة',
     'Net Points Change' => 'صافي تغيير النقاط',
-    
+
     // Tasks Summary
     'Tasks Summary' => 'ملخص المهام',
     'Total Tasks' => 'إجمالي المهام',
     'Completed Tasks' => 'المهام المكتملة',
     'In Progress Tasks' => 'المهام قيد التنفيذ',
     'Total Bounces' => 'إجمالي الإرجاعات',
-    
+
     // Attendance Summary
     'Attendance Summary' => 'ملخص الحضور',
     'Total Days' => 'إجمالي الأيام',
     'Late Days' => 'أيام التأخير',
     'Avg Idle Per Day (min)' => 'متوسط الخمول يومياً (دقيقة)',
-    
+
     // Transactions
     'Recent Point Transactions' => 'معاملات النقاط الأخيرة',
     'Date' => 'التاريخ',
@@ -74,12 +74,12 @@ return [
     'Reason' => 'السبب',
     'Created By' => 'أنشأ بواسطة',
     'System' => 'النظام',
-    
+
     // Footer
     'This report was generated automatically by the Business OS system.' => 'تم إنشاء هذا التقرير تلقائياً بواسطة نظام Business OS.',
     'Report ID' => 'رقم التقرير',
     'Generated at' => 'تم الإنشاء في',
-    
+
     // Additional translations for enhanced report
     'Daily Deduction Breakdown' => 'تفصيل الخصومات اليومية',
     'Clock In' => 'وقت الدخول',
@@ -126,7 +126,7 @@ return [
     'Significant negative point balance warrants salary adjustment discussion.' => 'الرصيد السلبي الكبير للنقاط يستدعي مناقشة تعديل الراتب.',
     'Bonus Consideration' => 'النظر في المكافأة',
     'Strong positive performance warrants bonus or salary increase consideration.' => 'الأداء الإيجابي القوي يستدعي النظر في مكافأة أو زيادة راتب.',
-    
+
     // قسم الراتب
     'Monthly Salary Calculation' => 'حساب الراتب الشهري',
     'This section calculates the final monthly salary based on base salary, performance points, and attendance deductions. Each point is valued at' => 'يحسب هذا القسم الراتب الشهري النهائي بناءً على الراتب الأساسي ونقاط الأداء وخصومات الحضور. كل نقطة تساوي',
@@ -160,7 +160,7 @@ return [
     'Action Required' => 'إجراء مطلوب',
     'Stable Performance' => 'أداء مستقر',
     'Performance is stable. Continue monitoring.' => 'الأداء مستقر. استمر في المراقبة.',
-    
+
     // الشروحات
     'What is Grace Period?' => 'ما هي فترة السماح؟',
     'Grace period explanation' => 'فترة السماح هي وقت إضافي يُمنح للموظفين قبل تطبيق خصومات الحضور. خلال هذه الفترة، التأخير لا يؤدي إلى خصم نقاط.',
@@ -184,7 +184,7 @@ return [
     'Deducted this period' => 'المخصوم في هذه الفترة',
     'Net change this period' => 'صافي التغيير في هذه الفترة',
     'points/minute' => 'نقطة/دقيقة',
-    
+
     // New translations for project and weekly sections
     'Project-wise Breakdown' => 'التفصيل حسب المشروع',
     'Project Name' => 'اسم المشروع',
@@ -198,7 +198,7 @@ return [
     'Last Activity' => 'آخر نشاط',
     'Showing top 10 projects' => 'عرض أفضل 10 مشاريع',
     'total' => 'إجمالي',
-    
+
     'Weekly Statistics' => 'الإحصائيات الأسبوعية',
     'Current Month' => 'الشهر الحالي',
     'Total Monthly Hours' => 'إجمالي ساعات الشهر',
@@ -207,7 +207,7 @@ return [
     'Date Range' => 'النطاق الزمني',
     'Working Days' => 'أيام العمل',
     'Performance' => 'الأداء',
-    
+
     // Daily breakdown translations
     'Daily Breakdown' => 'التفصيل اليومي',
     'Day' => 'اليوم',
@@ -226,14 +226,14 @@ return [
     'Present' => 'حاضر',
     'Late' => 'متأخر',
     'On time' => 'في الوقت',
-    
+
     // Performance indicators
     'Excellent' => 'ممتاز',
     'Very Good' => 'جيد جداً',
     'Good' => 'جيد',
     'Fair' => 'مقبول',
     'Poor' => 'ضعيف',
-    
+
     // Time indicators
     'hours' => 'ساعات',
     'hour' => 'ساعة',
@@ -241,12 +241,12 @@ return [
     'min' => 'دقيقة',
     'h' => 'س',
     'm' => 'د',
-    
+
     // Performance Indicators section
     'Performance Indicators' => 'مؤشرات الأداء',
     // Days of the week
     'Monday' => 'الاثنين',
-    'Tuesday' => 'الثلاثاء', 
+    'Tuesday' => 'الثلاثاء',
     'Wednesday' => 'الأربعاء',
     'Thursday' => 'الخميس',
     'Friday' => 'الجمعة',
@@ -269,7 +269,7 @@ return [
     'hours' => 'ساعات',
     'No work recorded' => 'لم يتم تسجيل عمل',
     'excellent' => 'ممتاز',
-    'good' => 'جيد', 
+    'good' => 'جيد',
     'needs_improvement' => 'يحتاج تحسين',
     'Excellent' => 'ممتاز',
     'Good' => 'جيد',

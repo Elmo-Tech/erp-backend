@@ -32,7 +32,9 @@ class SalesDashboardController extends Controller
      *     summary="Get sales dashboard summary",
      *     description="Get pipeline health, alerts, and today's schedule",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
+     *
      *     @OA\Response(response=200, description="Dashboard summary retrieved successfully"),
      *     @OA\Response(response=401, description="Unauthorized")
      * )
@@ -52,7 +54,9 @@ class SalesDashboardController extends Controller
      *     summary="Get pipeline health metrics",
      *     description="Get leads, proposals, and quotations by status with conversion rates",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
+     *
      *     @OA\Response(response=200, description="Pipeline health retrieved successfully")
      * )
      */
@@ -71,9 +75,11 @@ class SalesDashboardController extends Controller
      *     summary="Get team performance metrics",
      *     description="Get sales reps and tech leads performance with win rates",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="startDate", in="query", @OA\Schema(type="string", format="date")),
      *     @OA\Parameter(name="endDate", in="query", @OA\Schema(type="string", format="date")),
+     *
      *     @OA\Response(response=200, description="Team performance retrieved successfully")
      * )
      */
@@ -95,7 +101,9 @@ class SalesDashboardController extends Controller
      *     summary="Get bottleneck analysis",
      *     description="Analyze where leads are getting stuck and loss reasons",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
+     *
      *     @OA\Response(response=200, description="Bottleneck analysis retrieved successfully")
      * )
      */
@@ -114,7 +122,9 @@ class SalesDashboardController extends Controller
      *     summary="Get sales alerts",
      *     description="Get expiring proposals/quotations, overdue activities, and other alerts",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
+     *
      *     @OA\Response(response=200, description="Alerts retrieved successfully")
      * )
      */

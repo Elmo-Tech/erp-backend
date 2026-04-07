@@ -6,10 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Migration: Create HR Deductions and Rewards Tables
- * 
+ *
  * This migration creates a comprehensive system for managing employee
  * deductions (lateness, absence, penalties) and rewards (bonuses, incentives).
- * 
+ *
  * Features:
  * - Automatic deduction calculation for lateness/absence
  * - Manual deductions with approval workflow
@@ -49,19 +49,19 @@ return new class extends Migration
             $table->decimal('amount', 10, 2);
             $table->text('reason')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected', 'cancelled'])->default('pending');
-            
+
             // For automatic deductions (from attendance)
             $table->foreignId('attendance_id')->nullable()->constrained()->onDelete('set null');
             $table->unsignedInteger('late_minutes')->nullable();
-            
+
             // Approval workflow
             $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('approved_at')->nullable();
             $table->text('rejection_reason')->nullable();
-            
+
             // Reference to related entity
             $table->morphs('deductible'); // Can reference attendance, task, project, etc.
-            
+
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
             $table->timestamps();
             $table->softDeletes();
@@ -95,22 +95,22 @@ return new class extends Migration
             $table->decimal('amount', 10, 2);
             $table->text('reason')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected', 'paid', 'cancelled'])->default('pending');
-            
+
             // Points-based rewards
             $table->unsignedInteger('points_used')->nullable();
-            
+
             // Reference to related entity
             $table->morphs('rewardable'); // Can reference project, task, evaluation, etc.
-            
+
             // Approval workflow
             $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('approved_at')->nullable();
             $table->text('rejection_reason')->nullable();
-            
+
             // Payment tracking
             $table->date('paid_at')->nullable();
             $table->string('payment_reference')->nullable();
-            
+
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
             $table->timestamps();
             $table->softDeletes();
@@ -124,17 +124,17 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->foreignId('deduction_type_id')->constrained()->onDelete('cascade');
-            
+
             // Apply to specific user or all users
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
-            
+
             // Time-based rules
             $table->time('work_start_time')->default('09:00:00');
             $table->unsignedInteger('grace_minutes')->default(15);
-            
+
             // Deduction tiers
             $table->json('tiers')->nullable(); // e.g., [{'minutes': 15, 'amount': 10}, {'minutes': 30, 'amount': 25}]
-            
+
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
@@ -145,17 +145,17 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->year('year');
             $table->unsignedTinyInteger('month'); // 1-12
-            
+
             $table->decimal('base_salary', 10, 2)->default(0);
             $table->decimal('total_deductions', 10, 2)->default(0);
             $table->decimal('total_rewards', 10, 2)->default(0);
             $table->decimal('net_adjustment', 10, 2)->default(0);
             $table->decimal('final_salary', 10, 2)->default(0);
-            
+
             $table->enum('status', ['draft', 'confirmed', 'paid'])->default('draft');
             $table->foreignId('confirmed_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('confirmed_at')->nullable();
-            
+
             $table->timestamps();
             $table->softDeletes();
 

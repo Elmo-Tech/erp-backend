@@ -9,6 +9,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @OA\Schema(
  *     schema="TaskActivityResource",
  *     type="object",
+ *
  *     @OA\Property(property="activityId", type="integer"),
  *     @OA\Property(property="taskId", type="integer"),
  *     @OA\Property(property="userId", type="integer"),
@@ -34,7 +35,7 @@ class TaskActivityResource extends JsonResource
             'comment' => $this->comment,
             'isInternal' => (bool) $this->is_internal,
             'metadata' => $this->metadata ?? [],
-            'user' => $this->whenLoaded('user', fn() => [
+            'user' => $this->whenLoaded('user', fn () => [
                 'userId' => $this->user->id,
                 'name' => $this->user->name,
                 'avatar' => $this->user->avatar,

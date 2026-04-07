@@ -18,11 +18,11 @@ class ProjectHistoryService
     /**
      * Record a change to a project field.
      *
-     * @param Project $project The project being modified
-     * @param string $fieldName The name of the field that changed
-     * @param mixed $oldValue The previous value of the field
-     * @param mixed $newValue The new value of the field
-     * @param string|null $reason Optional reason for the change (required for tracked fields)
+     * @param  Project  $project  The project being modified
+     * @param  string  $fieldName  The name of the field that changed
+     * @param  mixed  $oldValue  The previous value of the field
+     * @param  mixed  $newValue  The new value of the field
+     * @param  string|null  $reason  Optional reason for the change (required for tracked fields)
      * @return ProjectHistory The created history record
      */
     public function recordChange(
@@ -46,7 +46,7 @@ class ProjectHistoryService
      * Check if a field requires a reason for changes.
      * Deadline and budget changes require justification for audit purposes.
      *
-     * @param string $fieldName The field name to check
+     * @param  string  $fieldName  The field name to check
      * @return bool True if the field requires a reason when changed
      */
     public function requiresReason(string $fieldName): bool
@@ -69,8 +69,8 @@ class ProjectHistoryService
      * Returns all history records ordered by most recent first,
      * with the user who made each change eager loaded.
      *
-     * @param Project $project The project to get history for
-     * @param string|null $fieldFilter Optional filter by field name
+     * @param  Project  $project  The project to get history for
+     * @param  string|null  $fieldFilter  Optional filter by field name
      * @return Collection<ProjectHistory> Collection of history records
      */
     public function getHistory(Project $project, ?string $fieldFilter = null): Collection

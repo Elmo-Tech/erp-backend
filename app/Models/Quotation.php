@@ -16,9 +16,19 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property string|null $quotation_number
+ * @property int $lead_id
+ * @property float|int|string|null $final_price
+ * @property string|null $currency
+ * @property QuotationStatus $status
+ * @property \Illuminate\Support\Carbon|null $expiry_date
+ * @property-read Lead $lead
+ */
 class Quotation extends Model implements Trackable
 {
-    use HasFactory, HasCreatedUpdatedBy, HasAuditTrail, SoftDeletes;
+    use HasAuditTrail, HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'quotation_number',
@@ -126,7 +136,7 @@ class Quotation extends Model implements Trackable
 
     public function getTrackableDisplayName(): string
     {
-        return ($this->quotation_number ?? 'Quotation #' . $this->id) . ' - ' . $this->lead->name;
+        return ($this->quotation_number ?? 'Quotation #'.$this->id).' - '.$this->lead->name;
     }
 
     /**
@@ -154,12 +164,12 @@ class Quotation extends Model implements Trackable
     public static function generateQuotationNumber(?string $fileNumber = null): string
     {
         $year = date('Y');
-        
+
         // If file number is provided, use it in the format
         if ($fileNumber) {
             return sprintf('QV-%s-%s', $year, $fileNumber);
         }
-        
+
         // Otherwise generate sequence number
         $lastQuotation = self::whereYear('created_at', $year)
             ->orderBy('id', 'desc')

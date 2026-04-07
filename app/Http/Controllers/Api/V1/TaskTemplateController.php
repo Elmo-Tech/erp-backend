@@ -8,9 +8,8 @@ use App\Models\TaskTemplate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
-use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 /**
  * @OA\Tag(
@@ -31,52 +30,67 @@ class TaskTemplateController extends Controller
      *     summary="Get all task templates",
      *     tags={"Task Templates"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
      *         description="Language preference (en or ar)",
+     *
      *         @OA\Schema(type="string", default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[category]",
      *         in="query",
      *         required=false,
      *         description="Filter by category",
+     *
      *         @OA\Schema(type="string")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[is_active]",
      *         in="query",
      *         required=false,
      *         description="Filter by active status",
+     *
      *         @OA\Schema(type="boolean")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[search]",
      *         in="query",
      *         required=false,
      *         description="Search in name and description",
+     *
      *         @OA\Schema(type="string")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         required=false,
      *         description="Page number",
+     *
      *         @OA\Schema(type="integer", default=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="per_page",
      *         in="query",
      *         required=false,
      *         description="Items per page",
+     *
      *         @OA\Schema(type="integer", default=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task templates retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task templates retrieved successfully"),
      *             @OA\Property(
@@ -85,7 +99,9 @@ class TaskTemplateController extends Controller
      *                 @OA\Property(
      *                     property="templates",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="id", type="integer", example=1),
      *                         @OA\Property(property="name", type="string", example="Bug Fix Template"),
      *                         @OA\Property(property="code", type="string", example="BUG_FIX"),
@@ -106,6 +122,7 @@ class TaskTemplateController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(response=401, description="Unauthenticated")
      * )
      */
@@ -118,29 +135,38 @@ class TaskTemplateController extends Controller
                 AllowedFilter::callback('search', function ($query, $value) {
                     $query->where(function ($q) use ($value) {
                         $q->where('name', 'like', "%{$value}%")
-                          ->orWhere('description', 'like', "%{$value}%");
+                            ->orWhere('description', 'like', "%{$value}%");
                     });
                 }),
             ])
             ->withCount('tasks')
             ->latest()
-            ->paginate($request->get('per_page', 15));
+            ->paginate($request->get('per_page', $request->get('perPage', 15)));
+
+        $items = $templates->map(function ($template) {
+            return [
+                'id' => $template->id,
+                'name' => $template->name,
+                'code' => $template->code,
+                'description' => $template->description,
+                'category' => $template->category,
+                'defaultValues' => $template->default_values,
+                'subtasks' => $template->subtasks,
+                'isActive' => $template->is_active,
+                'usageCount' => $template->tasks_count,
+                'createdAt' => $template->created_at->toDateTimeString(),
+                'updatedAt' => $template->updated_at->toDateTimeString(),
+                'createdBy' => $template->created_by,
+                'updatedBy' => $template->updated_by,
+            ];
+        });
 
         $data = [
-            'templates' => $templates->map(function ($template) {
-                return [
-                    'id' => $template->id,
-                    'name' => $template->name,
-                    'code' => $template->code,
-                    'description' => $template->description,
-                    'category' => $template->category,
-                    'isActive' => $template->is_active,
-                    'usageCount' => $template->tasks_count,
-                    'createdAt' => $template->created_at->toDateTimeString(),
-                ];
-            }),
+            'items' => $items,
+            'templates' => $items,
             'pagination' => [
                 'total' => $templates->total(),
+                'count' => $templates->count(),
                 'perPage' => $templates->perPage(),
                 'currentPage' => $templates->currentPage(),
                 'totalPages' => $templates->lastPage(),
@@ -156,24 +182,31 @@ class TaskTemplateController extends Controller
      *     summary="Get a specific task template",
      *     tags={"Task Templates"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="template",
      *         in="path",
      *         required=true,
      *         description="Task Template ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
      *         description="Language preference (en or ar)",
+     *
      *         @OA\Schema(type="string", default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task template retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task template retrieved successfully"),
      *             @OA\Property(
@@ -191,6 +224,7 @@ class TaskTemplateController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(response=401, description="Unauthenticated"),
      *     @OA\Response(response=404, description="Template not found")
      * )
@@ -220,17 +254,22 @@ class TaskTemplateController extends Controller
      *     summary="Create a new task template",
      *     tags={"Task Templates"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
      *         description="Language preference (en or ar)",
+     *
      *         @OA\Schema(type="string", default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"name", "code"},
+     *
      *             @OA\Property(property="name", type="string", example="Bug Fix Template"),
      *             @OA\Property(property="code", type="string", example="BUG_FIX"),
      *             @OA\Property(property="description", type="string", example="Standard template for bug fixes"),
@@ -239,8 +278,10 @@ class TaskTemplateController extends Controller
      *             @OA\Property(
      *                 property="subtasks",
      *                 type="array",
+     *
      *                 @OA\Items(
      *                     type="object",
+     *
      *                     @OA\Property(property="title", type="string", example="Reproduce the bug"),
      *                     @OA\Property(property="description", type="string", example="Document steps to reproduce"),
      *                     @OA\Property(property="priority", type="string", example="high")
@@ -249,15 +290,19 @@ class TaskTemplateController extends Controller
      *             @OA\Property(property="isActive", type="boolean", example=true)
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Task template created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task template created successfully"),
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(response=401, description="Unauthenticated"),
      *     @OA\Response(response=422, description="Validation error")
      * )
@@ -303,6 +348,7 @@ class TaskTemplateController extends Controller
             ], __('Task template created successfully'), 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return ApiResponse::error(__('Failed to create task template'), ['error' => $e->getMessage()], 500);
         }
     }
@@ -313,23 +359,30 @@ class TaskTemplateController extends Controller
      *     summary="Update a task template",
      *     tags={"Task Templates"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="template",
      *         in="path",
      *         required=true,
      *         description="Task Template ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
      *         description="Language preference (en or ar)",
+     *
      *         @OA\Schema(type="string", default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="name", type="string", example="Bug Fix Template"),
      *             @OA\Property(property="description", type="string", example="Updated description"),
      *             @OA\Property(property="category", type="string", example="development"),
@@ -338,15 +391,19 @@ class TaskTemplateController extends Controller
      *             @OA\Property(property="isActive", type="boolean", example=true)
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task template updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task template updated successfully"),
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(response=401, description="Unauthenticated"),
      *     @OA\Response(response=404, description="Template not found"),
      *     @OA\Response(response=422, description="Validation error")
@@ -369,12 +426,24 @@ class TaskTemplateController extends Controller
         DB::beginTransaction();
         try {
             $updateData = [];
-            if (isset($validated['name'])) $updateData['name'] = $validated['name'];
-            if (isset($validated['description'])) $updateData['description'] = $validated['description'];
-            if (isset($validated['category'])) $updateData['category'] = $validated['category'];
-            if (isset($validated['defaultValues'])) $updateData['default_values'] = $validated['defaultValues'];
-            if (isset($validated['subtasks'])) $updateData['subtasks'] = $validated['subtasks'];
-            if (isset($validated['isActive'])) $updateData['is_active'] = $validated['isActive'];
+            if (isset($validated['name'])) {
+                $updateData['name'] = $validated['name'];
+            }
+            if (isset($validated['description'])) {
+                $updateData['description'] = $validated['description'];
+            }
+            if (isset($validated['category'])) {
+                $updateData['category'] = $validated['category'];
+            }
+            if (isset($validated['defaultValues'])) {
+                $updateData['default_values'] = $validated['defaultValues'];
+            }
+            if (isset($validated['subtasks'])) {
+                $updateData['subtasks'] = $validated['subtasks'];
+            }
+            if (isset($validated['isActive'])) {
+                $updateData['is_active'] = $validated['isActive'];
+            }
 
             $template->update($updateData);
 
@@ -392,6 +461,7 @@ class TaskTemplateController extends Controller
             ], __('Task template updated successfully'));
         } catch (\Exception $e) {
             DB::rollBack();
+
             return ApiResponse::error(__('Failed to update task template'), ['error' => $e->getMessage()], 500);
         }
     }
@@ -402,28 +472,36 @@ class TaskTemplateController extends Controller
      *     summary="Delete a task template",
      *     tags={"Task Templates"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="template",
      *         in="path",
      *         required=true,
      *         description="Task Template ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
      *         description="Language preference (en or ar)",
+     *
      *         @OA\Schema(type="string", default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task template deleted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task template deleted successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(response=401, description="Unauthenticated"),
      *     @OA\Response(response=404, description="Template not found")
      * )
@@ -441,24 +519,31 @@ class TaskTemplateController extends Controller
      *     summary="Create a task from a template",
      *     tags={"Task Templates"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="template",
      *         in="path",
      *         required=true,
      *         description="Task Template ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
      *         description="Language preference (en or ar)",
+     *
      *         @OA\Schema(type="string", default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"projectId", "title"},
+     *
      *             @OA\Property(property="projectId", type="integer", example=5),
      *             @OA\Property(property="title", type="string", example="Fix login bug"),
      *             @OA\Property(property="description", type="string", example="Users cannot login with email"),
@@ -466,15 +551,19 @@ class TaskTemplateController extends Controller
      *             @OA\Property(property="dueDate", type="string", format="date", example="2026-03-01")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Task created from template successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task created from template successfully"),
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(response=401, description="Unauthenticated"),
      *     @OA\Response(response=404, description="Template not found"),
      *     @OA\Response(response=422, description="Validation error")
@@ -510,6 +599,7 @@ class TaskTemplateController extends Controller
             ], __('Task created from template successfully'), 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return ApiResponse::error(__('Failed to create task from template'), ['error' => $e->getMessage()], 500);
         }
     }

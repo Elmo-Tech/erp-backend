@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Enums\DeliverableStatus;
+use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\V1\Admin\AdminUpdateDeliverableRequest;
 use App\Http\Requests\V1\Admin\AdminChangeDeliverableStatusRequest;
 use App\Http\Requests\V1\Admin\AdminForceReviewDeliverableRequest;
+use App\Http\Requests\V1\Admin\AdminUpdateDeliverableRequest;
 use App\Http\Resources\V1\Tasks\TaskDeliverableResource;
 use App\Models\TaskDeliverable;
 use App\Services\Tasks\DeliverableService;
-use App\Helpers\ApiResponse;
-use App\Enums\DeliverableStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -38,21 +38,28 @@ class AdminDeliverableController extends Controller
      *     operationId="adminUpdateDeliverable",
      *     tags={"Admin - Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="title", type="string", example="Updated Deliverable Title"),
      *             @OA\Property(property="description", type="string", example="Updated description"),
      *             @OA\Property(property="acceptanceCriteria", type="string", example="Updated criteria"),
@@ -63,10 +70,13 @@ class AdminDeliverableController extends Controller
      *             @OA\Property(property="order", type="integer", example=2)
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Deliverable updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Deliverable updated successfully by admin"),
      *             @OA\Property(
@@ -92,13 +102,13 @@ class AdminDeliverableController extends Controller
                 'points_awarded' => $request->pointsAwarded,
                 'is_bonus' => $request->isBonus,
                 'order' => $request->order,
-            ], fn($value) => $value !== null);
+            ], fn ($value) => $value !== null);
 
             $deliverable->update($updateData);
             $deliverable->load('reviewer', 'task');
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($deliverable)
+                'deliverable' => new TaskDeliverableResource($deliverable),
             ], __('messages.admin_deliverable_updated'));
         });
     }
@@ -111,22 +121,29 @@ class AdminDeliverableController extends Controller
      *     operationId="adminDeleteDeliverable",
      *     tags={"Admin - Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Deliverable deleted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Deliverable deleted successfully by admin")
      *         )
@@ -136,7 +153,7 @@ class AdminDeliverableController extends Controller
     public function destroy(int $deliverableId): JsonResponse
     {
         $deliverable = TaskDeliverable::findOrFail($deliverableId);
-        
+
         $deliverable->delete();
 
         return ApiResponse::success(
@@ -153,22 +170,29 @@ class AdminDeliverableController extends Controller
      *     operationId="adminChangeDeliverableStatus",
      *     tags={"Admin - Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"status"},
+     *
      *             @OA\Property(
      *                 property="status",
      *                 type="string",
@@ -184,10 +208,13 @@ class AdminDeliverableController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Status changed successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Deliverable status changed successfully"),
      *             @OA\Property(
@@ -208,27 +235,27 @@ class AdminDeliverableController extends Controller
 
         return DB::transaction(function () use ($request, $deliverable, $oldStatus) {
             $newStatus = DeliverableStatus::from($request->status);
-            
+
             $updateData = ['status' => $newStatus];
 
             // Update timestamps based on new status
-            if ($newStatus === DeliverableStatus::SUBMITTED && !$deliverable->submitted_at) {
+            if ($newStatus === DeliverableStatus::SUBMITTED && ! $deliverable->submitted_at) {
                 $updateData['submitted_at'] = now();
             }
 
             if (in_array($newStatus, [DeliverableStatus::APPROVED, DeliverableStatus::REJECTED])) {
-                if (!$deliverable->reviewed_at) {
+                if (! $deliverable->reviewed_at) {
                     $updateData['reviewed_at'] = now();
                 }
-                if (!$deliverable->reviewed_by) {
+                if (! $deliverable->reviewed_by) {
                     $updateData['reviewed_by'] = auth()->id();
                 }
             }
 
             // Add reason to review notes if provided
             if ($request->reason) {
-                $existingNotes = $deliverable->review_notes ? $deliverable->review_notes . "\n\n" : '';
-                $updateData['review_notes'] = $existingNotes . "[Admin Override] " . $request->reason;
+                $existingNotes = $deliverable->review_notes ? $deliverable->review_notes."\n\n" : '';
+                $updateData['review_notes'] = $existingNotes.'[Admin Override] '.$request->reason;
             }
 
             $deliverable->update($updateData);
@@ -250,21 +277,28 @@ class AdminDeliverableController extends Controller
      *     operationId="adminResetDeliverable",
      *     tags={"Admin - Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=false,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(
      *                 property="reason",
      *                 type="string",
@@ -272,6 +306,7 @@ class AdminDeliverableController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Deliverable reset successfully"
@@ -286,7 +321,7 @@ class AdminDeliverableController extends Controller
             $updateData = [
                 'status' => DeliverableStatus::PENDING,
                 'submission_notes' => null,
-                'review_notes' => $request->reason ? "[Admin Reset] " . $request->reason : null,
+                'review_notes' => $request->reason ? '[Admin Reset] '.$request->reason : null,
                 'submitted_at' => null,
                 'reviewed_at' => null,
                 'reviewed_by' => null,
@@ -297,7 +332,7 @@ class AdminDeliverableController extends Controller
             $deliverable->load('reviewer', 'task');
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($deliverable)
+                'deliverable' => new TaskDeliverableResource($deliverable),
             ], __('messages.admin_deliverable_reset'));
         });
     }
@@ -310,25 +345,33 @@ class AdminDeliverableController extends Controller
      *     operationId="adminForceApprove",
      *     tags={"Admin - Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=false,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="pointsAwarded", type="integer", example=20, description="Points to award (default: 1)"),
      *             @OA\Property(property="reviewNotes", type="string", example="Approved by admin due to urgent deadline")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Deliverable approved successfully"
@@ -357,7 +400,7 @@ class AdminDeliverableController extends Controller
             $deliverable->load('reviewer', 'task');
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($deliverable)
+                'deliverable' => new TaskDeliverableResource($deliverable),
             ], __('messages.admin_deliverable_approved'));
         });
     }
@@ -370,24 +413,32 @@ class AdminDeliverableController extends Controller
      *     operationId="adminForceReject",
      *     tags={"Admin - Deliverables"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="deliverableId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=false,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="reviewNotes", type="string", example="Rejected by admin: Does not meet quality standards")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Deliverable rejected successfully"
@@ -416,7 +467,7 @@ class AdminDeliverableController extends Controller
             $deliverable->load('reviewer', 'task');
 
             return ApiResponse::success([
-                'deliverable' => new TaskDeliverableResource($deliverable)
+                'deliverable' => new TaskDeliverableResource($deliverable),
             ], __('messages.admin_deliverable_rejected'));
         });
     }

@@ -1,9 +1,9 @@
 <?php
 
+use App\Traits\CreatedUpdatedByMigration;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use App\Traits\CreatedUpdatedByMigration;
 
 return new class extends Migration
 {
@@ -30,10 +30,10 @@ return new class extends Migration
             $table->boolean('is_bonus')->default(false); // Extra credit deliverable
             $table->integer('order')->default(0); // Display order
             $table->timestamps();
-            
+
             // Add audit columns
             $this->addAuditColumns($table);
-            
+
             // Indexes
             $table->index(['task_id', 'status']);
             $table->index(['task_id', 'order']);

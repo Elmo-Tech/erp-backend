@@ -32,14 +32,14 @@ class DeliverableSubmitted extends Notification implements ShouldQueue
             ->subject(__('New Deliverable Submitted: :name', ['name' => $this->deliverable->title]))
             ->greeting(__('Hello :name,', ['name' => $notifiable->name]))
             ->line(__(':developer has submitted a new deliverable for review! 📋', ['developer' => $this->developerName]))
-            ->line('**' . __('Deliverable Details:') . '**')
+            ->line('**'.__('Deliverable Details:').'**')
             ->line(__('Deliverable: :name', ['name' => $this->deliverable->title]))
             ->line(__('Task: :task', ['task' => $taskTitle]))
             ->line(__('Project: :project', ['project' => $projectName]))
             ->line(__('Submitted At: :time', ['time' => $this->deliverable->submitted_at?->format('Y-m-d H:i')]))
             ->when($this->deliverable->submission_notes, function ($message) {
-                return $message->line('**' . __('Submission Notes:') . '**')
-                              ->line($this->deliverable->submission_notes);
+                return $message->line('**'.__('Submission Notes:').'**')
+                    ->line($this->deliverable->submission_notes);
             })
             ->action(__('Review Deliverable'), url("/dashboard/tasks/{$this->deliverable->task_id}"))
             ->line(__('Please review this deliverable at your earliest convenience.'));

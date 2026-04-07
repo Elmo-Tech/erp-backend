@@ -22,52 +22,52 @@ class StoreContractRequest extends FormRequest
         return [
             // Data source: either from an approved quotation or new terms
             'dataSource' => ['required', 'string', 'in:from_quotation,new_terms'],
-            
+
             // Base contract fields
             'title' => ['required', 'string', 'max:255'],
             'expiryDays' => ['required', 'integer', 'min:1'],
             'projectDuration' => ['required', 'string', 'max:100'],
             'content' => ['required', 'string'],
-            
+
             // Deliverables (array of strings)
             'deliverables' => ['nullable', 'array', 'min:1'],
             'deliverables.*' => ['required', 'string', 'max:500'],
-            
+
             // Dates
             'startDate' => ['required', 'date'],
             'endDate' => ['required', 'date', 'after:startDate'],
-            
+
             // Preparation deadline (optional)
             'preparationDeadline' => ['nullable', 'date', 'after_or_equal:startDate'],
-            
+
             // File number (optional, auto-generated if not provided)
             'fileNumber' => ['nullable', 'string', 'max:50', 'unique:contracts,file_number'],
-            
+
             // Linkage fields
             'quotationId' => ['nullable', 'integer', 'exists:quotations,id'],
             'projectId' => ['nullable', 'integer', 'exists:projects,id'],
             'templateId' => ['nullable', 'integer', 'exists:contract_templates,id'],
             'taskId' => ['nullable', 'integer', 'exists:tasks,id'],
-            
+
             // Parties (required for new_terms, optional for from_quotation)
             'partyOne' => ['nullable', 'array'],
             'partyOne.company' => ['nullable', 'string', 'max:255'],
             'partyOne.representative' => ['nullable', 'string', 'max:255'],
             'partyOne.title' => ['nullable', 'string', 'max:100'],
             'partyOne.address' => ['nullable', 'string'],
-            
+
             'partyTwo' => ['nullable', 'array'],
             'partyTwo.company' => ['nullable', 'string', 'max:255'],
             'partyTwo.name' => ['nullable', 'string', 'max:255'],
             'partyTwo.representative' => ['nullable', 'string', 'max:255'],
             'partyTwo.title' => ['nullable', 'string', 'max:100'],
             'partyTwo.address' => ['nullable', 'string'],
-            
+
             // Financial (required for new_terms, optional for from_quotation)
             'totalAmount' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'size:3'],
             'paymentTerms' => ['nullable', 'string'],
-            
+
             // Milestones (required for new_terms)
             'milestones' => ['nullable', 'array', 'min:1'],
             'milestones.*.title' => ['required_with:milestones', 'string', 'max:255'],
@@ -85,11 +85,11 @@ class StoreContractRequest extends FormRequest
             $dataSource = $this->input('dataSource');
             $quotationId = $this->input('quotationId');
             $milestones = $this->input('milestones', []);
-            
+
             // If dataSource is 'from_quotation', validate quotation
             if ($dataSource === 'from_quotation') {
                 // quotationId is required when dataSource is from_quotation
-                if (!$quotationId) {
+                if (! $quotationId) {
                     $validator->errors()->add('quotationId', __('contracts.quotation_required_for_from_quotation'));
                 } else {
                     // Check if quotation exists and is approved
@@ -99,22 +99,22 @@ class StoreContractRequest extends FormRequest
                     }
                 }
             }
-            
+
             // If dataSource is 'new_terms', milestones must sum to 100%
             if ($dataSource === 'new_terms') {
-                if (!$this->filled('totalAmount')) {
+                if (! $this->filled('totalAmount')) {
                     $validator->errors()->add('totalAmount', __('validation.required', ['attribute' => 'totalAmount']));
                 }
 
-                if (!$this->filled('partyOne.company')) {
+                if (! $this->filled('partyOne.company')) {
                     $validator->errors()->add('partyOne.company', __('validation.required', ['attribute' => 'partyOne.company']));
                 }
 
-                if (!$this->filled('partyOne.representative')) {
+                if (! $this->filled('partyOne.representative')) {
                     $validator->errors()->add('partyOne.representative', __('validation.required', ['attribute' => 'partyOne.representative']));
                 }
 
-                if (!$this->filled('partyTwo.representative')) {
+                if (! $this->filled('partyTwo.representative')) {
                     $validator->errors()->add('partyTwo.representative', __('validation.required', ['attribute' => 'partyTwo.representative']));
                 }
 
@@ -122,14 +122,14 @@ class StoreContractRequest extends FormRequest
                     $validator->errors()->add('milestones', __('contracts.milestones_required'));
                 }
 
-                if (!empty($milestones)) {
+                if (! empty($milestones)) {
                     $totalPercentage = array_sum(array_column($milestones, 'percentage'));
                     if (round($totalPercentage, 2) !== 100.00) {
                         $validator->errors()->add('milestones', __('contracts.milestones_must_equal_100', ['total' => $totalPercentage]));
                     }
                 }
             }
-            
+
             // Validate deliverables minimum count
             $deliverables = $this->input('deliverables', []);
             if ($dataSource === 'new_terms' && empty($deliverables)) {

@@ -3,15 +3,16 @@
 namespace Tests\Unit\Observers;
 
 use App\Enums\TaskStatus;
+use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
-use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
  * Test TaskObserver bug bounce logic.
- * 
+ *
  * Verifies that the TaskObserver correctly:
  * - Detects testing → in_progress transitions
  * - Increments reopen_count by exactly 1
@@ -22,17 +23,18 @@ class TaskObserverTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Project $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->user = User::factory()->create();
         $this->project = Project::factory()->create();
     }
 
-    /** @test */
+    #[Test]
     public function it_increments_reopen_count_when_transitioning_from_testing_to_in_progress()
     {
         // Create a task in testing status
@@ -50,7 +52,7 @@ class TaskObserverTest extends TestCase
         $this->assertEquals(1, $task->fresh()->reopen_count);
     }
 
-    /** @test */
+    #[Test]
     public function it_increments_reopen_count_multiple_times_for_multiple_bounces()
     {
         // Create a task with existing bounce count
@@ -68,7 +70,7 @@ class TaskObserverTest extends TestCase
         $this->assertEquals(3, $task->fresh()->reopen_count);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_increment_reopen_count_for_other_transitions()
     {
         $testCases = [
@@ -98,12 +100,12 @@ class TaskObserverTest extends TestCase
             $task->update(['status' => $case['to']]);
 
             // Verify reopen_count was NOT incremented
-            $this->assertEquals(0, $task->fresh()->reopen_count, 
+            $this->assertEquals(0, $task->fresh()->reopen_count,
                 "Reopen count should not increment for {$case['from']->value} → {$case['to']->value} transition");
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_increment_reopen_count_when_status_is_not_changed()
     {
         $task = Task::factory()->create([
@@ -120,7 +122,7 @@ class TaskObserverTest extends TestCase
         $this->assertEquals(0, $task->fresh()->reopen_count);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_default_reopen_count_correctly()
     {
         // Create task without explicitly setting reopen_count (uses default 0)

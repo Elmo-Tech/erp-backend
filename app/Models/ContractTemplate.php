@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ContractTemplate extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
         'name',

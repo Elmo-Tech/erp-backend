@@ -8,11 +8,6 @@ class ApiResponse
 {
     /**
      * Return a success response
-     *
-     * @param mixed $data
-     * @param string $message
-     * @param int $statusCode
-     * @return JsonResponse
      */
     public static function success(
         mixed $data = null,
@@ -28,11 +23,6 @@ class ApiResponse
 
     /**
      * Return an error response
-     *
-     * @param string $message
-     * @param int $statusCode
-     * @param array $errors
-     * @return JsonResponse
      */
     public static function error(
         string $message = 'Error',
@@ -44,7 +34,7 @@ class ApiResponse
             'message' => $message,
         ];
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $response['errors'] = $errors;
         }
 
@@ -53,10 +43,6 @@ class ApiResponse
 
     /**
      * Return a validation error response
-     *
-     * @param array $errors
-     * @param string $message
-     * @return JsonResponse
      */
     public static function validationError(
         array $errors,
@@ -67,9 +53,6 @@ class ApiResponse
 
     /**
      * Return a not found response
-     *
-     * @param string $message
-     * @return JsonResponse
      */
     public static function notFound(
         string $message = 'Resource not found'
@@ -79,9 +62,6 @@ class ApiResponse
 
     /**
      * Return an unauthorized response
-     *
-     * @param string $message
-     * @return JsonResponse
      */
     public static function unauthorized(
         string $message = 'Unauthorized'
@@ -91,9 +71,6 @@ class ApiResponse
 
     /**
      * Return a forbidden response
-     *
-     * @param string $message
-     * @return JsonResponse
      */
     public static function forbidden(
         string $message = 'Forbidden'

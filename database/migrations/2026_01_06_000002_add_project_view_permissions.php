@@ -8,11 +8,11 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
+     *
      * Adds permissions for viewing sensitive project data:
      * - Budget information (cards, amounts)
      * - Project history (audit trail)
-     * 
+     *
      * Only Admin/Super Admin should see these by default.
      * Employees see project details but NOT budget or history.
      */
@@ -50,7 +50,7 @@ return new class extends Migration
     public function down(): void
     {
         $permissions = ['view_project_budget', 'view_project_history'];
-        
+
         foreach ($permissions as $permission) {
             Permission::where('name', $permission)->delete();
         }

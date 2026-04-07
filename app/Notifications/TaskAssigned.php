@@ -44,7 +44,7 @@ class TaskAssigned extends Notification implements ShouldQueue
             ->subject(__('New Task Assigned: :title', ['title' => $this->task->title]))
             ->greeting(__('Hello :name,', ['name' => $notifiable->name ?? __('there')]))
             ->line($summaryLine)
-            ->line('**' . __('Task Details:') . '**')
+            ->line('**'.__('Task Details:').'**')
             ->line(__('Task: :title', ['title' => $this->task->title]))
             ->line(__('Project: :project', ['project' => $projectName]))
             ->line(__('Priority: :priority', ['priority' => $priority]))
@@ -54,7 +54,7 @@ class TaskAssigned extends Notification implements ShouldQueue
             })
             ->when($this->task->description, function ($message) {
                 return $message->line(__('Description: :description', [
-                    'description' => Str::limit($this->task->description, 150)
+                    'description' => Str::limit($this->task->description, 150),
                 ]));
             })
             ->action(__('View Task'), url("/dashboard/tasks/{$this->task->id}"))

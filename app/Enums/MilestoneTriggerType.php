@@ -11,7 +11,7 @@ enum MilestoneTriggerType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::IMMEDIATE => __('enums.milestone_trigger.immediate'),
             self::PROJECT_STATUS => __('enums.milestone_trigger.project_status'),
             self::DELIVERABLE => __('enums.milestone_trigger.deliverable'),

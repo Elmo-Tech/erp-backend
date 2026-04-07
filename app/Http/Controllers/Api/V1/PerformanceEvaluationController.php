@@ -6,10 +6,10 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Performance\CreateEvaluationPeriodRequest;
 use App\Http\Requests\V1\Performance\UpdateEvaluationRequest;
-use App\Http\Resources\V1\Performance\EvaluationPeriodResource;
 use App\Http\Resources\V1\Performance\EvaluationPeriodCollection;
-use App\Http\Resources\V1\Performance\PerformanceEvaluationResource;
+use App\Http\Resources\V1\Performance\EvaluationPeriodResource;
 use App\Http\Resources\V1\Performance\PerformanceEvaluationCollection;
+use App\Http\Resources\V1\Performance\PerformanceEvaluationResource;
 use App\Models\EvaluationPeriod;
 use App\Models\PerformanceEvaluation;
 use App\Models\User;
@@ -43,22 +43,29 @@ class PerformanceEvaluationController extends Controller
      *     summary="Get all evaluation periods",
      *     description="Returns paginated list of evaluation periods. Requires view_performance_evaluations permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="integer", default=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string"),
      *             @OA\Property(property="data", type="object",
@@ -73,12 +80,13 @@ class PerformanceEvaluationController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized")
      * )
      */
     public function periods(Request $request): JsonResponse
     {
-        if (!$request->user()->can('view_performance_evaluations')) {
+        if (! $request->user()->can('view_performance_evaluations')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -96,37 +104,46 @@ class PerformanceEvaluationController extends Controller
      *     summary="Create a new evaluation period",
      *     description="Creates a new bi-monthly evaluation period. Requires manage_performance_evaluations permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"name", "startDate", "endDate"},
+     *
      *             @OA\Property(property="name", type="string", example="January-February 2026"),
      *             @OA\Property(property="startDate", type="string", format="date", example="2026-01-01"),
      *             @OA\Property(property="endDate", type="string", format="date", example="2026-02-28")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Created",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string"),
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=422, description="Validation Error")
      * )
      */
     public function createPeriod(CreateEvaluationPeriodRequest $request): JsonResponse
     {
-        if (!$request->user()->can('manage_performance_evaluations')) {
+        if (! $request->user()->can('manage_performance_evaluations')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -153,26 +170,34 @@ class PerformanceEvaluationController extends Controller
      *     summary="Activate an evaluation period",
      *     description="Activates a draft period and creates evaluations for all active employees. Requires manage_performance_evaluations permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="periodId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=400, description="Period already activated"),
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Period not found")
@@ -180,7 +205,7 @@ class PerformanceEvaluationController extends Controller
      */
     public function activatePeriod(Request $request, int $periodId): JsonResponse
     {
-        if (!$request->user()->can('manage_performance_evaluations')) {
+        if (! $request->user()->can('manage_performance_evaluations')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -214,40 +239,53 @@ class PerformanceEvaluationController extends Controller
      *     summary="Get evaluations list",
      *     description="Returns paginated list of performance evaluations with filters. Requires view_performance_evaluations permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[periodId]",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[status]",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"pending", "in_progress", "completed", "approved"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[bonusTier]",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"excellent", "good", "average", "poor"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="integer", default=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="evaluations", type="array", @OA\Items(
@@ -262,12 +300,13 @@ class PerformanceEvaluationController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized")
      * )
      */
     public function index(Request $request): JsonResponse
     {
-        if (!$request->user()->can('view_performance_evaluations')) {
+        if (! $request->user()->can('view_performance_evaluations')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -299,22 +338,29 @@ class PerformanceEvaluationController extends Controller
      *     summary="Get a specific evaluation with detailed scores",
      *     description="Returns detailed evaluation with all score breakdowns. Users can view their own evaluations.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="evaluation", type="object"),
@@ -351,6 +397,7 @@ class PerformanceEvaluationController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Evaluation not found")
      * )
@@ -360,7 +407,7 @@ class PerformanceEvaluationController extends Controller
         $evaluation = PerformanceEvaluation::with(['user', 'period', 'evaluator'])->findOrFail($id);
 
         // Users can view their own evaluations
-        if ($evaluation->user_id !== $request->user()->id && !$request->user()->can('view_performance_evaluations')) {
+        if ($evaluation->user_id !== $request->user()->id && ! $request->user()->can('view_performance_evaluations')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -380,33 +427,41 @@ class PerformanceEvaluationController extends Controller
      *     summary="Calculate scores for an evaluation",
      *     description="Automatically calculates all scores based on system data (tasks, attendance, code reviews, innovation logs). Requires manage_performance_evaluations permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Evaluation not found")
      * )
      */
     public function calculate(Request $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('manage_performance_evaluations')) {
+        if (! $request->user()->can('manage_performance_evaluations')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -427,21 +482,28 @@ class PerformanceEvaluationController extends Controller
      *     summary="Manually update evaluation scores",
      *     description="Allows manual adjustment of evaluation scores. Requires manage_performance_evaluations permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="bugSeverityScore", type="number", minimum=0, maximum=15),
      *             @OA\Property(property="codeQualityScore", type="number", minimum=0, maximum=15),
      *             @OA\Property(property="innovationScore", type="number", minimum=0, maximum=20),
@@ -453,14 +515,18 @@ class PerformanceEvaluationController extends Controller
      *             @OA\Property(property="evaluatorNotes", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Evaluation not found"),
      *     @OA\Response(response=422, description="Validation Error")
@@ -468,7 +534,7 @@ class PerformanceEvaluationController extends Controller
      */
     public function update(UpdateEvaluationRequest $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('manage_performance_evaluations')) {
+        if (! $request->user()->can('manage_performance_evaluations')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -506,39 +572,50 @@ class PerformanceEvaluationController extends Controller
      *     summary="Approve an evaluation",
      *     description="Approves a completed evaluation. Requires approve_performance_evaluations permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=false,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="notes", type="string", description="Optional approval notes")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Evaluation not found")
      * )
      */
     public function approve(Request $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('approve_performance_evaluations')) {
+        if (! $request->user()->can('approve_performance_evaluations')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -563,22 +640,29 @@ class PerformanceEvaluationController extends Controller
      *     summary="Get current user's evaluations",
      *     description="Returns paginated list of the authenticated user's performance evaluations.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="integer", default=10)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="object")
      *         )
@@ -603,22 +687,29 @@ class PerformanceEvaluationController extends Controller
      *     summary="Get bonus calculations for a period",
      *     description="Returns bonus calculations for all employees in a period. Requires view_bonuses permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="periodId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="periodId", type="integer"),
@@ -641,13 +732,14 @@ class PerformanceEvaluationController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Period not found")
      * )
      */
     public function periodBonuses(Request $request, int $periodId): JsonResponse
     {
-        if (!$request->user()->can('view_bonuses')) {
+        if (! $request->user()->can('view_bonuses')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 

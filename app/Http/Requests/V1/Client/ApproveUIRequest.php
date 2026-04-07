@@ -34,9 +34,6 @@ class ApproveUIRequest extends FormRequest
 
     /**
      * Configure the validator instance.
-     *
-     * @param Validator $validator
-     * @return void
      */
     public function withValidator(Validator $validator): void
     {
@@ -44,24 +41,25 @@ class ApproveUIRequest extends FormRequest
             // Get project from route parameter (Laravel model binding)
             $project = $this->route('project');
 
-            if (!$project) {
+            if (! $project) {
                 $validator->errors()->add('project', 'Project not found.');
+
                 return;
             }
 
             // Check if project is in ui_ux status
             if ($project->status !== ProjectStatus::UI_UX) {
                 $validator->errors()->add(
-                    'status', 
-                    'Project must be in UI/UX phase to approve UI deliverables. Current status: ' . $project->status->label()
+                    'status',
+                    'Project must be in UI/UX phase to approve UI deliverables. Current status: '.$project->status->label()
                 );
             }
 
             // Check if UI is already approved
             if ($project->ui_approved_at) {
                 $validator->errors()->add(
-                    'approval', 
-                    'UI deliverables have already been approved on ' . $project->ui_approved_at->format('Y-m-d H:i:s')
+                    'approval',
+                    'UI deliverables have already been approved on '.$project->ui_approved_at->format('Y-m-d H:i:s')
                 );
             }
         });
@@ -84,7 +82,6 @@ class ApproveUIRequest extends FormRequest
     /**
      * Handle a failed validation attempt.
      *
-     * @param Validator $validator
      * @throws HttpResponseException
      */
     protected function failedValidation(Validator $validator): void

@@ -14,7 +14,6 @@ use App\Models\Proposal;
 use App\Models\Quotation;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SalesDashboardService
@@ -29,14 +28,14 @@ class SalesDashboardService
             ->whereNotIn('status', [LeadStatus::WON, LeadStatus::LOST])
             ->groupBy('status')
             ->get()
-            ->mapWithKeys(fn($item) => [$item->status->value => $item->count]);
+            ->mapWithKeys(fn ($item) => [$item->status->value => $item->count]);
 
         // Proposals by status
         $proposalsByStatus = Proposal::select('status', DB::raw('count(*) as count'))
             ->whereNotIn('status', [ProposalStatus::APPROVED, ProposalStatus::REJECTED, ProposalStatus::EXPIRED])
             ->groupBy('status')
             ->get()
-            ->mapWithKeys(fn($item) => [$item->status->value => $item->count]);
+            ->mapWithKeys(fn ($item) => [$item->status->value => $item->count]);
 
         // Quotations by status with values
         $quotationStats = Quotation::select(
@@ -48,11 +47,11 @@ class SalesDashboardService
             ->groupBy('status')
             ->get();
 
-        $quotationsByStatus = $quotationStats->mapWithKeys(fn($item) => [
+        $quotationsByStatus = $quotationStats->mapWithKeys(fn ($item) => [
             $item->status->value => [
                 'count' => $item->count,
                 'totalValue' => (float) $item->total_value,
-            ]
+            ],
         ]);
 
         // Total pending value
@@ -93,12 +92,12 @@ class SalesDashboardService
         $endDate = $endDate ?? now()->endOfMonth();
 
         // Sales reps performance
-        $salesPerformance = User::whereHas('roles', fn($q) => $q->where('name', 'sales'))
+        $salesPerformance = User::whereHas('roles', fn ($q) => $q->where('name', 'sales'))
             ->withCount([
-                'leads' => fn($q) => $q->whereBetween('created_at', [$startDate, $endDate]),
-                'leads as won_leads_count' => fn($q) => $q->where('status', LeadStatus::WON)
+                'leads' => fn ($q) => $q->whereBetween('created_at', [$startDate, $endDate]),
+                'leads as won_leads_count' => fn ($q) => $q->where('status', LeadStatus::WON)
                     ->whereBetween('converted_at', [$startDate, $endDate]),
-                'leads as lost_leads_count' => fn($q) => $q->where('status', LeadStatus::LOST)
+                'leads as lost_leads_count' => fn ($q) => $q->where('status', LeadStatus::LOST)
                     ->whereBetween('updated_at', [$startDate, $endDate]),
             ])
             ->get()
@@ -117,10 +116,10 @@ class SalesDashboardService
             });
 
         // Tech leads performance
-        $techLeadPerformance = User::whereHas('roles', fn($q) => $q->whereIn('name', ['tech-lead', 'senior-developer']))
+        $techLeadPerformance = User::whereHas('roles', fn ($q) => $q->whereIn('name', ['tech-lead', 'senior-developer']))
             ->withCount([
-                'techLeadLeads' => fn($q) => $q->whereBetween('created_at', [$startDate, $endDate]),
-                'techLeadLeads as successful_proposals_count' => fn($q) => $q->whereHas('proposals', fn($pq) => $pq->where('status', ProposalStatus::APPROVED)),
+                'techLeadLeads' => fn ($q) => $q->whereBetween('created_at', [$startDate, $endDate]),
+                'techLeadLeads as successful_proposals_count' => fn ($q) => $q->whereHas('proposals', fn ($pq) => $pq->where('status', ProposalStatus::APPROVED)),
             ])
             ->get()
             ->map(function ($user) {
@@ -183,7 +182,7 @@ class SalesDashboardService
             ->orderByDesc('count')
             ->limit(5)
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'reason' => $item->loss_reason,
                 'count' => $item->count,
             ]);
@@ -196,7 +195,7 @@ class SalesDashboardService
             ->orderByDesc('count')
             ->limit(5)
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'reason' => $item->rejection_reason,
                 'count' => $item->count,
             ]);
@@ -209,7 +208,7 @@ class SalesDashboardService
             ->orderByDesc('count')
             ->limit(5)
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'reason' => $item->rejection_reason?->value ?? $item->rejection_reason,
                 'count' => $item->count,
             ]);
@@ -244,7 +243,7 @@ class SalesDashboardService
             ->whereBetween('expiry_date', [now(), now()->addHours(48)])
             ->with('lead:id,name,company')
             ->get()
-            ->map(fn($p) => [
+            ->map(fn ($p) => [
                 'type' => 'proposal_expiring',
                 'severity' => 'warning',
                 'title' => __('alerts.proposal_expiring'),
@@ -264,7 +263,7 @@ class SalesDashboardService
             ->whereBetween('expiry_date', [now(), now()->addHours(48)])
             ->with('lead:id,name,company')
             ->get()
-            ->map(fn($q) => [
+            ->map(fn ($q) => [
                 'type' => 'quotation_expiring',
                 'severity' => 'warning',
                 'title' => __('alerts.quotation_expiring'),
@@ -284,7 +283,7 @@ class SalesDashboardService
             ->with(['lead:id,name', 'user:id,name'])
             ->limit(10)
             ->get()
-            ->map(fn($a) => [
+            ->map(fn ($a) => [
                 'type' => 'activity_overdue',
                 'severity' => 'error',
                 'title' => __('alerts.activity_overdue'),
@@ -304,7 +303,7 @@ class SalesDashboardService
             ->with('lead:id,name')
             ->limit(10)
             ->get()
-            ->map(fn($m) => [
+            ->map(fn ($m) => [
                 'type' => 'meeting_needs_minutes',
                 'severity' => 'info',
                 'title' => __('alerts.meeting_needs_minutes'),

@@ -6,7 +6,6 @@ use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
@@ -21,7 +20,6 @@ class ProfitabilityService
     /**
      * Calculate profitability for a single project.
      *
-     * @param Project $project
      * @return array{
      *     projectId: int,
      *     title: string,
@@ -50,15 +48,12 @@ class ProfitabilityService
 
     /**
      * Calculate total cost for a project based on time entries and user costs.
-     *
-     * @param Project $project
-     * @return float
      */
     public function calculateProjectCost(Project $project): float
     {
         // Get all time entries for the project and its tasks
         $projectTimeEntries = $this->getProjectTimeEntries($project);
-        
+
         $totalCost = 0.0;
 
         foreach ($projectTimeEntries as $timeEntry) {
@@ -73,11 +68,9 @@ class ProfitabilityService
     /**
      * Get profitability report with filtering and pagination.
      *
-     * @param array $filters ['status' => string, 'dateFrom' => string, 'dateTo' => string]
-     * @param string $sortBy 'profit' | 'margin' | 'budget'
-     * @param string $sortDirection 'asc' | 'desc'
-     * @param int $perPage
-     * @return LengthAwarePaginator
+     * @param  array  $filters  ['status' => string, 'dateFrom' => string, 'dateTo' => string]
+     * @param  string  $sortBy  'profit' | 'margin' | 'budget'
+     * @param  string  $sortDirection  'asc' | 'desc'
      */
     public function getProfitabilityReport(
         array $filters = [],
@@ -87,28 +80,28 @@ class ProfitabilityService
     ): LengthAwarePaginator {
         // Validate sort parameters
         $allowedSortFields = ['profit', 'margin', 'budget'];
-        if (!in_array($sortBy, $allowedSortFields)) {
-            throw new InvalidArgumentException("Invalid sort field. Allowed: " . implode(', ', $allowedSortFields));
+        if (! in_array($sortBy, $allowedSortFields)) {
+            throw new InvalidArgumentException('Invalid sort field. Allowed: '.implode(', ', $allowedSortFields));
         }
 
         $allowedDirections = ['asc', 'desc'];
-        if (!in_array($sortDirection, $allowedDirections)) {
-            throw new InvalidArgumentException("Invalid sort direction. Allowed: asc, desc");
+        if (! in_array($sortDirection, $allowedDirections)) {
+            throw new InvalidArgumentException('Invalid sort direction. Allowed: asc, desc');
         }
 
         // Build query with filters
         $query = Project::with(['client', 'timeEntries.user']);
 
         // Apply status filter
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
         // Apply date range filter
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->where('created_at', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->where('created_at', '<=', $filters['dateTo']);
         }
 
@@ -122,7 +115,7 @@ class ProfitabilityService
 
         // Sort the collection
         $profitabilityData = $profitabilityData->sortBy([
-            [$sortBy, $sortDirection === 'desc' ? 'desc' : 'asc']
+            [$sortBy, $sortDirection === 'desc' ? 'desc' : 'asc'],
         ])->values();
 
         // Manual pagination
@@ -156,7 +149,7 @@ class ProfitabilityService
     public function getOverviewStats(): array
     {
         $projects = Project::with(['timeEntries.user'])->get();
-        
+
         $totalRevenue = 0.0;
         $totalCost = 0.0;
         $activeProjects = 0;
@@ -165,7 +158,7 @@ class ProfitabilityService
         foreach ($projects as $project) {
             $budget = (float) $project->budget;
             $cost = $this->calculateProjectCost($project);
-            
+
             $totalRevenue += $budget;
             $totalCost += $cost;
 
@@ -191,9 +184,6 @@ class ProfitabilityService
 
     /**
      * Get all time entries for a project including task time entries.
-     *
-     * @param Project $project
-     * @return Collection
      */
     private function getProjectTimeEntries(Project $project): Collection
     {

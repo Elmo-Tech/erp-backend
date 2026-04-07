@@ -11,6 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *     type="object",
  *     title="Task Deliverable Resource",
  *     description="Task deliverable resource representation",
+ *
  *     @OA\Property(property="deliverableId", type="integer", example=1),
  *     @OA\Property(property="taskId", type="integer", example=5),
  *     @OA\Property(property="title", type="string", example="Complete user authentication"),
@@ -54,24 +55,24 @@ class TaskDeliverableResource extends JsonResource
             'deliverableId' => $this->id,
             'taskId' => $this->task_id,
             'title' => $this->title,
-            'description' => $this->description ?? "",
-            'acceptanceCriteria' => $this->acceptance_criteria ?? "",
+            'description' => $this->description ?? '',
+            'acceptanceCriteria' => $this->acceptance_criteria ?? '',
             'status' => $this->status->value,
             'statusLabel' => $this->status->label(),
             'statusColor' => $this->getStatusColor(),
-            'submissionNotes' => $this->submission_notes ?? "",
-            'reviewNotes' => $this->review_notes ?? "",
+            'submissionNotes' => $this->submission_notes ?? '',
+            'reviewNotes' => $this->review_notes ?? '',
             'submittedAt' => $this->submitted_at?->toISOString(),
             'reviewedAt' => $this->reviewed_at?->toISOString(),
             'pointsAwarded' => $this->points_awarded,
             'isBonus' => $this->is_bonus,
             'order' => $this->order,
-            
+
             // Status helpers
             'canBeSubmitted' => $this->canBeSubmitted(),
             'canBeReviewed' => $this->canBeReviewed(),
             'isCompleted' => $this->isCompleted(),
-            
+
             // Relationships
             'reviewer' => $this->when($this->reviewer, function () {
                 return [
@@ -81,7 +82,7 @@ class TaskDeliverableResource extends JsonResource
                     'avatar' => $this->reviewer->avatar,
                 ];
             }),
-            
+
             // Timestamps
             'createdAt' => $this->created_at->toISOString(),
             'updatedAt' => $this->updated_at->toISOString(),

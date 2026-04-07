@@ -2,18 +2,19 @@
 
 namespace App\Console\Commands;
 
-use App\Models\User;
 use App\Models\InnovationLog;
+use App\Models\Task;
+use App\Models\User;
 use App\Notifications\InnovationLogSubmitted;
 use App\Notifications\InnovationLogVerified;
 use App\Notifications\TaskAssigned;
-use App\Models\Task;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Notification;
 
 class TestNotificationsCommand extends Command
 {
     protected $signature = 'test:notifications';
+
     protected $description = 'Test notification system functionality';
 
     public function handle()
@@ -22,8 +23,9 @@ class TestNotificationsCommand extends Command
 
         // Get first user
         $user = User::first();
-        if (!$user) {
+        if (! $user) {
             $this->error('No users found. Please create a user first.');
+
             return;
         }
 
@@ -31,7 +33,7 @@ class TestNotificationsCommand extends Command
 
         // Test 1: Innovation Log Submitted (to admins)
         $this->info('📝 Test 1: Innovation Log Submitted Notification');
-        
+
         $innovationLog = InnovationLog::first();
         if ($innovationLog) {
             $admins = User::role(['admin', 'super-admin'])->get();

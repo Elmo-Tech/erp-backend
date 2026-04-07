@@ -25,8 +25,8 @@ class ClientPortalAccessCreated extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $portalUrl = config('app.frontend_url') . '/client';
-        
+        $portalUrl = config('app.frontend_url').'/client';
+
         // Generate password reset link for secure password setup
         $resetUrl = $this->getPasswordResetUrl($notifiable);
 
@@ -54,8 +54,8 @@ class ClientPortalAccessCreated extends Notification implements ShouldQueue
     {
         // Generate a password reset token
         $token = Password::broker()->createToken($notifiable);
-        
+
         // Build the reset URL
-        return config('app.frontend_url') . '/reset-password?token=' . $token . '&email=' . urlencode($notifiable->email);
+        return config('app.frontend_url').'/reset-password?token='.$token.'&email='.urlencode($notifiable->email);
     }
 }

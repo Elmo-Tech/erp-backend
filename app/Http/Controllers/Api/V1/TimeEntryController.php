@@ -36,53 +36,70 @@ class TimeEntryController extends Controller
      *     summary="Get time entries with filtering",
      *     description="Retrieve a paginated list of time entries with optional filtering by trackable type, ID, and date range",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[trackableType]",
      *         in="query",
      *         description="Filter by trackable type",
+     *
      *         @OA\Schema(type="string", enum={"App\\Models\\Lead", "App\\Models\\Quotation", "App\\Models\\Task"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[trackableId]",
      *         in="query",
      *         description="Filter by trackable ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[startDate]",
      *         in="query",
      *         description="Filter by start date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[endDate]",
      *         in="query",
      *         description="Filter by end date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number for pagination",
+     *
      *         @OA\Schema(type="integer", minimum=1, example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Number of items per page",
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Time entries retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Time entries retrieved successfully"),
      *             @OA\Property(
@@ -91,7 +108,9 @@ class TimeEntryController extends Controller
      *                 @OA\Property(
      *                     property="timeEntries",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="timeEntryId", type="integer", example=1),
      *                         @OA\Property(property="userId", type="integer", example=1),
      *                         @OA\Property(property="trackableId", type="integer", example=1),
@@ -117,10 +136,13 @@ class TimeEntryController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -132,6 +154,7 @@ class TimeEntryController extends Controller
         $timeEntries = QueryBuilder::for(TimeEntry::class)
             ->with(['trackable', 'user'])
             ->allowedFilters([
+                AllowedFilter::exact('user_id'),
                 AllowedFilter::exact('trackable_type'),
                 AllowedFilter::exact('trackable_id'),
                 AllowedFilter::callback('start_date', function ($query, $value) {
@@ -139,7 +162,7 @@ class TimeEntryController extends Controller
                 }),
                 AllowedFilter::callback('end_date', function ($query, $value) {
                     $query->whereDate('start_time', '<=', $value);
-                })
+                }),
             ])
             ->defaultSort('-start_time')
             ->paginate($request->get('perPage', 15));
@@ -158,25 +181,33 @@ class TimeEntryController extends Controller
      *     summary="Start a timer for a trackable entity",
      *     description="Start a new timer for a lead, quotation, or task",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"trackableId", "trackableType"},
+     *
      *             @OA\Property(property="trackableId", type="integer", example=1),
      *             @OA\Property(property="trackableType", type="string", enum={"lead", "quotation", "task"}, example="lead")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Timer started successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Timer started successfully"),
      *             @OA\Property(
@@ -196,10 +227,13 @@ class TimeEntryController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for starting timer"),
      *             @OA\Property(
@@ -208,31 +242,41 @@ class TimeEntryController extends Controller
      *                 @OA\Property(
      *                     property="trackableId",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="The trackableId field is required.")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Business logic error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="User already has an active timer. Stop it before starting a new one.")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Trackable entity not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Trackable entity not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -244,7 +288,7 @@ class TimeEntryController extends Controller
         try {
             $data = $request->validated();
             $user = $request->user();
-            
+
             // Map trackable type to model class
             $trackableClass = match ($data['trackableType']) {
                 'lead' => Lead::class,
@@ -252,26 +296,26 @@ class TimeEntryController extends Controller
                 'task' => 'App\\Models\\Task', // For future implementation
                 default => null
             };
-            
-            if (!$trackableClass) {
+
+            if (! $trackableClass) {
                 return ApiResponse::error('Invalid trackable type', 400);
             }
-            
+
             // Find the trackable entity
             $trackable = $trackableClass::find($data['trackableId']);
-            
-            if (!$trackable) {
+
+            if (! $trackable) {
                 return ApiResponse::notFound('Trackable entity not found');
             }
-            
+
             // Ensure the entity implements Trackable interface
-            if (!$trackable instanceof Trackable) {
+            if (! $trackable instanceof Trackable) {
                 return ApiResponse::error('Entity does not support time tracking', 400);
             }
-            
+
             // Start the timer
             $timeEntry = $this->timeTrackingService->startTimer($user, $trackable);
-            
+
             return ApiResponse::success(
                 new TimeEntryResource($timeEntry->load('trackable')),
                 'Timer started successfully',
@@ -292,17 +336,22 @@ class TimeEntryController extends Controller
      *     summary="Stop the active timer",
      *     description="Stop the currently active timer for the authenticated user",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Timer stopped successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Timer stopped successfully"),
      *             @OA\Property(
@@ -322,18 +371,24 @@ class TimeEntryController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="No active timer found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="No active timer found for this user.")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -344,10 +399,10 @@ class TimeEntryController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             // Stop the timer
             $timeEntry = $this->timeTrackingService->stopTimer($user);
-            
+
             return ApiResponse::success(
                 new TimeEntryResource($timeEntry->load('trackable')),
                 'Timer stopped successfully'
@@ -365,17 +420,22 @@ class TimeEntryController extends Controller
      *     summary="Get the current user's active timer",
      *     description="Retrieve the currently active timer for the authenticated user",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Active timer retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Active timer retrieved successfully"),
      *             @OA\Property(
@@ -395,19 +455,25 @@ class TimeEntryController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="No active timer found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="No active timer found"),
      *             @OA\Property(property="data", type="null")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -417,16 +483,16 @@ class TimeEntryController extends Controller
     public function active(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         $activeTimer = $this->timeTrackingService->getActiveTimer($user);
-        
-        if (!$activeTimer) {
+
+        if (! $activeTimer) {
             return ApiResponse::success(
                 null,
                 'No active timer found'
             );
         }
-        
+
         return ApiResponse::success(
             new TimeEntryResource($activeTimer->load('trackable')),
             'Active timer retrieved successfully'
@@ -441,29 +507,37 @@ class TimeEntryController extends Controller
      *     summary="Update a time entry (Admin/Super Admin only)",
      *     description="Update time entry details. Only admins and super admins can modify time entries.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Time Entry ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="startTime", type="string", format="date-time", example="2025-01-06 09:00:00"),
      *             @OA\Property(property="endTime", type="string", format="date-time", example="2025-01-06 17:00:00"),
      *             @OA\Property(property="durationMinutes", type="integer", example=480),
      *             @OA\Property(property="notes", type="string", example="Manual adjustment for missed timer")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Time entry updated successfully"
@@ -481,41 +555,41 @@ class TimeEntryController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        
+
         // Check permission to edit time entries
-        if (!$user->can('edit_time_entries')) {
+        if (! $user->can('edit_time_entries')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
-        
+
         $timeEntry = TimeEntry::find($id);
-        
-        if (!$timeEntry) {
+
+        if (! $timeEntry) {
             return ApiResponse::notFound(__('messages.time_entry_not_found'));
         }
-        
+
         $updateData = [];
-        
+
         if ($request->has('startTime')) {
             $updateData['start_time'] = $request->input('startTime');
         }
-        
+
         if ($request->has('endTime')) {
             $updateData['end_time'] = $request->input('endTime');
         }
-        
+
         if ($request->has('durationMinutes')) {
             $updateData['duration_minutes'] = $request->input('durationMinutes');
         }
-        
+
         // If start and end time provided but no duration, calculate it
-        if (isset($updateData['start_time']) && isset($updateData['end_time']) && !isset($updateData['duration_minutes'])) {
+        if (isset($updateData['start_time']) && isset($updateData['end_time']) && ! isset($updateData['duration_minutes'])) {
             $start = \Carbon\Carbon::parse($updateData['start_time']);
             $end = \Carbon\Carbon::parse($updateData['end_time']);
             $updateData['duration_minutes'] = (int) floor($start->diffInSeconds($end) / 60);
         }
-        
+
         $timeEntry->update($updateData);
-        
+
         return ApiResponse::success(
             new TimeEntryResource($timeEntry->fresh()->load('trackable')),
             __('messages.time_entry_updated')
@@ -530,31 +604,40 @@ class TimeEntryController extends Controller
      *     summary="Get all time entries (Admin/Super Admin only)",
      *     description="Retrieve all time entries with filtering. Only admins and super admins can access.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[userId]",
      *         in="query",
      *         description="Filter by user ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[startDate]",
      *         in="query",
      *         description="Filter by start date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[endDate]",
      *         in="query",
      *         description="Filter by end date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Time entries retrieved successfully"
@@ -568,12 +651,12 @@ class TimeEntryController extends Controller
     public function all(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         // Check permission to view all time entries
-        if (!$user->can('view_all_time_entries')) {
+        if (! $user->can('view_all_time_entries')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
-        
+
         $timeEntries = QueryBuilder::for(TimeEntry::class)
             ->with(['trackable', 'user'])
             ->allowedFilters([
@@ -585,7 +668,7 @@ class TimeEntryController extends Controller
                 }),
                 AllowedFilter::callback('end_date', function ($query, $value) {
                     $query->whereDate('start_time', '<=', $value);
-                })
+                }),
             ])
             ->defaultSort('-start_time')
             ->paginate($request->get('perPage', 15));
@@ -604,23 +687,30 @@ class TimeEntryController extends Controller
      *     summary="Get all active timers (Admin/Super Admin only)",
      *     description="Retrieve all currently active timers with user and trackable details. Only admins and super admins can access.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Active timers retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Active timers retrieved successfully"),
      *             @OA\Property(
      *                 property="data",
      *                 type="array",
+     *
      *                 @OA\Items(
+     *
      *                     @OA\Property(property="timeEntryId", type="integer", example=1),
      *                     @OA\Property(property="userId", type="integer", example=1),
      *                     @OA\Property(property="userName", type="string", example="John Doe"),
@@ -634,6 +724,7 @@ class TimeEntryController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Unauthorized - Admin access required"
@@ -643,12 +734,12 @@ class TimeEntryController extends Controller
     public function activeTimers(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         // Check permission to view all time entries (admin/super admin only)
-        if (!$user->can('view_all_time_entries')) {
+        if (! $user->can('view_all_time_entries')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
-        
+
         $activeTimers = TimeEntry::with(['user', 'trackable'])
             ->whereNull('end_time')
             ->orderBy('start_time', 'desc')
@@ -656,7 +747,7 @@ class TimeEntryController extends Controller
 
         $timersData = $activeTimers->map(function ($timer) {
             $elapsedMinutes = $timer->start_time->diffInMinutes(now());
-            
+
             return [
                 'timeEntryId' => $timer->id,
                 'userId' => $timer->user_id,
@@ -684,28 +775,36 @@ class TimeEntryController extends Controller
      *     summary="Stop a timer as admin (Admin/Super Admin only)",
      *     description="Stop any active timer as an admin. Only admins and super admins can access.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Time Entry ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Timer stopped successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Timer stopped successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Unauthorized - Admin access required"
@@ -719,26 +818,26 @@ class TimeEntryController extends Controller
     public function stopTimerAdmin(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        
+
         // Check permission to manage time entries (admin/super admin only)
-        if (!$user->can('edit_time_entries')) {
+        if (! $user->can('edit_time_entries')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
-        
+
         $timeEntry = TimeEntry::with(['user', 'trackable'])->find($id);
-        
-        if (!$timeEntry) {
+
+        if (! $timeEntry) {
             return ApiResponse::notFound('Time entry not found');
         }
-        
+
         if ($timeEntry->end_time !== null) {
             return ApiResponse::error('Timer is already stopped', 400);
         }
-        
+
         // Stop the timer using the service
         $timerUser = $timeEntry->user;
         $stoppedTimer = $this->timeTrackingService->stopTimer($timerUser);
-        
+
         return ApiResponse::success(
             [
                 'timeEntryId' => $stoppedTimer->id,

@@ -34,32 +34,42 @@ class MilestoneController extends Controller
      *     summary="Create invoice from milestone",
      *     description="Creates a new invoice linked to the specified milestone. The invoice amount and currency are taken from the milestone/contract.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Milestone ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=false,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="dueDate", type="string", format="date", example="2025-02-15", description="Invoice due date (defaults to milestone due date or 14 days from now)"),
      *             @OA\Property(property="notes", type="string", example="Payment for design phase", description="Additional notes for the invoice"),
      *             @OA\Property(property="sendImmediately", type="boolean", example=false, description="Whether to send the invoice immediately after creation")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Invoice created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoice created from milestone successfully"),
      *             @OA\Property(
@@ -70,26 +80,35 @@ class MilestoneController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Bad request - Milestone already has invoice or is paid",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Milestone already has an invoice linked")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User does not have permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Milestone not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Milestone not found")
      *         )
@@ -98,7 +117,7 @@ class MilestoneController extends Controller
      */
     public function createInvoice(CreateMilestoneInvoiceRequest $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('create_milestone_invoice')) {
+        if (! $request->user()->can('create_milestone_invoice')) {
             return ApiResponse::error(__('messages.unauthorized'), [], 403);
         }
 
@@ -109,7 +128,7 @@ class MilestoneController extends Controller
 
             // Send immediately if requested
             if ($request->boolean('sendImmediately')) {
-                if (!$request->user()->can('send_invoices')) {
+                if (! $request->user()->can('send_invoices')) {
                     return ApiResponse::error(__('messages.unauthorized_send_invoice'), [], 403);
                 }
                 $invoice = $this->invoiceService->sendInvoice($invoice);
@@ -132,31 +151,41 @@ class MilestoneController extends Controller
      *     summary="Link existing invoice to milestone",
      *     description="Links an existing invoice to the specified milestone",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Milestone ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"invoiceId"},
+     *
      *             @OA\Property(property="invoiceId", type="integer", example=5, description="ID of the invoice to link")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Invoice linked successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoice linked to milestone successfully"),
      *             @OA\Property(
@@ -166,26 +195,35 @@ class MilestoneController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Bad request - Milestone already has invoice",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Milestone already has an invoice linked")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Milestone or Invoice not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Not found")
      *         )
@@ -194,7 +232,7 @@ class MilestoneController extends Controller
      */
     public function linkInvoice(LinkMilestoneInvoiceRequest $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('link_milestone_invoice')) {
+        if (! $request->user()->can('link_milestone_invoice')) {
             return ApiResponse::error(__('messages.unauthorized'), [], 403);
         }
 
@@ -220,47 +258,63 @@ class MilestoneController extends Controller
      *     summary="Mark milestone as paid",
      *     description="Marks a milestone as paid. If linked to an invoice, the invoice status is also updated.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Milestone ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=false,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="invoiceId", type="integer", example=5, description="Optional invoice ID to link")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Milestone marked as paid",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Milestone marked as paid"),
      *             @OA\Property(property="data", ref="#/components/schemas/MilestoneResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Milestone not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Milestone not found")
      *         )
@@ -269,7 +323,7 @@ class MilestoneController extends Controller
      */
     public function markPaid(Request $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('mark_milestone_paid')) {
+        if (! $request->user()->can('mark_milestone_paid')) {
             return ApiResponse::error(__('messages.unauthorized'), [], 403);
         }
 
@@ -300,33 +354,43 @@ class MilestoneController extends Controller
      *     summary="Get milestone details",
      *     description="Retrieve a specific milestone with its linked invoice",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Milestone ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Milestone retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Milestone retrieved successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/MilestoneResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Milestone not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Milestone not found")
      *         )

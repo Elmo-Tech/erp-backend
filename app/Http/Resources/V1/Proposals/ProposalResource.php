@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\V1\Proposals;
 
-use App\Http\Resources\V1\Leads\LeadResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -39,7 +38,7 @@ class ProposalResource extends JsonResource
             'internalNotes' => $this->internal_notes ?? '',
             'isExpired' => $this->isExpired(),
             'canBeEdited' => $this->canBeEdited(),
-            
+
             // Relations
             'lead' => $this->whenLoaded('lead', function () {
                 return [
@@ -57,8 +56,8 @@ class ProposalResource extends JsonResource
                     'type' => $this->template->type ?? '',
                 ];
             }),
-            'quotationsCount' => $this->whenLoaded('quotations', fn() => $this->quotations->count()),
-            
+            'quotationsCount' => $this->whenLoaded('quotations', fn () => $this->quotations->count()),
+
             // Audit
             'createdAt' => $this->created_at?->toISOString() ?? '',
             'updatedAt' => $this->updated_at?->toISOString() ?? '',

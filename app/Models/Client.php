@@ -11,9 +11,33 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property string|null $name
+ * @property string|null $email
+ * @property string|null $phone
+ * @property string|null $company
+ * @property string|null $position
+ * @property string|null $address
+ * @property string|null $city
+ * @property string|null $country
+ * @property string|null $website
+ * @property string|null $notes
+ * @property ClientStatus|null $status
+ * @property int|null $user_id
+ * @property int|null $lead_id
+ * @property float|int|string|null $total_revenue
+ * @property int|null $active_projects_count
+ * @property int|null $projects_count
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read User|null $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Project> $projects
+ * @property-read Lead|null $originalLead
+ */
 class Client extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -109,7 +133,7 @@ class Client extends Model
      */
     public function getTotalRevenueAttribute(): float
     {
-        return $this->projects()->sum('budget') ?? 0;
+        return $this->projects()->sum('budget');
     }
 
     /**

@@ -11,7 +11,7 @@ return new class extends Migration
 
     /**
      * Run the migrations.
-     * 
+     *
      * Multi-assignee support with roles:
      * - developer: Can work on task, create sub-tasks, run timer
      * - reviewer: Can review, add internal notes, approve/reject

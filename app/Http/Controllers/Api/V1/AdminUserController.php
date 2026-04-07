@@ -29,17 +29,22 @@ class AdminUserController extends Controller
      *     summary="Get all users with internal cost information",
      *     description="Retrieve all users with their internal cost information. Internal costs are only visible to users with view_internal_costs permission. This endpoint requires manage_internal_costs permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Users retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Users retrieved successfully"),
      *             @OA\Property(
@@ -48,23 +53,30 @@ class AdminUserController extends Controller
      *                 @OA\Property(
      *                     property="users",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/AdminUserResource")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks manage_internal_costs permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to manage internal costs")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -74,7 +86,7 @@ class AdminUserController extends Controller
     public function index(Request $request): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('manage_internal_costs')) {
+        if (! auth()->user()->can('manage_internal_costs')) {
             return ApiResponse::forbidden('You do not have permission to manage internal costs');
         }
 
@@ -86,12 +98,12 @@ class AdminUserController extends Controller
             $usersData = \App\Http\Resources\V1\Admin\AdminUserResource::collection($users);
 
             return ApiResponse::success([
-                'users' => $usersData
+                'users' => $usersData,
             ], 'Users retrieved successfully');
 
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to retrieve users: ' . $e->getMessage(),
+                'Failed to retrieve users: '.$e->getMessage(),
                 500
             );
         }
@@ -105,25 +117,32 @@ class AdminUserController extends Controller
      *     summary="Update user's internal hourly cost",
      *     description="Update the internal hourly cost for a specific user. This endpoint requires manage_internal_costs permission and logs all changes to audit_logs. The actual cost value is never returned in the response for security.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="User ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
      *         description="Internal cost update data",
+     *
      *         @OA\JsonContent(
      *             required={"internalHourlyCost"},
+     *
      *             @OA\Property(
      *                 property="internalHourlyCost",
      *                 type="number",
@@ -134,10 +153,13 @@ class AdminUserController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Internal cost updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Internal hourly cost updated successfully"),
      *             @OA\Property(
@@ -150,26 +172,35 @@ class AdminUserController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks manage_internal_costs permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to manage internal costs")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="User not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="User not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed"),
      *             @OA\Property(
@@ -178,15 +209,19 @@ class AdminUserController extends Controller
      *                 @OA\Property(
      *                     property="internalHourlyCost",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="The internal hourly cost must be a positive number")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -196,7 +231,7 @@ class AdminUserController extends Controller
     public function updateInternalCost(Request $request, int $id): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('manage_internal_costs')) {
+        if (! auth()->user()->can('manage_internal_costs')) {
             return ApiResponse::forbidden('You do not have permission to manage internal costs');
         }
 
@@ -206,13 +241,13 @@ class AdminUserController extends Controller
                 'required',
                 'numeric',
                 'min:0.01',
-                'max:9999.99'
-            ]
+                'max:9999.99',
+            ],
         ], [
             'internalHourlyCost.required' => 'The internal hourly cost is required',
             'internalHourlyCost.numeric' => 'The internal hourly cost must be a number',
             'internalHourlyCost.min' => 'The internal hourly cost must be at least 0.01',
-            'internalHourlyCost.max' => 'The internal hourly cost cannot exceed 9999.99'
+            'internalHourlyCost.max' => 'The internal hourly cost cannot exceed 9999.99',
         ]);
 
         if ($validator->fails()) {
@@ -224,8 +259,9 @@ class AdminUserController extends Controller
 
             // Find the user
             $user = User::find($id);
-            if (!$user) {
+            if (! $user) {
                 DB::rollBack();
+
                 return ApiResponse::notFound('User not found');
             }
 
@@ -244,7 +280,7 @@ class AdminUserController extends Controller
                     'old_cost' => $oldCost ? (string) $oldCost : null,
                     'new_cost' => (string) $newCost,
                     'updated_by' => auth()->user()->name,
-                    'updated_by_id' => auth()->id()
+                    'updated_by_id' => auth()->id(),
                 ]
             );
 
@@ -255,13 +291,14 @@ class AdminUserController extends Controller
                 'userId' => $user->id,
                 'userName' => $user->name,
                 'updated' => true,
-                'updatedAt' => $user->updated_at->toISOString()
+                'updatedAt' => $user->updated_at->toISOString(),
             ], 'Internal hourly cost updated successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return ApiResponse::error(
-                'Failed to update internal cost: ' . $e->getMessage(),
+                'Failed to update internal cost: '.$e->getMessage(),
                 500
             );
         }
@@ -275,35 +312,45 @@ class AdminUserController extends Controller
      *     summary="Bulk update users' internal hourly costs",
      *     description="Update internal hourly costs for multiple users in a single operation. This endpoint requires manage_internal_costs permission and logs all changes to audit_logs. All costs are validated before any updates are made.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
      *         description="Bulk cost update data",
+     *
      *         @OA\JsonContent(
      *             required={"users"},
+     *
      *             @OA\Property(
      *                 property="users",
      *                 type="array",
      *                 description="Array of user cost updates",
+     *
      *                 @OA\Items(
      *                     type="object",
      *                     required={"userId", "internalHourlyCost"},
+     *
      *                     @OA\Property(property="userId", type="integer", example=1),
      *                     @OA\Property(property="internalHourlyCost", type="number", format="float", minimum=0.01, example=75.50)
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Bulk internal costs updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Bulk internal costs updated successfully"),
      *             @OA\Property(
@@ -314,8 +361,10 @@ class AdminUserController extends Controller
      *                 @OA\Property(
      *                     property="updatedUsers",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="userId", type="integer", example=1),
      *                         @OA\Property(property="userName", type="string", example="John Doe"),
      *                         @OA\Property(property="updated", type="boolean", example=true)
@@ -324,18 +373,24 @@ class AdminUserController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks manage_internal_costs permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to manage internal costs")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed"),
      *             @OA\Property(
@@ -344,15 +399,19 @@ class AdminUserController extends Controller
      *                 @OA\Property(
      *                     property="users.0.internalHourlyCost",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="The internal hourly cost must be a positive number")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -362,7 +421,7 @@ class AdminUserController extends Controller
     public function bulkUpdateInternalCosts(Request $request): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('manage_internal_costs')) {
+        if (! auth()->user()->can('manage_internal_costs')) {
             return ApiResponse::forbidden('You do not have permission to manage internal costs');
         }
 
@@ -374,8 +433,8 @@ class AdminUserController extends Controller
                 'required',
                 'numeric',
                 'min:0.01',
-                'max:9999.99'
-            ]
+                'max:9999.99',
+            ],
         ], [
             'users.required' => 'The users array is required',
             'users.array' => 'The users must be an array',
@@ -387,7 +446,7 @@ class AdminUserController extends Controller
             'users.*.internalHourlyCost.required' => 'Internal hourly cost is required for each user',
             'users.*.internalHourlyCost.numeric' => 'Internal hourly cost must be a number',
             'users.*.internalHourlyCost.min' => 'Internal hourly cost must be at least 0.01',
-            'users.*.internalHourlyCost.max' => 'Internal hourly cost cannot exceed 9999.99'
+            'users.*.internalHourlyCost.max' => 'Internal hourly cost cannot exceed 9999.99',
         ]);
 
         if ($validator->fails()) {
@@ -407,7 +466,7 @@ class AdminUserController extends Controller
 
                 // Find the user
                 $user = User::find($userId);
-                if (!$user) {
+                if (! $user) {
                     continue; // Skip if user not found (should not happen due to validation)
                 }
 
@@ -426,14 +485,14 @@ class AdminUserController extends Controller
                         'new_cost' => (string) $newCost,
                         'updated_by' => auth()->user()->name,
                         'updated_by_id' => auth()->id(),
-                        'bulk_operation' => true
+                        'bulk_operation' => true,
                     ]
                 );
 
                 $updatedUsers[] = [
                     'userId' => $user->id,
                     'userName' => $user->name,
-                    'updated' => true
+                    'updated' => true,
                 ];
 
                 $totalUpdated++;
@@ -445,13 +504,14 @@ class AdminUserController extends Controller
             return ApiResponse::success([
                 'totalUpdated' => $totalUpdated,
                 'updatedAt' => now()->toISOString(),
-                'updatedUsers' => $updatedUsers
+                'updatedUsers' => $updatedUsers,
             ], 'Bulk internal costs updated successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return ApiResponse::error(
-                'Failed to update internal costs: ' . $e->getMessage(),
+                'Failed to update internal costs: '.$e->getMessage(),
                 500
             );
         }

@@ -2,7 +2,6 @@
 
 namespace App\Services\Performance;
 
-use App\Enums\BonusTier;
 use App\Enums\TaskStatus;
 use App\Models\Attendance;
 use App\Models\CodeReview;
@@ -90,7 +89,7 @@ class PerformanceEvaluationService
     private function calculateTechnicalQuality(User $user, Carbon $startDate, Carbon $endDate): array
     {
         // Bug Severity Score (based on reopen_count)
-        $tasks = Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
+        $tasks = Task::whereHas('assignees', fn ($q) => $q->where('user_id', $user->id))
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->whereIn('status', [TaskStatus::DONE, TaskStatus::TESTING])
             ->get();
@@ -172,7 +171,7 @@ class PerformanceEvaluationService
     private function calculateProductivityScore(User $user, Carbon $startDate, Carbon $endDate): array
     {
         // On-time Delivery Score
-        $completedTasks = Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
+        $completedTasks = Task::whereHas('assignees', fn ($q) => $q->where('user_id', $user->id))
             ->where('status', TaskStatus::DONE)
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->whereNotNull('due_date')

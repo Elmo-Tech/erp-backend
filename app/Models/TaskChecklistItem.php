@@ -72,9 +72,11 @@ class TaskChecklistItem extends Model
     {
         if ($this->is_completed) {
             $this->markIncomplete();
+
             return false;
         } else {
             $this->markComplete($userId);
+
             return true;
         }
     }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V1\HR;
 
+use App\Enums\UserSpecialization;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,6 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @OA\Schema(
  *     schema="EmployeeResource",
  *     type="object",
+ *
  *     @OA\Property(property="userId", type="integer", example=1),
  *     @OA\Property(property="name", type="string", example="John Doe"),
  *     @OA\Property(property="email", type="string", example="john@example.com"),
@@ -29,40 +32,47 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class EmployeeResource extends JsonResource
 {
+    /** @mixin User */
     public function toArray(Request $request): array
     {
+        /** @var User $employee */
+        $employee = $this->resource;
         $user = $request->user();
         $canViewSalary = $user && $user->can('view_employee_salary');
+        $roleName = $employee->roles->pluck('name')->first() ?? '';
+        $specialization = $employee->specialization;
+        $graceDaysAllowed = $employee->grace_days_allowed ?? 0;
+        $graceDaysUsed = $employee->grace_days_used ?? 0;
 
         return [
-            'userId' => $this->id,
-            'name' => $this->name,
-            'email' => $this->email,
-            'avatar' => $this->avatar,
-            'isActive' => (bool) $this->is_active,
-            'role' => $this->roles->first()?->name ?? '',
-            'specialization' => $this->specialization?->value ?? '',
-            
+            'userId' => $employee->id,
+            'name' => $employee->name,
+            'email' => $employee->email,
+            'avatar' => $employee->avatar,
+            'isActive' => (bool) $employee->is_active,
+            'role' => $roleName,
+            'specialization' => $specialization instanceof UserSpecialization ? $specialization->value : '',
+
             // Work schedule
-            'workHoursPerDay' => (int) $this->work_hours_per_day,
-            'workStartTime' => $this->work_start_time,
-            'expectedClockOut' => $this->expected_clock_out,
-            
+            'workHoursPerDay' => (int) ($employee->work_hours_per_day ?? 0),
+            'workStartTime' => $employee->work_start_time,
+            'expectedClockOut' => $employee->expected_clock_out,
+
             // Grace days
-            'graceDaysAllowed' => (int) $this->grace_days_allowed,
-            'graceDaysUsed' => (int) $this->grace_days_used,
-            'graceDaysRemaining' => max(0, $this->grace_days_allowed - $this->grace_days_used),
-            
+            'graceDaysAllowed' => (int) $graceDaysAllowed,
+            'graceDaysUsed' => (int) $graceDaysUsed,
+            'graceDaysRemaining' => max(0, $graceDaysAllowed - $graceDaysUsed),
+
             // Performance
-            'totalPoints' => (int) $this->total_points,
-            'skills' => $this->skills ?? [],
-            
+            'totalPoints' => (int) ($employee->total_points ?? 0),
+            'skills' => $employee->skills ?? [],
+
             // Salary info (admin only)
-            'salary' => $canViewSalary ? (float) ($this->salary ?? 0) : null,
-            'totalDeductions' => $canViewSalary ? (float) ($this->total_deductions ?? 0) : null,
-            'internalHourlyCost' => $canViewSalary ? (float) ($this->internal_hourly_cost ?? 0) : null,
-            
-            'createdAt' => $this->created_at?->toISOString() ?? '',
+            'salary' => $canViewSalary ? (float) ($employee->salary ?? 0) : null,
+            'totalDeductions' => $canViewSalary ? (float) ($employee->total_deductions ?? 0) : null,
+            'internalHourlyCost' => $canViewSalary ? (float) ($employee->internal_hourly_cost ?? 0) : null,
+
+            'createdAt' => $employee->created_at?->toISOString() ?? '',
         ];
     }
 }

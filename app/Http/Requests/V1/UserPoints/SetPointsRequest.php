@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\V1\UserPoints;
 
-use Illuminate\Foundation\Http\FormRequest;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class SetPointsRequest extends FormRequest

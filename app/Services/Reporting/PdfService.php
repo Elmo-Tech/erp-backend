@@ -3,24 +3,22 @@
 namespace App\Services\Reporting;
 
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 
 class PdfService
 {
     /**
      * Load font configuration for Arabic support
-     *
-     * @return array
      */
     private function loadFontConfig(): array
     {
         $configPath = storage_path('app/fonts/font_config.php');
-        
+
         if (File::exists($configPath)) {
             return include $configPath;
         }
-        
+
         // Default fallback configuration
         return [
             'arabic_fonts' => [
@@ -37,37 +35,34 @@ class PdfService
 
     /**
      * Get default font based on locale and available fonts
-     *
-     * @param array $fontConfig
-     * @return string
      */
     private function getDefaultFont(array $fontConfig): string
     {
         $locale = app()->getLocale();
-        
+
         if ($locale === 'ar') {
             // Check if Arabic fonts are available
             $arabicFont = $fontConfig['arabic_fonts']['regular'] ?? 'DejaVu Sans';
             $fontPath = storage_path('app/fonts');
-            
+
             // Verify font files exist
-            if (File::exists($fontPath . '/NotoSansArabic-Regular.ttf')) {
+            if (File::exists($fontPath.'/NotoSansArabic-Regular.ttf')) {
                 return 'Noto Sans Arabic';
             }
-            
+
             return 'DejaVu Sans'; // Fallback for Arabic
         }
-        
+
         return 'DejaVu Sans'; // Default for other languages
     }
 
     /**
      * Generate PDF with robust error handling and directory management
      *
-     * @param string $view Blade view name
-     * @param array $data Data to pass to the view
-     * @param array $options PDF generation options
-     * @return \Barryvdh\DomPDF\PDF
+     * @param  string  $view  Blade view name
+     * @param  array  $data  Data to pass to the view
+     * @param  array  $options  PDF generation options
+     *
      * @throws \Exception
      */
     public function generatePdf(string $view, array $data = [], array $options = []): \Barryvdh\DomPDF\PDF
@@ -77,16 +72,16 @@ class PdfService
 
         // Store current locale to restore later
         $currentLocale = app()->getLocale();
-        
+
         // Set locale if provided in data
         if (isset($data['locale'])) {
             app()->setLocale($data['locale']);
-            Log::info('PDF generation: Locale set to ' . $data['locale']);
+            Log::info('PDF generation: Locale set to '.$data['locale']);
         }
-        
+
         // Load font configuration
         $fontConfig = $this->loadFontConfig();
-        
+
         // Default options for safe PDF generation with Arabic support
         $defaultOptions = [
             'defaultFont' => 'DejaVu Sans', // Always use DejaVu Sans - it has excellent Arabic support
@@ -109,7 +104,7 @@ class PdfService
 
         // Merge with provided options (but prioritize critical Arabic settings)
         $pdfOptions = array_merge($defaultOptions, $options);
-        
+
         // Force critical settings for Arabic support
         $pdfOptions['enableFontSubsetting'] = false; // Never enable subsetting for Arabic
         $pdfOptions['defaultFont'] = 'DejaVu Sans'; // Always use DejaVu Sans
@@ -118,19 +113,19 @@ class PdfService
             Log::info('PDF generation attempt', [
                 'view' => $view,
                 'locale' => app()->getLocale(),
-                'options' => $pdfOptions
+                'options' => $pdfOptions,
             ]);
-            
+
             // Generate PDF with Arabic-safe options
             $pdf = Pdf::loadView($view, $data);
             $pdf->setPaper('A4', 'portrait');
             $pdf->setOptions($pdfOptions);
 
             Log::info('PDF generation successful with Arabic-safe options');
-            
+
             // Restore original locale
             app()->setLocale($currentLocale);
-            
+
             return $pdf;
 
         } catch (\Exception $e) {
@@ -138,13 +133,13 @@ class PdfService
                 'error' => $e->getMessage(),
                 'view' => $view,
                 'options' => $pdfOptions,
-                'locale' => app()->getLocale()
+                'locale' => app()->getLocale(),
             ]);
 
             // Fallback: Try with absolute minimal options
             try {
                 Log::info('Attempting PDF generation with minimal fallback options');
-                
+
                 $pdf = Pdf::loadView($view, $data);
                 $pdf->setPaper('A4', 'portrait');
                 $pdf->setOptions([
@@ -159,25 +154,26 @@ class PdfService
 
                 // Restore original locale
                 app()->setLocale($currentLocale);
-                
+
                 Log::info('PDF generation succeeded with minimal fallback options', ['view' => $view]);
+
                 return $pdf;
 
             } catch (\Exception $fallbackException) {
                 // Restore original locale
                 app()->setLocale($currentLocale);
-                
+
                 Log::error('PDF generation completely failed', [
                     'original_error' => $e->getMessage(),
                     'fallback_error' => $fallbackException->getMessage(),
                     'view' => $view,
                     'data_keys' => array_keys($data),
-                    'locale' => $currentLocale
+                    'locale' => $currentLocale,
                 ]);
 
                 throw new \Exception(
-                    'PDF generation failed: ' . $e->getMessage() . 
-                    ' (Fallback also failed: ' . $fallbackException->getMessage() . ')'
+                    'PDF generation failed: '.$e->getMessage().
+                    ' (Fallback also failed: '.$fallbackException->getMessage().')'
                 );
             }
         }
@@ -186,37 +182,29 @@ class PdfService
     /**
      * Generate and download PDF
      *
-     * @param string $view
-     * @param array $data
-     * @param string $filename
-     * @param array $options
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function downloadPdf(string $view, array $data, string $filename, array $options = [])
     {
         $pdf = $this->generatePdf($view, $data, $options);
+
         return $pdf->download($filename);
     }
 
     /**
      * Generate and stream PDF (display in browser)
      *
-     * @param string $view
-     * @param array $data
-     * @param string $filename
-     * @param array $options
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function streamPdf(string $view, array $data, string $filename, array $options = [])
     {
         $pdf = $this->generatePdf($view, $data, $options);
+
         return $pdf->stream($filename);
     }
 
     /**
      * Ensure required directories exist for PDF generation
-     *
-     * @return void
      */
     private function ensureDirectoriesExist(): void
     {
@@ -230,19 +218,19 @@ class PdfService
         ];
 
         foreach ($directories as $directory) {
-            if (!is_dir($directory)) {
+            if (! is_dir($directory)) {
                 try {
                     mkdir($directory, 0755, true);
-                    
+
                     // Create .gitkeep file
-                    $gitkeepFile = $directory . '/.gitkeep';
-                    if (!file_exists($gitkeepFile)) {
+                    $gitkeepFile = $directory.'/.gitkeep';
+                    if (! file_exists($gitkeepFile)) {
                         file_put_contents($gitkeepFile, '# Keep this directory in version control');
                     }
-                    
+
                     Log::info("Created PDF directory: {$directory}");
                 } catch (\Exception $e) {
-                    Log::warning("Failed to create PDF directory {$directory}: " . $e->getMessage());
+                    Log::warning("Failed to create PDF directory {$directory}: ".$e->getMessage());
                 }
             }
         }
@@ -293,12 +281,12 @@ class PdfService
             $pdf = $this->generatePdf('test.pdf-test', $testData);
             $results['generation'] = [
                 'success' => true,
-                'message' => 'PDF generation test successful'
+                'message' => 'PDF generation test successful',
             ];
         } catch (\Exception $e) {
             $results['generation'] = [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
 

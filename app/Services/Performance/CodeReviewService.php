@@ -121,8 +121,8 @@ class CodeReviewService
                 'documentation' => round($approvedReviews->avg('documentation_score'), 2),
                 'overall' => round($approvedReviews->avg('average_score'), 2),
             ],
-            'approvalRate' => $reviews->count() > 0 
-                ? round(($approvedReviews->count() / $reviews->count()) * 100, 2) 
+            'approvalRate' => $reviews->count() > 0
+                ? round(($approvedReviews->count() / $reviews->count()) * 100, 2)
                 : 0,
         ];
     }
@@ -155,7 +155,7 @@ class CodeReviewService
         }
 
         $avgScore = $reviews->avg('average_score');
-        
+
         // Convert 1-5 scale to 0-15 scale
         return round(($avgScore / 5) * 15, 2);
     }

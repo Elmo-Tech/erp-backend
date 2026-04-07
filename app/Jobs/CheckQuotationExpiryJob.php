@@ -38,7 +38,7 @@ class CheckQuotationExpiryJob implements ShouldQueue
                 ->whereIn('status', ['draft', 'sent', 'under_review']) // Only active quotations
                 ->get();
 
-            Log::info('CheckQuotationExpiryJob: Found ' . $expiringQuotations->count() . ' quotations expiring in 3 days');
+            Log::info('CheckQuotationExpiryJob: Found '.$expiringQuotations->count().' quotations expiring in 3 days');
 
             foreach ($expiringQuotations as $quotation) {
                 $this->sendExpiryNotification($quotation);
@@ -56,11 +56,11 @@ class CheckQuotationExpiryJob implements ShouldQueue
             }
 
         } catch (\Exception $e) {
-            Log::error('CheckQuotationExpiryJob failed: ' . $e->getMessage(), [
+            Log::error('CheckQuotationExpiryJob failed: '.$e->getMessage(), [
                 'exception' => $e,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             throw $e; // Re-throw to mark job as failed
         }
     }
@@ -73,25 +73,25 @@ class CheckQuotationExpiryJob implements ShouldQueue
         try {
             // Get the assigned sales rep from the lead
             $assignedUser = $quotation->lead->assignedTo ?? null;
-            
-            if (!$assignedUser) {
+
+            if (! $assignedUser) {
                 // Fallback: notify all users with quotation management permissions
                 $salesUsers = User::permission('manage_quotations')->get();
-                
+
                 foreach ($salesUsers as $user) {
                     $user->notify(new QuotationExpiring($quotation));
                 }
-                
+
                 Log::info("Quotation {$quotation->id} expiry notification sent to all sales users (no assigned rep)");
             } else {
                 // Notify the assigned sales rep
                 $assignedUser->notify(new QuotationExpiring($quotation));
-                
+
                 Log::info("Quotation {$quotation->id} expiry notification sent to user {$assignedUser->id}");
             }
 
         } catch (\Exception $e) {
-            Log::error("Failed to send expiry notification for quotation {$quotation->id}: " . $e->getMessage());
+            Log::error("Failed to send expiry notification for quotation {$quotation->id}: ".$e->getMessage());
         }
     }
 
@@ -102,7 +102,7 @@ class CheckQuotationExpiryJob implements ShouldQueue
     {
         Log::error('CheckQuotationExpiryJob failed permanently', [
             'exception' => $exception->getMessage(),
-            'trace' => $exception->getTraceAsString()
+            'trace' => $exception->getTraceAsString(),
         ]);
     }
 }

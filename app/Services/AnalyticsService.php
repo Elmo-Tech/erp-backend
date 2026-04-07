@@ -33,7 +33,7 @@ class AnalyticsService
                 ->selectRaw('CASE WHEN COUNT(leads.id) > 0 THEN (COUNT(CASE WHEN leads.status = ? THEN 1 END) / COUNT(leads.id)) * 100 ELSE 0 END as conversion_rate', [LeadStatus::WON->value])
                 ->leftJoin('leads', function ($join) {
                     $join->on('users.id', '=', 'leads.reference_id')
-                         ->where('leads.reference_type', 'sales_rep');
+                        ->where('leads.reference_type', 'sales_rep');
                 })
                 ->groupBy('users.id', 'users.name')
                 ->having('total_leads', '>', 0)
@@ -56,10 +56,10 @@ class AnalyticsService
 
             // Monthly performance trend (last 12 months)
             $monthlyTrend = Lead::select(
-                    DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
-                    DB::raw('COUNT(*) as total_leads'),
-                    DB::raw('COUNT(CASE WHEN status = "' . LeadStatus::WON->value . '" THEN 1 END) as won_leads')
-                )
+                DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
+                DB::raw('COUNT(*) as total_leads'),
+                DB::raw('COUNT(CASE WHEN status = "'.LeadStatus::WON->value.'" THEN 1 END) as won_leads')
+            )
                 ->where('created_at', '>=', now()->subMonths(12))
                 ->groupBy('month')
                 ->orderBy('month')
@@ -148,10 +148,10 @@ class AnalyticsService
 
             // Monthly rejection trend
             $monthlyRejectionTrend = Quotation::select(
-                    DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
-                    DB::raw('COUNT(*) as total_quotations'),
-                    DB::raw('COUNT(CASE WHEN status = "' . QuotationStatus::REJECTED->value . '" THEN 1 END) as rejected_quotations')
-                )
+                DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
+                DB::raw('COUNT(*) as total_quotations'),
+                DB::raw('COUNT(CASE WHEN status = "'.QuotationStatus::REJECTED->value.'" THEN 1 END) as rejected_quotations')
+            )
                 ->where('created_at', '>=', now()->subMonths(12))
                 ->groupBy('month')
                 ->orderBy('month')
@@ -227,9 +227,9 @@ class AnalyticsService
 
             // Monthly cashflow projection (next 12 months)
             $monthlyCashflow = Invoice::select(
-                    DB::raw('DATE_FORMAT(due_date, "%Y-%m") as month'),
-                    DB::raw('SUM(amount) as expected_amount')
-                )
+                DB::raw('DATE_FORMAT(due_date, "%Y-%m") as month'),
+                DB::raw('SUM(amount) as expected_amount')
+            )
                 ->whereIn('status', [InvoiceStatus::SENT, InvoiceStatus::OVERDUE])
                 ->where('due_date', '>=', now())
                 ->where('due_date', '<=', now()->addMonths(12))
@@ -245,10 +245,10 @@ class AnalyticsService
 
             // Payment trends (last 6 months)
             $paymentTrends = Invoice::select(
-                    DB::raw('DATE_FORMAT(paid_at, "%Y-%m") as month'),
-                    DB::raw('SUM(amount) as paid_amount'),
-                    DB::raw('COUNT(*) as paid_count')
-                )
+                DB::raw('DATE_FORMAT(paid_at, "%Y-%m") as month'),
+                DB::raw('SUM(amount) as paid_amount'),
+                DB::raw('COUNT(*) as paid_count')
+            )
                 ->where('status', InvoiceStatus::PAID)
                 ->where('paid_at', '>=', now()->subMonths(6))
                 ->groupBy('month')
@@ -301,7 +301,7 @@ class AnalyticsService
                         'type' => 'expiring_quotation',
                         'id' => $quotation->id,
                         'title' => "Quotation {$quotation->quotation_number}",
-                        'description' => "For {$quotation->lead->name} - Expires " . $quotation->expiry_date->format('M j, Y'),
+                        'description' => "For {$quotation->lead->name} - Expires ".$quotation->expiry_date->format('M j, Y'),
                         'urgency' => $quotation->expiry_date->diffInDays(now()) <= 1 ? 'critical' : 'high',
                         'daysLeft' => $quotation->expiry_date->diffInDays(now()),
                         'amount' => $quotation->final_price,
@@ -318,10 +318,12 @@ class AnalyticsService
                 ->filter(function ($lead) {
                     // Check if there's been any recent activity
                     $lastActivity = $lead->activities()->latest()->first();
-                    return !$lastActivity || $lastActivity->created_at <= now()->subDays(14);
+
+                    return ! $lastActivity || $lastActivity->created_at <= now()->subDays(14);
                 })
                 ->map(function ($lead) {
                     $daysSinceUpdate = $lead->updated_at->diffInDays(now());
+
                     return [
                         'type' => 'stale_lead',
                         'id' => $lead->id,
@@ -340,12 +342,13 @@ class AnalyticsService
                 ->where('status', InvoiceStatus::OVERDUE)
                 ->orWhere(function ($query) {
                     $query->where('status', InvoiceStatus::SENT)
-                          ->where('due_date', '<', now());
+                        ->where('due_date', '<', now());
                 })
                 ->orderBy('due_date')
                 ->get()
                 ->map(function ($invoice) {
                     $daysOverdue = now()->diffInDays($invoice->due_date);
+
                     return [
                         'type' => 'overdue_invoice',
                         'id' => $invoice->id,
@@ -368,11 +371,12 @@ class AnalyticsService
                 ->get()
                 ->map(function ($lead) {
                     $daysOverdue = now()->diffInDays($lead->next_follow_up_at);
+
                     return [
                         'type' => 'follow_up_needed',
                         'id' => $lead->id,
                         'title' => "Follow-up: {$lead->name}",
-                        'description' => "Follow-up was due " . $lead->next_follow_up_at->format('M j, Y'),
+                        'description' => 'Follow-up was due '.$lead->next_follow_up_at->format('M j, Y'),
                         'urgency' => $daysOverdue > 7 ? 'high' : 'medium',
                         'daysOverdue' => $daysOverdue,
                         'company' => $lead->company,
@@ -423,7 +427,7 @@ class AnalyticsService
     {
         $totalQuotations = Quotation::count();
         $rejectedQuotations = Quotation::where('status', QuotationStatus::REJECTED)->count();
-        
+
         return $totalQuotations > 0 ? ($rejectedQuotations / $totalQuotations) * 100 : 0;
     }
 

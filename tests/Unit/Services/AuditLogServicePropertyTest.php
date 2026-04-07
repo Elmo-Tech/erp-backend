@@ -3,34 +3,34 @@
 namespace Tests\Unit\Services;
 
 use App\Models\AuditLog;
-use App\Models\User;
 use App\Models\Project;
+use App\Models\User;
 use App\Services\Client\AuditLogService;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 /**
  * Property-Based Tests for AuditLogService
- * 
+ *
  * Feature: client-portal-security, Property 9: Audit Logging
  * Validates: Requirements 16.1, 16.2, 16.3, 16.4, 16.5
  */
 class AuditLogServicePropertyTest extends TestCase
 {
-    use TestTrait, RefreshDatabase;
+    use RefreshDatabase, TestTrait;
 
     private AuditLogService $auditLogService;
+
     private User $testUser;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->auditLogService = new AuditLogService();
-        
+        $this->auditLogService = new AuditLogService;
+
         // Create a test user for authentication
         $this->testUser = User::factory()->create();
         Auth::login($this->testUser);
@@ -41,18 +41,18 @@ class AuditLogServicePropertyTest extends TestCase
         // Clean up audit logs for this test user to prevent interference
         AuditLog::where('user_id', $this->testUser->id)->delete();
         AuditLog::whereNull('user_id')->delete();
-        
+
         parent::tearDown();
     }
 
     /**
      * Property 9: Audit Logging
-     * 
+     *
      * For any client authentication event, data access, or action (UI approval, invoice payment),
      * an audit log record SHALL be created. For any forbidden access attempt, an audit log SHALL
      * be created with details. For any audit log record, it SHALL contain: user_id, action,
      * auditable_type, auditable_id, ip_address, timestamp.
-     * 
+     *
      * **Validates: Requirements 16.1, 16.2, 16.3, 16.4, 16.5**
      */
     public function test_audit_logging_creates_complete_records(): void
@@ -67,10 +67,10 @@ class AuditLogServicePropertyTest extends TestCase
             ->then(function ($action, $ipAddress, $userAgent) {
                 // Create a test project for auditable model
                 $project = Project::factory()->create();
-                
+
                 // Test general audit logging with explicit IP and user agent
                 $auditLog = $this->auditLogService->log($action, $project, ['test_key' => 'test_value'], $ipAddress, $userAgent);
-                
+
                 // Verify audit log record contains all required fields
                 $this->assertInstanceOf(AuditLog::class, $auditLog);
                 $this->assertEquals($this->testUser->id, $auditLog->user_id);
@@ -81,7 +81,7 @@ class AuditLogServicePropertyTest extends TestCase
                 $this->assertEquals($userAgent, $auditLog->user_agent);
                 $this->assertEquals(['test_key' => 'test_value'], $auditLog->metadata);
                 $this->assertNotNull($auditLog->created_at);
-                
+
                 // Verify audit log is persisted in database
                 $this->assertDatabaseHas('audit_logs', [
                     'user_id' => $this->testUser->id,
@@ -96,10 +96,10 @@ class AuditLogServicePropertyTest extends TestCase
 
     /**
      * Property 9: Audit Logging - Forbidden Access Attempts
-     * 
+     *
      * For any forbidden access attempt, an audit log SHALL be created with details
      * including resource type and resource ID.
-     * 
+     *
      * **Validates: Requirements 16.4, 16.5**
      */
     public function test_audit_logging_forbidden_access_attempts(): void
@@ -117,10 +117,10 @@ class AuditLogServicePropertyTest extends TestCase
                 AuditLog::where('user_id', $this->testUser->id)
                     ->where('action', 'forbidden_access_attempt')
                     ->delete();
-                
+
                 // Test forbidden access logging with explicit IP and user agent
                 $this->auditLogService->logForbiddenAccess($resourceType, $resourceId, $ipAddress, $userAgent);
-                
+
                 // Verify forbidden access attempt is logged
                 $this->assertDatabaseHas('audit_logs', [
                     'user_id' => $this->testUser->id,
@@ -130,13 +130,13 @@ class AuditLogServicePropertyTest extends TestCase
                     'ip_address' => $ipAddress,
                     'user_agent' => $userAgent,
                 ]);
-                
+
                 // Verify metadata contains resource details
                 $auditLog = AuditLog::where('action', 'forbidden_access_attempt')
                     ->where('user_id', $this->testUser->id)
                     ->latest()
                     ->first();
-                
+
                 $this->assertNotNull($auditLog);
                 $this->assertEquals($resourceType, $auditLog->metadata['resource_type']);
                 $this->assertEquals($resourceId, $auditLog->metadata['resource_id']);
@@ -145,10 +145,10 @@ class AuditLogServicePropertyTest extends TestCase
 
     /**
      * Property 9: Audit Logging - Authentication Events
-     * 
+     *
      * For any client authentication event, an audit log SHALL be created
      * with proper user identification and IP tracking.
-     * 
+     *
      * **Validates: Requirements 16.1, 16.2**
      */
     public function test_audit_logging_authentication_events(): void
@@ -163,7 +163,7 @@ class AuditLogServicePropertyTest extends TestCase
             ->then(function ($authEvent, $ipAddress, $userAgent) {
                 // Test authentication event logging with explicit IP and user agent
                 $this->auditLogService->logAuthentication($authEvent, $this->testUser->id, $ipAddress, $userAgent);
-                
+
                 // Verify authentication event is logged
                 $this->assertDatabaseHas('audit_logs', [
                     'user_id' => $this->testUser->id,
@@ -173,13 +173,13 @@ class AuditLogServicePropertyTest extends TestCase
                     'ip_address' => $ipAddress,
                     'user_agent' => $userAgent,
                 ]);
-                
+
                 // Verify audit log record is complete
                 $auditLog = AuditLog::where('action', $authEvent)
                     ->where('user_id', $this->testUser->id)
                     ->latest()
                     ->first();
-                
+
                 $this->assertNotNull($auditLog);
                 $this->assertEquals([], $auditLog->metadata);
                 $this->assertNotNull($auditLog->created_at);
@@ -188,10 +188,10 @@ class AuditLogServicePropertyTest extends TestCase
 
     /**
      * Property 9: Audit Logging - Null Auditable Model
-     * 
+     *
      * For any audit log without an auditable model, the system SHALL
      * handle null values correctly and still create complete records.
-     * 
+     *
      * **Validates: Requirements 16.5**
      */
     public function test_audit_logging_null_auditable_model(): void
@@ -205,7 +205,7 @@ class AuditLogServicePropertyTest extends TestCase
             ->then(function ($action, $metadata) {
                 // Test logging without auditable model with explicit IP and user agent
                 $auditLog = $this->auditLogService->log($action, null, $metadata, '127.0.0.1', 'Test Agent');
-                
+
                 // Verify audit log record is created correctly
                 $this->assertInstanceOf(AuditLog::class, $auditLog);
                 $this->assertEquals($this->testUser->id, $auditLog->user_id);
@@ -215,7 +215,7 @@ class AuditLogServicePropertyTest extends TestCase
                 $this->assertEquals('127.0.0.1', $auditLog->ip_address);
                 $this->assertEquals('Test Agent', $auditLog->user_agent);
                 $this->assertEquals($metadata, $auditLog->metadata);
-                
+
                 // Verify database record
                 $this->assertDatabaseHas('audit_logs', [
                     'user_id' => $this->testUser->id,
@@ -230,10 +230,10 @@ class AuditLogServicePropertyTest extends TestCase
 
     /**
      * Property 9: Audit Logging - Multiple Actions Sequence
-     * 
+     *
      * For any sequence of audit actions, each SHALL be logged independently
      * with correct timestamps and maintain data integrity.
-     * 
+     *
      * **Validates: Requirements 16.1, 16.2, 16.3, 16.5**
      */
     public function test_audit_logging_multiple_actions_sequence(): void
@@ -247,32 +247,32 @@ class AuditLogServicePropertyTest extends TestCase
             ->then(function ($actions, $projectCount) {
                 // Clean up any existing audit logs for this user to ensure clean test
                 AuditLog::where('user_id', $this->testUser->id)->delete();
-                
+
                 // Create multiple projects
                 $projects = Project::factory()->count($projectCount)->create();
-                
+
                 $auditLogs = [];
-                
+
                 // Log multiple actions in sequence with explicit IP and user agent
                 foreach ($actions as $index => $action) {
                     $project = $projects[$index % $projectCount];
                     $metadata = ['sequence' => $index, 'project_count' => $projectCount];
-                    
+
                     $auditLog = $this->auditLogService->log($action, $project, $metadata, '192.168.1.1', 'Sequence Test');
                     $auditLogs[] = $auditLog;
-                    
+
                     // Small delay to ensure different timestamps
                     usleep(1000);
                 }
-                
+
                 // Verify all audit logs were created
                 $this->assertCount(count($actions), $auditLogs);
-                
+
                 // Verify each audit log is independent and correct
                 foreach ($auditLogs as $index => $auditLog) {
                     $expectedAction = $actions[$index];
                     $expectedProject = $projects[$index % $projectCount];
-                    
+
                     $this->assertEquals($this->testUser->id, $auditLog->user_id);
                     $this->assertEquals($expectedAction, $auditLog->action);
                     $this->assertEquals(Project::class, $auditLog->auditable_type);
@@ -280,7 +280,7 @@ class AuditLogServicePropertyTest extends TestCase
                     $this->assertEquals($index, $auditLog->metadata['sequence']);
                     $this->assertEquals($projectCount, $auditLog->metadata['project_count']);
                 }
-                
+
                 // Verify timestamps are in correct order
                 for ($i = 1; $i < count($auditLogs); $i++) {
                     $this->assertGreaterThanOrEqual(
@@ -289,7 +289,7 @@ class AuditLogServicePropertyTest extends TestCase
                         'Audit log timestamps should be in chronological order'
                     );
                 }
-                
+
                 // Verify database contains all records for this test
                 $this->assertEquals(
                     count($actions),
@@ -301,10 +301,10 @@ class AuditLogServicePropertyTest extends TestCase
 
     /**
      * Property 9: Audit Logging - Unauthenticated User Handling
-     * 
+     *
      * For any audit logging when no user is authenticated, the system SHALL
      * handle null user_id gracefully while still capturing other details.
-     * 
+     *
      * **Validates: Requirements 16.2, 16.5**
      */
     public function test_audit_logging_unauthenticated_user(): void
@@ -318,10 +318,10 @@ class AuditLogServicePropertyTest extends TestCase
             ->then(function ($action, $ipAddress) {
                 // Logout to simulate unauthenticated state
                 Auth::logout();
-                
+
                 // Test logging without authenticated user with explicit IP and user agent
                 $auditLog = $this->auditLogService->log($action, null, ['unauthenticated' => true], $ipAddress, 'Unauthenticated Agent');
-                
+
                 // Verify audit log handles null user_id
                 $this->assertInstanceOf(AuditLog::class, $auditLog);
                 $this->assertNull($auditLog->user_id);
@@ -331,7 +331,7 @@ class AuditLogServicePropertyTest extends TestCase
                 $this->assertEquals($ipAddress, $auditLog->ip_address);
                 $this->assertEquals('Unauthenticated Agent', $auditLog->user_agent);
                 $this->assertEquals(['unauthenticated' => true], $auditLog->metadata);
-                
+
                 // Verify database record
                 $this->assertDatabaseHas('audit_logs', [
                     'user_id' => null,

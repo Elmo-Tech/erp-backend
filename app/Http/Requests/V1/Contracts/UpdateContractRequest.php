@@ -22,27 +22,27 @@ class UpdateContractRequest extends FormRequest
             'templateId' => ['nullable', 'integer', 'exists:contract_templates,id'],
             'title' => ['nullable', 'string', 'max:255'],
             'content' => ['nullable', 'string'],
-            
+
             'partyOne' => ['nullable', 'array'],
             'partyOne.company' => ['nullable', 'string', 'max:255'],
             'partyOne.representative' => ['nullable', 'string', 'max:255'],
             'partyOne.title' => ['nullable', 'string', 'max:100'],
             'partyOne.address' => ['nullable', 'string'],
-            
+
             'partyTwo' => ['nullable', 'array'],
             'partyTwo.company' => ['nullable', 'string', 'max:255'],
             'partyTwo.name' => ['nullable', 'string', 'max:255'],
             'partyTwo.representative' => ['nullable', 'string', 'max:255'],
             'partyTwo.title' => ['nullable', 'string', 'max:100'],
             'partyTwo.address' => ['nullable', 'string'],
-            
+
             'totalAmount' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'size:3'],
             'paymentTerms' => ['nullable', 'string'],
-            
+
             'startDate' => ['nullable', 'date'],
             'endDate' => ['nullable', 'date', 'after:startDate'],
-            
+
             'milestones' => ['nullable', 'array'],
             'milestones.*.title' => ['required_with:milestones', 'string', 'max:255'],
             'milestones.*.description' => ['nullable', 'string'],

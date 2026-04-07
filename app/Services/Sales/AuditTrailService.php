@@ -59,7 +59,7 @@ class AuditTrailService
                 });
 
                 // Proposal history
-                if (!empty($proposalIds)) {
+                if (! empty($proposalIds)) {
                     $query->orWhere(function ($q) use ($proposalIds) {
                         $q->where('auditable_type', Proposal::class)
                             ->whereIn('auditable_id', $proposalIds);
@@ -67,7 +67,7 @@ class AuditTrailService
                 }
 
                 // Quotation history
-                if (!empty($quotationIds)) {
+                if (! empty($quotationIds)) {
                     $query->orWhere(function ($q) use ($quotationIds) {
                         $q->where('auditable_type', Quotation::class)
                             ->whereIn('auditable_id', $quotationIds);

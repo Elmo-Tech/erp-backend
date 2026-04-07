@@ -33,64 +33,85 @@ class AuditLogController extends Controller
      *     summary="Get paginated list of audit logs (Admin only)",
      *     tags={"Audit Logs"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[event_type]",
      *         in="query",
      *         description="Filter by event type",
+     *
      *         @OA\Schema(type="string", enum={"contract", "invoice", "project", "payment", "security", "system"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[severity]",
      *         in="query",
      *         description="Filter by severity level",
+     *
      *         @OA\Schema(type="string", enum={"info", "warning", "critical"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[user_id]",
      *         in="query",
      *         description="Filter by user ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[action]",
      *         in="query",
      *         description="Search in action field",
+     *
      *         @OA\Schema(type="string")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[date_from]",
      *         in="query",
      *         description="Filter from date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[date_to]",
      *         in="query",
      *         description="Filter to date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
+     *
      *         @OA\Schema(type="integer", default=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Items per page",
+     *
      *         @OA\Schema(type="integer", default=20)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Audit logs retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Audit logs retrieved successfully"),
      *             @OA\Property(
@@ -99,8 +120,10 @@ class AuditLogController extends Controller
      *                 @OA\Property(
      *                     property="auditLogs",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/AuditLogResource")
      *                 ),
+     *
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
@@ -117,7 +140,7 @@ class AuditLogController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        if (!$request->user()?->can('view_audit_logs')) {
+        if (! $request->user()?->can('view_audit_logs')) {
             return ApiResponse::forbidden('You do not have permission to view audit logs');
         }
 
@@ -156,7 +179,7 @@ class AuditLogController extends Controller
 
     public function actionTypes(Request $request): JsonResponse
     {
-        if (!$request->user()?->can('view_audit_logs')) {
+        if (! $request->user()?->can('view_audit_logs')) {
             return ApiResponse::forbidden('You do not have permission to view audit logs');
         }
 
@@ -177,22 +200,29 @@ class AuditLogController extends Controller
      *     summary="Get audit log details (Admin only)",
      *     tags={"Audit Logs"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Audit log retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Audit log retrieved successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/AuditLogResource")
@@ -202,7 +232,7 @@ class AuditLogController extends Controller
      */
     public function show(AuditLog $auditLog): JsonResponse
     {
-        if (!request()->user()?->can('view_audit_logs')) {
+        if (! request()->user()?->can('view_audit_logs')) {
             return ApiResponse::forbidden('You do not have permission to view audit logs');
         }
 
@@ -220,22 +250,29 @@ class AuditLogController extends Controller
      *     summary="Get audit log statistics (Admin only)",
      *     tags={"Audit Logs"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="days",
      *         in="query",
      *         description="Number of days to include in stats",
+     *
      *         @OA\Schema(type="integer", default=30)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Audit log statistics retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Audit log statistics retrieved successfully"),
      *             @OA\Property(
@@ -258,8 +295,10 @@ class AuditLogController extends Controller
      *                 @OA\Property(
      *                     property="dailyActivity",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="date", type="string", format="date"),
      *                         @OA\Property(property="count", type="integer")
      *                     )
@@ -271,7 +310,7 @@ class AuditLogController extends Controller
      */
     public function stats(Request $request): JsonResponse
     {
-        if (!$request->user()?->can('view_audit_logs')) {
+        if (! $request->user()?->can('view_audit_logs')) {
             return ApiResponse::forbidden('You do not have permission to view audit logs');
         }
 
@@ -304,7 +343,7 @@ class AuditLogController extends Controller
             ->map(function ($item) {
                 return [
                     'date' => $item->date,
-                    'count' => $item->count
+                    'count' => $item->count,
                 ];
             });
 

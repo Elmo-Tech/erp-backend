@@ -4,15 +4,15 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\V1\Leads\StoreLeadRequest;
-use App\Http\Requests\V1\Leads\UpdateLeadRequest;
 use App\Http\Requests\V1\Leads\StoreLeadActivityRequest;
 use App\Http\Requests\V1\Leads\StoreLeadMeetingRequest;
+use App\Http\Requests\V1\Leads\StoreLeadRequest;
+use App\Http\Requests\V1\Leads\UpdateLeadRequest;
 use App\Http\Requests\V1\Leads\UpdateLeadStatusRequest;
-use App\Http\Resources\V1\Leads\LeadCollection;
-use App\Http\Resources\V1\Leads\LeadResource;
 use App\Http\Resources\V1\Leads\LeadActivityResource;
+use App\Http\Resources\V1\Leads\LeadCollection;
 use App\Http\Resources\V1\Leads\LeadMeetingResource;
+use App\Http\Resources\V1\Leads\LeadResource;
 use App\Models\Lead;
 use App\Models\LeadMeeting;
 use App\Services\Sales\LeadService;
@@ -35,6 +35,7 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Get all leads with pagination and filtering",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="filter[status]", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="filter[source]", in="query", @OA\Schema(type="string")),
@@ -44,6 +45,7 @@ class LeadController extends Controller
      *     @OA\Parameter(name="sort", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Leads retrieved successfully"),
      *     @OA\Response(response=401, description="Unauthorized")
      * )
@@ -65,11 +67,15 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Create a new lead",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"name", "email"},
+     *
      *             @OA\Property(property="name", type="string"),
      *             @OA\Property(property="email", type="string"),
      *             @OA\Property(property="phone", type="string"),
@@ -84,6 +90,7 @@ class LeadController extends Controller
      *             @OA\Property(property="notes", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=201, description="Lead created successfully"),
      *     @OA\Response(response=422, description="Validation error")
      * )
@@ -109,8 +116,10 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Get a single lead",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Lead retrieved successfully"),
      *     @OA\Response(response=404, description="Lead not found")
      * )
@@ -132,9 +141,12 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Update an existing lead",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\RequestBody(required=true, @OA\JsonContent()),
+     *
      *     @OA\Response(response=200, description="Lead updated successfully"),
      *     @OA\Response(response=422, description="Validation error")
      * )
@@ -160,8 +172,10 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Delete a lead",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Lead deleted successfully"),
      *     @OA\Response(response=404, description="Lead not found")
      * )
@@ -180,15 +194,20 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Update lead status",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"status"},
+     *
      *             @OA\Property(property="status", type="string"),
      *             @OA\Property(property="lossReason", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=200, description="Status updated successfully")
      * )
      */
@@ -220,6 +239,7 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Get leads grouped by status for Kanban view",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Kanban data retrieved successfully")
      * )
      */
@@ -237,6 +257,7 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Get leads needing follow-up",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Follow-ups retrieved successfully")
      * )
      */
@@ -257,11 +278,15 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Add activity to lead",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"type", "title"},
+     *
      *             @OA\Property(property="type", type="string", enum={"call", "email", "meeting", "note", "status_change"}),
      *             @OA\Property(property="title", type="string"),
      *             @OA\Property(property="description", type="string"),
@@ -270,6 +295,7 @@ class LeadController extends Controller
      *             @OA\Property(property="completedAt", type="string", format="date-time")
      *         )
      *     ),
+     *
      *     @OA\Response(response=201, description="Activity added successfully")
      * )
      */
@@ -295,7 +321,9 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Get lead activities",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Activities retrieved successfully")
      * )
      */
@@ -316,11 +344,15 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Schedule a meeting for lead",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"title", "location", "scheduledAt"},
+     *
      *             @OA\Property(property="title", type="string"),
      *             @OA\Property(property="location", type="string", enum={"online", "office", "client_site"}),
      *             @OA\Property(property="meetingLink", type="string"),
@@ -329,6 +361,7 @@ class LeadController extends Controller
      *             @OA\Property(property="attendees", type="array", @OA\Items(type="object"))
      *         )
      *     ),
+     *
      *     @OA\Response(response=201, description="Meeting scheduled successfully")
      * )
      */
@@ -354,7 +387,9 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Get lead meetings",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Meetings retrieved successfully")
      * )
      */
@@ -375,6 +410,7 @@ class LeadController extends Controller
      *     tags={"Leads"},
      *     summary="Update a meeting",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Meeting updated successfully")
      * )
      */

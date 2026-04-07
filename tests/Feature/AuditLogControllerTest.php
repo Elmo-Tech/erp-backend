@@ -17,10 +17,10 @@ class AuditLogControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create permissions
         Permission::firstOrCreate(['name' => 'view_audit_logs']);
-        
+
         // Create roles
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $adminRole->givePermissionTo('view_audit_logs');
@@ -29,7 +29,7 @@ class AuditLogControllerTest extends TestCase
     public function test_index_requires_authentication(): void
     {
         $response = $this->getJson('/api/v1/admin/audit-logs');
-        
+
         $response->assertStatus(401);
     }
 
@@ -37,14 +37,14 @@ class AuditLogControllerTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-        
+
         $response = $this->getJson('/api/v1/admin/audit-logs');
-        
+
         $response->assertStatus(403)
-                 ->assertJson([
-                     'success' => false,
-                     'message' => 'You do not have permission to view audit logs'
-                 ]);
+            ->assertJson([
+                'success' => false,
+                'message' => 'You do not have permission to view audit logs',
+            ]);
     }
 
     public function test_index_returns_audit_logs_with_permission(): void
@@ -52,7 +52,7 @@ class AuditLogControllerTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('admin');
         Sanctum::actingAs($user);
-        
+
         // Create some audit logs
         $auditLog1 = AuditLog::create([
             'user_id' => $user->id,
@@ -66,7 +66,7 @@ class AuditLogControllerTest extends TestCase
             'user_agent' => 'Test Agent',
             'metadata' => ['old_cost' => '50.00', 'new_cost' => '75.00'],
         ]);
-        
+
         $auditLog2 = AuditLog::create([
             'user_id' => $user->id,
             'event_type' => 'security',
@@ -77,48 +77,48 @@ class AuditLogControllerTest extends TestCase
             'user_agent' => 'Test Agent 2',
             'metadata' => [],
         ]);
-        
+
         $response = $this->getJson('/api/v1/admin/audit-logs');
-        
+
         $response->assertStatus(200)
-                 ->assertJson([
-                     'success' => true,
-                     'message' => 'Audit logs retrieved successfully'
-                 ])
-                 ->assertJsonStructure([
-                     'data' => [
-                         'auditLogs' => [
-                             '*' => [
-                                 'id',
-                                 'userId',
-                                 'userName',
-                                 'action',
-                                 'eventType',
-                                 'severity',
-                                 'description',
-                                 'auditableType',
-                                 'auditableId',
-                                 'ipAddress',
-                                 'userAgent',
-                                 'metadata',
-                                 'createdAt',
-                                 'isSensitive'
-                             ]
-                         ],
-                         'pagination' => [
-                             'total',
-                             'count',
-                             'perPage',
-                             'currentPage',
-                             'totalPages'
-                         ]
-                     ]
-                 ]);
-        
+            ->assertJson([
+                'success' => true,
+                'message' => 'Audit logs retrieved successfully',
+            ])
+            ->assertJsonStructure([
+                'data' => [
+                    'auditLogs' => [
+                        '*' => [
+                            'id',
+                            'userId',
+                            'userName',
+                            'action',
+                            'eventType',
+                            'severity',
+                            'description',
+                            'auditableType',
+                            'auditableId',
+                            'ipAddress',
+                            'userAgent',
+                            'metadata',
+                            'createdAt',
+                            'isSensitive',
+                        ],
+                    ],
+                    'pagination' => [
+                        'total',
+                        'count',
+                        'perPage',
+                        'currentPage',
+                        'totalPages',
+                    ],
+                ],
+            ]);
+
         // Verify the audit logs are returned
         $data = $response->json('data.auditLogs');
         $this->assertCount(2, $data);
-        
+
         // Verify both actions are present
         $actions = collect($data)->pluck('action')->toArray();
         $this->assertContains('update_internal_cost', $actions);
@@ -130,7 +130,7 @@ class AuditLogControllerTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('admin');
         Sanctum::actingAs($user);
-        
+
         // Create audit logs with different actions
         AuditLog::create([
             'user_id' => $user->id,
@@ -142,7 +142,7 @@ class AuditLogControllerTest extends TestCase
             'user_agent' => 'Test Agent',
             'metadata' => [],
         ]);
-        
+
         AuditLog::create([
             'user_id' => $user->id,
             'event_type' => 'security',
@@ -153,9 +153,9 @@ class AuditLogControllerTest extends TestCase
             'user_agent' => 'Test Agent',
             'metadata' => [],
         ]);
-        
+
         $response = $this->getJson('/api/v1/admin/audit-logs?filter[action]=update_internal_cost');
-        
+
         $response->assertStatus(200);
         $data = $response->json('data.auditLogs');
         $this->assertCount(1, $data);
@@ -168,7 +168,7 @@ class AuditLogControllerTest extends TestCase
         $user2 = User::factory()->create();
         $user1->assignRole('admin');
         Sanctum::actingAs($user1);
-        
+
         // Create audit logs for different users
         AuditLog::create([
             'user_id' => $user1->id,
@@ -180,7 +180,7 @@ class AuditLogControllerTest extends TestCase
             'user_agent' => 'Test Agent',
             'metadata' => [],
         ]);
-        
+
         AuditLog::create([
             'user_id' => $user2->id,
             'event_type' => 'security',
@@ -191,9 +191,9 @@ class AuditLogControllerTest extends TestCase
             'user_agent' => 'Test Agent',
             'metadata' => [],
         ]);
-        
+
         $response = $this->getJson("/api/v1/admin/audit-logs?filter[user_id]={$user2->id}");
-        
+
         $response->assertStatus(200);
         $data = $response->json('data.auditLogs');
         $this->assertCount(1, $data);
@@ -205,7 +205,7 @@ class AuditLogControllerTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('admin');
         Sanctum::actingAs($user);
-        
+
         // Create audit logs with different IP addresses
         AuditLog::create([
             'user_id' => $user->id,
@@ -217,7 +217,7 @@ class AuditLogControllerTest extends TestCase
             'user_agent' => 'Test Agent',
             'metadata' => [],
         ]);
-        
+
         AuditLog::create([
             'user_id' => $user->id,
             'event_type' => 'security',
@@ -228,9 +228,9 @@ class AuditLogControllerTest extends TestCase
             'user_agent' => 'Test Agent',
             'metadata' => [],
         ]);
-        
+
         $response = $this->getJson('/api/v1/admin/audit-logs?filter[search]=192.168');
-        
+
         $response->assertStatus(200);
         $data = $response->json('data.auditLogs');
         $this->assertCount(1, $data);
@@ -242,11 +242,11 @@ class AuditLogControllerTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('admin');
         Sanctum::actingAs($user);
-        
+
         $response = $this->getJson('/api/v1/admin/audit-logs?filter[action]=invalid_action');
-        
+
         $response->assertStatus(200)
-                 ->assertJsonPath('data.pagination.total', 0);
+            ->assertJsonPath('data.pagination.total', 0);
     }
 
     public function test_index_marks_sensitive_actions(): void
@@ -254,7 +254,7 @@ class AuditLogControllerTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('admin');
         Sanctum::actingAs($user);
-        
+
         // Create sensitive and non-sensitive audit logs
         AuditLog::create([
             'user_id' => $user->id,
@@ -266,7 +266,7 @@ class AuditLogControllerTest extends TestCase
             'user_agent' => 'Test Agent',
             'metadata' => [],
         ]);
-        
+
         AuditLog::create([
             'user_id' => $user->id,
             'event_type' => 'security',
@@ -277,16 +277,16 @@ class AuditLogControllerTest extends TestCase
             'user_agent' => 'Test Agent',
             'metadata' => [],
         ]);
-        
+
         $response = $this->getJson('/api/v1/admin/audit-logs');
-        
+
         $response->assertStatus(200);
         $data = $response->json('data.auditLogs');
-        
+
         // Find the sensitive and non-sensitive logs
         $sensitiveLog = collect($data)->firstWhere('action', 'update_internal_cost');
         $nonSensitiveLog = collect($data)->firstWhere('action', 'login');
-        
+
         $this->assertTrue($sensitiveLog['isSensitive']);
         $this->assertFalse($nonSensitiveLog['isSensitive']);
     }

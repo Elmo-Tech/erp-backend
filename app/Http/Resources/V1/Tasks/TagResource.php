@@ -9,6 +9,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @OA\Schema(
  *     schema="TagResource",
  *     type="object",
+ *
  *     @OA\Property(property="tagId", type="integer", example=1),
  *     @OA\Property(property="name", type="string", example="Backend"),
  *     @OA\Property(property="slug", type="string", example="backend"),

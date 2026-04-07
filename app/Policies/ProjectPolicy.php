@@ -27,7 +27,7 @@ class ProjectPolicy
     {
         // Clients can only view their own projects
         if ($user->hasRole('client')) {
-            return $project->client_id === $user->id;
+            return $project->client_id === $user->client?->id;
         }
 
         // Super Admin and Admin can view all projects
@@ -58,7 +58,7 @@ class ProjectPolicy
     public function create(User $user): bool
     {
         // Clients cannot create projects
-        return !$user->hasRole('client');
+        return ! $user->hasRole('client');
     }
 
     /**
@@ -101,7 +101,7 @@ class ProjectPolicy
     {
         // Only the project's client can approve UI
         if ($user->hasRole('client')) {
-            return $project->client_id === $user->id;
+            return $project->client_id === $user->client?->id;
         }
 
         // Admins can also approve on behalf of client

@@ -8,6 +8,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $contract_id
+ * @property string|null $title
+ * @property string|null $description
+ * @property float|int|string|null $amount
+ * @property float|int|string|null $percentage
+ * @property \Illuminate\Support\Carbon|null $due_date
+ * @property MilestoneTriggerType $trigger_type
+ * @property string|null $trigger_value
+ * @property MilestoneStatus $status
+ * @property int|null $invoice_id
+ * @property \Illuminate\Support\Carbon|null $paid_at
+ * @property int|null $sort_order
+ * @property-read Invoice|null $invoice
+ */
 class ContractMilestone extends Model
 {
     use HasFactory;

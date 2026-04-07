@@ -10,7 +10,6 @@ use App\Models\ProjectFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use OpenApi\Annotations as OA;
 
 class ProjectFileController extends Controller
 {
@@ -58,7 +57,7 @@ class ProjectFileController extends Controller
         if ($request->type === 'file' && $request->hasFile('file')) {
             $file = $request->file('file');
             $path = $file->store("projects/{$project->id}/files", 'public');
-            
+
             $data['file_path'] = $path;
             $data['mime_type'] = $file->getMimeType();
             $data['size'] = $file->getSize();

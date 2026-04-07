@@ -2,22 +2,22 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\PointTransactionType;
+use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\UserPoints\AddPointsRequest;
 use App\Http\Requests\V1\UserPoints\DeductPointsRequest;
 use App\Http\Requests\V1\UserPoints\SetPointsRequest;
+use App\Http\Resources\V1\UserPoints\LeaderboardResource;
 use App\Http\Resources\V1\UserPoints\UserPointCollection;
 use App\Http\Resources\V1\UserPoints\UserPointResource;
 use App\Http\Resources\V1\UserPoints\UserWithPointsCollection;
-use App\Http\Resources\V1\UserPoints\LeaderboardResource;
-use App\Models\User;
 use App\Models\PointTransaction;
+use App\Models\User;
 use App\Services\HR\UserPointsService;
 use App\Services\Points\UnifiedPointService;
-use App\Helpers\ApiResponse;
-use App\Enums\PointTransactionType;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -43,52 +43,69 @@ class UserPointsController extends Controller
      *     description="Retrieve paginated list of all employees with their current points",
      *     tags={"User Points"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Items per page",
+     *
      *         @OA\Schema(type="integer", example=15)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="search",
      *         in="query",
      *         description="Search by name or email",
+     *
      *         @OA\Schema(type="string", example="john")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="isActive",
      *         in="query",
      *         description="Filter by active status",
+     *
      *         @OA\Schema(type="boolean", example=true)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="sortBy",
      *         in="query",
      *         description="Sort field",
+     *
      *         @OA\Schema(type="string", enum={"total_points", "name", "created_at"}, example="total_points")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="sortOrder",
      *         in="query",
      *         description="Sort order",
+     *
      *         @OA\Schema(type="string", enum={"asc", "desc"}, example="desc")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Users with points retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Users with points retrieved successfully"),
      *             @OA\Property(
@@ -97,7 +114,9 @@ class UserPointsController extends Controller
      *                 @OA\Property(
      *                     property="users",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="userId", type="integer", example=1),
      *                         @OA\Property(property="name", type="string", example="John Doe"),
      *                         @OA\Property(property="email", type="string", example="john@example.com"),
@@ -146,25 +165,33 @@ class UserPointsController extends Controller
      *     description="Add points to a specific user with reason tracking",
      *     tags={"User Points"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="userId", type="integer", example=1),
      *             @OA\Property(property="type", type="string", example="performance_bonus"),
      *             @OA\Property(property="points", type="integer", example=50),
      *             @OA\Property(property="reason", type="string", example="Excellent performance this month")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Points added successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Points added successfully"),
      *             @OA\Property(
@@ -183,10 +210,13 @@ class UserPointsController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed"),
      *             @OA\Property(
@@ -227,25 +257,33 @@ class UserPointsController extends Controller
      *     description="Deduct points from a specific user with reason tracking",
      *     tags={"User Points"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="userId", type="integer", example=1),
      *             @OA\Property(property="type", type="string", example="task_late"),
      *             @OA\Property(property="points", type="integer", example=25),
      *             @OA\Property(property="reason", type="string", example="Late submission of deliverables")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Points deducted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Points deducted successfully"),
      *             @OA\Property(
@@ -293,24 +331,32 @@ class UserPointsController extends Controller
      *     description="Set user points to a specific value with reason tracking",
      *     tags={"User Points"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="userId", type="integer", example=1),
      *             @OA\Property(property="points", type="integer", example=200),
      *             @OA\Property(property="reason", type="string", example="Monthly reset to bonus threshold")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Points set successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Points set successfully"),
      *             @OA\Property(
@@ -356,34 +402,45 @@ class UserPointsController extends Controller
      *     description="Get paginated history of points changes for a specific user",
      *     tags={"User Points"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="userId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Items per page",
+     *
      *         @OA\Schema(type="integer", example=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="User points history retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="User points history retrieved successfully"),
      *             @OA\Property(
@@ -392,7 +449,9 @@ class UserPointsController extends Controller
      *                 @OA\Property(
      *                     property="pointsHistory",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="userPointId", type="integer", example=1),
      *                         @OA\Property(property="pointsChange", type="integer", example=50),
      *                         @OA\Property(property="pointsBefore", type="integer", example=100),
@@ -421,7 +480,7 @@ class UserPointsController extends Controller
     {
         $user = User::findOrFail($userId);
         $perPage = min($request->get('perPage', 15), 100);
-        
+
         $history = $this->userPointsService->getUserPointsHistory($user, $perPage);
 
         return ApiResponse::success(
@@ -437,28 +496,37 @@ class UserPointsController extends Controller
      *     description="Get top users by points for leaderboard display",
      *     tags={"User Points"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="limit",
      *         in="query",
      *         description="Number of top users to return",
+     *
      *         @OA\Schema(type="integer", example=10)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Leaderboard retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Leaderboard retrieved successfully"),
      *             @OA\Property(
      *                 property="data",
      *                 type="array",
+     *
      *                 @OA\Items(
+     *
      *                     @OA\Property(property="userId", type="integer", example=1),
      *                     @OA\Property(property="name", type="string", example="John Doe"),
      *                     @OA\Property(property="avatar", type="string", example=""),
@@ -488,16 +556,21 @@ class UserPointsController extends Controller
      *     description="Get overall points statistics for admin dashboard",
      *     tags={"User Points"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Statistics retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Statistics retrieved successfully"),
      *             @OA\Property(
@@ -535,48 +608,63 @@ class UserPointsController extends Controller
      *     description="Get detailed report of points activities within a date range",
      *     tags={"User Points"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateFrom",
      *         in="query",
      *         description="Start date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2026-01-01")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateTo",
      *         in="query",
      *         description="End date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2026-01-31")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="userId",
      *         in="query",
      *         description="Filter by specific user ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="type",
      *         in="query",
      *         description="Filter by activity type",
+     *
      *         @OA\Schema(type="string", enum={"manual", "automatic"}, example="manual")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Items per page",
+     *
      *         @OA\Schema(type="integer", example=20)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Points report retrieved successfully"
@@ -595,105 +683,102 @@ class UserPointsController extends Controller
         $perPage = min($request->get('perPage', 20), 100);
         $report = $this->userPointsService->getPointsReport($filters, $perPage);
 
-                return ApiResponse::success(
+        return ApiResponse::success(
 
-                    $report,
+            $report,
 
-                    __('Points report retrieved successfully')
+            __('Points report retrieved successfully')
 
-                );
+        );
 
-            }
+    }
 
-        
+    /**
+     * @OA\Get(
 
-            /**
+     *     path="/api/v1/user-points/transaction-types",
 
-             * @OA\Get(
+     *     summary="Get all point transaction types",
 
-             *     path="/api/v1/user-points/transaction-types",
+     *     description="Retrieve a list of all available point transaction types for selection",
 
-             *     summary="Get all point transaction types",
+     *     tags={"User Points"},
 
-             *     description="Retrieve a list of all available point transaction types for selection",
+     *     security={{"sanctum":{}}},
 
-             *     tags={"User Points"},
+     *
+     *     @OA\Response(
 
-             *     security={{"sanctum":{}}},
+     *         response=200,
 
-             *     @OA\Response(
+     *         description="Transaction types retrieved successfully",
 
-             *         response=200,
+     *
+     *         @OA\JsonContent(
 
-             *         description="Transaction types retrieved successfully",
+     *
+     *             @OA\Property(property="success", type="boolean", example=true),
 
-             *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Transaction types retrieved successfully"),
 
-             *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
 
-             *             @OA\Property(property="message", type="string", example="Transaction types retrieved successfully"),
+     *                 property="data",
 
-             *             @OA\Property(
+     *                 type="array",
 
-             *                 property="data",
+     *
+     *                 @OA\Items(
 
-             *                 type="array",
+     *
+     *                     @OA\Property(property="name", type="string", example="TASK_COMPLETED"),
 
-             *                 @OA\Items(
+     *                     @OA\Property(property="value", type="string", example="task_completed"),
 
-             *                     @OA\Property(property="name", type="string", example="TASK_COMPLETED"),
+     *                     @OA\Property(property="label", type="string", example="Task Completed"),
 
-             *                     @OA\Property(property="value", type="string", example="task_completed"),
+     *                     @OA\Property(property="points", type="integer", example=10)
 
-             *                     @OA\Property(property="label", type="string", example="Task Completed"),
+     *                 )
 
-             *                     @OA\Property(property="points", type="integer", example=10)
+     *             )
 
-             *                 )
+     *         )
 
-             *             )
+     *     )
 
-             *         )
+     * )
+     */
+    public function getTransactionTypes(): JsonResponse
+    {
 
-             *     )
+        $types = collect(PointTransactionType::cases())->map(function ($type) {
 
-             * )
+            return [
 
-             */
+                'name' => $type->name,
 
-            public function getTransactionTypes(): JsonResponse
+                'value' => $type->value,
 
-            {
+                'label' => $type->label(),
 
-                $types = collect(PointTransactionType::cases())->map(function ($type) {
+                'points' => $type->defaultPoints(),
 
-                    return [
+                'is_positive' => $type->isPositive(),
 
-                        'name' => $type->name,
+            ];
 
-                        'value' => $type->value,
+        });
 
-                        'label' => $type->label(),
+        return ApiResponse::success(
 
-                        'points' => $type->defaultPoints(),
+            $types,
 
-                        'is_positive' => $type->isPositive(),
+            __('Transaction types retrieved successfully')
 
-                    ];
+        );
 
-                });
-
-        
-
-                return ApiResponse::success(
-
-                    $types,
-
-                    __('Transaction types retrieved successfully')
-
-                );
-
-            }
+    }
 
     /**
      * Get unified user points history from both systems
@@ -701,7 +786,7 @@ class UserPointsController extends Controller
     public function getUnifiedHistory(Request $request, int $userId): JsonResponse
     {
         $user = User::findOrFail($userId);
-        
+
         $filters = [];
         if ($request->has('dateFrom')) {
             $filters['dateFrom'] = $request->dateFrom;
@@ -709,16 +794,16 @@ class UserPointsController extends Controller
         if ($request->has('dateTo')) {
             $filters['dateTo'] = $request->dateTo;
         }
-        
+
         $limit = $request->get('limit', 50);
-        
+
         $history = $this->unifiedPointService->getUserHistory($user, $limit, $filters);
         $summary = $this->unifiedPointService->getUserSummary(
-            $user, 
-            $filters['dateFrom'] ?? null, 
+            $user,
+            $filters['dateFrom'] ?? null,
             $filters['dateTo'] ?? null
         );
-        
+
         return ApiResponse::success([
             'transactions' => $history,
             'summary' => $summary,
@@ -733,22 +818,29 @@ class UserPointsController extends Controller
      *     description="Delete a specific point transaction and recalculate user's total points",
      *     tags={"User Points"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="transactionId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="string", example="pt_123")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Transaction deleted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Transaction deleted successfully"),
      *             @OA\Property(
@@ -759,18 +851,24 @@ class UserPointsController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Transaction not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Transaction not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Unauthorized to delete this transaction",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You can only delete manual transactions")
      *         )
@@ -780,7 +878,7 @@ class UserPointsController extends Controller
     public function deleteTransaction(string $transactionId): JsonResponse
     {
         // Parse transaction ID (format: pt_123 or up_123)
-        if (!str_contains($transactionId, '_')) {
+        if (! str_contains($transactionId, '_')) {
             return ApiResponse::error(
                 __('Invalid transaction ID format'),
                 [],
@@ -793,8 +891,8 @@ class UserPointsController extends Controller
         if ($type === 'pt') {
             // Delete from PointTransaction
             $transaction = PointTransaction::find($id);
-            
-            if (!$transaction) {
+
+            if (! $transaction) {
                 return ApiResponse::error(
                     __('Transaction not found'),
                     [],
@@ -803,7 +901,7 @@ class UserPointsController extends Controller
             }
 
             // Only allow deletion of manual transactions
-            if (!in_array($transaction->type->value, ['manual_bonus', 'manual_deduction'])) {
+            if (! in_array($transaction->type->value, ['manual_bonus', 'manual_deduction'])) {
                 return ApiResponse::error(
                     __('You can only delete manual transactions'),
                     [],

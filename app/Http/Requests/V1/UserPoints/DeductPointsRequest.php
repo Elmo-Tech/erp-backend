@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\V1\UserPoints;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Helpers\ApiResponse;
 use App\Enums\PointTransactionType;
+use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
@@ -36,7 +36,7 @@ class DeductPointsRequest extends FormRequest
                 Rule::enum(PointTransactionType::class),
                 function ($attribute, $value, $fail) {
                     $type = PointTransactionType::tryFrom($value);
-                    if ($type && !$type->isPositive()) {
+                    if ($type && ! $type->isPositive()) {
                         return; // Valid negative type
                     }
                     $fail(__('Only negative point categories can be used for deductions'));
@@ -46,7 +46,7 @@ class DeductPointsRequest extends FormRequest
                 'required',
                 'integer',
                 'min:1',
-                'max:1000'
+                'max:1000',
             ],
             'reason' => ['required', 'string', 'min:3', 'max:255'],
         ];

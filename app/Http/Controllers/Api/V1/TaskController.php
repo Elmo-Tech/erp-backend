@@ -4,20 +4,20 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\V1\Tasks\StoreTaskRequest;
-use App\Http\Requests\V1\Tasks\UpdateTaskRequest;
 use App\Http\Requests\V1\Tasks\AddAssigneeRequest;
-use App\Http\Requests\V1\Tasks\StoreTestScenarioRequest;
-use App\Http\Requests\V1\Tasks\VerifyTestScenarioRequest;
-use App\Http\Requests\V1\Tasks\UpdateTaskStatusRequest;
 use App\Http\Requests\V1\Tasks\AddCommentRequest;
 use App\Http\Requests\V1\Tasks\MarkCompleteRequest;
+use App\Http\Requests\V1\Tasks\StoreTaskRequest;
+use App\Http\Requests\V1\Tasks\StoreTestScenarioRequest;
+use App\Http\Requests\V1\Tasks\UpdateTaskRequest;
+use App\Http\Requests\V1\Tasks\UpdateTaskStatusRequest;
+use App\Http\Requests\V1\Tasks\VerifyTestScenarioRequest;
+use App\Http\Resources\V1\Tasks\TagResource;
+use App\Http\Resources\V1\Tasks\TaskActivityResource;
+use App\Http\Resources\V1\Tasks\TaskAssigneeResource;
 use App\Http\Resources\V1\Tasks\TaskCollection;
 use App\Http\Resources\V1\Tasks\TaskResource;
-use App\Http\Resources\V1\Tasks\TaskAssigneeResource;
 use App\Http\Resources\V1\Tasks\TaskTestScenarioResource;
-use App\Http\Resources\V1\Tasks\TaskActivityResource;
-use App\Http\Resources\V1\Tasks\TagResource;
 use App\Models\Task;
 use App\Models\TaskTestScenario;
 use App\Services\Tasks\TaskService;
@@ -48,77 +48,102 @@ class TaskController extends Controller
      *     summary="Get all tasks with pagination and filtering",
      *     description="Retrieve a paginated list of tasks with optional filtering by project, status, assignee, and search",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[projectId]",
      *         in="query",
      *         description="Filter tasks by project ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[status]",
      *         in="query",
      *         description="Filter tasks by status",
+     *
      *         @OA\Schema(type="string", enum={"todo", "in_progress", "review", "testing", "completed"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[assignedTo]",
      *         in="query",
      *         description="Filter tasks by assigned user ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[parentId]",
      *         in="query",
      *         description="Filter tasks by parent ID (use null for root tasks)",
+     *
      *         @OA\Schema(type="integer", nullable=true)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[search]",
      *         in="query",
      *         description="Search tasks by title",
+     *
      *         @OA\Schema(type="string")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[type]",
      *         in="query",
      *         description="Filter tasks by type",
+     *
      *         @OA\Schema(type="string", enum={"task", "bug", "feature", "improvement"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[priority]",
      *         in="query",
      *         description="Filter tasks by priority",
+     *
      *         @OA\Schema(type="string", enum={"low", "medium", "high", "urgent"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[tagId]",
      *         in="query",
      *         description="Filter tasks by tag ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number for pagination",
+     *
      *         @OA\Schema(type="integer", minimum=1, example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Number of items per page",
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Tasks retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Tasks retrieved successfully"),
      *             @OA\Property(
@@ -127,8 +152,10 @@ class TaskController extends Controller
      *                 @OA\Property(
      *                     property="tasks",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/TaskResource")
      *                 ),
+     *
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
@@ -141,10 +168,13 @@ class TaskController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -209,17 +239,22 @@ class TaskController extends Controller
      *     summary="Create a new task",
      *     description="Create a new task within a project",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"projectId", "title"},
+     *
      *             @OA\Property(property="projectId", type="integer", example=1),
      *             @OA\Property(property="parentId", type="integer", nullable=true, example=null),
      *             @OA\Property(property="assignedTo", type="integer", nullable=true, example=2),
@@ -230,28 +265,37 @@ class TaskController extends Controller
      *             @OA\Property(property="internalReviewerNotes", type="string", example="Review security implementation carefully")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Task created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task created successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/TaskResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for task creation"),
      *             @OA\Property(property="errors", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -282,41 +326,54 @@ class TaskController extends Controller
      *     summary="Get a single task",
      *     description="Retrieve a specific task by ID with related data",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Task ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task retrieved successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/TaskResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Task not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Task not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -341,23 +398,30 @@ class TaskController extends Controller
      *     summary="Update an existing task",
      *     description="Update a task with status transition validation",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Task ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="parentId", type="integer", nullable=true, example=null),
      *             @OA\Property(property="assignedTo", type="integer", nullable=true, example=2),
      *             @OA\Property(property="title", type="string", example="Updated task title"),
@@ -367,36 +431,48 @@ class TaskController extends Controller
      *             @OA\Property(property="internalReviewerNotes", type="string", example="Updated internal notes")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task updated successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/TaskResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for task update"),
      *             @OA\Property(property="errors", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Task not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Task not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -426,41 +502,54 @@ class TaskController extends Controller
      *     summary="Delete a task",
      *     description="Delete a specific task by ID. Child tasks will also be deleted (cascade).",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Task ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task deleted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task deleted successfully"),
      *             @OA\Property(property="data", type="null")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Task not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Task not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -485,45 +574,59 @@ class TaskController extends Controller
      *     summary="Get children of a task",
      *     description="Retrieve all direct children of a specific task for lazy loading",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Parent Task ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task children retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task children retrieved successfully"),
      *             @OA\Property(
      *                 property="data",
      *                 type="array",
+     *
      *                 @OA\Items(ref="#/components/schemas/TaskResource")
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Task not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Task not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -548,36 +651,47 @@ class TaskController extends Controller
      *     summary="Get tasks for a project with hierarchy",
      *     description="Retrieve root-level tasks for a project with their children loaded",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="projectId",
      *         in="path",
      *         required=true,
      *         description="Project ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number for pagination",
+     *
      *         @OA\Schema(type="integer", minimum=1, example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Number of items per page",
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Project tasks retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Project tasks retrieved successfully"),
      *             @OA\Property(
@@ -586,8 +700,10 @@ class TaskController extends Controller
      *                 @OA\Property(
      *                     property="tasks",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/TaskResource")
      *                 ),
+     *
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
@@ -600,10 +716,13 @@ class TaskController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -628,6 +747,7 @@ class TaskController extends Controller
      *     tags={"Tasks"},
      *     summary="Get all available tags",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Tags retrieved successfully")
      * )
      */
@@ -649,38 +769,49 @@ class TaskController extends Controller
      *     summary="Add an assignee to a task",
      *     description="Add a team member to any task type. When adding to Main Task, propagates to Weekly Tasks only (not Subtasks). Weekly/Subtasks can be managed independently. Requires manage_task_team permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="task",
      *         in="path",
      *         required=true,
      *         description="Task ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"userId", "role"},
+     *
      *             @OA\Property(property="userId", type="integer", example=2),
      *             @OA\Property(property="role", type="string", enum={"developer", "reviewer", "lead"}, example="developer"),
      *             @OA\Property(property="isPrimary", type="boolean", example=true)
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Assignee added successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Assignee added successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/TaskAssigneeResource")
      *         )
      *     ),
+     *
      *     @OA\Response(response=400, description="User not in team or already assigned"),
      *     @OA\Response(response=403, description="Unauthorized to manage team")
      * )
@@ -689,7 +820,7 @@ class TaskController extends Controller
     {
         // Check authorization using policy
         $user = $request->user();
-        if (!$user->can('manageTeam', $task)) {
+        if (! $user->can('manageTeam', $task)) {
             return ApiResponse::error(
                 __('messages.no_permission_manage_team'),
                 403
@@ -728,35 +859,45 @@ class TaskController extends Controller
      *     summary="Remove an assignee from a task",
      *     description="Remove an assignee from any task type. When removing from Main Task, also removes from Weekly Tasks only (not Subtasks). Weekly/Subtasks can be managed independently. Requires manage_task_team permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="task",
      *         in="path",
      *         required=true,
      *         description="Task ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="userId",
      *         in="path",
      *         required=true,
      *         description="User ID to remove",
+     *
      *         @OA\Schema(type="integer", example=2)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Assignee removed successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Assignee removed successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized to manage team"),
      *     @OA\Response(response=404, description="Assignee not found")
      * )
@@ -765,7 +906,7 @@ class TaskController extends Controller
     {
         // Check authorization using policy
         $user = $request->user();
-        if (!$user->can('manageTeam', $task)) {
+        if (! $user->can('manageTeam', $task)) {
             return ApiResponse::error(
                 __('messages.no_permission_manage_team'),
                 403
@@ -775,7 +916,7 @@ class TaskController extends Controller
         try {
             $removed = $this->taskService->removeAssignee($task, $userId, $user);
 
-            if (!$removed) {
+            if (! $removed) {
                 return ApiResponse::error('Assignee not found', 404);
             }
 
@@ -792,6 +933,7 @@ class TaskController extends Controller
      *     tags={"Tasks"},
      *     summary="Get test scenarios for a task",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Test scenarios retrieved successfully")
      * )
      */
@@ -813,15 +955,19 @@ class TaskController extends Controller
      *     summary="Add a test scenario to a task",
      *     description="Add a test scenario to a Weekly Task or Subtask. Main Tasks cannot have test scenarios. Weekly tasks require manage_task_test_scenarios permission. Subtasks allow assigned users to manage.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"title"},
+     *
      *             @OA\Property(property="title", type="string"),
      *             @OA\Property(property="description", type="string"),
      *             @OA\Property(property="expectedResult", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=201, description="Test scenario added successfully"),
      *     @OA\Response(response=400, description="Cannot add test scenario to Main Task"),
      *     @OA\Response(response=403, description="Unauthorized to manage test scenarios on this task type")
@@ -831,7 +977,7 @@ class TaskController extends Controller
     {
         // Check authorization using policy
         $user = $request->user();
-        if (!$user->can('manageTestScenarios', $task)) {
+        if (! $user->can('manageTestScenarios', $task)) {
             return ApiResponse::error(
                 __('messages.no_permission_manage_test_scenarios'),
                 403
@@ -864,6 +1010,7 @@ class TaskController extends Controller
      *     summary="Mark a test scenario as completed (check) - Available to all users",
      *     description="Any user can check/complete a test scenario. This marks it as checked by the developer.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Test scenario completed successfully")
      * )
      */
@@ -889,14 +1036,18 @@ class TaskController extends Controller
      *     summary="Verify a test scenario - Only for Admin and Task Reviewers",
      *     description="Only users with Admin role or assigned as Reviewer in the task team can verify test scenarios. This is the final approval step.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"passed"},
+     *
      *             @OA\Property(property="passed", type="boolean"),
      *             @OA\Property(property="notes", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=200, description="Test scenario verified successfully"),
      *     @OA\Response(response=403, description="Unauthorized - Only Admin and Task Reviewers can verify")
      * )
@@ -904,21 +1055,21 @@ class TaskController extends Controller
     public function verifyTestScenario(VerifyTestScenarioRequest $request, TaskTestScenario $scenario): JsonResponse
     {
         $user = $request->user();
-        
+
         // Load the task with assignees
         $task = $scenario->task()->with('assignees')->first();
-        
+
         // Check if user is Admin/Super Admin
         $isAdmin = $user->hasAnyRole(['admin', 'super-admin']);
-        
+
         // Check if user is assigned as reviewer in this task
         $isTaskReviewer = $task->assignees()
             ->where('user_id', $user->id)
             ->where('role', 'reviewer')
             ->exists();
-        
+
         // Only Admin or Task Reviewer can verify
-        if (!$isAdmin && !$isTaskReviewer) {
+        if (! $isAdmin && ! $isTaskReviewer) {
             return ApiResponse::error(
                 __('messages.no_permission_verify_test_scenarios'),
                 403
@@ -950,6 +1101,7 @@ class TaskController extends Controller
      *     tags={"Tasks"},
      *     summary="Get activity log for a task",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Activities retrieved successfully")
      * )
      */
@@ -957,7 +1109,7 @@ class TaskController extends Controller
     {
         $user = $request->user();
         $includeInternal = $user && $user->can('view_internal_notes');
-        
+
         $activities = $this->taskService->getActivities($task, $includeInternal);
 
         return ApiResponse::success(
@@ -973,14 +1125,18 @@ class TaskController extends Controller
      *     tags={"Tasks"},
      *     summary="Add a comment to a task",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"comment"},
+     *
      *             @OA\Property(property="comment", type="string"),
      *             @OA\Property(property="isInternal", type="boolean")
      *         )
      *     ),
+     *
      *     @OA\Response(response=201, description="Comment added successfully")
      * )
      */
@@ -1012,6 +1168,7 @@ class TaskController extends Controller
      *     tags={"Tasks"},
      *     summary="Get user points summary for a project",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Points summary retrieved successfully")
      * )
      */
@@ -1020,7 +1177,7 @@ class TaskController extends Controller
         $summary = $this->taskService->getUserPointsSummary($projectId);
 
         return ApiResponse::success(
-            $summary->map(fn($item) => [
+            $summary->map(fn ($item) => [
                 'userId' => $item->user_id,
                 'userName' => $item->user?->name ?? 'Unknown',
                 'totalPoints' => (int) $item->total_points,
@@ -1037,59 +1194,78 @@ class TaskController extends Controller
      *     summary="Get tasks where current user is assigned as team member",
      *     description="Retrieve tasks where the authenticated user is assigned as a team member (in task_assignees table)",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[projectId]",
      *         in="query",
      *         description="Filter tasks by project ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[status]",
      *         in="query",
      *         description="Filter tasks by status",
+     *
      *         @OA\Schema(type="string", enum={"todo", "in_progress", "review", "testing", "completed"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[type]",
      *         in="query",
      *         description="Filter tasks by type",
+     *
      *         @OA\Schema(type="string", enum={"main", "weekly", "subtask"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[priority]",
      *         in="query",
      *         description="Filter tasks by priority",
+     *
      *         @OA\Schema(type="string", enum={"low", "medium", "high", "urgent"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[search]",
      *         in="query",
      *         description="Search tasks by title",
+     *
      *         @OA\Schema(type="string")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number for pagination",
+     *
      *         @OA\Schema(type="integer", minimum=1, example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Number of items per page",
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="My assigned tasks retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="My assigned tasks retrieved successfully"),
      *             @OA\Property(
@@ -1098,8 +1274,10 @@ class TaskController extends Controller
      *                 @OA\Property(
      *                     property="tasks",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/TaskResource")
      *                 ),
+     *
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
@@ -1112,10 +1290,13 @@ class TaskController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -1164,58 +1345,77 @@ class TaskController extends Controller
      *     summary="Update task status",
      *     description="Update task status with flexible transitions - allows changing to any status directly",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Task ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"status"},
+     *
      *             @OA\Property(property="status", type="string", enum={"todo", "in_progress", "review", "testing", "completed"}, example="completed"),
      *             @OA\Property(property="reason", type="string", example="Task completed ahead of schedule")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task status updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task status updated successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/TaskResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for task status update"),
      *             @OA\Property(property="errors", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Task not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Task not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -1250,63 +1450,85 @@ class TaskController extends Controller
      *     summary="Mark a task as complete",
      *     description="Mark a task as complete. Only primary assignees can mark tasks as complete, and active timers must be stopped first.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Task ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=false,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="reason", type="string", example="Task completed successfully", maxLength=500)
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task marked as complete successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task marked as complete successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/TaskResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Validation error - Timer active or already completed",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Please stop the active timer before marking task as complete")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Unauthorized - Only primary assignees can mark tasks as complete",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Only primary assignees can mark tasks as complete")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Task not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Task not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )

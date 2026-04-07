@@ -33,6 +33,12 @@ class ProposalService
                 AllowedFilter::exact('lead_id'),
                 AllowedFilter::exact('is_fast_track'),
                 AllowedFilter::exact('is_skipped'),
+                AllowedFilter::callback('leadId', function ($query, $value) {
+                    $query->where('lead_id', $value);
+                }),
+                AllowedFilter::callback('isFastTrack', function ($query, $value) {
+                    $query->where('is_fast_track', filter_var($value, FILTER_VALIDATE_BOOLEAN));
+                }),
                 AllowedFilter::scope('expiring_in'),
                 AllowedFilter::scope('active'),
                 'search' => AllowedFilter::callback('search', function ($query, $value) {
@@ -70,9 +76,9 @@ class ProposalService
 
         // Calculate expiry_date from expiryDays if provided, otherwise use expiryDate or default to 10 days
         $expiryDate = null;
-        if (!empty($data['expiryDays'])) {
+        if (! empty($data['expiryDays'])) {
             $expiryDate = now()->addDays($data['expiryDays']);
-        } elseif (!empty($data['expiryDate'])) {
+        } elseif (! empty($data['expiryDate'])) {
             $expiryDate = $data['expiryDate'];
         } else {
             // Default to 10 days for non-skipped proposals
@@ -160,8 +166,8 @@ class ProposalService
         $taskData = [
             'project_id' => null, // No project yet, will be created upon proposal approval
             'assigned_to' => $data['taskAssignedTo'],
-            'title' => $data['taskTitle'] ?? 'Follow up on proposal: ' . $proposal->title,
-            'description' => 'Follow up task for proposal: ' . $proposal->proposal_number . "\n\n" . ($proposal->content ?? ''),
+            'title' => $data['taskTitle'] ?? 'Follow up on proposal: '.$proposal->title,
+            'description' => 'Follow up task for proposal: '.$proposal->proposal_number."\n\n".($proposal->content ?? ''),
             'status' => TaskStatus::TODO,
             'type' => TaskType::TASK,
             'priority' => TaskPriority::MEDIUM,
@@ -202,7 +208,7 @@ class ProposalService
             Storage::disk('public')->delete($proposal->file_path);
         }
 
-        $path = $file->store('proposals/' . $proposal->lead_id, 'public');
+        $path = $file->store('proposals/'.$proposal->lead_id, 'public');
 
         $proposal->update([
             'file_path' => $path,
@@ -235,7 +241,7 @@ class ProposalService
      */
     public function markAsViewed(Proposal $proposal): Proposal
     {
-        if (!$proposal->viewed_at) {
+        if (! $proposal->viewed_at) {
             $proposal->update([
                 'status' => ProposalStatus::VIEWED,
                 'viewed_at' => now(),
@@ -282,7 +288,7 @@ class ProposalService
             'proposal_number' => Proposal::generateProposalNumber(),
             'file_number' => Proposal::generateFileNumber(),
             'lead_id' => $data['leadId'],
-            'title' => $data['title'] ?? 'Fast Track - ' . ($data['projectName'] ?? 'Project'),
+            'title' => $data['title'] ?? 'Fast Track - '.($data['projectName'] ?? 'Project'),
             'status' => ProposalStatus::APPROVED,
             'is_fast_track' => true,
             'fast_track_reason' => $data['fastTrackReason'],

@@ -41,7 +41,7 @@ enum TaskStatus: string
             self::COMPLETED,
         ];
 
-        return array_filter($allStatuses, fn($status) => $status !== $this);
+        return array_filter($allStatuses, fn ($status) => $status !== $this);
     }
 
     /**

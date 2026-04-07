@@ -3,21 +3,20 @@
 namespace App\Http\Controllers\Api\V1\HR;
 
 use App\Http\Controllers\Controller;
-use App\Models\EmployeeDeduction;
-use App\Models\DeductionType;
-use App\Models\DeductionRule;
-use App\Models\SalaryAdjustment;
-use App\Http\Resources\V1\HR\EmployeeDeductionResource;
-use App\Http\Resources\V1\HR\EmployeeDeductionCollection;
+use App\Http\Requests\V1\HR\ApproveDeductionRequest;
 use App\Http\Requests\V1\HR\StoreEmployeeDeductionRequest;
 use App\Http\Requests\V1\HR\UpdateEmployeeDeductionRequest;
-use App\Http\Requests\V1\HR\ApproveDeductionRequest;
-use Illuminate\Http\Request;
+use App\Http\Resources\V1\HR\EmployeeDeductionCollection;
+use App\Http\Resources\V1\HR\EmployeeDeductionResource;
+use App\Models\DeductionType;
+use App\Models\EmployeeDeduction;
+use App\Models\SalaryAdjustment;
 use Illuminate\Http\JsonResponse;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class EmployeeDeductionController extends Controller
 {
@@ -57,7 +56,7 @@ class EmployeeDeductionController extends Controller
             $validated = $request->validated();
 
             // Calculate amount if not provided
-            if (!isset($validated['amount']) || $validated['amount'] == 0) {
+            if (! isset($validated['amount']) || $validated['amount'] == 0) {
                 $deductionType = DeductionType::find($validated['deduction_type_id']);
                 $rule = $deductionType->rules()->active()->first();
 
@@ -86,6 +85,7 @@ class EmployeeDeductionController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Failed to create employee deduction',
                 'error' => $e->getMessage(),
@@ -153,7 +153,7 @@ class EmployeeDeductionController extends Controller
     {
         Gate::authorize('approve', $employeeDeduction);
 
-        if (!$employeeDeduction->canBeApproved()) {
+        if (! $employeeDeduction->canBeApproved()) {
             return response()->json([
                 'message' => 'This deduction cannot be approved',
             ], 422);
@@ -174,6 +174,7 @@ class EmployeeDeductionController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Failed to approve deduction',
                 'error' => $e->getMessage(),
@@ -192,7 +193,7 @@ class EmployeeDeductionController extends Controller
             'rejection_reason' => 'required|string|max:1000',
         ]);
 
-        if (!$employeeDeduction->canBeApproved()) {
+        if (! $employeeDeduction->canBeApproved()) {
             return response()->json([
                 'message' => 'This deduction cannot be rejected',
             ], 422);
@@ -295,6 +296,7 @@ class EmployeeDeductionController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Failed to create bulk deductions',
                 'error' => $e->getMessage(),
@@ -319,7 +321,7 @@ class EmployeeDeductionController extends Controller
     {
         $rule = $deductionType->rules()->active()->first();
 
-        if (!$rule) {
+        if (! $rule) {
             return null;
         }
 

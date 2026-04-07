@@ -3,15 +3,15 @@
 namespace App\Models;
 
 use App\Traits\HasCreatedUpdatedBy;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Carbon\Carbon;
 
 class RecurringTaskConfig extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
         'template_task_id',
@@ -41,10 +41,15 @@ class RecurringTaskConfig extends Model
      * Frequency constants
      */
     const FREQUENCY_DAILY = 'daily';
+
     const FREQUENCY_WEEKLY = 'weekly';
+
     const FREQUENCY_BIWEEKLY = 'biweekly';
+
     const FREQUENCY_MONTHLY = 'monthly';
+
     const FREQUENCY_QUARTERLY = 'quarterly';
+
     const FREQUENCY_YEARLY = 'yearly';
 
     /**
@@ -76,7 +81,7 @@ class RecurringTaskConfig extends Model
      */
     public function shouldGenerateForDate(Carbon $date): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 
@@ -108,17 +113,17 @@ class RecurringTaskConfig extends Model
 
         return match ($this->frequency) {
             self::FREQUENCY_DAILY => $startDate->diffInDays($date) % $interval === 0,
-            
+
             self::FREQUENCY_WEEKLY => $this->matchesWeekly($date, $startDate, $interval),
-            
+
             self::FREQUENCY_BIWEEKLY => $this->matchesWeekly($date, $startDate, 2),
-            
+
             self::FREQUENCY_MONTHLY => $this->matchesMonthly($date, $startDate, $interval),
-            
+
             self::FREQUENCY_QUARTERLY => $this->matchesMonthly($date, $startDate, 3),
-            
+
             self::FREQUENCY_YEARLY => $this->matchesYearly($date, $startDate, $interval),
-            
+
             default => false,
         };
     }
@@ -129,12 +134,13 @@ class RecurringTaskConfig extends Model
     protected function matchesWeekly(Carbon $date, Carbon $startDate, int $interval): bool
     {
         // Check if day of week is in allowed days
-        if ($this->days_of_week && !in_array($date->dayOfWeekIso, $this->days_of_week)) {
+        if ($this->days_of_week && ! in_array($date->dayOfWeekIso, $this->days_of_week)) {
             return false;
         }
 
         // Check interval
         $weeksDiff = $startDate->diffInWeeks($date);
+
         return $weeksDiff % $interval === 0;
     }
 
@@ -144,7 +150,7 @@ class RecurringTaskConfig extends Model
     protected function matchesMonthly(Carbon $date, Carbon $startDate, int $interval): bool
     {
         $dayOfMonth = $this->day_of_month ?? $startDate->day;
-        
+
         // Adjust for months with fewer days
         $lastDayOfMonth = $date->daysInMonth;
         $targetDay = min($dayOfMonth, $lastDayOfMonth);
@@ -154,6 +160,7 @@ class RecurringTaskConfig extends Model
         }
 
         $monthsDiff = $startDate->diffInMonths($date);
+
         return $monthsDiff % $interval === 0;
     }
 
@@ -167,6 +174,7 @@ class RecurringTaskConfig extends Model
         }
 
         $yearsDiff = $startDate->diffInYears($date);
+
         return $yearsDiff % $interval === 0;
     }
 
@@ -176,12 +184,12 @@ class RecurringTaskConfig extends Model
     public function generateNextTask(): ?Task
     {
         $template = $this->templateTask;
-        if (!$template) {
+        if (! $template) {
             return null;
         }
 
         $nextDate = $this->getNextOccurrenceDate();
-        if (!$nextDate) {
+        if (! $nextDate) {
             return null;
         }
 
@@ -222,18 +230,18 @@ class RecurringTaskConfig extends Model
     {
         $lastTask = $this->generatedTasks()->latest('due_date')->first();
         $startDate = $lastTask ? Carbon::parse($lastTask->due_date) : Carbon::parse($this->start_date);
-        
+
         // Find next valid date
         $maxIterations = 365; // Prevent infinite loop
         $iterations = 0;
-        
+
         while ($iterations < $maxIterations) {
             $startDate->addDay();
-            
+
             if ($this->shouldGenerateForDate($startDate)) {
                 return $startDate;
             }
-            
+
             $iterations++;
         }
 

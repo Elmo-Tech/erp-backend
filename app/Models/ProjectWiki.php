@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Crypt;
 
 class ProjectWiki extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasCreatedUpdatedBy, HasFactory;
 
     /**
      * The attributes that are mass assignable.

@@ -2,15 +2,21 @@
 
 namespace App\Http\Resources\V1\Activity;
 
+use App\Models\Activity;
+use App\Models\Lead;
+use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * @mixin Activity
+ *
  * @OA\Schema(
  *     schema="ActivityResource",
  *     type="object",
  *     title="Activity Resource",
  *     description="Activity resource representation",
+ *
  *     @OA\Property(property="activityId", type="integer", example=1),
  *     @OA\Property(property="subjectId", type="integer", example=1),
  *     @OA\Property(property="subjectType", type="string", example="App\\Models\\Lead"),
@@ -40,33 +46,59 @@ class ActivityResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        /** @var Activity $activity */
+        $activity = $this->resource;
+
         return [
-            'activityId' => $this->id,
-            'subjectId' => $this->subject_id,
-            'subjectType' => $this->subject_type,
-            'subjectName' => $this->when($this->relationLoaded('subject'), function () {
-                return $this->subject?->name ?? $this->subject?->title ?? 'Unknown';
+            'activityId' => $activity->id,
+            'subjectId' => $activity->subject_id,
+            'subjectType' => $activity->subject_type,
+            'subjectName' => $this->when($activity->relationLoaded('subject'), function () use ($activity) {
+                $subject = $activity->subject;
+
+                if ($subject instanceof Lead) {
+                    return $subject->name ?? 'Unknown';
+                }
+
+                if ($subject instanceof Project) {
+                    return $subject->title;
+                }
+
+                return 'Unknown';
             }),
-            'type' => $this->type->value,
-            'typeLabel' => $this->type->label(),
-            'typeIcon' => $this->type->icon(),
-            'status' => $this->status->value,
-            'statusLabel' => $this->status->label(),
-            'statusColor' => $this->status->color(),
-            'title' => $this->title ?? '',
-            'description' => $this->description ?? '',
-            'outcomeSummary' => $this->outcome_summary ?? '',
-            'isCompleted' => $this->is_completed ?? false,
-            'assignedTo' => $this->when($this->relationLoaded('assignedTo'), [
-                'userId' => $this->assignedTo?->id ?? 0,
-                'name' => $this->assignedTo?->name ?? '',
-                'email' => $this->assignedTo?->email ?? '',
-                'avatar' => $this->assignedTo?->avatar ?? '',
-            ]),
-            'scheduledAt' => $this->scheduled_at?->toISOString() ?? '',
-            'completedAt' => $this->completed_at?->toISOString() ?? '',
-            'createdAt' => $this->created_at?->toISOString() ?? '',
-            'updatedAt' => $this->updated_at?->toISOString() ?? '',
+            'type' => $activity->type->value,
+            'typeLabel' => $activity->type->label(),
+            'typeIcon' => $activity->type->icon(),
+            'status' => $activity->status->value,
+            'statusLabel' => $activity->status->label(),
+            'statusColor' => $activity->status->color(),
+            'title' => $activity->title ?? '',
+            'description' => $activity->description ?? '',
+            'outcomeSummary' => $activity->outcome_summary ?? '',
+            'isCompleted' => $activity->is_completed ?? false,
+            'assignedTo' => $this->when($activity->relationLoaded('assignedTo'), function () use ($activity) {
+                $assignedTo = $activity->assignedTo;
+
+                if ($assignedTo === null) {
+                    return [
+                        'userId' => 0,
+                        'name' => '',
+                        'email' => '',
+                        'avatar' => '',
+                    ];
+                }
+
+                return [
+                    'userId' => $assignedTo->id,
+                    'name' => $assignedTo->name ?? '',
+                    'email' => $assignedTo->email ?? '',
+                    'avatar' => $assignedTo->avatar ?? '',
+                ];
+            }),
+            'scheduledAt' => $activity->scheduled_at?->toISOString() ?? '',
+            'completedAt' => $activity->completed_at?->toISOString() ?? '',
+            'createdAt' => $activity->created_at?->toISOString() ?? '',
+            'updatedAt' => $activity->updated_at?->toISOString() ?? '',
         ];
     }
 }

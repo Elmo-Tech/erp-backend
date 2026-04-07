@@ -17,12 +17,12 @@ return new class extends Migration
     {
         Schema::create('activities', function (Blueprint $table) {
             $table->id();
-            
+
             // Polymorphic relationship
             $table->unsignedBigInteger('subject_id');
             $table->string('subject_type');
             $table->index(['subject_id', 'subject_type']);
-            
+
             // Activity details
             $table->string('type'); // meeting, call, email, note, technical_discovery
             $table->string('status')->default('scheduled'); // scheduled, completed, cancelled
@@ -30,16 +30,16 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->text('outcome_summary')->nullable(); // For meeting minutes
             $table->boolean('is_completed')->default(false);
-            
+
             // Assignment and scheduling
             $table->foreignId('assigned_to')->constrained('users');
             $table->timestamp('scheduled_at')->nullable();
             $table->timestamp('completed_at')->nullable();
-            
+
             // Audit columns
             $this->addAuditColumns($table);
             $table->timestamps();
-            
+
             // Indexes
             $table->index(['type']);
             $table->index(['status']);

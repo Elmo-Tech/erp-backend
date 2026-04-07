@@ -17,14 +17,14 @@ class QuotationResource extends JsonResource
     public function toArray(Request $request): array
     {
         $pricingService = app(PricingService::class);
-        
+
         // Convert estimations to camelCase
         $estimations = $this->estimations ?? [];
         $camelCaseEstimations = $pricingService->convertEstimationsToCamelCase($estimations);
-        
+
         // Calculate pricing breakdown
         $pricingBreakdown = [];
-        if (!empty($estimations) && $this->hourly_rate > 0) {
+        if (! empty($estimations) && $this->hourly_rate > 0) {
             try {
                 $pricingBreakdown = $pricingService->calculateQuote(
                     $camelCaseEstimations,

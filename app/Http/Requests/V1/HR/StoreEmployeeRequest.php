@@ -13,6 +13,7 @@ use Illuminate\Validation\Rule;
  * @OA\Schema(
  *     schema="StoreEmployeeRequest",
  *     required={"name", "email", "password"},
+ *
  *     @OA\Property(property="name", type="string", example="John Doe"),
  *     @OA\Property(property="email", type="string", format="email", example="john@example.com"),
  *     @OA\Property(property="password", type="string", minLength=8, example="password123"),

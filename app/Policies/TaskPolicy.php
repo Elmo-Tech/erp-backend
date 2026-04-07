@@ -11,7 +11,7 @@ use Illuminate\Auth\Access\HandlesAuthorization;
  * TaskPolicy handles authorization for task operations.
  *
  * Requirements: 4.2
- * 
+ *
  * Team & Test Scenario Permissions:
  * - Main/Weekly Tasks: Only users with manage_task_team/manage_task_test_scenarios permission
  * - Subtasks: Any assigned user can manage team (view only) and test scenarios
@@ -133,7 +133,7 @@ class TaskPolicy
     public function updateInternalNotes(User $user, Task $task): bool
     {
         // Must have permission to view internal notes
-        if (!$user->can('view_internal_notes')) {
+        if (! $user->can('view_internal_notes')) {
             return false;
         }
 
@@ -198,7 +198,7 @@ class TaskPolicy
 
     /**
      * Determine whether the user can manage team members (assignees) on a task.
-     * 
+     *
      * Rules:
      * - All task types (Main/Weekly/Subtask): Admin/Super Admin or users with manage_task_team permission can add/remove members
      * - When adding to Main Task: propagates to Weekly Tasks only
@@ -232,7 +232,7 @@ class TaskPolicy
 
     /**
      * Determine whether the user can manage test scenarios on a task.
-     * 
+     *
      * Rules:
      * - Main Tasks: Cannot have test scenarios (business rule)
      * - Weekly Tasks: Only Admin/Super Admin or users with manage_task_test_scenarios permission
@@ -264,7 +264,7 @@ class TaskPolicy
         if ($task->type === TaskType::SUBTASK) {
             // Check if user is assigned to this task
             $isAssigned = $task->assignees()->where('user_id', $user->id)->exists();
-            
+
             return $isAssigned || $task->assigned_to === $user->id || $task->created_by === $user->id;
         }
 

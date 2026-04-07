@@ -83,7 +83,6 @@ class UpdateRoleRequest extends FormRequest
     /**
      * Handle a failed validation attempt.
      *
-     * @param  \Illuminate\Contracts\Validation\Validator  $validator
      * @return void
      *
      * @throws \Illuminate\Http\Exceptions\HttpResponseException
@@ -105,9 +104,9 @@ class UpdateRoleRequest extends FormRequest
     {
         // Convert camelCase to snake_case for database compatibility if needed
         // In this case, we keep the role name as provided since it's a user-defined identifier
-        
+
         // Ensure permissions array is not null
-        if (!$this->has('permissions')) {
+        if (! $this->has('permissions')) {
             $this->merge(['permissions' => []]);
         }
     }
@@ -116,23 +115,23 @@ class UpdateRoleRequest extends FormRequest
      * Configure the validator instance.
      *
      * @param  \Illuminate\Validation\Validator  $validator
-     * @return void
      */
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
             $roleId = $this->route('role'); // Changed from 'id' to 'role'
-            
+
             // Check if the role exists and if it's protected
             try {
                 $role = Role::findOrFail($roleId);
-                
+
                 // Prevent updating protected roles
                 if (in_array($role->name, ['admin', 'client', 'super-admin'])) {
                     $validator->errors()->add(
                         'role',
                         'This role is protected and cannot be modified.'
                     );
+
                     return; // Exit early if role is protected
                 }
 
@@ -140,11 +139,11 @@ class UpdateRoleRequest extends FormRequest
                 if ($this->has('permissions') && is_array($this->permissions)) {
                     $existingPermissions = Permission::pluck('name')->toArray();
                     $invalidPermissions = array_diff($this->permissions, $existingPermissions);
-                    
-                    if (!empty($invalidPermissions)) {
+
+                    if (! empty($invalidPermissions)) {
                         $validator->errors()->add(
                             'permissions',
-                            'The following permissions do not exist: ' . implode(', ', $invalidPermissions)
+                            'The following permissions do not exist: '.implode(', ', $invalidPermissions)
                         );
                     }
                 }
@@ -156,7 +155,7 @@ class UpdateRoleRequest extends FormRequest
                     if (in_array($this->name, $protectedNames) && $role->name !== $this->name) {
                         $validator->errors()->add(
                             'name',
-                            'Cannot rename role to a protected name. Protected names: ' . implode(', ', $protectedNames)
+                            'Cannot rename role to a protected name. Protected names: '.implode(', ', $protectedNames)
                         );
                     }
                 }
@@ -165,6 +164,7 @@ class UpdateRoleRequest extends FormRequest
                     'role',
                     'The specified role does not exist.'
                 );
+
                 return; // Exit early if role doesn't exist
             }
         });

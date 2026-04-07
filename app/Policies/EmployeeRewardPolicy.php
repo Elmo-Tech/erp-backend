@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\EmployeeReward;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class EmployeeRewardPolicy
@@ -27,7 +27,7 @@ class EmployeeRewardPolicy
         if ($user->id === $employeeReward->user_id) {
             return true;
         }
-        
+
         return $user->hasRole(['admin', 'hr_manager', 'manager']);
     }
 
@@ -64,7 +64,7 @@ class EmployeeRewardPolicy
         if ($user->id === $employeeReward->user_id) {
             return false;
         }
-        
+
         return $user->hasRole(['admin', 'hr_manager']);
     }
 

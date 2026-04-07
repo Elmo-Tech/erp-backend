@@ -15,7 +15,7 @@ class EvaluationPeriodResource extends JsonResource
             'startDate' => $this->start_date?->format('Y-m-d') ?? '',
             'endDate' => $this->end_date?->format('Y-m-d') ?? '',
             'status' => $this->status ?? '',
-            'evaluationsCount' => $this->whenLoaded('evaluations', fn() => $this->evaluations->count(), 0),
+            'evaluationsCount' => $this->whenLoaded('evaluations', fn () => $this->evaluations->count(), 0),
             'createdBy' => $this->created_by ?? 0,
             'createdAt' => $this->created_at?->toISOString() ?? '',
         ];

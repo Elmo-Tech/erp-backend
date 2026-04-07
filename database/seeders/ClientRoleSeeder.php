@@ -10,7 +10,7 @@ class ClientRoleSeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     * 
+     *
      * Note: This seeder adds additional client-specific permissions
      * that are not included in AdminUserSeeder.
      */
@@ -40,7 +40,7 @@ class ClientRoleSeeder extends Seeder
         // Get current permissions and add the new ones
         $currentPermissions = $clientRole->permissions->pluck('name')->toArray();
         $allClientPermissions = array_unique(array_merge($currentPermissions, $clientSpecificPermissions));
-        
+
         // Sync all permissions to client role
         $clientRole->syncPermissions($allClientPermissions);
 

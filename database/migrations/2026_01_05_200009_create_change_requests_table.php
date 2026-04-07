@@ -22,22 +22,22 @@ return new class extends Migration
             $table->string('title');
             $table->text('description');
             $table->text('impact_analysis')->nullable();
-            
+
             // Cost
             $table->boolean('is_billable')->default(true);
             $table->decimal('estimated_hours', 8, 2)->default(0);
             $table->decimal('estimated_cost', 15, 2)->default(0);
             $table->decimal('approved_cost', 15, 2)->nullable();
-            
+
             // Timeline impact
             $table->integer('additional_days')->default(0);
-            
+
             // Status
             $table->string('status')->default('pending'); // pending, under_review, approved, rejected, implemented
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('approved_at')->nullable();
             $table->text('rejection_reason')->nullable();
-            
+
             $this->addAuditColumns($table);
             $table->timestamps();
 

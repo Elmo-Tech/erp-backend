@@ -12,9 +12,9 @@ class PerformanceEvaluationResource extends JsonResource
         return [
             'evaluationId' => $this->id,
             'userId' => $this->user_id,
-            'userName' => $this->whenLoaded('user', fn() => $this->user->name, ''),
+            'userName' => $this->whenLoaded('user', fn () => $this->user->name, ''),
             'periodId' => $this->evaluation_period_id,
-            'periodName' => $this->whenLoaded('period', fn() => $this->period->name, ''),
+            'periodName' => $this->whenLoaded('period', fn () => $this->period->name, ''),
             'scores' => [
                 'technicalQuality' => [
                     'bugSeverity' => (float) ($this->bug_severity_score ?? 0),
@@ -40,7 +40,7 @@ class PerformanceEvaluationResource extends JsonResource
             'bonusAmount' => (float) ($this->bonus_amount ?? 0),
             'evaluatorNotes' => $this->evaluator_notes ?? '',
             'evaluatedBy' => $this->evaluated_by ?? 0,
-            'evaluatorName' => $this->whenLoaded('evaluator', fn() => $this->evaluator?->name ?? '', ''),
+            'evaluatorName' => $this->whenLoaded('evaluator', fn () => $this->evaluator?->name ?? '', ''),
             'evaluatedAt' => $this->evaluated_at?->toISOString() ?? '',
             'status' => $this->status ?? '',
             'createdAt' => $this->created_at?->toISOString() ?? '',

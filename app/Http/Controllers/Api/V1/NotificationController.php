@@ -27,7 +27,7 @@ class NotificationController extends Controller
             ->paginate($perPage);
 
         return ApiResponse::success([
-            'notifications' => $notifications->map(fn($n) => [
+            'notifications' => $notifications->map(fn ($n) => [
                 'notificationId' => $n->id,
                 'type' => $n->data['type'] ?? 'general',
                 'message' => $n->data['message'] ?? '',
@@ -51,6 +51,7 @@ class NotificationController extends Controller
     public function unreadCount(Request $request): JsonResponse
     {
         $count = $request->user()->unreadNotifications()->count();
+
         return ApiResponse::success(['unreadCount' => $count]);
     }
 
@@ -60,12 +61,13 @@ class NotificationController extends Controller
     public function markAsRead(Request $request, string $id): JsonResponse
     {
         $notification = $request->user()->notifications()->find($id);
-        
-        if (!$notification) {
+
+        if (! $notification) {
             return ApiResponse::error('Notification not found', 404);
         }
 
         $notification->markAsRead();
+
         return ApiResponse::success(null, 'Notification marked as read');
     }
 
@@ -75,6 +77,7 @@ class NotificationController extends Controller
     public function markAllAsRead(Request $request): JsonResponse
     {
         $request->user()->unreadNotifications->markAsRead();
+
         return ApiResponse::success(null, 'All notifications marked as read');
     }
 }

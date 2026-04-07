@@ -17,21 +17,29 @@ class ClientScope implements Scope
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return;
         }
 
         // Only apply scope for client role users
-        if (!$user->hasRole('client')) {
+        if (! $user->hasRole('client')) {
+            return;
+        }
+
+        $clientId = $user->client?->id;
+
+        if (! $clientId) {
+            $builder->whereRaw('1 = 0');
+
             return;
         }
 
         // Apply filtering based on model type
         if ($model instanceof \App\Models\Project) {
-            $builder->where('client_id', $user->id);
+            $builder->where('client_id', $clientId);
         } elseif ($model instanceof \App\Models\Invoice) {
-            $builder->whereHas('project', function ($query) use ($user) {
-                $query->where('client_id', $user->id);
+            $builder->whereHas('project', function ($query) use ($clientId) {
+                $query->where('client_id', $clientId);
             });
         }
     }

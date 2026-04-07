@@ -17,7 +17,7 @@ class InnovationLogObserver
     {
         // Notify all admins when a new innovation log is submitted
         $admins = User::role(['admin', 'super-admin'])->get();
-        
+
         if ($admins->isNotEmpty()) {
             Notification::send($admins, new InnovationLogSubmitted($innovationLog));
         }

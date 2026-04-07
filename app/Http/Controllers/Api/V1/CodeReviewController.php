@@ -6,8 +6,8 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Performance\CreateCodeReviewRequest;
 use App\Http\Requests\V1\Performance\UpdateCodeReviewRequest;
-use App\Http\Resources\V1\Performance\CodeReviewResource;
 use App\Http\Resources\V1\Performance\CodeReviewCollection;
+use App\Http\Resources\V1\Performance\CodeReviewResource;
 use App\Models\CodeReview;
 use App\Models\Task;
 use App\Models\User;
@@ -38,48 +38,63 @@ class CodeReviewController extends Controller
      *     summary="Get code reviews list",
      *     description="Returns paginated list of code reviews. Users see their own reviews unless they have view_all_code_reviews permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[asReviewer]",
      *         in="query",
      *         required=false,
      *         description="Filter reviews where current user is the reviewer",
+     *
      *         @OA\Schema(type="string", enum={"true", "false"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[asDeveloper]",
      *         in="query",
      *         required=false,
      *         description="Filter reviews where current user is the developer",
+     *
      *         @OA\Schema(type="string", enum={"true", "false"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[status]",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"pending", "approved", "needs_revision", "rejected"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[taskId]",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="integer", default=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="codeReviews", type="array", @OA\Items(
@@ -105,7 +120,7 @@ class CodeReviewController extends Controller
             $query->where('reviewer_id', $request->user()->id);
         } elseif ($request->has('filter.asDeveloper') && $request->query('filter.asDeveloper') === 'true') {
             $query->where('developer_id', $request->user()->id);
-        } elseif (!$request->user()->can('view_all_code_reviews')) {
+        } elseif (! $request->user()->can('view_all_code_reviews')) {
             $query->where(function ($q) use ($request) {
                 $q->where('reviewer_id', $request->user()->id)
                     ->orWhere('developer_id', $request->user()->id);
@@ -134,16 +149,21 @@ class CodeReviewController extends Controller
      *     summary="Create a new code review",
      *     description="Creates a new code review for a task. The authenticated user becomes the reviewer.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"taskId", "developerId"},
+     *
      *             @OA\Property(property="taskId", type="integer", description="Task being reviewed"),
      *             @OA\Property(property="developerId", type="integer", description="Developer who wrote the code"),
      *             @OA\Property(property="codeQualityScore", type="integer", minimum=1, maximum=5),
@@ -155,14 +175,18 @@ class CodeReviewController extends Controller
      *             @OA\Property(property="improvementSuggestions", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Created",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=422, description="Validation Error")
      * )
      */
@@ -194,26 +218,34 @@ class CodeReviewController extends Controller
      *     summary="Get a specific code review",
      *     description="Returns detailed code review. Only reviewer, developer, or users with view_all_code_reviews can access.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Not found")
      * )
@@ -227,7 +259,7 @@ class CodeReviewController extends Controller
             || $review->developer_id === $request->user()->id
             || $request->user()->can('view_all_code_reviews');
 
-        if (!$canView) {
+        if (! $canView) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -242,21 +274,28 @@ class CodeReviewController extends Controller
      *     summary="Update a code review",
      *     description="Updates code review scores. Only the reviewer or users with manage_code_reviews can update.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="codeQualityScore", type="integer", minimum=1, maximum=5),
      *             @OA\Property(property="readabilityScore", type="integer", minimum=1, maximum=5),
      *             @OA\Property(property="scalabilityScore", type="integer", minimum=1, maximum=5),
@@ -266,14 +305,18 @@ class CodeReviewController extends Controller
      *             @OA\Property(property="improvementSuggestions", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Not found")
      * )
@@ -283,7 +326,7 @@ class CodeReviewController extends Controller
         $review = CodeReview::findOrFail($id);
 
         // Only reviewer can update
-        if ($review->reviewer_id !== $request->user()->id && !$request->user()->can('manage_code_reviews')) {
+        if ($review->reviewer_id !== $request->user()->id && ! $request->user()->can('manage_code_reviews')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -303,26 +346,34 @@ class CodeReviewController extends Controller
      *     summary="Approve a code review",
      *     description="Marks the code review as approved. Only the reviewer or users with manage_code_reviews can approve.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Not found")
      * )
@@ -331,7 +382,7 @@ class CodeReviewController extends Controller
     {
         $review = CodeReview::findOrFail($id);
 
-        if ($review->reviewer_id !== $request->user()->id && !$request->user()->can('manage_code_reviews')) {
+        if ($review->reviewer_id !== $request->user()->id && ! $request->user()->can('manage_code_reviews')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -351,33 +402,44 @@ class CodeReviewController extends Controller
      *     summary="Request revision for a code review",
      *     description="Marks the code review as needing revision with improvement suggestions.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"suggestions"},
+     *
      *             @OA\Property(property="suggestions", type="string", description="Improvement suggestions for the developer")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Not found"),
      *     @OA\Response(response=422, description="Validation Error")
@@ -387,7 +449,7 @@ class CodeReviewController extends Controller
     {
         $review = CodeReview::findOrFail($id);
 
-        if ($review->reviewer_id !== $request->user()->id && !$request->user()->can('manage_code_reviews')) {
+        if ($review->reviewer_id !== $request->user()->id && ! $request->user()->can('manage_code_reviews')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -411,33 +473,44 @@ class CodeReviewController extends Controller
      *     summary="Reject a code review",
      *     description="Marks the code review as rejected with a reason.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"reason"},
+     *
      *             @OA\Property(property="reason", type="string", description="Reason for rejecting the code review")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Not found"),
      *     @OA\Response(response=422, description="Validation Error")
@@ -447,7 +520,7 @@ class CodeReviewController extends Controller
     {
         $review = CodeReview::findOrFail($id);
 
-        if ($review->reviewer_id !== $request->user()->id && !$request->user()->can('manage_code_reviews')) {
+        if ($review->reviewer_id !== $request->user()->id && ! $request->user()->can('manage_code_reviews')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -471,16 +544,21 @@ class CodeReviewController extends Controller
      *     summary="Get pending reviews for current user as reviewer",
      *     description="Returns list of code reviews pending the current user's review.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="array", @OA\Items(type="object"))
      *         )
@@ -502,28 +580,37 @@ class CodeReviewController extends Controller
      *     summary="Get code review statistics for current user",
      *     description="Returns statistics about the current user's code reviews as a developer.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="startDate",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="endDate",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="totalReviews", type="integer"),
@@ -546,11 +633,11 @@ class CodeReviewController extends Controller
      */
     public function myStats(Request $request): JsonResponse
     {
-        $startDate = $request->query('startDate') 
-            ? \Carbon\Carbon::parse($request->query('startDate')) 
+        $startDate = $request->query('startDate')
+            ? \Carbon\Carbon::parse($request->query('startDate'))
             : now()->startOfMonth();
-        $endDate = $request->query('endDate') 
-            ? \Carbon\Carbon::parse($request->query('endDate')) 
+        $endDate = $request->query('endDate')
+            ? \Carbon\Carbon::parse($request->query('endDate'))
             : now()->endOfMonth();
 
         $stats = $this->codeReviewService->getDeveloperStats(

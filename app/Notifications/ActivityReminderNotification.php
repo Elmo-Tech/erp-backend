@@ -18,7 +18,7 @@ class ActivityReminderNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return match($this->reminder->channel) {
+        return match ($this->reminder->channel) {
             'mail' => ['mail'],
             'database' => ['database'],
             'both' => ['mail', 'database'],
@@ -36,7 +36,7 @@ class ActivityReminderNotification extends Notification implements ShouldQueue
             ->greeting(__('notifications.greeting', ['name' => $notifiable->name]))
             ->line($this->reminder->message)
             ->line(__('notifications.lead_info', ['name' => $leadName]))
-            ->action(__('notifications.view_details'), url('/leads/' . $remindable->lead_id))
+            ->action(__('notifications.view_details'), url('/leads/'.$remindable->lead_id))
             ->line(__('notifications.reminder_footer'));
     }
 

@@ -16,12 +16,12 @@ class UserWithPointsResource extends JsonResource
     {
         return [
             'userId' => $this->id ?? 0,
-            'name' => $this->name ?? "",
-            'email' => $this->email ?? "",
+            'name' => $this->name ?? '',
+            'email' => $this->email ?? '',
             'avatar' => $this->avatar,
             'totalPoints' => $this->total_points ?? 0,
             'isActive' => $this->is_active ?? false,
-            'createdAt' => $this->created_at?->toISOString() ?? "",
+            'createdAt' => $this->created_at?->toISOString() ?? '',
         ];
     }
 }

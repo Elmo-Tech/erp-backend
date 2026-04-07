@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -16,10 +16,10 @@ return new class extends Migration
             // Add event type for categorizing different types of system events
             // Make it nullable first to handle existing records
             $table->string('event_type', 50)->nullable()->after('action')->index();
-            
+
             // Add severity level for filtering critical events
             $table->enum('severity', ['info', 'warning', 'critical'])->default('info')->after('event_type')->index();
-            
+
             // Add description field for human-readable event description
             $table->text('description')->nullable()->after('severity');
         });
@@ -27,7 +27,7 @@ return new class extends Migration
         // Update existing records with default event_type
         DB::table('audit_logs')->whereNull('event_type')->update([
             'event_type' => 'system_action',
-            'description' => 'Legacy audit log entry'
+            'description' => 'Legacy audit log entry',
         ]);
 
         // Now make event_type NOT NULL

@@ -10,7 +10,7 @@ enum MeetingLocation: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::ONLINE => __('enums.meeting_location.online'),
             self::OFFICE => __('enums.meeting_location.office'),
             self::CLIENT_SITE => __('enums.meeting_location.client_site'),

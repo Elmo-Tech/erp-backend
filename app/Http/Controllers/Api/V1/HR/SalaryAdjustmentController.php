@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Api\V1\HR;
 
 use App\Http\Controllers\Controller;
-use App\Models\SalaryAdjustment;
-use App\Http\Resources\V1\HR\SalaryAdjustmentResource;
 use App\Http\Resources\V1\HR\SalaryAdjustmentCollection;
-use Illuminate\Http\Request;
+use App\Http\Resources\V1\HR\SalaryAdjustmentResource;
+use App\Models\SalaryAdjustment;
 use Illuminate\Http\JsonResponse;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class SalaryAdjustmentController extends Controller
 {
@@ -71,7 +71,7 @@ class SalaryAdjustmentController extends Controller
             $user = $userAdjustments->first()->user;
             $totalAdditions = $userAdjustments->filter->isPositive()->sum('amount');
             $totalDeductions = $userAdjustments->filter->isNegative()->sum('amount');
-            
+
             return [
                 'user_id' => $userId,
                 'user_name' => $user?->name,
@@ -122,7 +122,7 @@ class SalaryAdjustmentController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        if (!$salaryAdjustment->approve(auth()->id(), $validated['notes'] ?? null)) {
+        if (! $salaryAdjustment->approve(auth()->id(), $validated['notes'] ?? null)) {
             return response()->json([
                 'message' => 'Cannot approve this adjustment',
             ], 422);
@@ -141,7 +141,7 @@ class SalaryAdjustmentController extends Controller
     {
         Gate::authorize('update', $salaryAdjustment);
 
-        if (!$salaryAdjustment->markAsProcessed()) {
+        if (! $salaryAdjustment->markAsProcessed()) {
             return response()->json([
                 'message' => 'Cannot mark this adjustment as processed',
             ], 422);
@@ -164,7 +164,7 @@ class SalaryAdjustmentController extends Controller
             'reason' => 'required|string|max:1000',
         ]);
 
-        if (!$salaryAdjustment->cancel($validated['reason'])) {
+        if (! $salaryAdjustment->cancel($validated['reason'])) {
             return response()->json([
                 'message' => 'Cannot cancel this adjustment',
             ], 422);
@@ -211,6 +211,7 @@ class SalaryAdjustmentController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Failed to approve adjustments',
                 'error' => $e->getMessage(),

@@ -31,7 +31,7 @@ class MarkOverdueInvoicesJob implements ShouldQueue
 
         try {
             $count = $billingService->markOverdueInvoices();
-            
+
             Log::info("MarkOverdueInvoicesJob completed successfully. Marked {$count} invoices as overdue.");
         } catch (\Exception $e) {
             Log::error("MarkOverdueInvoicesJob failed: {$e->getMessage()}");

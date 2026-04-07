@@ -40,7 +40,7 @@ class ProjectStatusChangedNotification extends Notification implements ShouldQue
     public function toMail(object $notifiable): MailMessage
     {
         $statusLabel = $this->getStatusLabel($this->newStatus);
-        
+
         return (new MailMessage)
             ->subject(__('notifications.project_status_changed_subject', ['project' => $this->project->title]))
             ->greeting(__('notifications.hello', ['name' => $notifiable->name]))
@@ -78,7 +78,7 @@ class ProjectStatusChangedNotification extends Notification implements ShouldQue
      */
     private function getStatusLabel(?string $status): string
     {
-        if (!$status) {
+        if (! $status) {
             return __('statuses.unknown');
         }
 

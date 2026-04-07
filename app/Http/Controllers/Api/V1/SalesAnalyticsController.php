@@ -25,8 +25,10 @@ class SalesAnalyticsController extends Controller
      *     tags={"Sales Analytics"},
      *     summary="Get sales performance by user",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="startDate", in="query", @OA\Schema(type="string", format="date")),
      *     @OA\Parameter(name="endDate", in="query", @OA\Schema(type="string", format="date")),
+     *
      *     @OA\Response(response=200, description="Performance data retrieved successfully")
      * )
      */
@@ -53,6 +55,7 @@ class SalesAnalyticsController extends Controller
      *     tags={"Sales Analytics"},
      *     summary="Get leads by source analytics",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Source analytics retrieved successfully")
      * )
      */
@@ -79,6 +82,7 @@ class SalesAnalyticsController extends Controller
      *     tags={"Sales Analytics"},
      *     summary="Get sales pipeline",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Pipeline data retrieved successfully")
      * )
      */
@@ -98,6 +102,7 @@ class SalesAnalyticsController extends Controller
      *     tags={"Sales Analytics"},
      *     summary="Get revenue forecast based on milestones",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Forecast data retrieved successfully")
      * )
      */
@@ -115,6 +120,7 @@ class SalesAnalyticsController extends Controller
      *     tags={"Sales Analytics"},
      *     summary="Get quotation statistics",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Quotation stats retrieved successfully")
      * )
      */
@@ -135,6 +141,7 @@ class SalesAnalyticsController extends Controller
      *     tags={"Sales Analytics"},
      *     summary="Get project types breakdown",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Project types data retrieved successfully")
      * )
      */

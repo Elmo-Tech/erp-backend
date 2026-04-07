@@ -2,7 +2,6 @@
 
 namespace App\Observers;
 
-use App\Enums\PointTransactionType;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Models\Task;
@@ -36,14 +35,11 @@ class TaskObserver
      * - Calculating delay_days when task is completed
      * - Awarding points for on-time delivery only
      * - Deducting points for late delivery (1 point per day late)
-     *
-     * @param Task $task
-     * @return void
      */
     public function updating(Task $task): void
     {
         // Only process if status is being changed
-        if (!$task->isDirty('status')) {
+        if (! $task->isDirty('status')) {
             return;
         }
 
@@ -58,7 +54,7 @@ class TaskObserver
         // Handle task reopening (bug bounce) - deduct points
         if ($oldStatus === TaskStatus::TESTING && $newStatus === TaskStatus::IN_PROGRESS) {
             $task->reopen_count = ($task->reopen_count ?? 0) + 1;
-            
+
             // Deduct points for bug bounce only from primary assignees
             if ($this->shouldAwardPoints($task)) {
                 $primaryAssignees = $task->assignees()->where('is_primary', true)->get();
@@ -71,7 +67,7 @@ class TaskObserver
         // Handle task completion - award/deduct points based on timing only
         if ($newStatus === TaskStatus::COMPLETED && $oldStatus !== TaskStatus::COMPLETED) {
             $task->completed_at = now();
-            
+
             // Calculate delay_days if task has a due_date
             $isOnTime = false;
             $delayDays = 0;
@@ -80,11 +76,11 @@ class TaskObserver
                 $completedDate = $task->completed_at->startOfDay();
                 $delayDays = (int) $dueDate->diffInDays($completedDate, false);
                 $task->delay_days = $delayDays;
-                
+
                 // Task is on time if completed on or before due date
                 $isOnTime = $delayDays <= 0;
             }
-            
+
             // Award/deduct points based on timing only (no base completion points)
             if ($this->shouldAwardPoints($task)) {
                 $primaryAssignees = $task->assignees()->where('is_primary', true)->get();
@@ -104,9 +100,6 @@ class TaskObserver
     /**
      * Determine if points should be awarded for this task.
      * Points are only awarded for MAIN and WEEKLY tasks, not for SUBTASKS.
-     *
-     * @param Task $task
-     * @return bool
      */
     private function shouldAwardPoints(Task $task): bool
     {

@@ -6,7 +6,6 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Services\AnalyticsService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 /**
  * @OA\Tag(
@@ -30,16 +29,21 @@ class AnalyticsController extends Controller
      *     summary="Get sales performance metrics and conversion rates",
      *     tags={"Analytics"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Sales performance metrics retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Sales performance metrics retrieved successfully"),
      *             @OA\Property(
@@ -57,8 +61,10 @@ class AnalyticsController extends Controller
      *                 @OA\Property(
      *                     property="conversionByRep",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="id", type="integer", example=1),
      *                         @OA\Property(property="name", type="string", example="John Doe"),
      *                         @OA\Property(property="totalLeads", type="integer", example=25),
@@ -69,8 +75,10 @@ class AnalyticsController extends Controller
      *                 @OA\Property(
      *                     property="pipelineHealth",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="status", type="string", example="negotiation"),
      *                         @OA\Property(property="statusLabel", type="string", example="Negotiation"),
      *                         @OA\Property(property="count", type="integer", example=12)
@@ -79,8 +87,10 @@ class AnalyticsController extends Controller
      *                 @OA\Property(
      *                     property="monthlyTrend",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="month", type="string", example="2026-01"),
      *                         @OA\Property(property="totalLeads", type="integer", example=15),
      *                         @OA\Property(property="wonLeads", type="integer", example=5),
@@ -105,16 +115,21 @@ class AnalyticsController extends Controller
      *     summary="Get rejection analysis and reasons why deals are lost",
      *     tags={"Analytics"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Rejection analysis retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Rejection analysis retrieved successfully"),
      *             @OA\Property(
@@ -123,8 +138,10 @@ class AnalyticsController extends Controller
      *                 @OA\Property(
      *                     property="rejectionReasons",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="reason", type="string", example="price"),
      *                         @OA\Property(property="reasonLabel", type="string", example="Price too high"),
      *                         @OA\Property(property="count", type="integer", example=15)
@@ -133,8 +150,10 @@ class AnalyticsController extends Controller
      *                 @OA\Property(
      *                     property="rejectionBySector",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="sector", type="string", example="fintech"),
      *                         @OA\Property(property="sectorLabel", type="string", example="Fintech"),
      *                         @OA\Property(property="totalQuotations", type="integer", example=20),
@@ -145,8 +164,10 @@ class AnalyticsController extends Controller
      *                 @OA\Property(
      *                     property="monthlyTrend",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="month", type="string", example="2026-01"),
      *                         @OA\Property(property="totalQuotations", type="integer", example=25),
      *                         @OA\Property(property="rejectedQuotations", type="integer", example=6),
@@ -178,16 +199,21 @@ class AnalyticsController extends Controller
      *     summary="Get cashflow forecast including receivables and projected revenue",
      *     tags={"Analytics"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Financial forecast retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Financial forecast retrieved successfully"),
      *             @OA\Property(
@@ -204,8 +230,10 @@ class AnalyticsController extends Controller
      *                 @OA\Property(
      *                     property="revenueBySector",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="sector", type="string", example="fintech"),
      *                         @OA\Property(property="sectorLabel", type="string", example="Fintech"),
      *                         @OA\Property(property="totalRevenue", type="number", format="float", example=150000.00),
@@ -216,8 +244,10 @@ class AnalyticsController extends Controller
      *                 @OA\Property(
      *                     property="monthlyCashflow",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="month", type="string", example="2026-03"),
      *                         @OA\Property(property="expectedAmount", type="number", format="float", example=45000.00)
      *                     )
@@ -248,16 +278,21 @@ class AnalyticsController extends Controller
      *     summary="Get items needing immediate attention (expiring quotations, stale leads, etc.)",
      *     tags={"Analytics"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Follow-up radar retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Follow-up radar retrieved successfully"),
      *             @OA\Property(
@@ -266,8 +301,10 @@ class AnalyticsController extends Controller
      *                 @OA\Property(
      *                     property="items",
      *                     type="array",
+     *
      *                     @OA\Items(
      *                         type="object",
+     *
      *                         @OA\Property(property="type", type="string", example="expiring_quotation"),
      *                         @OA\Property(property="id", type="integer", example=15),
      *                         @OA\Property(property="title", type="string", example="Quotation QT-2026-0015"),
@@ -312,16 +349,21 @@ class AnalyticsController extends Controller
      *     summary="Get executive dashboard summary with key metrics",
      *     tags={"Analytics"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Dashboard summary retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Dashboard summary retrieved successfully"),
      *             @OA\Property(
@@ -396,16 +438,21 @@ class AnalyticsController extends Controller
      *     summary="Clear analytics cache (Admin only)",
      *     tags={"Analytics"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Analytics cache cleared successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Analytics cache cleared successfully")
      *         )

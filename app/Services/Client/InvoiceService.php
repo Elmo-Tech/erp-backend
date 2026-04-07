@@ -8,8 +8,8 @@ use App\Models\ContractMilestone;
 use App\Models\Invoice;
 use App\Models\Project;
 use Carbon\Carbon;
-use InvalidArgumentException;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class InvoiceService
 {
@@ -19,7 +19,7 @@ class InvoiceService
 
     /**
      * Create a new invoice for a project.
-     * 
+     *
      * Requirements: 3.3, 10.3
      */
     public function createInvoice(Project $project, array $data): Invoice
@@ -56,7 +56,7 @@ class InvoiceService
 
         // Get project from contract
         $contract = $milestone->contract;
-        if (!$contract->project_id) {
+        if (! $contract->project_id) {
             throw new InvalidArgumentException('Contract must be linked to a project to create invoice.');
         }
 
@@ -91,12 +91,12 @@ class InvoiceService
     /**
      * Mark an invoice as paid.
      * If linked to a milestone, updates milestone status too.
-     * 
+     *
      * Requirements: 8.3
      */
     public function markAsPaid(Invoice $invoice): Invoice
     {
-        if (!$invoice->isPayable()) {
+        if (! $invoice->isPayable()) {
             throw new InvalidArgumentException('Invoice cannot be paid in current status.');
         }
 
@@ -189,8 +189,8 @@ class InvoiceService
 
         $milestone->update([
             'invoice_id' => $invoice->id,
-            'status' => $invoice->status === InvoiceStatus::PAID 
-                ? MilestoneStatus::PAID 
+            'status' => $invoice->status === InvoiceStatus::PAID
+                ? MilestoneStatus::PAID
                 : MilestoneStatus::INVOICED,
             'paid_at' => $invoice->paid_at,
         ]);
@@ -204,7 +204,7 @@ class InvoiceService
 
     /**
      * Mark overdue invoices (called by scheduled job).
-     * 
+     *
      * Requirements: 3.8, 18.2, 18.3
      */
     public function markOverdueInvoices(): int
@@ -218,12 +218,15 @@ class InvoiceService
         $count = 0;
         foreach ($overdueInvoices as $invoice) {
             $invoice->update(['status' => InvoiceStatus::OVERDUE]);
-            
+
             // Send overdue notification to client
-            if ($invoice->project && $invoice->project->client) {
-                $invoice->project->client->notify(new \App\Notifications\InvoiceOverdue($invoice));
+            if ($invoice->project && $invoice->project->client?->user) {
+                $invoice->project->client->user->notify(new \App\Notifications\InvoiceOverdue(
+                    $invoice,
+                    $invoice->due_date->diffInDays(Carbon::today())
+                ));
             }
-            
+
             $count++;
         }
 

@@ -1,15 +1,13 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
+     *
      * This migration ensures that existing tasks have at least one primary assignee.
      * For tasks that don't have any primary assignees, it will mark the first developer
      * as primary to maintain backward compatibility.
@@ -20,7 +18,7 @@ return new class extends Migration
         $tasksWithoutPrimary = DB::table('tasks')
             ->leftJoin('task_assignees', function ($join) {
                 $join->on('tasks.id', '=', 'task_assignees.task_id')
-                     ->where('task_assignees.is_primary', '=', true);
+                    ->where('task_assignees.is_primary', '=', true);
             })
             ->whereNull('task_assignees.id')
             ->pluck('tasks.id');

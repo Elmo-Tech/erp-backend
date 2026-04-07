@@ -9,10 +9,35 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property int $reward_type_id
+ * @property \Illuminate\Support\Carbon|null $reward_date
+ * @property float|int|string $amount
+ * @property string|null $reason
+ * @property string $status
+ * @property int|null $points_used
+ * @property int|null $approved_by
+ * @property \Illuminate\Support\Carbon|null $approved_at
+ * @property string|null $rejection_reason
+ * @property \Illuminate\Support\Carbon|null $paid_at
+ * @property string|null $payment_reference
+ * @property string $rewardable_type
+ * @property int $rewardable_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read User|null $user
+ * @property-read RewardType|null $rewardType
+ * @property-read User|null $approver
+ */
 class EmployeeReward extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
+    /**
+     * @var list<string>
+     */
     protected $fillable = [
         'user_id',
         'reward_type_id',
@@ -30,6 +55,9 @@ class EmployeeReward extends Model
         'rewardable_id',
     ];
 
+    /**
+     * @var array<string, string>
+     */
     protected $casts = [
         'reward_date' => 'date',
         'amount' => 'decimal:2',
@@ -42,9 +70,13 @@ class EmployeeReward extends Model
      * Status constants
      */
     const STATUS_PENDING = 'pending';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_REJECTED = 'rejected';
+
     const STATUS_PAID = 'paid';
+
     const STATUS_CANCELLED = 'cancelled';
 
     /**
@@ -125,7 +157,7 @@ class EmployeeReward extends Model
      */
     public function approve(int $approverId): bool
     {
-        if (!$this->canBeApproved()) {
+        if (! $this->canBeApproved()) {
             return false;
         }
 
@@ -143,7 +175,7 @@ class EmployeeReward extends Model
      */
     public function reject(int $approverId, string $reason): bool
     {
-        if (!$this->canBeApproved()) {
+        if (! $this->canBeApproved()) {
             return false;
         }
 
@@ -160,7 +192,7 @@ class EmployeeReward extends Model
     /**
      * Mark reward as paid
      */
-    public function markAsPaid(string $paymentReference = null): bool
+    public function markAsPaid(?string $paymentReference = null): bool
     {
         if ($this->status !== self::STATUS_APPROVED) {
             return false;

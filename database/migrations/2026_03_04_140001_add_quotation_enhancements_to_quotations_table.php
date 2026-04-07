@@ -14,14 +14,14 @@ return new class extends Migration
         Schema::table('quotations', function (Blueprint $table) {
             // File number for easier reference
             $table->string('file_number', 50)->nullable()->unique()->after('quotation_number');
-            
+
             // Revision tracking
             $table->boolean('needs_revision')->default(false)->after('file_number');
             $table->text('revision_notes')->nullable()->after('needs_revision');
-            
+
             // Task linkage for project-based quotations
             $table->foreignId('task_id')->nullable()->after('revision_notes')->constrained('tasks')->nullOnDelete();
-            
+
             // Indexes
             $table->index('needs_revision');
             $table->index('task_id');
@@ -35,11 +35,11 @@ return new class extends Migration
     {
         Schema::table('quotations', function (Blueprint $table) {
             $table->dropForeign(['task_id']);
-            
+
             $table->dropUnique('quotations_file_number_unique');
             $table->dropIndex(['needs_revision']);
             $table->dropIndex(['task_id']);
-            
+
             $table->dropColumn([
                 'file_number',
                 'needs_revision',

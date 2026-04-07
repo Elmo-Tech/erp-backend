@@ -3,7 +3,6 @@
 namespace App\Services\Sales;
 
 use App\Models\ContractTemplate;
-use App\Models\Lead;
 use App\Models\ProposalTemplate;
 use App\Models\Quotation;
 use App\Models\User;

@@ -15,14 +15,27 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * @property int $id
+ * @property int $client_id
+ * @property string $title
+ * @property ProjectStatus|null $status
+ * @property float|int|string|null $budget
+ * @property \Illuminate\Support\Carbon|null $deadline
+ * @property \Illuminate\Support\Carbon|null $ui_approved_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property-read Client $client
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Invoice> $invoices
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, ProjectMember> $members
+ */
 class Project extends Model implements Trackable
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $fillable = [
         'client_id',
@@ -58,10 +71,10 @@ class Project extends Model implements Trackable
     protected static function booted(): void
     {
         // Apply ClientScope when authenticated user is a client
-        static::addGlobalScope(new ClientScope());
-        
+        static::addGlobalScope(new ClientScope);
+
         // Apply TeamMemberScope for employees to only see their projects
-        static::addGlobalScope(new TeamMemberScope());
+        static::addGlobalScope(new TeamMemberScope);
     }
 
     /**
@@ -150,8 +163,9 @@ class Project extends Model implements Trackable
                 if ($totalTasks === 0) {
                     return 0.0;
                 }
-                
+
                 $completedTasks = $this->tasks()->where('status', 'completed')->count();
+
                 return round(($completedTasks / $totalTasks) * 100, 1);
             }
         );
@@ -199,7 +213,7 @@ class Project extends Model implements Trackable
         // since parent tasks aggregate time from their children
         return $this->tasks()
             ->whereDoesntHave('children')
-            ->sum('total_time_spent') ?? 0;
+            ->sum('total_time_spent');
     }
 
     /**
@@ -224,10 +238,10 @@ class Project extends Model implements Trackable
      */
     public function isPinnedBy(?int $userId): bool
     {
-        if (!$userId) {
+        if (! $userId) {
             return false;
         }
-        
+
         return $this->pinnedByUsers()->where('user_id', $userId)->exists();
     }
 }

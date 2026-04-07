@@ -12,7 +12,7 @@ enum TemplateType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::SAAS => __('enums.template_type.saas'),
             self::CUSTOM => __('enums.template_type.custom'),
             self::MOBILE => __('enums.template_type.mobile'),

@@ -30,21 +30,21 @@ class ProjectStatusChanged extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $clientName = $this->project->client?->name ?? __('No Client');
-        
+
         return (new MailMessage)
             ->subject(__('Project Status Updated: :project', ['project' => $this->project->title]))
             ->greeting(__('Hello :name,', ['name' => $notifiable->name]))
             ->line(__('The status of project ":project" has been updated.', [
                 'project' => $this->project->title,
             ]))
-            ->line('**' . __('Status Change:') . '**')
+            ->line('**'.__('Status Change:').'**')
             ->line(__('Previous Status: :old', ['old' => __(ucfirst(str_replace('_', ' ', $this->oldStatus)))]))
             ->line(__('New Status: :new', ['new' => __(ucfirst(str_replace('_', ' ', $this->newStatus)))]))
-            ->line('**' . __('Project Details:') . '**')
+            ->line('**'.__('Project Details:').'**')
             ->line(__('Client: :client', ['client' => $clientName]))
             ->when($this->project->deadline, function ($message) {
                 return $message->line(__('Deadline: :deadline', [
-                    'deadline' => $this->project->deadline->format('Y-m-d')
+                    'deadline' => $this->project->deadline->format('Y-m-d'),
                 ]));
             })
             ->when($this->changedByName, function ($message) {
@@ -73,7 +73,7 @@ class ProjectStatusChanged extends Notification implements ShouldQueue
             'changed_by_name' => $this->changedByName,
             'reason' => $this->reason,
             'changed_at' => now()->toISOString(),
-            'message' => $this->changedByName 
+            'message' => $this->changedByName
                 ? __(':changer changed project ":project" status from :old to :new', [
                     'changer' => $this->changedByName,
                     'project' => $this->project->title,

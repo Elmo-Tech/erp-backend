@@ -66,8 +66,8 @@ class CodeReview extends Model
             $this->documentation_score,
         ];
 
-        $validScores = array_filter($scores, fn($s) => $s > 0);
-        
+        $validScores = array_filter($scores, fn ($s) => $s > 0);
+
         if (count($validScores) > 0) {
             $this->average_score = array_sum($validScores) / count($validScores);
         } else {

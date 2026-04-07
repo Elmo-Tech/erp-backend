@@ -34,7 +34,7 @@ class LeadAssigned extends Notification implements ShouldQueue
             ->subject(__('New Lead Assigned: :company', ['company' => $this->lead->company]))
             ->greeting(__('Hello :name,', ['name' => $notifiable->name]))
             ->line(__(':assigner has assigned you a new lead.', ['assigner' => $this->assignerName]))
-            ->line('**' . __('Lead Details:') . '**')
+            ->line('**'.__('Lead Details:').'**')
             ->line(__('Company: :company', ['company' => $this->lead->company]))
             ->line(__('Contact: :contact', ['contact' => $this->lead->name]))
             ->line(__('Email: :email', ['email' => $this->lead->email]))
@@ -44,7 +44,7 @@ class LeadAssigned extends Notification implements ShouldQueue
             ->line(__('Source: :source', ['source' => $source]))
             ->when($this->lead->notes, function ($message) {
                 return $message->line(__('Notes: :notes', [
-                    'notes' => substr($this->lead->notes, 0, 150) . '...'
+                    'notes' => substr($this->lead->notes, 0, 150).'...',
                 ]));
             })
             ->action(__('View Lead'), url("/dashboard/sales/leads/{$this->lead->id}"))

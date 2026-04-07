@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Performance\CreateInnovationLogRequest;
-use App\Http\Resources\V1\Performance\InnovationLogResource;
 use App\Http\Resources\V1\Performance\InnovationLogCollection;
+use App\Http\Resources\V1\Performance\InnovationLogResource;
 use App\Models\InnovationLog;
 use App\Services\Performance\InnovationTrackingService;
 use Illuminate\Http\JsonResponse;
@@ -35,47 +35,62 @@ class InnovationLogController extends Controller
      *     summary="Get innovation logs",
      *     description="Returns paginated list of innovation logs. Users see their own logs unless they have view_all_innovation_logs permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[userId]",
      *         in="query",
      *         required=false,
      *         description="Filter by user ID (requires view_all_innovation_logs permission)",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[category]",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ai_tool", "automation", "new_tech", "process_improvement"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[isVerified]",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"true", "false"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[impactLevel]",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"low", "medium", "high"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         required=false,
+     *
      *         @OA\Schema(type="integer", default=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="innovationLogs", type="array", @OA\Items(
@@ -99,7 +114,7 @@ class InnovationLogController extends Controller
         $query = InnovationLog::with(['user', 'project', 'task', 'verifier']);
 
         // Filter by user (admin can see all, users see their own)
-        if (!$request->user()->can('view_all_innovation_logs')) {
+        if (! $request->user()->can('view_all_innovation_logs')) {
             $query->where('user_id', $request->user()->id);
         } elseif ($request->has('filter.userId')) {
             $query->where('user_id', $request->query('filter.userId'));
@@ -131,16 +146,21 @@ class InnovationLogController extends Controller
      *     summary="Log a new innovation",
      *     description="Creates a new innovation log entry. Employees can log their use of AI tools, automation scripts, or new technologies.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"toolName", "category", "description"},
+     *
      *             @OA\Property(property="projectId", type="integer", description="Related project ID (optional)"),
      *             @OA\Property(property="taskId", type="integer", description="Related task ID (optional)"),
      *             @OA\Property(property="toolName", type="string", example="GitHub Copilot", description="Name of the tool or technology"),
@@ -151,14 +171,18 @@ class InnovationLogController extends Controller
      *             @OA\Property(property="timeSavedMinutes", type="integer", description="Estimated time saved in minutes")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Created",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=422, description="Validation Error")
      * )
      */
@@ -184,26 +208,34 @@ class InnovationLogController extends Controller
      *     summary="Get a specific innovation log",
      *     description="Returns detailed innovation log. Users can view their own logs.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Not found")
      * )
@@ -213,7 +245,7 @@ class InnovationLogController extends Controller
         $log = InnovationLog::with(['user', 'project', 'task', 'verifier'])->findOrFail($id);
 
         // Users can view their own logs
-        if ($log->user_id !== $request->user()->id && !$request->user()->can('view_all_innovation_logs')) {
+        if ($log->user_id !== $request->user()->id && ! $request->user()->can('view_all_innovation_logs')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -228,33 +260,41 @@ class InnovationLogController extends Controller
      *     summary="Verify an innovation log",
      *     description="Marks an innovation log as verified. Requires verify_innovation_logs permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Not found")
      * )
      */
     public function verify(Request $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('verify_innovation_logs')) {
+        if (! $request->user()->can('verify_innovation_logs')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -275,33 +315,41 @@ class InnovationLogController extends Controller
      *     summary="Reject an innovation log",
      *     description="Marks an innovation log as rejected/unverified. Requires verify_innovation_logs permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Not found")
      * )
      */
     public function reject(Request $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('verify_innovation_logs')) {
+        if (! $request->user()->can('verify_innovation_logs')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -322,26 +370,32 @@ class InnovationLogController extends Controller
      *     summary="Get pending innovation logs for verification",
      *     description="Returns list of unverified innovation logs. Requires verify_innovation_logs permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="array", @OA\Items(type="object"))
      *         )
      *     ),
+     *
      *     @OA\Response(response=403, description="Unauthorized")
      * )
      */
     public function pending(Request $request): JsonResponse
     {
-        if (!$request->user()->can('verify_innovation_logs')) {
+        if (! $request->user()->can('verify_innovation_logs')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -358,30 +412,39 @@ class InnovationLogController extends Controller
      *     summary="Get current user's innovation summary",
      *     description="Returns summary of the authenticated user's innovation logs for a date range.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="startDate",
      *         in="query",
      *         required=false,
      *         description="Start date (defaults to start of current month)",
+     *
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="endDate",
      *         in="query",
      *         required=false,
      *         description="End date (defaults to end of current month)",
+     *
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="logs", type="array", @OA\Items(type="object")),
@@ -404,11 +467,11 @@ class InnovationLogController extends Controller
      */
     public function mySummary(Request $request): JsonResponse
     {
-        $startDate = $request->query('startDate') 
-            ? \Carbon\Carbon::parse($request->query('startDate')) 
+        $startDate = $request->query('startDate')
+            ? \Carbon\Carbon::parse($request->query('startDate'))
             : now()->startOfMonth();
-        $endDate = $request->query('endDate') 
-            ? \Carbon\Carbon::parse($request->query('endDate')) 
+        $endDate = $request->query('endDate')
+            ? \Carbon\Carbon::parse($request->query('endDate'))
             : now()->endOfMonth();
 
         $summary = $this->innovationService->getUserInnovations(
@@ -428,26 +491,34 @@ class InnovationLogController extends Controller
      *     summary="Delete an innovation log",
      *     description="Deletes an innovation log. Users can delete their own unverified logs. Verified logs require manage_innovation_logs permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Success",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=400, description="Cannot delete verified log"),
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=404, description="Not found")
@@ -458,11 +529,11 @@ class InnovationLogController extends Controller
         $log = InnovationLog::findOrFail($id);
 
         // Users can delete their own unverified logs
-        if ($log->user_id !== $request->user()->id && !$request->user()->can('manage_innovation_logs')) {
+        if ($log->user_id !== $request->user()->id && ! $request->user()->can('manage_innovation_logs')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
-        if ($log->is_verified && !$request->user()->can('manage_innovation_logs')) {
+        if ($log->is_verified && ! $request->user()->can('manage_innovation_logs')) {
             return ApiResponse::error(__('messages.cannot_delete_verified'), 400);
         }
 

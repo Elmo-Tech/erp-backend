@@ -3,20 +3,20 @@
 namespace App\Http\Controllers\Api\V1\HR;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\V1\HR\ApproveRewardRequest;
+use App\Http\Requests\V1\HR\StoreEmployeeRewardRequest;
+use App\Http\Requests\V1\HR\UpdateEmployeeRewardRequest;
+use App\Http\Resources\V1\HR\EmployeeRewardCollection;
+use App\Http\Resources\V1\HR\EmployeeRewardResource;
 use App\Models\EmployeeReward;
 use App\Models\RewardType;
 use App\Models\SalaryAdjustment;
-use App\Http\Resources\V1\HR\EmployeeRewardResource;
-use App\Http\Resources\V1\HR\EmployeeRewardCollection;
-use App\Http\Requests\V1\HR\StoreEmployeeRewardRequest;
-use App\Http\Requests\V1\HR\UpdateEmployeeRewardRequest;
-use App\Http\Requests\V1\HR\ApproveRewardRequest;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class EmployeeRewardController extends Controller
 {
@@ -56,7 +56,7 @@ class EmployeeRewardController extends Controller
             $validated = $request->validated();
 
             // Calculate amount if not provided
-            if (!isset($validated['amount']) || $validated['amount'] == 0) {
+            if (! isset($validated['amount']) || $validated['amount'] == 0) {
                 $rewardType = RewardType::find($validated['reward_type_id']);
                 $user = \App\Models\User::find($validated['user_id']);
 
@@ -84,6 +84,7 @@ class EmployeeRewardController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Failed to create employee reward',
                 'error' => $e->getMessage(),
@@ -151,7 +152,7 @@ class EmployeeRewardController extends Controller
     {
         Gate::authorize('approve', $employeeReward);
 
-        if (!$employeeReward->canBeApproved()) {
+        if (! $employeeReward->canBeApproved()) {
             return response()->json([
                 'message' => 'This reward cannot be approved',
             ], 422);
@@ -172,6 +173,7 @@ class EmployeeRewardController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Failed to approve reward',
                 'error' => $e->getMessage(),
@@ -190,7 +192,7 @@ class EmployeeRewardController extends Controller
             'rejection_reason' => 'required|string|max:1000',
         ]);
 
-        if (!$employeeReward->canBeApproved()) {
+        if (! $employeeReward->canBeApproved()) {
             return response()->json([
                 'message' => 'This reward cannot be rejected',
             ], 422);
@@ -215,7 +217,7 @@ class EmployeeRewardController extends Controller
             'payment_reference' => 'nullable|string|max:255',
         ]);
 
-        if (!$employeeReward->markAsPaid($validated['payment_reference'] ?? null)) {
+        if (! $employeeReward->markAsPaid($validated['payment_reference'] ?? null)) {
             return response()->json([
                 'message' => 'Cannot mark this reward as paid',
             ], 422);
@@ -330,8 +332,8 @@ class EmployeeRewardController extends Controller
                 'amount' => $amount,
                 'points_used' => $validated['points'],
                 'reason' => $validated['reason'] ?? 'Points conversion',
-                'status' => $rewardType->requires_approval 
-                    ? EmployeeReward::STATUS_PENDING 
+                'status' => $rewardType->requires_approval
+                    ? EmployeeReward::STATUS_PENDING
                     : EmployeeReward::STATUS_APPROVED,
             ]);
 
@@ -357,6 +359,7 @@ class EmployeeRewardController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Failed to create reward from points',
                 'error' => $e->getMessage(),
@@ -416,8 +419,8 @@ class EmployeeRewardController extends Controller
                     'reward_date' => now(),
                     'amount' => $amount,
                     'reason' => "Performance evaluation reward - Score: {$evaluation->overall_score}",
-                    'status' => $rewardType->requires_approval 
-                        ? EmployeeReward::STATUS_PENDING 
+                    'status' => $rewardType->requires_approval
+                        ? EmployeeReward::STATUS_PENDING
                         : EmployeeReward::STATUS_APPROVED,
                     'rewardable_type' => \App\Models\PerformanceEvaluation::class,
                     'rewardable_id' => $evaluation->id,
@@ -439,6 +442,7 @@ class EmployeeRewardController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Failed to create bulk rewards',
                 'error' => $e->getMessage(),

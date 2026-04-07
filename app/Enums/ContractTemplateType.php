@@ -12,7 +12,7 @@ enum ContractTemplateType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DEVELOPMENT => __('enums.contract_template_type.development'),
             self::MAINTENANCE => __('enums.contract_template_type.maintenance'),
             self::SLA => __('enums.contract_template_type.sla'),

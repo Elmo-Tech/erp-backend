@@ -16,10 +16,13 @@ class HealthController extends Controller
      *     tags={"Health"},
      *     summary="API Health Check",
      *     description="Returns the health status of the API",
+     *
      *     @OA\Response(
      *         response=200,
      *         description="API is healthy",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="API is healthy"),
      *             @OA\Property(

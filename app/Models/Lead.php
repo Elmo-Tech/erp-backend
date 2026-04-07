@@ -19,9 +19,14 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property LeadSource|string|null $source
+ */
 class Lead extends Model implements Trackable
 {
-    use HasFactory, HasCreatedUpdatedBy, HasAuditTrail, SoftDeletes;
+    use HasAuditTrail, HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -173,7 +178,7 @@ class Lead extends Model implements Trackable
      */
     public function getTrackableDisplayName(): string
     {
-        return $this->name . ($this->company ? ' (' . $this->company . ')' : '');
+        return $this->name.($this->company ? ' ('.$this->company.')' : '');
     }
 
     /**

@@ -39,10 +39,10 @@ class TaskStatusChanged extends Notification implements ShouldQueue
                 'changer' => $this->changedByName,
                 'task' => $this->task->title,
             ]))
-            ->line('**' . __('Status Change:') . '**')
+            ->line('**'.__('Status Change:').'**')
             ->line(__('Previous Status: :old', ['old' => __(ucfirst(str_replace('_', ' ', $this->oldStatus)))]))
             ->line(__('New Status: :new', ['new' => __(ucfirst(str_replace('_', ' ', $this->newStatus)))]))
-            ->line('**' . __('Task Details:') . '**')
+            ->line('**'.__('Task Details:').'**')
             ->line(__('Task: :title', ['title' => $this->task->title]))
             ->line(__('Project: :project', ['project' => $projectName]))
             ->line(__('Priority: :priority', ['priority' => $priority]))

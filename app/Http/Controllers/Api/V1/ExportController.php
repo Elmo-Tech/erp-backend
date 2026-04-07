@@ -32,12 +32,14 @@ class ExportController extends Controller
      *     tags={"Export"},
      *     summary="Export leads data",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="format", in="query", @OA\Schema(type="string", enum={"json", "csv"}, default="json")),
      *     @OA\Parameter(name="status", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="startDate", in="query", @OA\Schema(type="string", format="date")),
      *     @OA\Parameter(name="endDate", in="query", @OA\Schema(type="string", format="date")),
      *     @OA\Parameter(name="source", in="query", @OA\Schema(type="string")),
+     *
      *     @OA\Response(response=200, description="Export data retrieved")
      * )
      */
@@ -62,11 +64,13 @@ class ExportController extends Controller
      *     tags={"Export"},
      *     summary="Export proposals data",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="format", in="query", @OA\Schema(type="string", enum={"json", "csv"}, default="json")),
      *     @OA\Parameter(name="status", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="startDate", in="query", @OA\Schema(type="string", format="date")),
      *     @OA\Parameter(name="endDate", in="query", @OA\Schema(type="string", format="date")),
+     *
      *     @OA\Response(response=200, description="Export data retrieved")
      * )
      */
@@ -91,11 +95,13 @@ class ExportController extends Controller
      *     tags={"Export"},
      *     summary="Export quotations data",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="format", in="query", @OA\Schema(type="string", enum={"json", "csv"}, default="json")),
      *     @OA\Parameter(name="status", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="startDate", in="query", @OA\Schema(type="string", format="date")),
      *     @OA\Parameter(name="endDate", in="query", @OA\Schema(type="string", format="date")),
+     *
      *     @OA\Response(response=200, description="Export data retrieved")
      * )
      */
@@ -120,9 +126,11 @@ class ExportController extends Controller
      *     tags={"Export"},
      *     summary="Generate sales report",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="startDate", in="query", required=true, @OA\Schema(type="string", format="date")),
      *     @OA\Parameter(name="endDate", in="query", required=true, @OA\Schema(type="string", format="date")),
+     *
      *     @OA\Response(response=200, description="Report generated")
      * )
      */
@@ -146,15 +154,15 @@ class ExportController extends Controller
      */
     private function generateCsvResponse(array $data): Response
     {
-        $csv = implode(',', $data['headers']) . "\n";
+        $csv = implode(',', $data['headers'])."\n";
 
         foreach ($data['data'] as $row) {
-            $csv .= implode(',', array_map(fn($cell) => '"' . str_replace('"', '""', $cell ?? '') . '"', $row)) . "\n";
+            $csv .= implode(',', array_map(fn ($cell) => '"'.str_replace('"', '""', $cell ?? '').'"', $row))."\n";
         }
 
         return response($csv, 200, [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $data['filename'] . '.csv"',
+            'Content-Disposition' => 'attachment; filename="'.$data['filename'].'.csv"',
         ]);
     }
 }

@@ -35,11 +35,13 @@ class LeadHistoryController extends Controller
      *     tags={"Audit Trail"},
      *     summary="Get audit history for a lead",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Parameter(name="filter[actionType]", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="filter[fieldName]", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer", default=20)),
+     *
      *     @OA\Response(response=200, description="History retrieved successfully"),
      *     @OA\Response(response=404, description="Lead not found")
      * )
@@ -66,9 +68,11 @@ class LeadHistoryController extends Controller
      *     tags={"Audit Trail"},
      *     summary="Get full audit history for a lead including proposals and quotations",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer", default=50)),
+     *
      *     @OA\Response(response=200, description="Full history retrieved successfully"),
      *     @OA\Response(response=404, description="Lead not found")
      * )
@@ -93,8 +97,10 @@ class LeadHistoryController extends Controller
      *     tags={"Audit Trail"},
      *     summary="Get audit statistics for a lead",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Stats retrieved successfully")
      * )
      */
@@ -112,9 +118,11 @@ class LeadHistoryController extends Controller
      *     tags={"Audit Trail"},
      *     summary="Get audit history for a proposal",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer", default=20)),
+     *
      *     @OA\Response(response=200, description="History retrieved successfully")
      * )
      */
@@ -140,9 +148,11 @@ class LeadHistoryController extends Controller
      *     tags={"Audit Trail"},
      *     summary="Get audit history for a quotation",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer", default=20)),
+     *
      *     @OA\Response(response=200, description="History retrieved successfully")
      * )
      */
@@ -168,8 +178,10 @@ class LeadHistoryController extends Controller
      *     tags={"Audit Trail"},
      *     summary="Get recent audit activity across all entities",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="limit", in="query", @OA\Schema(type="integer", default=10)),
+     *
      *     @OA\Response(response=200, description="Recent activity retrieved successfully")
      * )
      */
@@ -192,9 +204,11 @@ class LeadHistoryController extends Controller
      *     tags={"Audit Trail"},
      *     summary="Get audit activity by a specific user",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="userId", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer", default=20)),
+     *
      *     @OA\Response(response=200, description="User activity retrieved successfully")
      * )
      */

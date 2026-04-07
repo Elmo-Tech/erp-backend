@@ -16,6 +16,7 @@ use App\Notifications\DeliverableSubmitted;
 use App\Services\Tasks\DeliverableService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class DeliverablePointsAndNotificationsTest extends TestCase
@@ -23,45 +24,49 @@ class DeliverablePointsAndNotificationsTest extends TestCase
     use RefreshDatabase;
 
     private DeliverableService $deliverableService;
+
     private User $developer;
+
     private User $reviewer;
+
     private Task $task;
+
     private TaskDeliverable $deliverable;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->deliverableService = app(DeliverableService::class);
-        
+
         // Create test users
         $this->developer = User::factory()->create(['name' => 'Test Developer']);
         $this->reviewer = User::factory()->create(['name' => 'Test Reviewer']);
-        
+
         // Create admin role and assign to reviewer so they can review deliverables
         $adminRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
         $this->reviewer->assignRole($adminRole);
-        
+
         // Create a client first
         $client = Client::factory()->create();
-        
+
         // Create a project with the client
         $project = Project::factory()->create(['client_id' => $client->id]);
-        
+
         // Create a weekly task (only weekly tasks can have deliverables)
         $this->task = Task::factory()->create([
             'type' => TaskType::WEEKLY,
             'title' => 'Test Weekly Task',
             'project_id' => $project->id,
         ]);
-        
+
         // Assign developer to task
         $this->task->assignees()->create([
             'user_id' => $this->developer->id,
             'role' => 'developer',
             'is_primary' => true,
         ]);
-        
+
         // Create deliverable
         $this->deliverable = TaskDeliverable::factory()->create([
             'task_id' => $this->task->id,
@@ -70,20 +75,20 @@ class DeliverablePointsAndNotificationsTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_sends_notification_when_deliverable_is_submitted()
     {
         Notification::fake();
-        
+
         $this->actingAs($this->developer);
-        
+
         // Submit deliverable
         $this->deliverableService->submitDeliverable(
             $this->deliverable,
             $this->developer,
             ['submissionNotes' => 'Test submission notes']
         );
-        
+
         // Assert notification was sent to reviewers
         Notification::assertSentTo(
             [$this->reviewer],
@@ -95,7 +100,7 @@ class DeliverablePointsAndNotificationsTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function it_awards_points_when_deliverable_is_approved()
     {
         // First submit the deliverable
@@ -103,11 +108,11 @@ class DeliverablePointsAndNotificationsTest extends TestCase
             'status' => DeliverableStatus::SUBMITTED,
             'submitted_at' => now(),
         ]);
-        
+
         $this->actingAs($this->reviewer);
-        
+
         $pointsBefore = $this->developer->total_points ?? 0;
-        
+
         // Approve deliverable
         $this->deliverableService->approveDeliverable(
             $this->deliverable,
@@ -117,11 +122,11 @@ class DeliverablePointsAndNotificationsTest extends TestCase
                 'pointsAwarded' => 5,
             ]
         );
-        
+
         // Assert points were awarded
         $this->developer->refresh();
         $this->assertEquals($pointsBefore + 5, $this->developer->total_points);
-        
+
         // Assert point transaction was created
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $this->developer->id,
@@ -132,7 +137,7 @@ class DeliverablePointsAndNotificationsTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_deducts_points_when_deliverable_is_rejected()
     {
         // First submit the deliverable
@@ -140,13 +145,13 @@ class DeliverablePointsAndNotificationsTest extends TestCase
             'status' => DeliverableStatus::SUBMITTED,
             'submitted_at' => now(),
         ]);
-        
+
         $this->actingAs($this->reviewer);
-        
+
         // Give developer some points first
         $this->developer->update(['total_points' => 10]);
         $pointsBefore = $this->developer->total_points;
-        
+
         // Reject deliverable
         $this->deliverableService->rejectDeliverable(
             $this->deliverable,
@@ -156,11 +161,11 @@ class DeliverablePointsAndNotificationsTest extends TestCase
                 'pointsDeducted' => 2,
             ]
         );
-        
+
         // Assert points were deducted
         $this->developer->refresh();
         $this->assertEquals($pointsBefore - 2, $this->developer->total_points);
-        
+
         // Assert point transaction was created
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $this->developer->id,
@@ -171,19 +176,19 @@ class DeliverablePointsAndNotificationsTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_sends_notification_when_deliverable_is_reviewed()
     {
         Notification::fake();
-        
+
         // First submit the deliverable
         $this->deliverable->update([
             'status' => DeliverableStatus::SUBMITTED,
             'submitted_at' => now(),
         ]);
-        
+
         $this->actingAs($this->reviewer);
-        
+
         // Approve deliverable
         $this->deliverableService->approveDeliverable(
             $this->deliverable,
@@ -193,7 +198,7 @@ class DeliverablePointsAndNotificationsTest extends TestCase
                 'pointsAwarded' => 3,
             ]
         );
-        
+
         // Assert notification was sent to developer
         Notification::assertSentTo(
             [$this->developer],
@@ -206,7 +211,7 @@ class DeliverablePointsAndNotificationsTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function it_creates_point_transaction_records_for_deliverable_reviews()
     {
         // First submit the deliverable
@@ -214,9 +219,9 @@ class DeliverablePointsAndNotificationsTest extends TestCase
             'status' => DeliverableStatus::SUBMITTED,
             'submitted_at' => now(),
         ]);
-        
+
         $this->actingAs($this->reviewer);
-        
+
         // Approve deliverable
         $this->deliverableService->approveDeliverable(
             $this->deliverable,
@@ -226,26 +231,26 @@ class DeliverablePointsAndNotificationsTest extends TestCase
                 'pointsAwarded' => 4,
             ]
         );
-        
+
         // Assert PointTransaction was created
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $this->developer->id,
             'points' => 4,
             'type' => PointTransactionType::DELIVERABLE_APPROVED->value,
         ]);
-        
+
         // Unified points now persist only through point_transactions.
         $this->assertDatabaseCount('point_transactions', 1);
     }
 
-    /** @test */
+    #[Test]
     public function it_prevents_non_developers_from_submitting_deliverables()
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Only assigned developers can submit deliverables.');
-        
+
         $this->actingAs($this->reviewer);
-        
+
         // Try to submit deliverable as non-developer
         $this->deliverableService->submitDeliverable(
             $this->deliverable,
@@ -254,14 +259,14 @@ class DeliverablePointsAndNotificationsTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function it_prevents_reviewing_non_submitted_deliverables()
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Deliverable cannot be reviewed in its current state.');
-        
+
         $this->actingAs($this->reviewer);
-        
+
         // Try to review pending deliverable
         $this->deliverableService->approveDeliverable(
             $this->deliverable,

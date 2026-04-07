@@ -34,46 +34,61 @@ class ActivityController extends Controller
      *     description="Retrieve paginated list of activities with filtering options",
      *     tags={"Activities"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[type]",
      *         in="query",
      *         description="Filter by activity type",
+     *
      *         @OA\Schema(type="string", enum={"call", "email", "meeting", "note", "status_change", "technical_discovery"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[status]",
      *         in="query",
      *         description="Filter by activity status",
+     *
      *         @OA\Schema(type="string", enum={"scheduled", "completed", "cancelled"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[assigned_to]",
      *         in="query",
      *         description="Filter by assigned user ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
+     *
      *         @OA\Schema(type="integer", default=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Items per page",
+     *
      *         @OA\Schema(type="integer", default=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Activities retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Activities retrieved successfully"),
      *             @OA\Property(
@@ -82,8 +97,10 @@ class ActivityController extends Controller
      *                 @OA\Property(
      *                     property="activities",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/ActivityResource")
      *                 ),
+     *
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
@@ -101,9 +118,9 @@ class ActivityController extends Controller
     public function index(Request $request): JsonResponse
     {
         $activities = Activity::with(['subject', 'assignedTo'])
-            ->when($request->get('filter.type'), fn($q, $type) => $q->where('type', $type))
-            ->when($request->get('filter.status'), fn($q, $status) => $q->where('status', $status))
-            ->when($request->get('filter.assigned_to'), fn($q, $userId) => $q->where('assigned_to', $userId))
+            ->when($request->get('filter.type'), fn ($q, $type) => $q->where('type', $type))
+            ->when($request->get('filter.status'), fn ($q, $status) => $q->where('status', $status))
+            ->when($request->get('filter.assigned_to'), fn ($q, $userId) => $q->where('assigned_to', $userId))
             ->orderBy('created_at', 'desc')
             ->paginate($request->get('perPage', 15));
 
@@ -120,16 +137,21 @@ class ActivityController extends Controller
      *     description="Create a new activity for any subject (Lead, Project, etc.)",
      *     tags={"Activities"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"subjectType", "subjectId", "type", "title"},
+     *
      *             @OA\Property(property="subjectType", type="string", example="App\\Models\\Lead", description="Subject model class"),
      *             @OA\Property(property="subjectId", type="integer", example=1, description="Subject ID"),
      *             @OA\Property(property="type", type="string", enum={"call", "email", "meeting", "note", "technical_discovery"}, example="meeting"),
@@ -140,19 +162,25 @@ class ActivityController extends Controller
      *             @OA\Property(property="outcomeSummary", type="string", example="Meeting completed successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Activity created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Activity created successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ActivityResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed"),
      *             @OA\Property(property="errors", type="object")
@@ -163,11 +191,11 @@ class ActivityController extends Controller
     public function store(CreateActivityRequest $request): JsonResponse
     {
         $data = $request->validated();
-        
+
         // Get the subject model
         $subjectClass = $data['subjectType'];
         $subject = $subjectClass::findOrFail($data['subjectId']);
-        
+
         $activity = $this->activityService->logActivity($subject, $data, $request->user());
 
         return ApiResponse::success(
@@ -184,27 +212,35 @@ class ActivityController extends Controller
      *     description="Retrieve detailed information about a specific activity",
      *     tags={"Activities"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Activity retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Activity retrieved successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ActivityResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Activity not found"
@@ -226,21 +262,28 @@ class ActivityController extends Controller
      *     description="Update an existing activity",
      *     tags={"Activities"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="title", type="string", example="Updated Meeting Title"),
      *             @OA\Property(property="description", type="string", example="Updated description"),
      *             @OA\Property(property="assignedTo", type="integer", example=3),
@@ -248,10 +291,13 @@ class ActivityController extends Controller
      *             @OA\Property(property="outcomeSummary", type="string", example="Meeting outcome updated")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Activity updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Activity updated successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ActivityResource")
@@ -262,7 +308,7 @@ class ActivityController extends Controller
     public function update(UpdateActivityRequest $request, Activity $activity): JsonResponse
     {
         $data = $request->validated();
-        
+
         $activity->update([
             'title' => $data['title'] ?? $activity->title,
             'description' => $data['description'] ?? $activity->description,
@@ -285,29 +331,39 @@ class ActivityController extends Controller
      *     description="Mark an activity as completed with outcome summary",
      *     tags={"Activities"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"outcomeSummary"},
+     *
      *             @OA\Property(property="outcomeSummary", type="string", example="Meeting completed successfully with all requirements discussed")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Activity marked as complete",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Activity marked as complete"),
      *             @OA\Property(property="data", ref="#/components/schemas/ActivityResource")
@@ -340,22 +396,29 @@ class ActivityController extends Controller
      *     description="Delete an activity",
      *     tags={"Activities"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Activity deleted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Activity deleted successfully")
      *         )

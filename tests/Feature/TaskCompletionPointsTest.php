@@ -9,7 +9,6 @@ use App\Models\PointTransaction;
 use App\Models\Task;
 use App\Models\TaskAssignee;
 use App\Models\User;
-use App\Models\UserPoint;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -27,7 +26,7 @@ class TaskCompletionPointsTest extends TestCase
             'status' => TaskStatus::IN_PROGRESS,
             'due_date' => Carbon::tomorrow(),
         ]);
-        
+
         // Create primary assignee
         TaskAssignee::factory()->create([
             'task_id' => $task->id,
@@ -41,7 +40,7 @@ class TaskCompletionPointsTest extends TestCase
         // Assert
         $user->refresh();
         $this->assertEquals(1, $user->total_points);
-        
+
         // Check PointTransaction was created for on-time delivery
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $user->id,
@@ -67,7 +66,7 @@ class TaskCompletionPointsTest extends TestCase
             'status' => TaskStatus::IN_PROGRESS,
             'due_date' => Carbon::yesterday(), // Due yesterday
         ]);
-        
+
         // Create primary assignee
         TaskAssignee::factory()->create([
             'task_id' => $task->id,
@@ -81,7 +80,7 @@ class TaskCompletionPointsTest extends TestCase
         // Assert
         $user->refresh();
         $this->assertEquals(4, $user->total_points); // 5 - 1 = 4
-        
+
         // Check PointTransaction was created for late delivery
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $user->id,
@@ -105,7 +104,7 @@ class TaskCompletionPointsTest extends TestCase
             'status' => TaskStatus::IN_PROGRESS,
             'due_date' => Carbon::now()->subDays(3), // Due 3 days ago
         ]);
-        
+
         // Create primary assignee
         TaskAssignee::factory()->create([
             'task_id' => $task->id,
@@ -119,7 +118,7 @@ class TaskCompletionPointsTest extends TestCase
         // Assert
         $user->refresh();
         $this->assertEquals(7, $user->total_points); // 10 - 3 = 7
-        
+
         // Check PointTransaction was created for late delivery with correct points
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $user->id,
@@ -143,7 +142,7 @@ class TaskCompletionPointsTest extends TestCase
             'status' => TaskStatus::IN_PROGRESS,
             'due_date' => null, // No due date
         ]);
-        
+
         // Create primary assignee
         TaskAssignee::factory()->create([
             'task_id' => $task->id,
@@ -157,7 +156,7 @@ class TaskCompletionPointsTest extends TestCase
         // Assert - No points should be awarded or deducted
         $user->refresh();
         $this->assertEquals(5, $user->total_points); // Unchanged
-        
+
         // Check no PointTransaction was created
         $this->assertDatabaseMissing('point_transactions', [
             'user_id' => $user->id,
@@ -175,7 +174,7 @@ class TaskCompletionPointsTest extends TestCase
             'status' => TaskStatus::IN_PROGRESS,
             'due_date' => Carbon::tomorrow(),
         ]);
-        
+
         // Create primary assignee
         TaskAssignee::factory()->create([
             'task_id' => $task->id,
@@ -189,7 +188,7 @@ class TaskCompletionPointsTest extends TestCase
         // Assert - No points should be awarded
         $user->refresh();
         $this->assertEquals(0, $user->total_points);
-        
+
         // Check no PointTransaction was created
         $this->assertDatabaseMissing('point_transactions', [
             'user_id' => $user->id,
@@ -203,20 +202,20 @@ class TaskCompletionPointsTest extends TestCase
         // Arrange
         $primaryUser = User::factory()->create(['total_points' => 0]);
         $secondaryUser = User::factory()->create(['total_points' => 0]);
-        
+
         $task = Task::factory()->create([
             'type' => TaskType::MAIN,
             'status' => TaskStatus::IN_PROGRESS,
             'due_date' => Carbon::tomorrow(),
         ]);
-        
+
         // Create primary and secondary assignees
         TaskAssignee::factory()->create([
             'task_id' => $task->id,
             'user_id' => $primaryUser->id,
             'is_primary' => true,
         ]);
-        
+
         TaskAssignee::factory()->create([
             'task_id' => $task->id,
             'user_id' => $secondaryUser->id,
@@ -229,17 +228,17 @@ class TaskCompletionPointsTest extends TestCase
         // Assert - Only primary assignee gets points
         $primaryUser->refresh();
         $secondaryUser->refresh();
-        
+
         $this->assertEquals(1, $primaryUser->total_points);
         $this->assertEquals(0, $secondaryUser->total_points);
-        
+
         // Check PointTransaction was created only for primary assignee
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $primaryUser->id,
             'points' => 1,
             'type' => PointTransactionType::TASK_ON_TIME->value,
         ]);
-        
+
         $this->assertDatabaseMissing('point_transactions', [
             'user_id' => $secondaryUser->id,
             'source_type' => Task::class,
@@ -256,7 +255,7 @@ class TaskCompletionPointsTest extends TestCase
             'status' => TaskStatus::TESTING,
             'reopen_count' => 0,
         ]);
-        
+
         // Create primary assignee
         TaskAssignee::factory()->create([
             'task_id' => $task->id,
@@ -270,10 +269,10 @@ class TaskCompletionPointsTest extends TestCase
         // Assert
         $user->refresh();
         $task->refresh();
-        
+
         $this->assertEquals(4, $user->total_points); // 5 - 1 = 4
         $this->assertEquals(1, $task->reopen_count);
-        
+
         // Check PointTransaction was created for task reopening
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $user->id,
@@ -293,7 +292,7 @@ class TaskCompletionPointsTest extends TestCase
             'status' => TaskStatus::IN_PROGRESS,
             'due_date' => Carbon::now()->addDays(3), // Due in 3 days
         ]);
-        
+
         // Create primary assignee
         TaskAssignee::factory()->create([
             'task_id' => $task->id,
@@ -307,10 +306,10 @@ class TaskCompletionPointsTest extends TestCase
         // Assert - Should get on-time points (early is considered on-time)
         $user->refresh();
         $task->refresh();
-        
+
         $this->assertEquals(1, $user->total_points);
         $this->assertTrue($task->delay_days <= 0); // Negative delay_days means early
-        
+
         // Check PointTransaction was created for on-time delivery
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $user->id,

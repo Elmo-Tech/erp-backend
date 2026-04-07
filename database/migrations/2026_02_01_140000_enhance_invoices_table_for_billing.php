@@ -14,13 +14,13 @@ return new class extends Migration
         Schema::table('invoices', function (Blueprint $table) {
             // Add contract relationship for milestone-based billing
             $table->foreignId('contract_id')->nullable()->after('project_id')->constrained()->cascadeOnDelete();
-            
+
             // Add milestone name for tracking which milestone this invoice is for
             $table->string('milestone_name')->nullable()->after('contract_id');
-            
+
             // Add sent_at timestamp for tracking when invoice was sent
             $table->timestamp('sent_at')->nullable()->after('paid_at');
-            
+
             // Add index for performance
             $table->index('contract_id');
             $table->index('milestone_name');

@@ -8,9 +8,9 @@ use App\Models\Task;
 use App\Models\TaskActivity;
 use App\Models\TaskDeliverable;
 use App\Models\User;
-use App\Services\Points\UnifiedPointService;
-use App\Notifications\DeliverableSubmitted;
 use App\Notifications\DeliverableReviewed;
+use App\Notifications\DeliverableSubmitted;
+use App\Services\Points\UnifiedPointService;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -74,12 +74,12 @@ class DeliverableService
      */
     public function submitDeliverable(TaskDeliverable $deliverable, User $developer, array $data): TaskDeliverable
     {
-        if (!$deliverable->canBeSubmitted()) {
+        if (! $deliverable->canBeSubmitted()) {
             throw new InvalidArgumentException('Deliverable cannot be submitted in its current state.');
         }
 
         // Validate that the developer is assigned to the task
-        if (!$deliverable->task->isDeveloper($developer)) {
+        if (! $deliverable->task->isDeveloper($developer)) {
             throw new InvalidArgumentException('Only assigned developers can submit deliverables.');
         }
 
@@ -109,7 +109,7 @@ class DeliverableService
      */
     public function startReview(TaskDeliverable $deliverable, User $reviewer): TaskDeliverable
     {
-        if (!$deliverable->canBeReviewed()) {
+        if (! $deliverable->canBeReviewed()) {
             throw new InvalidArgumentException('Deliverable cannot be reviewed in its current state.');
         }
 
@@ -130,11 +130,11 @@ class DeliverableService
      * Approve a deliverable and award points.
      */
     public function approveDeliverable(
-        TaskDeliverable $deliverable, 
-        User $reviewer, 
+        TaskDeliverable $deliverable,
+        User $reviewer,
         array $data
     ): TaskDeliverable {
-        if (!$deliverable->canBeReviewed()) {
+        if (! $deliverable->canBeReviewed()) {
             throw new InvalidArgumentException('Deliverable cannot be reviewed in its current state.');
         }
 
@@ -176,11 +176,11 @@ class DeliverableService
      * Reject a deliverable and deduct points.
      */
     public function rejectDeliverable(
-        TaskDeliverable $deliverable, 
-        User $reviewer, 
+        TaskDeliverable $deliverable,
+        User $reviewer,
         array $data
     ): TaskDeliverable {
-        if (!$deliverable->canBeReviewed()) {
+        if (! $deliverable->canBeReviewed()) {
             throw new InvalidArgumentException('Deliverable cannot be reviewed in its current state.');
         }
 
@@ -250,7 +250,7 @@ class DeliverableService
     public function getDeliverablesSummary(Task $task): array
     {
         $deliverables = $task->deliverables;
-        
+
         return [
             'total' => $deliverables->count(),
             'pending' => $deliverables->where('status', DeliverableStatus::PENDING)->count(),
@@ -272,7 +272,7 @@ class DeliverableService
                     $task->isReviewer($reviewer) ||
                     $reviewer->can('review_task_deliverables');
 
-        if (!$canReview) {
+        if (! $canReview) {
             throw new InvalidArgumentException('User does not have permission to review this deliverable.');
         }
     }
@@ -285,7 +285,7 @@ class DeliverableService
     {
         // Only award points to primary assignees (the actual developers working on the task)
         $primaryAssignees = $deliverable->task->assignees()->where('is_primary', true)->get();
-        
+
         foreach ($primaryAssignees as $assignee) {
             $this->pointService->awardPoints(
                 $assignee->user,
@@ -306,7 +306,7 @@ class DeliverableService
     {
         // Only deduct points from primary assignees (the actual developers working on the task)
         $primaryAssignees = $deliverable->task->assignees()->where('is_primary', true)->get();
-        
+
         foreach ($primaryAssignees as $assignee) {
             $this->pointService->deductPoints(
                 $assignee->user,
@@ -326,7 +326,7 @@ class DeliverableService
     {
         // Get all users who can review deliverables
         $reviewers = collect();
-        
+
         // Add admins and super-admins (only if roles exist)
         $adminRoles = ['admin', 'super-admin'];
         foreach ($adminRoles as $roleName) {
@@ -338,7 +338,7 @@ class DeliverableService
                 continue;
             }
         }
-        
+
         // Add users with review permission (only if permission exists)
         try {
             $reviewers = $reviewers->merge(
@@ -347,17 +347,17 @@ class DeliverableService
         } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
             // Permission doesn't exist, skip it
         }
-        
+
         // Add task reviewers if any
         if ($deliverable->task->reviewers) {
             $reviewers = $reviewers->merge($deliverable->task->reviewers);
         }
-        
+
         // Remove duplicates and the developer who submitted
         $reviewers = $reviewers->unique('id')->reject(function ($user) use ($developer) {
             return $user->id === $developer->id;
         });
-        
+
         // Send notifications
         foreach ($reviewers as $reviewer) {
             $reviewer->notify(new DeliverableSubmitted($deliverable, $developer->name));
@@ -370,7 +370,7 @@ class DeliverableService
     private function notifyDevelopers(TaskDeliverable $deliverable, User $reviewer, string $status): void
     {
         $developers = $deliverable->task->developers;
-        
+
         foreach ($developers as $assignee) {
             $assignee->user->notify(new DeliverableReviewed(
                 $deliverable,

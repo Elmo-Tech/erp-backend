@@ -70,14 +70,14 @@ class ContractService
             $startDate = \Carbon\Carbon::parse($data['startDate']);
             $expiryDays = $data['expiryDays'];
             $actorId = $this->resolveActorId($user);
-            
+
             // Calculate expiry date
             $expiryDate = now()->addDays($expiryDays);
-            
+
             // Generate contract number
             $fileNumber = $data['fileNumber'] ?? null;
             $contractNumber = Contract::generateContractNumber($fileNumber);
-            
+
             // Prepare common data
             $contractData = [
                 'contract_number' => $contractNumber,
@@ -98,21 +98,21 @@ class ContractService
                 'created_by' => $actorId,
                 'updated_by' => $actorId,
             ];
-            
+
             // Handle based on data source
             if ($dataSource === 'from_quotation') {
                 $contractData = $this->handleFromQuotation($contractData, $data);
             } else {
                 $contractData = $this->handleNewTerms($contractData, $data);
             }
-            
-            $shouldCopyMilestones = $dataSource === 'from_quotation' && !empty($contractData['_copy_milestones']);
+
+            $shouldCopyMilestones = $dataSource === 'from_quotation' && ! empty($contractData['_copy_milestones']);
 
             unset($contractData['_copy_milestones'], $contractData['_quotation_milestones']);
-            
+
             // Create the contract
             $contract = Contract::create($contractData);
-            
+
             // If dataSource is 'from_quotation' and no milestones provided, copy from quotation
             if ($shouldCopyMilestones) {
                 $quotation = Quotation::with('milestones')->find($data['quotationId']);
@@ -120,12 +120,12 @@ class ContractService
                     $this->copyMilestonesFromQuotation($contract, $quotation);
                 }
             }
-            
+
             // If milestones provided (for new_terms), create them
-            if ($dataSource === 'new_terms' && !empty($data['milestones'])) {
+            if ($dataSource === 'new_terms' && ! empty($data['milestones'])) {
                 $this->createMilestones($contract, $data['milestones']);
             }
-            
+
             return $this->loadContractRelations($contract);
         });
     }
@@ -144,22 +144,22 @@ class ContractService
 
     /**
      * Handle contract creation from an approved quotation
-     * 
-     * @param array $contractData Base contract data
-     * @param array $data Original request data
+     *
+     * @param  array  $contractData  Base contract data
+     * @param  array  $data  Original request data
      * @return array Updated contract data
      */
     private function handleFromQuotation(array $contractData, array $data): array
     {
         $quotationId = $data['quotationId'] ?? null;
-        
-        if (!$quotationId) {
+
+        if (! $quotationId) {
             throw new \InvalidArgumentException('Quotation ID is required for from_quotation data source');
         }
-        
+
         // Load quotation with relationships
         $quotation = Quotation::with(['lead', 'milestones'])->findOrFail($quotationId);
-        
+
         // Validate quotation is approved
         if ($quotation->status !== QuotationStatus::APPROVED) {
             throw new \InvalidArgumentException('Quotation must be approved to create a contract');
@@ -168,17 +168,17 @@ class ContractService
         if (Contract::where('quotation_id', $quotationId)->exists()) {
             throw new \InvalidArgumentException('A contract already exists for this quotation');
         }
-        
+
         // Link to quotation
         $contractData['quotation_id'] = $quotationId;
         $contractData['task_id'] = $data['taskId'] ?? $quotation->task_id;
         $contractData['project_id'] = $data['projectId'] ?? null;
         $contractData['template_id'] = $data['templateId'] ?? $quotation->template_id;
-        
+
         // Pull final price from quotation
         $contractData['total_amount'] = $quotation->final_price;
         $contractData['currency'] = $quotation->currency;
-        
+
         // If no party data provided, use lead data
         if (empty($contractData['party_two'])) {
             $contractData['party_two'] = [
@@ -191,24 +191,24 @@ class ContractService
                 'address' => '',
             ];
         }
-        
+
         // If no deliverables provided, create from quotation scope
         if (empty($contractData['deliverables']) && $quotation->scope_description) {
             // Convert scope description to deliverables array
             $contractData['deliverables'] = $this->extractDeliverablesFromScope($quotation->scope_description);
         }
-        
+
         // Mark that we need to copy milestones
         $contractData['_copy_milestones'] = true;
-        
+
         return $contractData;
     }
 
     /**
      * Handle contract creation with new terms (not from quotation)
-     * 
-     * @param array $contractData Base contract data
-     * @param array $data Original request data
+     *
+     * @param  array  $contractData  Base contract data
+     * @param  array  $data  Original request data
      * @return array Updated contract data
      */
     private function handleNewTerms(array $contractData, array $data): array
@@ -220,48 +220,41 @@ class ContractService
         $contractData['task_id'] = $data['taskId'] ?? null;
         $contractData['project_id'] = $data['projectId'] ?? null;
         $contractData['template_id'] = $data['templateId'] ?? null;
-        
+
         return $contractData;
     }
 
     /**
      * Extract deliverables from quotation scope description
-     * 
-     * @param string $scopeDescription
-     * @return array
      */
     private function extractDeliverablesFromScope(string $scopeDescription): array
     {
         // Simple extraction: split by newlines or bullet points
         $lines = preg_split('/[\n\r•\-]+/', $scopeDescription);
         $deliverables = [];
-        
+
         foreach ($lines as $line) {
             $line = trim($line);
             if (strlen($line) > 3 && strlen($line) < 500) {
                 $deliverables[] = $line;
             }
         }
-        
+
         return $deliverables;
     }
 
     /**
      * Create milestones for a contract
-     * 
-     * @param Contract $contract
-     * @param array $milestones
-     * @return void
      */
     private function createMilestones(Contract $contract, array $milestones): void
     {
         $sortOrder = 0;
-        
+
         foreach ($milestones as $milestone) {
             // Calculate amount from percentage
             $percentage = $milestone['percentage'] ?? 0;
             $amount = ($contract->total_amount * $percentage) / 100;
-            
+
             ContractMilestone::create([
                 'contract_id' => $contract->id,
                 'title' => $milestone['title'],
@@ -316,7 +309,7 @@ class ContractService
             if (array_key_exists('milestones', $data)) {
                 $contract->milestones()->delete();
 
-                if (!empty($data['milestones'])) {
+                if (! empty($data['milestones'])) {
                     $this->createMilestones($contract, $data['milestones']);
                 }
             }
@@ -327,26 +320,22 @@ class ContractService
 
     /**
      * Copy milestones from quotation to contract
-     * 
-     * @param Contract $contract
-     * @param Quotation $quotation
-     * @return void
      */
     public function copyMilestonesFromQuotation(Contract $contract, Quotation $quotation): void
     {
         $milestones = $quotation->milestones;
-        
+
         $sortOrder = 0;
         foreach ($milestones as $quotationMilestone) {
             // Calculate amount from percentage
             $percentage = $quotationMilestone->percentage;
             $amount = ($contract->total_amount * $percentage) / 100;
-            
+
             // Calculate due date based on contract start date if not set
-            $dueDate = $quotationMilestone->due_date 
+            $dueDate = $quotationMilestone->due_date
                 ? \Carbon\Carbon::parse($quotationMilestone->due_date)
                 : null;
-            
+
             ContractMilestone::create([
                 'contract_id' => $contract->id,
                 'title' => $quotationMilestone->name,
@@ -373,7 +362,7 @@ class ContractService
 
             // Generate contract content from template
             $content = $this->generateContractContent($quotation);
-            
+
             // Prepare party information
             $partyOne = [
                 'company' => config('app.company_name', 'Your Company'),
@@ -381,7 +370,7 @@ class ContractService
                 'title' => config('app.company_title', 'CEO'),
                 'address' => config('app.company_address', 'Company Address'),
             ];
-            
+
             $partyTwo = [
                 'name' => $quotation->lead->name,
                 'email' => $quotation->lead->email,
@@ -411,11 +400,6 @@ class ContractService
 
     /**
      * Sign a contract (legacy method for backward compatibility)
-     *
-     * @param Contract $contract
-     * @param string $signedByClient
-     * @param User $user
-     * @return Contract
      */
     public function signContract(Contract $contract, string $signedByClient, User $user): Contract
     {
@@ -426,9 +410,7 @@ class ContractService
      * Mark contract as signed and activate project
      * Also triggers lead to client conversion if lead exists
      *
-     * @param Contract $contract
-     * @param array $data Data including optional signedPdf
-     * @return Contract
+     * @param  array  $data  Data including optional signedPdf
      */
     public function markAsSigned(Contract $contract, array $data = [], ?User $user = null): Contract
     {
@@ -437,7 +419,7 @@ class ContractService
             $actor = $this->resolveActor($user);
 
             // Validate contract can be signed
-            if (!$contract->canBeSigned()) {
+            if (! $contract->canBeSigned()) {
                 throw new \InvalidArgumentException('Contract cannot be signed in current status');
             }
 
@@ -466,7 +448,7 @@ class ContractService
             }
 
             // If lead exists and not already converted, convert to client
-            if ($lead && !$lead->client_id && $actor) {
+            if ($lead && ! $lead->client_id && $actor) {
                 $this->leadConversionService->convertLeadToClient(
                     $lead,
                     $contract,
@@ -499,7 +481,7 @@ class ContractService
      */
     public function activateContract(Contract $contract, ?User $user = null): Contract
     {
-        if (!in_array($contract->status, [ContractStatus::SIGNED, ContractStatus::ACTIVE], true)) {
+        if (! in_array($contract->status, [ContractStatus::SIGNED, ContractStatus::ACTIVE], true)) {
             throw new \InvalidArgumentException('Only signed contracts can be activated');
         }
 
@@ -565,10 +547,10 @@ class ContractService
     private function generateContractContent(Quotation $quotation): string
     {
         $template = $this->getContractTemplate();
-        
+
         // Prepare payment plan table
         $paymentPlanTable = $this->generatePaymentPlanTable($quotation);
-        
+
         // Prepare estimations breakdown
         $estimationsBreakdown = $this->generateEstimationsBreakdown($quotation);
 
@@ -697,6 +679,7 @@ class ContractService
         }
 
         $html .= '</tbody></table>';
+
         return $html;
     }
 
@@ -706,7 +689,7 @@ class ContractService
     private function generateEstimationsBreakdown(Quotation $quotation): string
     {
         $estimations = $quotation->estimations;
-        
+
         $html = '<table class="table">';
         $html .= '<thead><tr><th>Service Type</th><th>Hours</th><th>Rate</th><th>Subtotal</th></tr></thead>';
         $html .= '<tbody>';
@@ -715,7 +698,7 @@ class ContractService
         foreach ($estimations as $type => $hours) {
             $subtotal = $hours * $quotation->hourly_rate;
             $total += $subtotal;
-            
+
             $html .= sprintf(
                 '<tr><td>%s</td><td>%d</td><td>%s %s</td><td>%s %s</td></tr>',
                 ucfirst(str_replace('_', ' ', $type)),
@@ -739,6 +722,7 @@ class ContractService
         }
 
         $html .= '</tbody></table>';
+
         return $html;
     }
 
@@ -765,7 +749,7 @@ class ContractService
             return;
         }
 
-        if (!$quotation) {
+        if (! $quotation) {
             return;
         } else {
             // Create new project from quotation using conversion service
@@ -773,13 +757,13 @@ class ContractService
                 'title' => "Project for {$quotation->lead->name}",
                 'description' => 'Project created from signed contract',
             ]);
-            
+
             // Update project status to in progress
             $project->update([
                 'status' => ProjectStatus::IN_PROGRESS,
                 'updated_by' => $actorId,
             ]);
-            
+
             // Link contract to project
             $contract->update(['project_id' => $project->id]);
         }

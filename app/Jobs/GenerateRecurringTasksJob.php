@@ -62,7 +62,7 @@ class GenerateRecurringTasksJob implements ShouldQueue
                         ->whereDate('due_date', $today)
                         ->exists();
 
-                    if (!$existsToday) {
+                    if (! $existsToday) {
                         $task = $config->generateNextTask();
 
                         if ($task) {

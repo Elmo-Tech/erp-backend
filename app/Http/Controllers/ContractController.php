@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\ContractStatus;
 use App\Helpers\ApiResponse;
-use App\Http\Requests\StoreContractRequest;
-use App\Http\Requests\UpdateContractRequest;
 use App\Http\Resources\V1\Contract\ContractCollection;
 use App\Http\Resources\V1\Contract\ContractResource;
 use App\Models\Contract;
@@ -13,7 +11,6 @@ use App\Models\Quotation;
 use App\Services\Sales\ContractService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\QueryBuilder;
 
 /**
@@ -36,40 +33,53 @@ class ContractController extends Controller
      *     summary="Get contracts list",
      *     tags={"Contracts"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[search]",
      *         in="query",
      *         description="Search in contract content and quotation details",
+     *
      *         @OA\Schema(type="string")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[status]",
      *         in="query",
      *         description="Filter by contract status",
+     *
      *         @OA\Schema(type="string", enum={"draft", "pending_signature", "signed", "active", "completed", "terminated"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
+     *
      *         @OA\Schema(type="integer", default=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Items per page",
+     *
      *         @OA\Schema(type="integer", default=10)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Contracts retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Contracts retrieved successfully"),
      *             @OA\Property(
@@ -78,8 +88,10 @@ class ContractController extends Controller
      *                 @OA\Property(
      *                     property="contracts",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/ContractResource")
      *                 ),
+     *
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
@@ -115,22 +127,29 @@ class ContractController extends Controller
      *     summary="Generate contract from quotation",
      *     tags={"Contracts"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="quotationId",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Contract generated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Contract generated successfully"),
      *             @OA\Property(
@@ -139,10 +158,13 @@ class ContractController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Quotation not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Quotation not found")
      *         )
@@ -177,22 +199,29 @@ class ContractController extends Controller
      *     summary="Get contract details",
      *     tags={"Contracts"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Contract retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Contract retrieved successfully"),
      *             @OA\Property(
@@ -219,23 +248,31 @@ class ContractController extends Controller
      *     summary="Sign contract with uploaded PDF",
      *     tags={"Contracts"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\MediaType(
      *             mediaType="multipart/form-data",
+     *
      *             @OA\Schema(
+     *
      *                 @OA\Property(
      *                     property="signedPdf",
      *                     type="string",
@@ -245,10 +282,13 @@ class ContractController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Contract signed successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Contract signed successfully"),
      *             @OA\Property(
@@ -257,10 +297,13 @@ class ContractController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed"),
      *             @OA\Property(
@@ -269,6 +312,7 @@ class ContractController extends Controller
      *                 @OA\Property(
      *                     property="signedPdf",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="The signed PDF field is required.")
      *                 )
      *             )
@@ -303,21 +347,28 @@ class ContractController extends Controller
      *     summary="Update contract status",
      *     tags={"Contracts"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"ar", "en"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(
      *                 property="status",
      *                 type="string",
@@ -326,10 +377,13 @@ class ContractController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Contract status updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Contract status updated successfully"),
      *             @OA\Property(

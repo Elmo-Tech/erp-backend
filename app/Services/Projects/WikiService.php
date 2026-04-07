@@ -13,11 +13,11 @@ class WikiService
      * When isEncrypted is true, the content is encrypted using Laravel's Crypt facade
      * before being stored in the database.
      *
-     * @param Project $project The project to create the wiki for
-     * @param array $data Wiki data containing:
-     *                    - title (string): The wiki entry title
-     *                    - content (string): The wiki content (will be encrypted if isEncrypted is true)
-     *                    - isEncrypted (bool, optional): Whether to encrypt the content (default: false)
+     * @param  Project  $project  The project to create the wiki for
+     * @param  array  $data  Wiki data containing:
+     *                       - title (string): The wiki entry title
+     *                       - content (string): The wiki content (will be encrypted if isEncrypted is true)
+     *                       - isEncrypted (bool, optional): Whether to encrypt the content (default: false)
      * @return ProjectWiki The created wiki entry
      */
     public function createWiki(Project $project, array $data): ProjectWiki
@@ -42,11 +42,11 @@ class WikiService
      * Update a wiki entry.
      * Handles encryption/decryption transitions when isEncrypted flag changes.
      *
-     * @param ProjectWiki $wiki The wiki entry to update
-     * @param array $data Updated wiki data containing:
-     *                    - title (string, optional): New title
-     *                    - content (string, optional): New content
-     *                    - isEncrypted (bool, optional): Whether to encrypt the content
+     * @param  ProjectWiki  $wiki  The wiki entry to update
+     * @param  array  $data  Updated wiki data containing:
+     *                       - title (string, optional): New title
+     *                       - content (string, optional): New content
+     *                       - isEncrypted (bool, optional): Whether to encrypt the content
      * @return ProjectWiki The updated wiki entry (fresh from database)
      */
     public function updateWiki(ProjectWiki $wiki, array $data): ProjectWiki
@@ -71,11 +71,11 @@ class WikiService
         } elseif (isset($data['isEncrypted'])) {
             // If only isEncrypted changed (without new content), re-encrypt/decrypt existing content
             $newIsEncrypted = $data['isEncrypted'];
-            
+
             if ($newIsEncrypted !== $wiki->is_encrypted) {
                 // Get the plaintext content (decrypted if currently encrypted)
                 $plainContent = $wiki->decrypted_content;
-                
+
                 if ($newIsEncrypted) {
                     // Encrypt the content
                     $updateData['content'] = Crypt::encryptString($plainContent);
@@ -83,12 +83,12 @@ class WikiService
                     // Store as plaintext
                     $updateData['content'] = $plainContent;
                 }
-                
+
                 $updateData['is_encrypted'] = $newIsEncrypted;
             }
         }
 
-        if (!empty($updateData)) {
+        if (! empty($updateData)) {
             $wiki->update($updateData);
         }
 
@@ -100,7 +100,7 @@ class WikiService
      * Returns an array with all wiki data, with content automatically decrypted
      * if the wiki entry is marked as encrypted.
      *
-     * @param ProjectWiki $wiki The wiki entry to retrieve
+     * @param  ProjectWiki  $wiki  The wiki entry to retrieve
      * @return array Array containing:
      *               - id: Wiki ID
      *               - projectId: Associated project ID
@@ -130,7 +130,7 @@ class WikiService
     /**
      * Get all wikis for a project with decrypted content.
      *
-     * @param Project $project The project to get wikis for
+     * @param  Project  $project  The project to get wikis for
      * @return array Array of wiki data with decrypted content
      */
     public function getProjectWikis(Project $project): array
@@ -143,7 +143,7 @@ class WikiService
     /**
      * Delete a wiki entry.
      *
-     * @param ProjectWiki $wiki The wiki entry to delete
+     * @param  ProjectWiki  $wiki  The wiki entry to delete
      * @return bool True if deletion was successful
      */
     public function deleteWiki(ProjectWiki $wiki): bool

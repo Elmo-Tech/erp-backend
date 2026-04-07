@@ -14,7 +14,7 @@ enum LeadStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::NEW => 'New',
             self::CONTACTED => 'Contacted',
             self::QUALIFIED => 'Qualified',

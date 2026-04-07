@@ -29,23 +29,30 @@ class EnumController extends Controller
      *     summary="Get all user specializations",
      *     description="Get list of all available user specializations with labels and colors",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="User specializations retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="User specializations retrieved successfully"),
      *             @OA\Property(
      *                 property="data",
      *                 type="array",
+     *
      *                 @OA\Items(
+     *
      *                     @OA\Property(property="value", type="string", example="backend"),
      *                     @OA\Property(property="label", type="string", example="Backend Developer"),
      *                     @OA\Property(property="color", type="string", example="bg-blue-100 text-blue-800")
@@ -71,23 +78,30 @@ class EnumController extends Controller
      *     summary="Get all task categories",
      *     description="Get list of all available task categories with labels and colors",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task categories retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task categories retrieved successfully"),
      *             @OA\Property(
      *                 property="data",
      *                 type="array",
+     *
      *                 @OA\Items(
+     *
      *                     @OA\Property(property="value", type="string", example="backend"),
      *                     @OA\Property(property="label", type="string", example="Backend Development"),
      *                     @OA\Property(property="color", type="string", example="bg-blue-100 text-blue-800")
@@ -113,30 +127,39 @@ class EnumController extends Controller
      *     summary="Get task categories compatible with a specialization",
      *     description="Get list of task categories that are compatible with a specific user specialization",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="specialization",
      *         in="path",
      *         required=true,
      *         description="User specialization",
+     *
      *         @OA\Schema(type="string", enum={"backend", "frontend", "fullstack", "ui_ux", "mobile", "devops", "qa"})
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Compatible task categories retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Compatible task categories retrieved successfully"),
      *             @OA\Property(
      *                 property="data",
      *                 type="array",
+     *
      *                 @OA\Items(
+     *
      *                     @OA\Property(property="value", type="string", example="backend"),
      *                     @OA\Property(property="label", type="string", example="Backend Development"),
      *                     @OA\Property(property="color", type="string", example="bg-blue-100 text-blue-800")
@@ -144,10 +167,13 @@ class EnumController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Invalid specialization",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Invalid specialization provided")
      *         )
@@ -159,8 +185,8 @@ class EnumController extends Controller
         try {
             $userSpecialization = UserSpecialization::from($specialization);
             $compatibleCategories = TaskCategory::getCompatibleCategories($userSpecialization);
-            
-            $options = array_map(fn($category) => [
+
+            $options = array_map(fn ($category) => [
                 'value' => $category->value,
                 'label' => $category->label(),
                 'color' => $category->color(),

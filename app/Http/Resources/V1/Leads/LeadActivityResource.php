@@ -13,7 +13,7 @@ class LeadActivityResource extends JsonResource
             'activityId' => $this->id,
             'leadId' => $this->lead_id,
             'userId' => $this->user_id,
-            'userName' => $this->whenLoaded('user', fn() => $this->user->name ?? ''),
+            'userName' => $this->whenLoaded('user', fn () => $this->user->name ?? ''),
             'type' => $this->type?->value ?? '',
             'typeLabel' => $this->type?->label() ?? '',
             'typeIcon' => $this->type?->icon() ?? '',

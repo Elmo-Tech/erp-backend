@@ -13,7 +13,9 @@ class AdminUserControllerTest extends TestCase
     use RefreshDatabase;
 
     protected User $adminUser;
+
     protected User $regularUser;
+
     protected User $testUser;
 
     protected function setUp(): void
@@ -32,14 +34,14 @@ class AdminUserControllerTest extends TestCase
 
         // Create test user to update costs for
         $this->testUser = User::factory()->create([
-            'internal_hourly_cost' => 50.00
+            'internal_hourly_cost' => 50.00,
         ]);
     }
 
     public function test_update_internal_cost_succeeds_for_authorized_user(): void
     {
         $costData = [
-            'internalHourlyCost' => 75.50
+            'internalHourlyCost' => 75.50,
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -54,8 +56,8 @@ class AdminUserControllerTest extends TestCase
                     'userId',
                     'userName',
                     'updated',
-                    'updatedAt'
-                ]
+                    'updatedAt',
+                ],
             ])
             ->assertJson([
                 'success' => true,
@@ -63,8 +65,8 @@ class AdminUserControllerTest extends TestCase
                 'data' => [
                     'userId' => $this->testUser->id,
                     'userName' => $this->testUser->name,
-                    'updated' => true
-                ]
+                    'updated' => true,
+                ],
             ]);
 
         // Verify the cost was updated in database
@@ -76,14 +78,14 @@ class AdminUserControllerTest extends TestCase
             'user_id' => $this->adminUser->id,
             'action' => 'update_internal_cost',
             'auditable_type' => User::class,
-            'auditable_id' => $this->testUser->id
+            'auditable_id' => $this->testUser->id,
         ]);
     }
 
     public function test_update_internal_cost_returns_forbidden_for_unauthorized_user(): void
     {
         $costData = [
-            'internalHourlyCost' => 75.50
+            'internalHourlyCost' => 75.50,
         ];
 
         $response = $this->actingAs($this->regularUser, 'sanctum')
@@ -93,7 +95,7 @@ class AdminUserControllerTest extends TestCase
         $response->assertStatus(403)
             ->assertJson([
                 'success' => false,
-                'message' => 'You do not have permission to manage internal costs'
+                'message' => 'You do not have permission to manage internal costs',
             ]);
 
         // Verify the cost was NOT updated
@@ -104,7 +106,7 @@ class AdminUserControllerTest extends TestCase
     public function test_update_internal_cost_validates_positive_cost(): void
     {
         $costData = [
-            'internalHourlyCost' => -10.00
+            'internalHourlyCost' => -10.00,
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -128,17 +130,17 @@ class AdminUserControllerTest extends TestCase
     public function test_update_internal_cost_returns_not_found_for_invalid_user(): void
     {
         $costData = [
-            'internalHourlyCost' => 75.50
+            'internalHourlyCost' => 75.50,
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
             ->withHeaders(['Accept-Language' => 'en'])
-            ->putJson("/api/v1/admin/users/99999/internal-cost", $costData);
+            ->putJson('/api/v1/admin/users/99999/internal-cost', $costData);
 
         $response->assertStatus(404)
             ->assertJson([
                 'success' => false,
-                'message' => 'User not found'
+                'message' => 'User not found',
             ]);
     }
 
@@ -151,17 +153,17 @@ class AdminUserControllerTest extends TestCase
             'users' => [
                 [
                     'userId' => $this->testUser->id,
-                    'internalHourlyCost' => 80.00
+                    'internalHourlyCost' => 80.00,
                 ],
                 [
                     'userId' => $user2->id,
-                    'internalHourlyCost' => 90.00
+                    'internalHourlyCost' => 90.00,
                 ],
                 [
                     'userId' => $user3->id,
-                    'internalHourlyCost' => 100.00
-                ]
-            ]
+                    'internalHourlyCost' => 100.00,
+                ],
+            ],
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -179,17 +181,17 @@ class AdminUserControllerTest extends TestCase
                         '*' => [
                             'userId',
                             'userName',
-                            'updated'
-                        ]
-                    ]
-                ]
+                            'updated',
+                        ],
+                    ],
+                ],
             ])
             ->assertJson([
                 'success' => true,
                 'message' => 'Bulk internal costs updated successfully',
                 'data' => [
-                    'totalUpdated' => 3
-                ]
+                    'totalUpdated' => 3,
+                ],
             ]);
 
         // Verify all costs were updated
@@ -206,21 +208,21 @@ class AdminUserControllerTest extends TestCase
             'user_id' => $this->adminUser->id,
             'action' => 'bulk_update_internal_cost',
             'auditable_type' => User::class,
-            'auditable_id' => $this->testUser->id
+            'auditable_id' => $this->testUser->id,
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
             'user_id' => $this->adminUser->id,
             'action' => 'bulk_update_internal_cost',
             'auditable_type' => User::class,
-            'auditable_id' => $user2->id
+            'auditable_id' => $user2->id,
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
             'user_id' => $this->adminUser->id,
             'action' => 'bulk_update_internal_cost',
             'auditable_type' => User::class,
-            'auditable_id' => $user3->id
+            'auditable_id' => $user3->id,
         ]);
     }
 
@@ -230,9 +232,9 @@ class AdminUserControllerTest extends TestCase
             'users' => [
                 [
                     'userId' => $this->testUser->id,
-                    'internalHourlyCost' => 80.00
-                ]
-            ]
+                    'internalHourlyCost' => 80.00,
+                ],
+            ],
         ];
 
         $response = $this->actingAs($this->regularUser, 'sanctum')
@@ -242,7 +244,7 @@ class AdminUserControllerTest extends TestCase
         $response->assertStatus(403)
             ->assertJson([
                 'success' => false,
-                'message' => 'You do not have permission to manage internal costs'
+                'message' => 'You do not have permission to manage internal costs',
             ]);
 
         // Verify the cost was NOT updated
@@ -266,9 +268,9 @@ class AdminUserControllerTest extends TestCase
             'users' => [
                 [
                     'userId' => 'invalid',
-                    'internalHourlyCost' => -10.00
-                ]
-            ]
+                    'internalHourlyCost' => -10.00,
+                ],
+            ],
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -278,7 +280,7 @@ class AdminUserControllerTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors([
                 'users.0.userId',
-                'users.0.internalHourlyCost'
+                'users.0.internalHourlyCost',
             ]);
     }
 
@@ -288,9 +290,9 @@ class AdminUserControllerTest extends TestCase
             'users' => [
                 [
                     'userId' => 99999,
-                    'internalHourlyCost' => 75.00
-                ]
-            ]
+                    'internalHourlyCost' => 75.00,
+                ],
+            ],
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -304,7 +306,7 @@ class AdminUserControllerTest extends TestCase
     public function test_response_does_not_expose_actual_cost_values(): void
     {
         $costData = [
-            'internalHourlyCost' => 75.50
+            'internalHourlyCost' => 75.50,
         ];
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
@@ -323,7 +325,7 @@ class AdminUserControllerTest extends TestCase
     public function test_audit_log_contains_proper_metadata(): void
     {
         $costData = [
-            'internalHourlyCost' => 85.75
+            'internalHourlyCost' => 85.75,
         ];
 
         $this->actingAs($this->adminUser, 'sanctum')
@@ -333,18 +335,18 @@ class AdminUserControllerTest extends TestCase
         $auditLog = AuditLog::where([
             'action' => 'update_internal_cost',
             'auditable_type' => User::class,
-            'auditable_id' => $this->testUser->id
+            'auditable_id' => $this->testUser->id,
         ])->first();
 
         $this->assertNotNull($auditLog);
         $this->assertEquals($this->adminUser->id, $auditLog->user_id);
-        
+
         $metadata = $auditLog->metadata;
         $this->assertArrayHasKey('old_cost', $metadata);
         $this->assertArrayHasKey('new_cost', $metadata);
         $this->assertArrayHasKey('updated_by', $metadata);
         $this->assertArrayHasKey('updated_by_id', $metadata);
-        
+
         $this->assertEquals('50.00', $metadata['old_cost']);
         $this->assertEquals('85.75', $metadata['new_cost']);
         $this->assertEquals($this->adminUser->name, $metadata['updated_by']);

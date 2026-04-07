@@ -34,47 +34,62 @@ class ClientInvoiceController extends Controller
      *     summary="Get client's invoices with pagination",
      *     description="Retrieve a paginated list of invoices for the authenticated client with limited data visibility (Black Box principle)",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[status]",
      *         in="query",
      *         description="Filter invoices by status",
+     *
      *         @OA\Schema(type="string", enum={"draft", "sent", "paid", "overdue", "cancelled"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[projectId]",
      *         in="query",
      *         description="Filter invoices by project ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[search]",
      *         in="query",
      *         description="Search invoices by invoice number",
+     *
      *         @OA\Schema(type="string")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number for pagination",
+     *
      *         @OA\Schema(type="integer", minimum=1, example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Number of items per page",
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Client invoices retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoices retrieved successfully"),
      *             @OA\Property(
@@ -83,8 +98,10 @@ class ClientInvoiceController extends Controller
      *                 @OA\Property(
      *                     property="invoices",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/ClientInvoiceResource")
      *                 ),
+     *
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
@@ -97,18 +114,24 @@ class ClientInvoiceController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User does not have client role",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Access denied")
      *         )
@@ -150,49 +173,65 @@ class ClientInvoiceController extends Controller
      *     summary="Get a single client invoice",
      *     description="Retrieve a specific invoice for the authenticated client with limited data visibility (Black Box principle)",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Invoice ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Client invoice retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoice retrieved successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ClientInvoiceResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Invoice not found or not accessible to client",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Invoice not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User does not have client role",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Access denied")
      *         )
@@ -219,57 +258,76 @@ class ClientInvoiceController extends Controller
      *     summary="Pay an invoice",
      *     description="Mark an invoice as paid for the authenticated client. Only payable invoices (sent or overdue status) can be paid.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Invoice ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Invoice paid successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoice paid successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/ClientInvoiceResource")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Invalid operation - invoice cannot be paid in current status",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Invoice cannot be paid in current status")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Invoice not found or not accessible to client",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Invoice not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User does not have client role or cannot pay this invoice",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Access denied")
      *         )

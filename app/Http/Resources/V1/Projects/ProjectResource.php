@@ -10,7 +10,7 @@ class ProjectResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
-     * 
+     *
      * Budget fields are hidden from users without 'view_project_budget' permission.
      *
      * @return array<string, mixed>

@@ -21,18 +21,18 @@ return new class extends Migration
             // Add file_number for unique proposal file identification
             // Format: PV-YEAR-0001 (e.g., PV-2026-0001)
             $table->string('file_number')->unique()->nullable()->after('proposal_number');
-            
+
             // Add skip fields for fast-track/skipped proposals
             $table->boolean('is_skipped')->default(false)->after('is_fast_track');
             $table->text('skip_reason')->nullable()->after('is_skipped');
-            
+
             // Add task relationship
             $table->foreignId('task_id')
                 ->nullable()
                 ->constrained('tasks')
                 ->nullOnDelete()
                 ->after('skip_reason');
-            
+
             // Add index for faster queries
             $table->index('is_skipped');
         });

@@ -39,7 +39,7 @@ class PointService
         bool $notify = true
     ): PointTransaction {
         $points = $points ?? $type->defaultPoints();
-        
+
         // Ensure points are negative for deductions
         $points = -abs($points);
 
@@ -57,14 +57,14 @@ class PointService
         ?string $reason,
         bool $notify = true
     ): PointTransaction {
-        return DB::transaction(function () use ($user, $points, $type, $source, $reason, $notify) {
+        return DB::transaction(function () use ($user, $points, $type, $source, $reason) {
             // Get active period
             $activePeriod = PointPeriod::getActivePeriod();
-            
-            if (!$activePeriod) {
+
+            if (! $activePeriod) {
                 throw new \Exception('No active point period found. Please create a period first.');
             }
-            
+
             // Update user's total points
             $user->increment('total_points', $points);
             $user->refresh();
@@ -140,12 +140,11 @@ class PointService
     public function recalculateUserPoints(User $user): int
     {
         $total = PointTransaction::where('user_id', $user->id)->sum('points');
-        
+
         $user->update(['total_points' => $total]);
 
         return $total;
     }
-}
 
     /**
      * Get points for a specific period
@@ -161,11 +160,11 @@ class PointService
     public function getCurrentPeriodLeaderboard(int $limit = 10): array
     {
         $activePeriod = PointPeriod::getActivePeriod();
-        
-        if (!$activePeriod) {
+
+        if (! $activePeriod) {
             return [];
         }
-        
+
         return $activePeriod->getLeaderboard($limit);
     }
 
@@ -177,13 +176,13 @@ class PointService
         $periods = PointPeriod::closed()
             ->orderBy('end_date', 'desc')
             ->get();
-        
+
         return $periods->map(function ($period) use ($user) {
             $points = $period->getUserPoints($user->id);
             $transactions = $period->transactions()
                 ->where('user_id', $user->id)
                 ->get();
-            
+
             return [
                 'periodId' => $period->id,
                 'periodName' => $period->name,
@@ -197,3 +196,4 @@ class PointService
             ];
         })->toArray();
     }
+}

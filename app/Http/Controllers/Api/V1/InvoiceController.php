@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\InvoiceStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\V1\Invoice\CreateInvoiceRequest;
-use App\Http\Requests\V1\Invoice\MarkAsPaidRequest;
-use App\Http\Requests\V1\Invoice\UpdateInvoiceRequest;
-use App\Http\Resources\V1\Invoice\InvoiceCollection;
-use App\Http\Resources\V1\Invoice\InvoiceResource;
+use App\Http\Requests\V1\Invoices\MarkAsPaidRequest;
+use App\Http\Requests\V1\Invoices\StoreInvoiceRequest;
+use App\Http\Requests\V1\Invoices\UpdateInvoiceRequest;
+use App\Http\Resources\V1\Invoices\InvoiceCollection;
+use App\Http\Resources\V1\Invoices\InvoiceResource;
 use App\Models\Invoice;
 use App\Models\Project;
 use App\Services\AuditService;
@@ -40,52 +40,69 @@ class InvoiceController extends Controller
      *     summary="Get paginated list of invoices",
      *     tags={"Invoices"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[search]",
      *         in="query",
      *         description="Search in invoice number, milestone name, or notes",
+     *
      *         @OA\Schema(type="string")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[status]",
      *         in="query",
      *         description="Filter by invoice status",
+     *
      *         @OA\Schema(type="string", enum={"draft", "sent", "paid", "overdue", "cancelled"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[project_id]",
      *         in="query",
      *         description="Filter by project ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[contract_id]",
      *         in="query",
      *         description="Filter by contract ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
+     *
      *         @OA\Schema(type="integer", default=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Items per page",
+     *
      *         @OA\Schema(type="integer", default=10)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Invoices retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoices retrieved successfully"),
      *             @OA\Property(
@@ -94,8 +111,10 @@ class InvoiceController extends Controller
      *                 @OA\Property(
      *                     property="invoices",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/InvoiceResource")
      *                 ),
+     *
      *                 @OA\Property(
      *                     property="pagination",
      *                     type="object",
@@ -121,6 +140,9 @@ class InvoiceController extends Controller
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('project_id'),
                 AllowedFilter::exact('contract_id'),
+                AllowedFilter::callback('projectId', function ($query, $value) {
+                    $query->where('project_id', $value);
+                }),
                 AllowedFilter::callback('dateFrom', function ($query, $value) {
                     $query->where('created_at', '>=', $value);
                 }),
@@ -144,15 +166,20 @@ class InvoiceController extends Controller
      *     summary="Create a new invoice",
      *     tags={"Invoices"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="projectId", type="integer", example=1),
      *             @OA\Property(property="contractId", type="integer", example=1),
      *             @OA\Property(property="milestoneName", type="string", example="Project Kickoff"),
@@ -162,10 +189,13 @@ class InvoiceController extends Controller
      *             @OA\Property(property="notes", type="string", example="Invoice for project kickoff milestone")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Invoice created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoice created successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
@@ -173,7 +203,7 @@ class InvoiceController extends Controller
      *     )
      * )
      */
-    public function store(CreateInvoiceRequest $request): JsonResponse
+    public function store(StoreInvoiceRequest $request): JsonResponse
     {
         $data = $request->validated();
 
@@ -214,22 +244,29 @@ class InvoiceController extends Controller
      *     summary="Get invoice details",
      *     tags={"Invoices"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Invoice retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoice retrieved successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
@@ -253,30 +290,40 @@ class InvoiceController extends Controller
      *     summary="Update invoice",
      *     tags={"Invoices"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="amount", type="number", format="float", example=5500.00),
      *             @OA\Property(property="dueDate", type="string", format="date", example="2026-03-15"),
      *             @OA\Property(property="notes", type="string", example="Updated invoice notes")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Invoice updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoice updated successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
@@ -319,22 +366,29 @@ class InvoiceController extends Controller
      *     summary="Send invoice to client",
      *     tags={"Invoices"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Invoice sent successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoice sent successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
@@ -358,30 +412,40 @@ class InvoiceController extends Controller
      *     summary="Mark invoice as paid",
      *     tags={"Invoices"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=false,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="paymentMethod", type="string", example="bank_transfer"),
      *             @OA\Property(property="transactionId", type="string", example="TXN123456"),
      *             @OA\Property(property="paymentNotes", type="string", example="Payment received via bank transfer")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Invoice marked as paid successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoice marked as paid successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
@@ -407,28 +471,38 @@ class InvoiceController extends Controller
      *     summary="Generate invoice for project milestone",
      *     tags={"Invoices"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="milestoneName", type="string", example="UI/UX Completion", enum={"Project Kickoff", "UI/UX Completion", "Development Completion", "Final Delivery"})
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Milestone invoice generated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Milestone invoice generated successfully"),
      *             @OA\Property(property="data", ref="#/components/schemas/InvoiceResource")
@@ -439,7 +513,7 @@ class InvoiceController extends Controller
     public function generateMilestoneInvoice(Request $request, Project $project): JsonResponse
     {
         $request->validate([
-            'milestoneName' => 'required|string|in:Project Kickoff,UI/UX Completion,Development Completion,Final Delivery'
+            'milestoneName' => 'required|string|in:Project Kickoff,UI/UX Completion,Development Completion,Final Delivery',
         ]);
 
         $invoice = $this->billingService->generateForMilestone($project, $request->milestoneName);
@@ -457,22 +531,29 @@ class InvoiceController extends Controller
      *     summary="Generate all pending milestone invoices for project",
      *     tags={"Invoices"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Pending invoices generated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Pending invoices generated successfully"),
      *             @OA\Property(
@@ -481,8 +562,10 @@ class InvoiceController extends Controller
      *                 @OA\Property(
      *                     property="invoices",
      *                     type="array",
+     *
      *                     @OA\Items(ref="#/components/schemas/InvoiceResource")
      *                 ),
+     *
      *                 @OA\Property(property="count", type="integer", example=2)
      *             )
      *         )
@@ -495,7 +578,7 @@ class InvoiceController extends Controller
 
         return ApiResponse::success([
             'invoices' => InvoiceResource::collection(collect($invoices)->load(['project', 'contract', 'createdBy'])),
-            'count' => count($invoices)
+            'count' => count($invoices),
         ], __('messages.pending_invoices_generated'), 201);
     }
 
@@ -505,22 +588,29 @@ class InvoiceController extends Controller
      *     summary="Delete invoice",
      *     tags={"Invoices"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Invoice deleted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Invoice deleted successfully")
      *         )

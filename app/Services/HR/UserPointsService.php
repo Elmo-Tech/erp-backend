@@ -2,9 +2,9 @@
 
 namespace App\Services\HR;
 
-use App\Models\User;
-use App\Models\PointTransaction;
 use App\Enums\PointTransactionType;
+use App\Models\PointTransaction;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
@@ -27,6 +27,7 @@ class UserPointsService
 
             // Create point transaction (single source)
             $transactionType = $type ?? ($points > 0 ? PointTransactionType::MANUAL_BONUS : PointTransactionType::MANUAL_DEDUCTION);
+
             return PointTransaction::create([
                 'user_id' => $user->id,
                 'points' => $points,
@@ -53,6 +54,7 @@ class UserPointsService
 
             // Create point transaction (single source)
             $transactionType = $type ?? PointTransactionType::MANUAL_DEDUCTION;
+
             return PointTransaction::create([
                 'user_id' => $user->id,
                 'points' => -abs($points),
@@ -79,6 +81,7 @@ class UserPointsService
 
             // Create point transaction (single source)
             $transactionType = $type ?? ($pointsChange >= 0 ? PointTransactionType::MANUAL_BONUS : PointTransactionType::MANUAL_DEDUCTION);
+
             return PointTransaction::create([
                 'user_id' => $user->id,
                 'points' => $pointsChange,
@@ -114,15 +117,15 @@ class UserPointsService
             'avatar',
             'total_points',
             'is_active',
-            'created_at'
+            'created_at',
         ]);
 
         // Apply filters
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -204,6 +207,7 @@ class UserPointsService
 
             // Create automatic point transaction
             $transactionType = $points >= 0 ? PointTransactionType::TASK_ON_TIME : PointTransactionType::TASK_LATE;
+
             return PointTransaction::create([
                 'user_id' => $user->id,
                 'points' => $points,
@@ -253,21 +257,21 @@ class UserPointsService
         $baseQuery = PointTransaction::query();
 
         // Apply date filters
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $baseQuery->whereDate('created_at', '>=', $filters['dateFrom']);
         }
 
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $baseQuery->whereDate('created_at', '<=', $filters['dateTo']);
         }
 
         // Apply user filter
-        if (!empty($filters['userId'])) {
+        if (! empty($filters['userId'])) {
             $baseQuery->where('user_id', $filters['userId']);
         }
 
         // Apply type filter
-        if (!empty($filters['type'])) {
+        if (! empty($filters['type'])) {
             $baseQuery->where('type', $filters['type']);
         }
 

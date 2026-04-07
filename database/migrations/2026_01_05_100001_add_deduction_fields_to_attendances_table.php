@@ -8,7 +8,7 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
+     *
      * Additional attendance fields for deduction tracking:
      * - deduction_minutes: Minutes to deduct from salary (after grace period)
      * - used_grace_day: Whether this day used a grace day
@@ -21,11 +21,11 @@ return new class extends Migration
             // Deduction tracking
             $table->unsignedInteger('deduction_minutes')->default(0)->after('idle_minutes');
             $table->boolean('used_grace_day')->default(false)->after('deduction_minutes');
-            
+
             // Expected times (stored for historical accuracy)
             $table->time('expected_clock_in')->nullable()->after('used_grace_day');
             $table->time('expected_clock_out')->nullable()->after('expected_clock_in');
-            
+
             // Notes for manual adjustments
             $table->text('notes')->nullable()->after('expected_clock_out');
         });

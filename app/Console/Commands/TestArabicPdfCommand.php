@@ -33,11 +33,11 @@ class TestArabicPdfCommand extends Command
                 'name' => 'أحمد محمد علي',
                 'email' => 'ahmed@example.com',
                 'specialization' => 'frontend_developer', // Use string instead of enum object
-                'totalPoints' => 150
+                'totalPoints' => 150,
             ],
             'period' => [
                 'dateFrom' => '2024-01-01',
-                'dateTo' => '2024-12-31'
+                'dateTo' => '2024-12-31',
             ],
             'overview' => [
                 'totalTrackedHours' => 160.5,
@@ -48,20 +48,20 @@ class TestArabicPdfCommand extends Command
                 'productivityScore' => 8.7,
                 'pointsEarned' => 180,
                 'pointsDeducted' => 30,
-                'netPointsChange' => 150
+                'netPointsChange' => 150,
             ],
             'tasks' => [
                 'total' => 45,
                 'completed' => 42,
                 'inProgress' => 3,
                 'totalBounces' => 2,
-                'tasksWithBounces' => [] // Add empty array to prevent errors
+                'tasksWithBounces' => [], // Add empty array to prevent errors
             ],
             'attendance' => [
                 'totalDays' => 22,
                 'lateDays' => 2,
                 'totalLateMinutes' => 15,
-                'averageIdlePerDay' => 25.5
+                'averageIdlePerDay' => 25.5,
             ],
             'points' => [
                 'transactions' => [
@@ -70,24 +70,24 @@ class TestArabicPdfCommand extends Command
                         'points' => 50,
                         'type' => 'task_completion',
                         'reason' => 'إنجاز مهمة بتقدير ممتاز',
-                        'createdBy' => 'مدير المشروع'
+                        'createdBy' => 'مدير المشروع',
                     ],
                     [
                         'createdAt' => '2024-01-10',
                         'points' => -10,
                         'type' => 'late_attendance',
                         'reason' => 'تأخير في الحضور',
-                        'createdBy' => 'النظام'
-                    ]
-                ]
+                        'createdBy' => 'النظام',
+                    ],
+                ],
             ],
             // Add missing optional sections to prevent template errors
             'gracePeriod' => null,
             'deductions' => [
                 'totalDeductions' => 0,
-                'dailyDeductions' => []
+                'dailyDeductions' => [],
             ],
-            'locale' => 'ar'
+            'locale' => 'ar',
         ];
 
         // Test both Arabic and English
@@ -96,24 +96,24 @@ class TestArabicPdfCommand extends Command
 
         foreach ($locales as $locale) {
             $this->info("Testing locale: {$locale}");
-            
+
             App::setLocale($locale);
             $testData['locale'] = $locale;
 
             try {
                 $pdf = $pdfService->generatePdf('reports.employee-review', $testData);
-                
+
                 if ($this->option('save')) {
-                    $filename = "test-arabic-pdf-{$locale}-" . date('Y-m-d-H-i-s') . '.pdf';
+                    $filename = "test-arabic-pdf-{$locale}-".date('Y-m-d-H-i-s').'.pdf';
                     $filepath = storage_path("app/public/{$filename}");
-                    
+
                     File::put($filepath, $pdf->output());
                     $this->info("✓ PDF saved: {$filepath}");
                 }
 
                 $results[$locale] = [
                     'success' => true,
-                    'message' => 'PDF generated successfully'
+                    'message' => 'PDF generated successfully',
                 ];
 
                 $this->info("✓ {$locale} PDF generation: SUCCESS");
@@ -121,56 +121,58 @@ class TestArabicPdfCommand extends Command
             } catch (\Exception $e) {
                 $results[$locale] = [
                     'success' => false,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ];
 
                 $this->error("✗ {$locale} PDF generation: FAILED");
-                $this->error("Error: " . $e->getMessage());
+                $this->error('Error: '.$e->getMessage());
             }
         }
 
         // Display summary
         $this->newLine();
         $this->info('=== Test Results Summary ===');
-        
+
         foreach ($results as $locale => $result) {
             $status = $result['success'] ? '✓ PASS' : '✗ FAIL';
             $this->line("{$locale}: {$status}");
-            
-            if (!$result['success']) {
-                $this->error("  Error: " . $result['error']);
+
+            if (! $result['success']) {
+                $this->error('  Error: '.$result['error']);
             }
         }
 
         // Check font availability
         $this->newLine();
         $this->info('=== Font Availability Check ===');
-        
+
         $fontDir = storage_path('app/fonts');
         $arabicFonts = [
             'NotoSansArabic-Regular.ttf',
-            'NotoSansArabic-Bold.ttf'
+            'NotoSansArabic-Bold.ttf',
         ];
 
         foreach ($arabicFonts as $font) {
-            $fontPath = $fontDir . '/' . $font;
+            $fontPath = $fontDir.'/'.$font;
             $exists = File::exists($fontPath);
             $status = $exists ? '✓ Available' : '✗ Missing';
             $this->line("{$font}: {$status}");
-            
-            if (!$exists) {
-                $this->warn("  Run: php artisan pdf:install-fonts --download");
+
+            if (! $exists) {
+                $this->warn('  Run: php artisan pdf:install-fonts --download');
             }
         }
 
         // Overall result
-        $allPassed = collect($results)->every(fn($result) => $result['success']);
-        
+        $allPassed = collect($results)->every(fn ($result) => $result['success']);
+
         if ($allPassed) {
             $this->info('🎉 All tests passed! Arabic PDF generation is working correctly.');
+
             return 0;
         } else {
             $this->error('❌ Some tests failed. Please check the errors above.');
+
             return 1;
         }
     }

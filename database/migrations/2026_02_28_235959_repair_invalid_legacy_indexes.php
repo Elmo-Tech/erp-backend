@@ -60,7 +60,7 @@ return new class extends Migration
     public function up(): void
     {
         foreach ($this->invalidIndexes as $tableName => $indexes) {
-            if (!Schema::hasTable($tableName)) {
+            if (! Schema::hasTable($tableName)) {
                 continue;
             }
 
@@ -77,7 +77,7 @@ return new class extends Migration
 
     private function dropIndexIfExists(string $tableName, string $indexName): void
     {
-        if (!$this->indexExists($tableName, $indexName)) {
+        if (! $this->indexExists($tableName, $indexName)) {
             return;
         }
 

@@ -14,7 +14,7 @@ use Tests\TestCase;
 
 /**
  * Integration test for Timer Auto-Status Update functionality
- * 
+ *
  * Tests the complete flow from API endpoint to database changes
  */
 class TimeTrackingTaskStatusIntegrationTest extends TestCase
@@ -57,20 +57,20 @@ class TimeTrackingTaskStatusIntegrationTest extends TestCase
 
         // Verify API response
         $response->assertStatus(201)
-                ->assertJson([
-                    'success' => true,
-                    'message' => 'Timer started successfully',
-                ])
-                ->assertJsonStructure([
-                    'data' => [
-                        'timeEntryId',
-                        'userId',
-                        'trackableId',
-                        'trackableType',
-                        'isActive',
-                        'startTime',
-                    ]
-                ]);
+            ->assertJson([
+                'success' => true,
+                'message' => 'Timer started successfully',
+            ])
+            ->assertJsonStructure([
+                'data' => [
+                    'timeEntryId',
+                    'userId',
+                    'trackableId',
+                    'trackableType',
+                    'isActive',
+                    'startTime',
+                ],
+            ]);
 
         // Refresh task from database
         $task->refresh();

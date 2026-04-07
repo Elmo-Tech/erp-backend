@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\V1\Tasks;
 
+use App\Enums\TaskCategory;
+use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Enums\TaskPriority;
-use App\Enums\TaskCategory;
 use App\Helpers\ApiResponse;
 use App\Models\Task;
 use Illuminate\Contracts\Validation\Validator;
@@ -17,7 +17,7 @@ class StoreTaskRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
-     * 
+     *
      * Authorization rules based on permissions:
      * - create_main_tasks: Can create main tasks
      * - create_weekly_tasks: Can create weekly tasks
@@ -28,12 +28,12 @@ class StoreTaskRequest extends FormRequest
     {
         $user = $this->user();
         $taskType = $this->input('type', TaskType::MAIN->value);
-        
+
         // Admin and Super Admin can create any task type
         if ($user->hasRole(['admin', 'super-admin'])) {
             return true;
         }
-        
+
         // Check specific permission based on task type
         return match ($taskType) {
             TaskType::MAIN->value => $user->can('create_main_tasks'),
@@ -76,8 +76,6 @@ class StoreTaskRequest extends FormRequest
 
     /**
      * Configure the validator instance.
-     *
-     * @param Validator $validator
      */
     public function withValidator(Validator $validator): void
     {
@@ -92,19 +90,20 @@ class StoreTaskRequest extends FormRequest
      */
     private function validateParentBelongsToSameProject(Validator $validator): void
     {
-        if (!$this->filled('parentId')) {
+        if (! $this->filled('parentId')) {
             return;
         }
 
         $parentTask = Task::find($this->input('parentId'));
-        
-        if (!$parentTask) {
+
+        if (! $parentTask) {
             return;
         }
 
         // If creating a task with a parent, inherit project from parent if not specified
-        if (!$this->filled('projectId') && $parentTask->project_id) {
+        if (! $this->filled('projectId') && $parentTask->project_id) {
             $this->merge(['projectId' => $parentTask->project_id]);
+
             return;
         }
 
@@ -128,12 +127,12 @@ class StoreTaskRequest extends FormRequest
         $type = $this->input('type');
         $parentId = $this->input('parentId');
 
-        if (!$type) {
+        if (! $type) {
             return;
         }
 
         $taskType = TaskType::tryFrom($type);
-        if (!$taskType) {
+        if (! $taskType) {
             return;
         }
 
@@ -143,33 +142,35 @@ class StoreTaskRequest extends FormRequest
                 'type',
                 'Main tasks cannot have a parent task.'
             );
+
             return;
         }
 
         // WEEKLY and SUBTASK must have a parent
-        if (in_array($taskType, [TaskType::WEEKLY, TaskType::SUBTASK]) && !$parentId) {
+        if (in_array($taskType, [TaskType::WEEKLY, TaskType::SUBTASK]) && ! $parentId) {
             $validator->errors()->add(
                 'parentId',
-                $taskType->label() . ' must have a parent task.'
+                $taskType->label().' must have a parent task.'
             );
+
             return;
         }
 
         // Validate parent type matches expected hierarchy
         if ($parentId) {
             $parentTask = Task::find($parentId);
-            if (!$parentTask) {
+            if (! $parentTask) {
                 return;
             }
 
             $allowedChildTypes = $parentTask->type->allowedChildTypes();
-            
-            if (!in_array($taskType, $allowedChildTypes)) {
-                $expectedTypes = array_map(fn($t) => $t->label(), $allowedChildTypes);
+
+            if (! in_array($taskType, $allowedChildTypes)) {
+                $expectedTypes = array_map(fn ($t) => $t->label(), $allowedChildTypes);
                 $validator->errors()->add(
                     'type',
-                    'A ' . $parentTask->type->label() . ' can only have ' . 
-                    (empty($expectedTypes) ? 'no children' : implode(' or ', $expectedTypes)) . ' as children.'
+                    'A '.$parentTask->type->label().' can only have '.
+                    (empty($expectedTypes) ? 'no children' : implode(' or ', $expectedTypes)).' as children.'
                 );
             }
         }
@@ -215,7 +216,6 @@ class StoreTaskRequest extends FormRequest
     /**
      * Handle a failed validation attempt.
      *
-     * @param Validator $validator
      * @throws HttpResponseException
      */
     protected function failedValidation(Validator $validator): void
@@ -236,14 +236,14 @@ class StoreTaskRequest extends FormRequest
     protected function failedAuthorization(): void
     {
         $taskType = $this->input('type', TaskType::MAIN->value);
-        
+
         $message = match ($taskType) {
             TaskType::MAIN->value => 'You do not have permission to create main tasks.',
             TaskType::WEEKLY->value => 'You do not have permission to create weekly tasks.',
             TaskType::SUBTASK->value => 'You do not have permission to create subtasks.',
             default => 'You do not have permission to create this task type.',
         };
-        
+
         throw new HttpResponseException(
             ApiResponse::error($message, 403)
         );

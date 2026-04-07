@@ -21,12 +21,12 @@ class StoreProposalRequest extends FormRequest
 
     /**
      * Get the validation rules that apply to the request.
-     * 
+     *
      * Three paths supported:
      * 1. Skip path: Mark proposal as skipped with reason (min 30 chars)
      * 2. Schedule path: Create proposal with follow-up task (requires assigned_to, due_date)
      * 3. Upload path: Create proposal with file upload
-     * 
+     *
      * expiryDays is required for all paths except 'skip'
      */
     public function rules(): array
@@ -39,18 +39,18 @@ class StoreProposalRequest extends FormRequest
             'expiryDate' => ['nullable', 'date', 'after:today'],
             'expiryDays' => ['nullable', 'integer', 'min:1'], // Required for all paths except 'skip'
             'internalNotes' => ['nullable', 'string'],
-            
+
             // Proposal action type using enum
             'actionType' => ['nullable', 'string', Rule::in(ProposalActionType::values())],
-            
+
             // Skip path validation
             'skipReason' => ['nullable', 'string', 'min:30'],
-            
+
             // Schedule path validation (for creating follow-up task)
             'taskAssignedTo' => ['nullable', 'integer', 'exists:users,id'],
             'taskDueDate' => ['nullable', 'date', 'after:today'],
             'taskTitle' => ['nullable', 'string', 'max:255'],
-            
+
             // Upload path validation
             'file' => ['nullable', 'file', 'mimes:pdf,ppt,pptx', 'max:20480'],
         ];
@@ -92,7 +92,7 @@ class StoreProposalRequest extends FormRequest
      */
     private function validateSkipPath(Validator $validator): void
     {
-        if (!$this->input('skipReason')) {
+        if (! $this->input('skipReason')) {
             $validator->errors()->add(
                 'skipReason',
                 __('validation.required', ['attribute' => 'skipReason'])
@@ -123,13 +123,13 @@ class StoreProposalRequest extends FormRequest
      */
     private function validateSchedulePath(Validator $validator): void
     {
-        if (!$this->input('taskAssignedTo')) {
+        if (! $this->input('taskAssignedTo')) {
             $validator->errors()->add(
                 'taskAssignedTo',
                 __('validation.required', ['attribute' => 'taskAssignedTo'])
             );
         }
-        if (!$this->input('taskDueDate')) {
+        if (! $this->input('taskDueDate')) {
             $validator->errors()->add(
                 'taskDueDate',
                 __('validation.required', ['attribute' => 'taskDueDate'])
@@ -142,7 +142,7 @@ class StoreProposalRequest extends FormRequest
      */
     private function validateUploadPath(Validator $validator): void
     {
-        if (!$this->hasFile('file')) {
+        if (! $this->hasFile('file')) {
             $validator->errors()->add(
                 'file',
                 __('validation.required', ['attribute' => 'file'])

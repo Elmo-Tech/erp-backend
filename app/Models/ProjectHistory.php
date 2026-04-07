@@ -13,7 +13,7 @@ class ProjectHistory extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $fillable = [
         'project_id',
@@ -29,7 +29,7 @@ class ProjectHistory extends Model
      */
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Project::class)->withoutGlobalScopes();
     }
 
     /**

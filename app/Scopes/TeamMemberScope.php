@@ -18,7 +18,7 @@ class TeamMemberScope implements Scope
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return;
         }
 

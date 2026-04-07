@@ -30,23 +30,41 @@ class TaskActivity extends Model
 
     // Activity types
     public const TYPE_CREATED = 'created';
+
     public const TYPE_UPDATED = 'updated';
+
     public const TYPE_STATUS_CHANGE = 'status_change';
+
     public const TYPE_ASSIGNEE_ADDED = 'assignee_added';
+
     public const TYPE_ASSIGNEE_REMOVED = 'assignee_removed';
+
     public const TYPE_TIMER_START = 'timer_start';
+
     public const TYPE_TIMER_STOP = 'timer_stop';
+
     public const TYPE_TEST_COMPLETED = 'test_completed';
+
     public const TYPE_TEST_VERIFIED = 'test_verified';
+
     public const TYPE_TEST_FAILED = 'test_failed';
+
     public const TYPE_COMMENT = 'comment';
+
     public const TYPE_INTERNAL_NOTE = 'internal_note';
+
     public const TYPE_TAG_ADDED = 'tag_added';
+
     public const TYPE_TAG_REMOVED = 'tag_removed';
+
     public const TYPE_PRIORITY_CHANGE = 'priority_change';
+
     public const TYPE_DUE_DATE_CHANGE = 'due_date_change';
+
     public const TYPE_DELIVERABLE_SUBMITTED = 'deliverable_submitted';
+
     public const TYPE_DELIVERABLE_APPROVED = 'deliverable_approved';
+
     public const TYPE_DELIVERABLE_REJECTED = 'deliverable_rejected';
 
     /**
@@ -192,9 +210,9 @@ class TaskActivity extends Model
      * Log deliverable approval with points.
      */
     public static function logDeliverableApproved(
-        Task $task, 
-        User $reviewer, 
-        string $deliverableTitle, 
+        Task $task,
+        User $reviewer,
+        string $deliverableTitle,
         int $pointsAwarded,
         bool $isBonus = false
     ): self {
@@ -218,9 +236,9 @@ class TaskActivity extends Model
      * Log deliverable rejection with points deduction.
      */
     public static function logDeliverableRejected(
-        Task $task, 
-        User $reviewer, 
-        string $deliverableTitle, 
+        Task $task,
+        User $reviewer,
+        string $deliverableTitle,
         int $pointsDeducted,
         ?string $reason = null
     ): self {

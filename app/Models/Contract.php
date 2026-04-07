@@ -9,9 +9,36 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string|null $contract_number
+ * @property int|null $quotation_id
+ * @property int|null $project_id
+ * @property int|null $template_id
+ * @property string|null $title
+ * @property string|null $content
+ * @property array<string, mixed>|null $party_one
+ * @property array<string, mixed>|null $party_two
+ * @property float|int|string|null $total_amount
+ * @property string|null $currency
+ * @property string|null $payment_terms
+ * @property \Illuminate\Support\Carbon|null $start_date
+ * @property \Illuminate\Support\Carbon|null $end_date
+ * @property \Illuminate\Support\Carbon|null $expiry_date
+ * @property \Illuminate\Support\Carbon|null $signed_at
+ * @property string|null $signed_by_client
+ * @property ContractStatus $status
+ * @property int|null $created_by
+ * @property int|null $updated_by
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read Quotation $quotation
+ * @property-read Project|null $project
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, ContractMilestone> $milestones
+ */
 class Contract extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
         'contract_number',
@@ -117,19 +144,18 @@ class Contract extends Model
     /**
      * Generate unique contract number
      * Format: CV-YEAR-FILENUMBER (e.g., CV-2026-0001)
-     * 
-     * @param string|null $fileNumber Optional file number to include in the contract number
-     * @return string
+     *
+     * @param  string|null  $fileNumber  Optional file number to include in the contract number
      */
     public static function generateContractNumber(?string $fileNumber = null): string
     {
         $year = date('Y');
-        
+
         // If file number is provided, use it
         if ($fileNumber) {
             return sprintf('CV-%s-%s', $year, $fileNumber);
         }
-        
+
         // Otherwise generate sequence number
         $lastContract = self::whereYear('created_at', $year)
             ->orderBy('id', 'desc')
@@ -144,14 +170,13 @@ class Contract extends Model
 
     /**
      * Calculate expiry date from start date and expiry days
-     * 
-     * @param \Carbon\Carbon|\DateTime|string $startDate
-     * @param int $expiryDays
-     * @return \Carbon\Carbon
+     *
+     * @param  \Carbon\Carbon|\DateTime|string  $startDate
      */
     public static function calculateExpiryDate($startDate, int $expiryDays): \Carbon\Carbon
     {
         $start = \Carbon\Carbon::parse($startDate);
+
         return $start->addDays($expiryDays);
     }
 }

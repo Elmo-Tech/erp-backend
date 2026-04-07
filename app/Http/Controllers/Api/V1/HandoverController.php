@@ -26,6 +26,7 @@ class HandoverController extends Controller
      *     tags={"Handovers"},
      *     summary="Get all handovers with filters",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Handovers retrieved successfully")
      * )
      */
@@ -43,6 +44,7 @@ class HandoverController extends Controller
      *     tags={"Handovers"},
      *     summary="Get pending handovers",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Pending handovers retrieved successfully")
      * )
      */
@@ -60,6 +62,7 @@ class HandoverController extends Controller
      *     tags={"Handovers"},
      *     summary="Create handover for project",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=201, description="Handover created successfully")
      * )
      */
@@ -92,6 +95,7 @@ class HandoverController extends Controller
      *     tags={"Handovers"},
      *     summary="Get a single handover",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Handover retrieved successfully")
      * )
      */
@@ -109,6 +113,7 @@ class HandoverController extends Controller
      *     tags={"Handovers"},
      *     summary="Update handover checklist",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Handover updated successfully")
      * )
      */
@@ -136,6 +141,7 @@ class HandoverController extends Controller
      *     tags={"Handovers"},
      *     summary="Complete handover",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Handover completed successfully")
      * )
      */
@@ -157,6 +163,7 @@ class HandoverController extends Controller
      *     tags={"Handovers"},
      *     summary="Dispute handover",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Handover disputed successfully")
      * )
      */

@@ -43,7 +43,7 @@ class SendExpiryNotificationsJob implements ShouldQueue
             $daysUntilExpiry = max(0, $daysUntilExpiry);
 
             // Notify sales reps with sales role
-            $salesUsers = User::whereHas('roles', fn($q) => $q->where('name', 'sales'))
+            $salesUsers = User::whereHas('roles', fn ($q) => $q->where('name', 'sales'))
                 ->where('is_active', true)
                 ->get();
 
@@ -71,7 +71,7 @@ class SendExpiryNotificationsJob implements ShouldQueue
             $daysUntilExpiry = max(0, $daysUntilExpiry);
 
             // Notify sales reps
-            $salesUsers = User::whereHas('roles', fn($q) => $q->where('name', 'sales'))
+            $salesUsers = User::whereHas('roles', fn ($q) => $q->where('name', 'sales'))
                 ->where('is_active', true)
                 ->get();
 

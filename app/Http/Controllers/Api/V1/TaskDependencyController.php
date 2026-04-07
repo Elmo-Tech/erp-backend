@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Models\TaskDependency;
 use App\Models\Task;
+use App\Models\TaskDependency;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,24 +31,31 @@ class TaskDependencyController extends Controller
      *     summary="Get all dependencies for a task",
      *     tags={"Task Dependencies"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="task",
      *         in="path",
      *         required=true,
      *         description="Task ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
      *         description="Language preference (en or ar)",
+     *
      *         @OA\Schema(type="string", default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task dependencies retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task dependencies retrieved successfully"),
      *             @OA\Property(
@@ -57,7 +64,9 @@ class TaskDependencyController extends Controller
      *                 @OA\Property(
      *                     property="dependencies",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="id", type="integer", example=1),
      *                         @OA\Property(property="taskId", type="integer", example=5),
      *                         @OA\Property(property="dependsOnTaskId", type="integer", example=3),
@@ -77,11 +86,13 @@ class TaskDependencyController extends Controller
      *                     property="blockedBy",
      *                     type="array",
      *                     description="Tasks that are blocking this task",
+     *
      *                     @OA\Items(type="object")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(response=401, description="Unauthenticated"),
      *     @OA\Response(response=403, description="Forbidden"),
      *     @OA\Response(response=404, description="Task not found")
@@ -140,38 +151,49 @@ class TaskDependencyController extends Controller
      *     summary="Create a new task dependency",
      *     tags={"Task Dependencies"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="task",
      *         in="path",
      *         required=true,
      *         description="Task ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
      *         description="Language preference (en or ar)",
+     *
      *         @OA\Schema(type="string", default="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"dependsOnTaskId"},
+     *
      *             @OA\Property(property="dependsOnTaskId", type="integer", example=3),
      *             @OA\Property(property="dependencyType", type="string", enum={"finish_to_start", "start_to_start", "finish_to_finish", "start_to_finish"}, example="finish_to_start"),
      *             @OA\Property(property="lagDays", type="integer", example=0, description="Number of days to wait after dependency is satisfied")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Task dependency created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task dependency created successfully"),
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(response=401, description="Unauthenticated"),
      *     @OA\Response(response=403, description="Forbidden"),
      *     @OA\Response(response=422, description="Validation error")
@@ -239,6 +261,7 @@ class TaskDependencyController extends Controller
             ], __('Task dependency created successfully'), 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return ApiResponse::error(__('Failed to create task dependency'), ['error' => $e->getMessage()], 500);
         }
     }
@@ -249,28 +272,36 @@ class TaskDependencyController extends Controller
      *     summary="Delete a task dependency",
      *     tags={"Task Dependencies"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="dependency",
      *         in="path",
      *         required=true,
      *         description="Task Dependency ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
      *         description="Language preference (en or ar)",
+     *
      *         @OA\Schema(type="string", default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Task dependency deleted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Task dependency deleted successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(response=401, description="Unauthenticated"),
      *     @OA\Response(response=403, description="Forbidden"),
      *     @OA\Response(response=404, description="Dependency not found")

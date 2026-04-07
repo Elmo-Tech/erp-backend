@@ -2,50 +2,60 @@
 
 namespace App\Http\Resources\V1\Client;
 
+use App\Models\Client;
+use BackedEnum;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin Client
+ */
 class ClientResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        /** @var Client $client */
+        $client = $this->resource;
+
         return [
-            'clientId' => $this->id,
-            'name' => $this->name ?? '',
-            'email' => $this->email ?? '',
-            'phone' => $this->phone ?? '',
-            'company' => $this->company ?? '',
-            'position' => $this->position ?? '',
-            'address' => $this->address ?? '',
-            'city' => $this->city ?? '',
-            'country' => $this->country ?? '',
-            'website' => $this->website ?? '',
-            'notes' => $this->notes ?? '',
-            'status' => $this->status?->value ?? $this->status ?? 'active',
-            'userId' => $this->user_id,
-            'leadId' => $this->lead_id,
-            'hasPortalAccess' => $this->hasPortalAccess(),
-            'totalRevenue' => (float) ($this->total_revenue ?? 0),
-            'activeProjectsCount' => (int) ($this->active_projects_count ?? 0),
-            'projectsCount' => $this->whenCounted('projects', $this->projects_count ?? 0),
-            'projects' => $this->whenLoaded('projects', function () {
-                return $this->projects->map(fn ($project) => [
+            'clientId' => $client->id,
+            'name' => $client->name ?? '',
+            'email' => $client->email ?? '',
+            'phone' => $client->phone ?? '',
+            'company' => $client->company ?? '',
+            'position' => $client->position ?? '',
+            'address' => $client->address ?? '',
+            'city' => $client->city ?? '',
+            'country' => $client->country ?? '',
+            'website' => $client->website ?? '',
+            'notes' => $client->notes ?? '',
+            'status' => $client->status->value,
+            'userId' => $client->user_id,
+            'leadId' => $client->lead_id,
+            'hasPortalAccess' => $client->hasPortalAccess(),
+            'totalRevenue' => (float) ($client->total_revenue ?? 0),
+            'activeProjectsCount' => (int) ($client->active_projects_count ?? 0),
+            'projectsCount' => $this->whenCounted('projects', $client->projects_count ?? 0),
+            'projects' => $this->whenLoaded('projects', function () use ($client) {
+                return $client->projects->map(fn ($project) => [
                     'projectId' => $project->id,
                     'title' => $project->title,
-                    'status' => $project->status->value ?? $project->status,
+                    'status' => $project->status->value,
                     'budget' => (float) $project->budget,
                     'deadline' => $project->deadline?->format('Y-m-d'),
-                ]);
+                ])->values()->all();
             }),
-            'originalLead' => $this->whenLoaded('originalLead', function () {
+            'originalLead' => $this->whenLoaded('originalLead', function () use ($client) {
+                $source = $client->originalLead->source;
+
                 return [
-                    'leadId' => $this->originalLead->id,
-                    'name' => $this->originalLead->name ?? '',
-                    'source' => $this->originalLead->source?->value ?? '',
+                    'leadId' => $client->originalLead->id,
+                    'name' => $client->originalLead->name ?? '',
+                    'source' => $source instanceof BackedEnum ? $source->value : ($source ?? ''),
                 ];
             }),
-            'createdAt' => $this->created_at?->toISOString() ?? '',
-            'updatedAt' => $this->updated_at?->toISOString() ?? '',
+            'createdAt' => $client->created_at?->toISOString() ?? '',
+            'updatedAt' => $client->updated_at?->toISOString() ?? '',
         ];
     }
 }

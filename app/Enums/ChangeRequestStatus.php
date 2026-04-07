@@ -12,7 +12,7 @@ enum ChangeRequestStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => __('enums.change_request_status.pending'),
             self::UNDER_REVIEW => __('enums.change_request_status.under_review'),
             self::APPROVED => __('enums.change_request_status.approved'),
@@ -23,7 +23,7 @@ enum ChangeRequestStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => 'gray',
             self::UNDER_REVIEW => 'yellow',
             self::APPROVED => 'green',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1\Auth;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use OpenApi\Attributes as OA;
@@ -20,6 +21,9 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'updatedAt', type: 'string', format: 'date-time', example: '2024-01-15T10:30:00Z'),
     ]
 )]
+/**
+ * @mixin User
+ */
 class LoginProfileResource extends JsonResource
 {
     /**
@@ -29,15 +33,18 @@ class LoginProfileResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        /** @var User $user */
+        $user = $this->resource;
+
         return [
-            'userId' => $this->id,
-            'name' => $this->name ?? "",
-            'email' => $this->email ?? "",
-            'emailVerifiedAt' => $this->email_verified_at?->toISOString() ?? null,
-            'avatar' => $this->avatar,
-            'skills' => $this->skills ?? [],
-            'createdAt' => $this->created_at?->toISOString() ?? "",
-            'updatedAt' => $this->updated_at?->toISOString() ?? "",
+            'userId' => $user->id,
+            'name' => $user->name ?? '',
+            'email' => $user->email ?? '',
+            'emailVerifiedAt' => $user->email_verified_at?->toISOString() ?? null,
+            'avatar' => $user->avatar,
+            'skills' => $user->skills ?? [],
+            'createdAt' => $user->created_at?->toISOString() ?? '',
+            'updatedAt' => $user->updated_at?->toISOString() ?? '',
         ];
     }
 }

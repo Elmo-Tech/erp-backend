@@ -13,7 +13,7 @@ enum ActivityType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::CALL => __('enums.activity_type.call'),
             self::EMAIL => __('enums.activity_type.email'),
             self::MEETING => __('enums.activity_type.meeting'),
@@ -25,7 +25,7 @@ enum ActivityType: string
 
     public function icon(): string
     {
-        return match($this) {
+        return match ($this) {
             self::CALL => 'phone',
             self::EMAIL => 'mail',
             self::MEETING => 'calendar',

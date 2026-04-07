@@ -19,13 +19,13 @@ class LeadClientPermissionsSeeder extends Seeder
             // Lead Conversion
             'convert_leads',
             'view_lead_conversion_status',
-            
+
             // Client Portal Access Management
             'manage_client_portal_access',
             'create_client_portal_access',
             'revoke_client_portal_access',
             'reset_client_portal_password',
-            
+
             // Points System
             'view_points',
             'manage_points',

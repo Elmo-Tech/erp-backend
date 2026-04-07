@@ -24,7 +24,7 @@ class InvoicePolicy
     public function view(User $user, Invoice $invoice): bool
     {
         if ($user->hasRole('client')) {
-            return $invoice->project->client_id === $user->id;
+            return $invoice->project->client_id === $user->client?->id;
         }
 
         return $user->hasAnyRole(['admin', 'super-admin', 'employee']);
@@ -35,7 +35,7 @@ class InvoicePolicy
      */
     public function create(User $user): bool
     {
-        return !$user->hasRole('client');
+        return ! $user->hasRole('client');
     }
 
     /**
@@ -43,7 +43,7 @@ class InvoicePolicy
      */
     public function update(User $user, Invoice $invoice): bool
     {
-        return !$user->hasRole('client');
+        return ! $user->hasRole('client');
     }
 
     /**
@@ -51,7 +51,7 @@ class InvoicePolicy
      */
     public function delete(User $user, Invoice $invoice): bool
     {
-        return !$user->hasRole('client');
+        return ! $user->hasRole('client');
     }
 
     /**
@@ -59,12 +59,12 @@ class InvoicePolicy
      */
     public function pay(User $user, Invoice $invoice): bool
     {
-        if (!$invoice->isPayable()) {
+        if (! $invoice->isPayable()) {
             return false;
         }
 
         if ($user->hasRole('client')) {
-            return $invoice->project->client_id === $user->id;
+            return $invoice->project->client_id === $user->client?->id;
         }
 
         return $user->hasAnyRole(['admin', 'super-admin']);

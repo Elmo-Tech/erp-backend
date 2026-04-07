@@ -2,15 +2,15 @@
 
 namespace App\Services\Tasks;
 
+use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Enums\TaskPriority;
+use App\Models\Tag;
 use App\Models\Task;
 use App\Models\TaskActivity;
 use App\Models\TaskAssignee;
 use App\Models\TaskTestScenario;
 use App\Models\TimeEntry;
-use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -34,32 +34,32 @@ class TaskService
             $query->visibleToUser($user);
         }
 
-        if (!empty($filters['projectId'])) {
+        if (! empty($filters['projectId'])) {
             $query->where('project_id', $filters['projectId']);
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['type'])) {
+        if (! empty($filters['type'])) {
             $query->where('type', $filters['type']);
         }
 
-        if (!empty($filters['priority'])) {
+        if (! empty($filters['priority'])) {
             $query->where('priority', $filters['priority']);
         }
 
-        if (!empty($filters['taskCategory'])) {
+        if (! empty($filters['taskCategory'])) {
             $query->where('task_category', $filters['taskCategory']);
         }
 
-        if (!empty($filters['assignedTo'])) {
+        if (! empty($filters['assignedTo'])) {
             $query->where('assigned_to', $filters['assignedTo']);
         }
 
         // Filter by team member (user assigned in task_assignees table)
-        if (!empty($filters['teamMember'])) {
+        if (! empty($filters['teamMember'])) {
             $query->whereHas('assignees', function ($q) use ($filters) {
                 $q->where('user_id', $filters['teamMember']);
             });
@@ -73,12 +73,12 @@ class TaskService
             }
         }
 
-        if (!empty($filters['tagId'])) {
-            $query->whereHas('tags', fn($q) => $q->where('tags.id', $filters['tagId']));
+        if (! empty($filters['tagId'])) {
+            $query->whereHas('tags', fn ($q) => $q->where('tags.id', $filters['tagId']));
         }
 
-        if (!empty($filters['search'])) {
-            $query->where('title', 'like', '%' . $filters['search'] . '%');
+        if (! empty($filters['search'])) {
+            $query->where('title', 'like', '%'.$filters['search'].'%');
         }
 
         // Use distinct to prevent duplicate results when joining with assignees
@@ -96,14 +96,14 @@ class TaskService
     {
         $query = Task::query()
             ->with([
-                'assignee', 
-                'project', 
-                'tags', 
-                'assignees.user', 
+                'assignee',
+                'project',
+                'tags',
+                'assignees.user',
                 'parent', // Load parent to show hierarchy
                 // Load children (Weekly tasks) with their children (Subtasks)
-                'children.assignee', 
-                'children.tags', 
+                'children.assignee',
+                'children.tags',
                 'children.assignees.user',
                 'children.children.assignee',
                 'children.children.tags',
@@ -112,7 +112,7 @@ class TaskService
             ->whereHas('assignees', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
-            // Removed whereNull('parent_id') to get ALL tasks where user is assigned
+        // Removed whereNull('parent_id') to get ALL tasks where user is assigned
 
         // Apply user specialization filtering
         if ($user->specialization) {
@@ -120,24 +120,24 @@ class TaskService
         }
 
         // Apply additional filters
-        if (!empty($filters['projectId'])) {
+        if (! empty($filters['projectId'])) {
             $query->where('project_id', $filters['projectId']);
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['type'])) {
+        if (! empty($filters['type'])) {
             $query->where('type', $filters['type']);
         }
 
-        if (!empty($filters['priority'])) {
+        if (! empty($filters['priority'])) {
             $query->where('priority', $filters['priority']);
         }
 
-        if (!empty($filters['search'])) {
-            $query->where('title', 'like', '%' . $filters['search'] . '%');
+        if (! empty($filters['search'])) {
+            $query->where('title', 'like', '%'.$filters['search'].'%');
         }
 
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
@@ -152,11 +152,11 @@ class TaskService
             ->where('project_id', $projectId)
             ->whereNull('parent_id')
             ->with([
-                'assignee', 
-                'tags', 
-                'assignees.user', 
+                'assignee',
+                'tags',
+                'assignees.user',
                 // Load children (Weekly tasks) with their children (Subtasks)
-                'children.assignee', 
+                'children.assignee',
                 'children.tags',
                 'children.assignees.user',
                 'children.children.assignee',
@@ -176,8 +176,8 @@ class TaskService
         return Task::query()
             ->where('parent_id', $taskId)
             ->with([
-                'assignee', 
-                'tags', 
+                'assignee',
+                'tags',
                 'assignees.user',
                 'children.assignee',
                 'children.tags',
@@ -208,7 +208,7 @@ class TaskService
     /**
      * Create a new task.
      * For Weekly Tasks and Subtasks, assignees are inherited from the Main Task.
-     * 
+     *
      * When assignedTo (primary assignee) is provided during creation,
      * automatically adds them as a primary assignee in task_assignees table.
      */
@@ -240,16 +240,16 @@ class TaskService
         $task = Task::create($taskData);
 
         // Attach tags
-        if (!empty($data['tagIds'])) {
+        if (! empty($data['tagIds'])) {
             $task->tags()->attach($data['tagIds']);
         }
 
         // Handle assignees based on task type
         $taskType = $data['type'] ?? TaskType::MAIN->value;
-        
+
         if ($taskType === TaskType::MAIN->value) {
             // Main Tasks: Add assignees directly (builds the team)
-            if (!empty($data['assignees'])) {
+            if (! empty($data['assignees'])) {
                 foreach ($data['assignees'] as $assignee) {
                     TaskAssignee::create([
                         'task_id' => $task->id,
@@ -261,11 +261,11 @@ class TaskService
                     ]);
                 }
             }
-            
+
             // Auto-add primary assignee if assignedTo is set and not already in assignees
-            if (!empty($data['assignedTo'])) {
+            if (! empty($data['assignedTo'])) {
                 $existingAssigneeIds = collect($data['assignees'] ?? [])->pluck('userId')->toArray();
-                if (!in_array($data['assignedTo'], $existingAssigneeIds)) {
+                if (! in_array($data['assignedTo'], $existingAssigneeIds)) {
                     TaskAssignee::create([
                         'task_id' => $task->id,
                         'user_id' => $data['assignedTo'],
@@ -280,9 +280,9 @@ class TaskService
             // Weekly Tasks and Subtasks: Can have specific assignees from the Main Task's team
             $mainTask = $this->findMainTask($task);
             $teamUserIds = $mainTask ? $mainTask->assignees()->pluck('user_id')->toArray() : [];
-            
+
             // If assignees provided, validate they're in the team and add them
-            if (!empty($data['assignees'])) {
+            if (! empty($data['assignees'])) {
                 foreach ($data['assignees'] as $assignee) {
                     // Only add if user is in the Main Task's team
                     if (in_array($assignee['userId'], $teamUserIds)) {
@@ -297,13 +297,13 @@ class TaskService
                     }
                 }
             }
-            
+
             // Auto-add primary assignee if assignedTo is set
-            if (!empty($data['assignedTo'])) {
+            if (! empty($data['assignedTo'])) {
                 $existingAssigneeIds = $task->assignees()->pluck('user_id')->toArray();
-                
+
                 // Only add if not already assigned and is in the team
-                if (!in_array($data['assignedTo'], $existingAssigneeIds)) {
+                if (! in_array($data['assignedTo'], $existingAssigneeIds)) {
                     if (in_array($data['assignedTo'], $teamUserIds)) {
                         TaskAssignee::create([
                             'task_id' => $task->id,
@@ -344,14 +344,14 @@ class TaskService
     {
         // Find the Main Task (root ancestor)
         $mainTask = $this->findMainTask($task);
-        
-        if (!$mainTask) {
+
+        if (! $mainTask) {
             return;
         }
 
         // Copy all assignees from Main Task
         $mainTaskAssignees = $mainTask->assignees()->get();
-        
+
         foreach ($mainTaskAssignees as $assignee) {
             TaskAssignee::create([
                 'task_id' => $task->id,
@@ -370,27 +370,27 @@ class TaskService
     private function findMainTask(Task $task): ?Task
     {
         $current = $task;
-        
+
         // Walk up the parent chain until we find a Main Task or reach the root
         while ($current->parent_id !== null) {
             $parent = Task::find($current->parent_id);
-            
-            if (!$parent) {
+
+            if (! $parent) {
                 break;
             }
-            
+
             if ($parent->type === TaskType::MAIN) {
                 return $parent;
             }
-            
+
             $current = $parent;
         }
-        
+
         // If current task's parent is null and it's a Main Task, return it
         if ($current->type === TaskType::MAIN) {
             return $current;
         }
-        
+
         return null;
     }
 
@@ -429,7 +429,7 @@ class TaskService
 
         $task->update($updateData);
 
-        if (array_key_exists('assignedTo', $data) && !empty($data['assignedTo'])) {
+        if (array_key_exists('assignedTo', $data) && ! empty($data['assignedTo'])) {
             $this->ensureAssignedUserExistsOnTask($task, (int) $data['assignedTo'], $user);
         }
 
@@ -469,7 +469,7 @@ class TaskService
             $mainTask = $this->findMainTask($task);
             if ($mainTask) {
                 $isInTeam = $mainTask->assignees()->where('user_id', $userId)->exists();
-                if (!$isInTeam) {
+                if (! $isInTeam) {
                     throw new \InvalidArgumentException(
                         'This user is not part of the project team. Add them to the Main Task first.'
                     );
@@ -527,8 +527,8 @@ class TaskService
         foreach ($weeklyTasks as $weeklyTask) {
             // Check if assignee already exists on weekly task
             $existingAssignee = $weeklyTask->assignees()->where('user_id', $userId)->first();
-            
-            if (!$existingAssignee) {
+
+            if (! $existingAssignee) {
                 TaskAssignee::create([
                     'task_id' => $weeklyTask->id,
                     'user_id' => $userId,
@@ -550,9 +550,9 @@ class TaskService
      * @throws \InvalidArgumentException
      */
     public function removeAssignee(Task $task, int $userId, User $performer): bool
-    {        
+    {
         $assignee = $task->assignees()->where('user_id', $userId)->first();
-        if (!$assignee) {
+        if (! $assignee) {
             return false;
         }
 
@@ -657,7 +657,7 @@ class TaskService
                 ->where('user_id', $developer->id)
                 ->where('is_primary', true) // Only primary assignees get points
                 ->first();
-            
+
             if ($assignee) {
                 $passed ? $assignee->addPoints(1) : $assignee->deductPoints(1);
             }
@@ -683,8 +683,8 @@ class TaskService
     public function getActivities(Task $task, bool $includeInternal = false, int $limit = 50): Collection
     {
         $query = $task->activities();
-        
-        if (!$includeInternal) {
+
+        if (! $includeInternal) {
             $query->where('is_internal', false);
         }
 
@@ -699,14 +699,13 @@ class TaskService
         return Tag::ofType('task')->orderBy('name')->get();
     }
 
-
     /**
      * Get tasks assigned to a user (via task_assignees).
      */
     public function getTasksForUser(int $userId, int $perPage = 15): LengthAwarePaginator
     {
         return Task::query()
-            ->whereHas('assignees', fn($q) => $q->where('user_id', $userId))
+            ->whereHas('assignees', fn ($q) => $q->where('user_id', $userId))
             ->with(['project', 'parent', 'tags', 'assignees.user'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -769,7 +768,7 @@ class TaskService
     public function getUserPointsSummary(int $projectId): Collection
     {
         return TaskAssignee::query()
-            ->whereHas('task', fn($q) => $q->where('project_id', $projectId))
+            ->whereHas('task', fn ($q) => $q->where('project_id', $projectId))
             ->where('is_primary', true) // Only count points from primary assignments
             ->selectRaw('user_id, SUM(points_earned) as total_points')
             ->groupBy('user_id')
@@ -839,12 +838,12 @@ class TaskService
         if ($newStatus === TaskStatus::COMPLETED && $oldStatus !== TaskStatus::COMPLETED) {
             $completedAt = now();
             $delayDays = null;
-            
+
             // Calculate delay if due_date is set
             if ($task->due_date) {
                 $dueDate = $task->due_date->startOfDay();
                 $completedDate = $completedAt->startOfDay();
-                
+
                 if ($completedDate->isAfter($dueDate)) {
                     // Completed after due date = late (positive)
                     $delayDays = $dueDate->diffInDays($completedDate);
@@ -856,24 +855,24 @@ class TaskService
                     $delayDays = 0;
                 }
             }
-            
+
             $task->update([
                 'completed_at' => $completedAt,
-                'delay_days' => $delayDays
+                'delay_days' => $delayDays,
             ]);
-            
+
             // Log completion with delay info
             $delayMessage = '';
             if ($delayDays !== null) {
                 if ($delayDays > 0) {
                     $delayMessage = " ({$delayDays} days late)";
                 } elseif ($delayDays < 0) {
-                    $delayMessage = " (" . abs($delayDays) . " days early)";
+                    $delayMessage = ' ('.abs($delayDays).' days early)';
                 } else {
-                    $delayMessage = " (on time)";
+                    $delayMessage = ' (on time)';
                 }
             }
-            
+
             TaskActivity::logComment(
                 $task,
                 $user,
@@ -900,7 +899,7 @@ class TaskService
             ->where('is_primary', true)
             ->exists();
 
-        if (!$isPrimaryAssignee) {
+        if (! $isPrimaryAssignee) {
             throw new \InvalidArgumentException('Only primary assignees can mark tasks as complete');
         }
 
@@ -928,17 +927,18 @@ class TaskService
     {
         $existingAssignee = $task->assignees()->where('user_id', $assignedUserId)->first();
         if ($existingAssignee) {
-            if (!$existingAssignee->is_primary) {
+            if (! $existingAssignee->is_primary) {
                 $existingAssignee->update([
                     'is_primary' => true,
                     'updated_by' => $actor->id,
                 ]);
             }
+
             return;
         }
 
         $assignedUser = User::find($assignedUserId);
-        if (!$assignedUser) {
+        if (! $assignedUser) {
             return;
         }
 

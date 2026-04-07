@@ -14,28 +14,28 @@ use Tests\TestCase;
 
 /**
  * Property-Based Tests for ProjectHistoryService
- * 
+ *
  * Feature: project-management-wiki, Property 7: History Records Created on Update
  * Validates: Requirements 3.2, 9.2, 9.3
  */
 class ProjectHistoryServicePropertyTest extends TestCase
 {
-    use TestTrait, RefreshDatabase;
+    use RefreshDatabase, TestTrait;
 
     private ProjectHistoryService $historyService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->historyService = new ProjectHistoryService();
+        $this->historyService = new ProjectHistoryService;
     }
 
     /**
      * Property 7: History Records Created on Update
-     * 
-     * For any project field update, a corresponding ProjectHistory record SHALL be 
+     *
+     * For any project field update, a corresponding ProjectHistory record SHALL be
      * created with the correct old_value, new_value, and changed_by fields.
-     * 
+     *
      * **Validates: Requirements 3.2, 9.2, 9.3**
      */
     public function test_history_records_created_on_update(): void
@@ -49,18 +49,19 @@ class ProjectHistoryServicePropertyTest extends TestCase
             ->then(function ($fieldName, $seed) {
                 // Create a user who will make the change
                 $user = User::factory()->create([
-                    'name' => 'History Test User ' . $seed . '_' . uniqid(),
-                    'email' => 'historyuser' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'History Test User '.$seed.'_'.uniqid(),
+                    'email' => 'historyuser'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 // Authenticate the user
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
-                    'title' => 'Original Title ' . $seed,
-                    'description' => 'Original Description ' . $seed,
+                    'client_id' => $client->id,
+                    'title' => 'Original Title '.$seed,
+                    'description' => 'Original Description '.$seed,
                     'status' => ProjectStatus::DRAFT,
                     'budget' => 10000.00 + $seed,
                     'deadline' => now()->addDays(30 + $seed),
@@ -69,8 +70,8 @@ class ProjectHistoryServicePropertyTest extends TestCase
                 // Generate old and new values based on field type
                 $oldValue = $this->getOldValue($project, $fieldName);
                 $newValue = $this->generateNewValue($fieldName, $seed);
-                $reason = $this->historyService->requiresReason($fieldName) 
-                    ? 'Test reason for change ' . $seed 
+                $reason = $this->historyService->requiresReason($fieldName)
+                    ? 'Test reason for change '.$seed
                     : null;
 
                 // Record the change using the service
@@ -146,10 +147,10 @@ class ProjectHistoryServicePropertyTest extends TestCase
 
     /**
      * Property 7: History Records Created on Update - Multiple Changes
-     * 
-     * For any sequence of multiple field updates on the same project, each update 
+     *
+     * For any sequence of multiple field updates on the same project, each update
      * SHALL create a separate history record with correct values.
-     * 
+     *
      * **Validates: Requirements 3.2, 9.2, 9.3**
      */
     public function test_history_records_multiple_changes(): void
@@ -163,16 +164,17 @@ class ProjectHistoryServicePropertyTest extends TestCase
             ->then(function ($changeCount, $seed) {
                 // Create a user who will make the changes
                 $user = User::factory()->create([
-                    'name' => 'Multi Change User ' . $seed . '_' . uniqid(),
-                    'email' => 'multichange' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Multi Change User '.$seed.'_'.uniqid(),
+                    'email' => 'multichange'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 // Authenticate the user
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
+                    'client_id' => $client->id,
                 ]);
 
                 $createdHistories = [];
@@ -181,10 +183,10 @@ class ProjectHistoryServicePropertyTest extends TestCase
                 // Make multiple changes
                 for ($i = 0; $i < $changeCount; $i++) {
                     $fieldName = $fields[$i % count($fields)];
-                    $oldValue = 'Old Value ' . $i;
-                    $newValue = 'New Value ' . $i . '_' . $seed;
-                    $reason = $this->historyService->requiresReason($fieldName) 
-                        ? 'Reason for change ' . $i 
+                    $oldValue = 'Old Value '.$i;
+                    $newValue = 'New Value '.$i.'_'.$seed;
+                    $reason = $this->historyService->requiresReason($fieldName)
+                        ? 'Reason for change '.$i
                         : null;
 
                     $historyRecord = $this->historyService->recordChange(
@@ -211,7 +213,7 @@ class ProjectHistoryServicePropertyTest extends TestCase
                 // Verify each history record has correct values
                 foreach ($createdHistories as $index => $historyData) {
                     $record = $historyData['record'];
-                    
+
                     $this->assertEquals($project->id, $record->project_id,
                         "History record {$index} should reference correct project");
                     $this->assertEquals($historyData['fieldName'], $record->field_name,
@@ -241,10 +243,10 @@ class ProjectHistoryServicePropertyTest extends TestCase
 
     /**
      * Property 7: History Records Created on Update - Null Values
-     * 
-     * For any field update where old_value or new_value is null, the history record 
+     *
+     * For any field update where old_value or new_value is null, the history record
      * SHALL correctly store null values.
-     * 
+     *
      * **Validates: Requirements 3.2, 9.2, 9.3**
      */
     public function test_history_records_null_values(): void
@@ -260,20 +262,21 @@ class ProjectHistoryServicePropertyTest extends TestCase
             ->then(function ($fieldName, $oldIsNull, $newIsNull, $seed) {
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'Null Test User ' . $seed . '_' . uniqid(),
-                    'email' => 'nulltest' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Null Test User '.$seed.'_'.uniqid(),
+                    'email' => 'nulltest'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
+                    'client_id' => $client->id,
                 ]);
 
                 // Generate values based on null flags
-                $oldValue = $oldIsNull ? null : 'Old Value ' . $seed;
-                $newValue = $newIsNull ? null : 'New Value ' . $seed;
+                $oldValue = $oldIsNull ? null : 'Old Value '.$seed;
+                $newValue = $newIsNull ? null : 'New Value '.$seed;
 
                 // Record the change
                 $historyRecord = $this->historyService->recordChange(
@@ -311,10 +314,10 @@ class ProjectHistoryServicePropertyTest extends TestCase
 
     /**
      * Property 7: History Records Created on Update - Value Type Conversion
-     * 
-     * For any field update with non-string values (integers, floats, enums), 
+     *
+     * For any field update with non-string values (integers, floats, enums),
      * the history record SHALL convert values to strings correctly.
-     * 
+     *
      * **Validates: Requirements 3.2, 9.2, 9.3**
      */
     public function test_history_records_value_type_conversion(): void
@@ -329,15 +332,16 @@ class ProjectHistoryServicePropertyTest extends TestCase
             ->then(function ($budgetInt, $decimalPart, $seed) {
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'Type Conv User ' . $seed . '_' . uniqid(),
-                    'email' => 'typeconv' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Type Conv User '.$seed.'_'.uniqid(),
+                    'email' => 'typeconv'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
+                    'client_id' => $client->id,
                 ]);
 
                 // Test with decimal budget value
@@ -384,10 +388,10 @@ class ProjectHistoryServicePropertyTest extends TestCase
 
     /**
      * Property 7: History Records Created on Update - getHistory Retrieval
-     * 
-     * For any project with history records, getHistory SHALL return all records 
+     *
+     * For any project with history records, getHistory SHALL return all records
      * in descending order by created_at with changedByUser relationship loaded.
-     * 
+     *
      * **Validates: Requirements 3.2, 9.2, 9.3**
      */
     public function test_history_records_retrieval(): void
@@ -401,15 +405,16 @@ class ProjectHistoryServicePropertyTest extends TestCase
             ->then(function ($recordCount, $seed) {
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'Retrieval User ' . $seed . '_' . uniqid(),
-                    'email' => 'retrieval' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Retrieval User '.$seed.'_'.uniqid(),
+                    'email' => 'retrieval'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
+                    'client_id' => $client->id,
                 ]);
 
                 // Create multiple history records with slight time differences
@@ -418,11 +423,11 @@ class ProjectHistoryServicePropertyTest extends TestCase
                     $record = $this->historyService->recordChange(
                         $project,
                         'title',
-                        'Old Title ' . $i,
-                        'New Title ' . $i
+                        'Old Title '.$i,
+                        'New Title '.$i
                     );
                     $createdRecords[] = $record;
-                    
+
                     // Small delay to ensure different timestamps
                     usleep(1000);
                 }
@@ -480,12 +485,12 @@ class ProjectHistoryServicePropertyTest extends TestCase
     private function generateNewValue(string $fieldName, int $seed): mixed
     {
         return match ($fieldName) {
-            'title' => 'Updated Title ' . $seed,
-            'description' => 'Updated Description ' . $seed,
+            'title' => 'Updated Title '.$seed,
+            'description' => 'Updated Description '.$seed,
             'status' => ProjectStatus::ACTIVE->value,
             'budget' => 20000.00 + $seed,
             'deadline' => now()->addDays(60 + $seed)->format('Y-m-d'),
-            default => 'New Value ' . $seed,
+            default => 'New Value '.$seed,
         };
     }
 }

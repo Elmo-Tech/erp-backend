@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\V1\Contracts\SignContractRequest;
 use App\Http\Requests\V1\Contracts\StoreContractRequest;
 use App\Http\Requests\V1\Contracts\UpdateContractRequest;
-use App\Http\Requests\V1\Contracts\SignContractRequest;
 use App\Http\Resources\V1\Contracts\ContractCollection;
 use App\Http\Resources\V1\Contracts\ContractMilestoneResource;
 use App\Http\Resources\V1\Contracts\ContractResource;
@@ -33,6 +33,7 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Get all contracts with pagination",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Contracts retrieved successfully")
      * )
      */
@@ -53,6 +54,7 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Create a new contract",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=201, description="Contract created successfully")
      * )
      */
@@ -77,6 +79,7 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Create contract from quotation",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=201, description="Contract created successfully")
      * )
      */
@@ -102,6 +105,7 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Get a single contract",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Contract retrieved successfully")
      * )
      */
@@ -122,6 +126,7 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Update a contract",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Contract updated successfully")
      * )
      */
@@ -146,6 +151,7 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Sign a contract",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Contract signed successfully")
      * )
      */
@@ -171,13 +177,17 @@ class ContractController extends Controller
      *     summary="Sign a contract (PATCH method)",
      *     description="Mark contract as signed and auto-convert lead to client",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="signedByClient", type="string", description="Name of person signing on behalf of client"),
      *             @OA\Property(property="signedPdf", type="file", description="Signed PDF file (optional)")
      *         )
      *     ),
+     *
      *     @OA\Response(response=200, description="Contract signed and lead converted to client successfully")
      * )
      */
@@ -207,6 +217,7 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Activate a signed contract",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Contract activated successfully")
      * )
      */
@@ -230,13 +241,17 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Update contract status",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"status"},
+     *
      *             @OA\Property(property="status", type="string", enum={"draft", "pending_signature", "signed", "active", "completed", "terminated"})
      *         )
      *     ),
+     *
      *     @OA\Response(response=200, description="Contract status updated successfully")
      * )
      */
@@ -265,6 +280,7 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Get milestones due for payment",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Milestones retrieved successfully")
      * )
      */
@@ -284,6 +300,7 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Mark milestone as paid",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Milestone marked as paid")
      * )
      */
@@ -307,6 +324,7 @@ class ContractController extends Controller
      *     tags={"Contracts"},
      *     summary="Delete a contract",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Contract deleted successfully")
      * )
      */

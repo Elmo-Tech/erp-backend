@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\AuditLog;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AuditService
@@ -21,7 +20,7 @@ class AuditService
         ?string $description = null
     ): AuditLog {
         $request = request();
-        
+
         return AuditLog::create([
             'user_id' => Auth::id(),
             'event_type' => $eventType,
@@ -136,27 +135,27 @@ class AuditService
             ->orderBy('created_at', 'desc');
 
         // Apply filters
-        if (!empty($filters['event_type'])) {
+        if (! empty($filters['event_type'])) {
             $query->where('event_type', $filters['event_type']);
         }
 
-        if (!empty($filters['severity'])) {
+        if (! empty($filters['severity'])) {
             $query->where('severity', $filters['severity']);
         }
 
-        if (!empty($filters['user_id'])) {
+        if (! empty($filters['user_id'])) {
             $query->where('user_id', $filters['user_id']);
         }
 
-        if (!empty($filters['action'])) {
+        if (! empty($filters['action'])) {
             $query->where('action', 'like', "%{$filters['action']}%");
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 

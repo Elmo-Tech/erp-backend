@@ -3,37 +3,16 @@
 namespace App\Http\Controllers\Api\V1\HR;
 
 use App\Http\Controllers\Controller;
-use App\Models\DeductionType;
-use App\Models\DeductionRule;
-use App\Models\EmployeeDeduction;
-use App\Models\RewardType;
-use App\Models\EmployeeReward;
-use App\Models\SalaryAdjustment;
-use App\Http\Resources\V1\HR\DeductionTypeResource;
-use App\Http\Resources\V1\HR\DeductionTypeCollection;
-use App\Http\Resources\V1\HR\RewardTypeResource;
-use App\Http\Resources\V1\HR\RewardTypeCollection;
-use App\Http\Resources\V1\HR\EmployeeDeductionResource;
-use App\Http\Resources\V1\HR\EmployeeDeductionCollection;
-use App\Http\Resources\V1\HR\EmployeeRewardResource;
-use App\Http\Resources\V1\HR\EmployeeRewardCollection;
-use App\Http\Resources\V1\HR\SalaryAdjustmentResource;
-use App\Http\Resources\V1\HR\SalaryAdjustmentCollection;
 use App\Http\Requests\V1\HR\StoreDeductionTypeRequest;
 use App\Http\Requests\V1\HR\UpdateDeductionTypeRequest;
-use App\Http\Requests\V1\HR\StoreRewardTypeRequest;
-use App\Http\Requests\V1\HR\UpdateRewardTypeRequest;
-use App\Http\Requests\V1\HR\StoreEmployeeDeductionRequest;
-use App\Http\Requests\V1\HR\UpdateEmployeeDeductionRequest;
-use App\Http\Requests\V1\HR\StoreEmployeeRewardRequest;
-use App\Http\Requests\V1\HR\UpdateEmployeeRewardRequest;
-use App\Http\Requests\V1\HR\ApproveDeductionRequest;
-use App\Http\Requests\V1\HR\ApproveRewardRequest;
-use Illuminate\Http\Request;
+use App\Http\Resources\V1\HR\DeductionTypeCollection;
+use App\Http\Resources\V1\HR\DeductionTypeResource;
+use App\Models\DeductionType;
+use App\Models\EmployeeDeduction;
 use Illuminate\Http\JsonResponse;
-use Spatie\QueryBuilder\QueryBuilder;
+use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
-use Illuminate\Support\Facades\DB;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class DeductionTypeController extends Controller
 {
@@ -52,7 +31,7 @@ class DeductionTypeController extends Controller
                 AllowedFilter::exact('category'),
             ])
             ->allowedSorts(['name', 'created_at', 'is_active'])
-            ->with(['rules'])
+            ->with(['deductionRules'])
             ->paginate($request->get('per_page', 15));
 
         return response()->json(new DeductionTypeCollection($deductionTypes));
@@ -80,7 +59,7 @@ class DeductionTypeController extends Controller
     {
         $this->authorize('view', $deductionType);
 
-        $deductionType->load(['rules', 'employeeDeductions' => function ($query) {
+        $deductionType->load(['deductionRules', 'employeeDeductions' => function ($query) {
             $query->latest()->limit(10);
         }]);
 

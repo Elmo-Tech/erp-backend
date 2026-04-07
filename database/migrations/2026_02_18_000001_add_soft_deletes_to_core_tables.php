@@ -6,10 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Migration: Add Soft Deletes to Core Business Tables
- * 
+ *
  * This migration adds soft delete capability to critical business tables
  * to prevent permanent data loss and enable data recovery.
- * 
+ *
  * Security: Soft deletes allow recovery of accidentally deleted records
  * and maintain audit trail integrity.
  */
@@ -42,7 +42,7 @@ return new class extends Migration
     public function up(): void
     {
         foreach ($this->tables as $tableName) {
-            if (Schema::hasTable($tableName) && !Schema::hasColumn($tableName, 'deleted_at')) {
+            if (Schema::hasTable($tableName) && ! Schema::hasColumn($tableName, 'deleted_at')) {
                 Schema::table($tableName, function (Blueprint $blueprint) {
                     $blueprint->softDeletes()->after('updated_at');
                 });

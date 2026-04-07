@@ -12,7 +12,7 @@ enum MeetingStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::SCHEDULED => __('enums.meeting_status.scheduled'),
             self::IN_PROGRESS => __('enums.meeting_status.in_progress'),
             self::COMPLETED => __('enums.meeting_status.completed'),
@@ -23,7 +23,7 @@ enum MeetingStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::SCHEDULED => 'blue',
             self::IN_PROGRESS => 'yellow',
             self::COMPLETED => 'green',

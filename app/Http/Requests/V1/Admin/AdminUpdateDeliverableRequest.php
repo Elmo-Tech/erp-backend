@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\V1\Admin;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use App\Helpers\ApiResponse;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class AdminUpdateDeliverableRequest extends FormRequest
 {
@@ -33,25 +33,25 @@ class AdminUpdateDeliverableRequest extends FormRequest
         return [
             'title.string' => __('validation.string', ['attribute' => 'title']),
             'title.max' => __('validation.max.string', ['attribute' => 'title', 'max' => 255]),
-            
+
             'description.string' => __('validation.string', ['attribute' => 'description']),
             'description.max' => __('validation.max.string', ['attribute' => 'description', 'max' => 5000]),
-            
+
             'acceptanceCriteria.string' => __('validation.string', ['attribute' => 'acceptanceCriteria']),
             'acceptanceCriteria.max' => __('validation.max.string', ['attribute' => 'acceptanceCriteria', 'max' => 5000]),
-            
+
             'submissionNotes.string' => __('validation.string', ['attribute' => 'submissionNotes']),
             'submissionNotes.max' => __('validation.max.string', ['attribute' => 'submissionNotes', 'max' => 5000]),
-            
+
             'reviewNotes.string' => __('validation.string', ['attribute' => 'reviewNotes']),
             'reviewNotes.max' => __('validation.max.string', ['attribute' => 'reviewNotes', 'max' => 5000]),
-            
+
             'pointsAwarded.integer' => __('validation.integer', ['attribute' => 'pointsAwarded']),
             'pointsAwarded.min' => __('validation.min.numeric', ['attribute' => 'pointsAwarded', 'min' => -1000]),
             'pointsAwarded.max' => __('validation.max.numeric', ['attribute' => 'pointsAwarded', 'max' => 1000]),
-            
+
             'isBonus.boolean' => __('validation.boolean', ['attribute' => 'isBonus']),
-            
+
             'order.integer' => __('validation.integer', ['attribute' => 'order']),
             'order.min' => __('validation.min.numeric', ['attribute' => 'order', 'min' => 0]),
         ];

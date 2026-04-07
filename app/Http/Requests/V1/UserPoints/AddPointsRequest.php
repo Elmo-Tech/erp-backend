@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\V1\UserPoints;
 
-use Illuminate\Foundation\Http\FormRequest;
-use App\Helpers\ApiResponse;
 use App\Enums\PointTransactionType;
+use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
@@ -48,7 +48,7 @@ class AddPointsRequest extends FormRequest
                 'integer',
                 'min:1',
                 'max:1000',
-                'not_in:0'
+                'not_in:0',
             ],
             'reason' => ['required', 'string', 'min:3', 'max:255'],
         ];

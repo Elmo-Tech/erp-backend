@@ -4,6 +4,7 @@ namespace Tests\Unit\Http\Controllers;
 
 use App\Enums\ProjectStatus;
 use App\Models\AuditLog;
+use App\Models\Client;
 use App\Models\Project;
 use App\Models\ProjectHistory;
 use App\Models\User;
@@ -16,23 +17,26 @@ use Tests\TestCase;
 
 /**
  * Property-Based Tests for ClientProjectController UI Approval Workflow
- * 
+ *
  * Feature: client-portal-security, Property 6: UI Approval Workflow
  * Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6
  */
 class ClientProjectControllerPropertyTest extends TestCase
 {
-    use TestTrait, RefreshDatabase;
+    use RefreshDatabase, TestTrait;
 
     private User $clientUser;
+
+    private Client $clientProfile;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create a client user for testing
         $this->clientUser = User::factory()->create();
         $this->clientUser->assignRole('client');
+        $this->clientProfile = $this->ensureClientProfile($this->clientUser);
         Auth::login($this->clientUser);
     }
 
@@ -42,26 +46,26 @@ class ClientProjectControllerPropertyTest extends TestCase
         if (isset($this->clientUser)) {
             // Delete audit logs for this user
             AuditLog::where('user_id', $this->clientUser->id)->delete();
-            
+
             // Delete project histories for projects owned by this client
-            $projectIds = Project::where('client_id', $this->clientUser->id)->pluck('id');
+            $projectIds = Project::where('client_id', $this->clientProfile->id)->pluck('id');
             ProjectHistory::whereIn('project_id', $projectIds)->delete();
-            
+
             // Delete projects owned by this client
-            Project::where('client_id', $this->clientUser->id)->delete();
+            Project::where('client_id', $this->clientProfile->id)->delete();
         }
-        
+
         parent::tearDown();
     }
 
     /**
      * Property 6: UI Approval Workflow
-     * 
+     *
      * For any client UI approval request on a project in 'ui_ux' status, the system SHALL:
      * set ui_approved_at to current timestamp, cancel any scheduled AutoApproveUIJob,
      * transition status to 'development', and record the approval in project_history.
      * For any project not in 'ui_ux' status, the approval request SHALL be rejected with an error.
-     * 
+     *
      * **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6**
      */
     public function test_ui_approval_workflow_for_ui_ux_projects(): void
@@ -77,7 +81,7 @@ class ClientProjectControllerPropertyTest extends TestCase
             ->then(function ($title, $budget, $deadline, $autoApprovalJobId) {
                 // Create a project in ui_ux status for this client
                 $project = Project::factory()->create([
-                    'client_id' => $this->clientUser->id,
+                    'client_id' => $this->clientProfile->id,
                     'title' => $title,
                     'status' => ProjectStatus::UI_UX,
                     'budget' => $budget,
@@ -157,9 +161,9 @@ class ClientProjectControllerPropertyTest extends TestCase
 
     /**
      * Property 6: UI Approval Workflow - Rejection for Non-UI_UX Projects
-     * 
+     *
      * For any project not in 'ui_ux' status, the approval request SHALL be rejected with an error.
-     * 
+     *
      * **Validates: Requirements 7.5**
      */
     public function test_ui_approval_workflow_rejects_non_ui_ux_projects(): void
@@ -174,14 +178,14 @@ class ClientProjectControllerPropertyTest extends TestCase
                     ProjectStatus::TESTING,
                     ProjectStatus::COMPLETED,
                     ProjectStatus::ON_HOLD,
-                    ProjectStatus::CANCELLED
+                    ProjectStatus::CANCELLED,
                 ]), // non-ui_ux statuses
                 Generator\elements(['Project Alpha', 'Beta System', 'Gamma App']) // project titles
             )
             ->then(function ($status, $title) {
                 // Create a project in non-ui_ux status for this client
                 $project = Project::factory()->create([
-                    'client_id' => $this->clientUser->id,
+                    'client_id' => $this->clientProfile->id,
                     'title' => $title,
                     'status' => $status,
                     'ui_approved_at' => null,
@@ -237,10 +241,10 @@ class ClientProjectControllerPropertyTest extends TestCase
 
     /**
      * Property 6: UI Approval Workflow - Already Approved Projects
-     * 
+     *
      * For any project that has already been approved (ui_approved_at is not null),
      * the approval request SHALL be rejected with an error.
-     * 
+     *
      * **Validates: Requirements 7.5**
      */
     public function test_ui_approval_workflow_rejects_already_approved_projects(): void
@@ -254,7 +258,7 @@ class ClientProjectControllerPropertyTest extends TestCase
             ->then(function ($approvalTimestamp, $title) {
                 // Create a project in ui_ux status that's already approved
                 $project = Project::factory()->create([
-                    'client_id' => $this->clientUser->id,
+                    'client_id' => $this->clientProfile->id,
                     'title' => $title,
                     'status' => ProjectStatus::UI_UX,
                     'ui_approved_at' => Carbon::parse($approvalTimestamp),
@@ -300,10 +304,10 @@ class ClientProjectControllerPropertyTest extends TestCase
 
     /**
      * Property 6: UI Approval Workflow - Multiple Concurrent Approvals
-     * 
+     *
      * For any sequence of UI approval requests on different projects in 'ui_ux' status,
      * each SHALL be processed independently and correctly.
-     * 
+     *
      * **Validates: Requirements 7.2, 7.3, 7.4, 7.6**
      */
     public function test_ui_approval_workflow_multiple_projects(): void
@@ -317,17 +321,17 @@ class ClientProjectControllerPropertyTest extends TestCase
             ->then(function ($projectCount, $baseJobId) {
                 // Clean up any existing data for this user before starting
                 AuditLog::where('user_id', $this->clientUser->id)->delete();
-                $existingProjectIds = Project::where('client_id', $this->clientUser->id)->pluck('id');
+                $existingProjectIds = Project::where('client_id', $this->clientProfile->id)->pluck('id');
                 ProjectHistory::whereIn('project_id', $existingProjectIds)->delete();
-                Project::where('client_id', $this->clientUser->id)->delete();
-                
+                Project::where('client_id', $this->clientProfile->id)->delete();
+
                 $projects = [];
-                
+
                 // Create multiple projects in ui_ux status
                 for ($i = 0; $i < $projectCount; $i++) {
-                    $jobId = $baseJobId ? $baseJobId . '_' . $i : null;
+                    $jobId = $baseJobId ? $baseJobId.'_'.$i : null;
                     $projects[] = Project::factory()->create([
-                        'client_id' => $this->clientUser->id,
+                        'client_id' => $this->clientProfile->id,
                         'title' => "Project {$i}",
                         'status' => ProjectStatus::UI_UX,
                         'ui_approved_at' => null,
@@ -340,7 +344,7 @@ class ClientProjectControllerPropertyTest extends TestCase
                 // Approve each project
                 foreach ($projects as $index => $project) {
                     $beforeApproval = Carbon::now()->subSecond();
-                    
+
                     $response = $this->postJson("/api/v1/client/projects/{$project->id}/approve-ui", [], [
                         'Accept-Language' => 'en',
                     ]);
@@ -362,7 +366,7 @@ class ClientProjectControllerPropertyTest extends TestCase
                 // Verify all projects were approved correctly
                 foreach ($projects as $index => $project) {
                     $project->refresh();
-                    
+
                     // Verify approval timestamp
                     $this->assertNotNull($project->ui_approved_at);
                     $this->assertGreaterThanOrEqual($approvalTimes[$index]['before'], $project->ui_approved_at);
@@ -402,10 +406,10 @@ class ClientProjectControllerPropertyTest extends TestCase
 
     /**
      * Property 6: UI Approval Workflow - Transaction Integrity
-     * 
+     *
      * For any UI approval request, if any part of the workflow fails,
      * the entire transaction SHALL be rolled back maintaining data consistency.
-     * 
+     *
      * **Validates: Requirements 7.2, 7.3, 7.4, 7.6**
      */
     public function test_ui_approval_workflow_transaction_integrity(): void
@@ -419,13 +423,13 @@ class ClientProjectControllerPropertyTest extends TestCase
             ->then(function ($title, $jobId) {
                 // Clean up any existing data for this user before starting
                 AuditLog::where('user_id', $this->clientUser->id)->delete();
-                $existingProjectIds = Project::where('client_id', $this->clientUser->id)->pluck('id');
+                $existingProjectIds = Project::where('client_id', $this->clientProfile->id)->pluck('id');
                 ProjectHistory::whereIn('project_id', $existingProjectIds)->delete();
-                Project::where('client_id', $this->clientUser->id)->delete();
-                
+                Project::where('client_id', $this->clientProfile->id)->delete();
+
                 // Create a project in ui_ux status
                 $project = Project::factory()->create([
-                    'client_id' => $this->clientUser->id,
+                    'client_id' => $this->clientProfile->id,
                     'title' => $title,
                     'status' => ProjectStatus::UI_UX,
                     'ui_approved_at' => null,
@@ -469,7 +473,7 @@ class ClientProjectControllerPropertyTest extends TestCase
                 $statusHistory = ProjectHistory::where('project_id', $project->id)
                     ->where('field_name', 'status')
                     ->first(); // Observer creates this without specific reason
-                
+
                 $approvalHistory = ProjectHistory::where('project_id', $project->id)
                     ->where('field_name', 'ui_approved_at')
                     ->where('reason', 'Client approved UI deliverables')

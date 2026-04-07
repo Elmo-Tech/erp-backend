@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1\Admin;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use OpenApi\Attributes as OA;
@@ -22,6 +23,9 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'updatedAt', type: 'string', format: 'date-time', example: '2024-01-15T10:30:00Z'),
     ]
 )]
+/**
+ * @mixin User
+ */
 class AdminUserResource extends JsonResource
 {
     /**
@@ -31,21 +35,24 @@ class AdminUserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        /** @var User $user */
+        $user = $this->resource;
+
         $data = [
-            'userId' => $this->id,
-            'name' => $this->name ?? "",
-            'email' => $this->email ?? "",
-            'emailVerifiedAt' => $this->email_verified_at?->toISOString() ?? null,
-            'avatar' => $this->avatar,
-            'skills' => $this->skills ?? [],
-            'roles' => $this->roles->pluck('name')->toArray(),
-            'createdAt' => $this->created_at?->toISOString() ?? "",
-            'updatedAt' => $this->updated_at?->toISOString() ?? "",
+            'userId' => $user->id,
+            'name' => $user->name ?? '',
+            'email' => $user->email ?? '',
+            'emailVerifiedAt' => $user->email_verified_at?->toISOString() ?? null,
+            'avatar' => $user->avatar,
+            'skills' => $user->skills ?? [],
+            'roles' => $user->roles->pluck('name')->toArray(),
+            'createdAt' => $user->created_at?->toISOString() ?? '',
+            'updatedAt' => $user->updated_at?->toISOString() ?? '',
         ];
 
         // Conditionally include internal hourly cost based on permission
         if ($request->user()?->can('view_internal_costs')) {
-            $data['internalHourlyCost'] = $this->internal_hourly_cost ? (float) $this->internal_hourly_cost : 0.0;
+            $data['internalHourlyCost'] = $user->internal_hourly_cost ? (float) $user->internal_hourly_cost : 0.0;
         }
 
         return $data;

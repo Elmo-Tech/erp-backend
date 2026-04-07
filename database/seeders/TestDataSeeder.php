@@ -15,14 +15,14 @@ class TestDataSeeder extends Seeder
     public function run(): void
     {
         $user = User::first();
-        
+
         // Create test lead
         $lead = Lead::create([
             'name' => 'Test Lead',
             'email' => 'test@example.com',
             'company' => 'Test Company',
             'source' => 'website',
-            'status' => 'new'
+            'status' => 'new',
         ]);
 
         // Create test quotation
@@ -33,12 +33,12 @@ class TestDataSeeder extends Seeder
             'discount_percentage' => 10.0,
             'final_price' => 4500.00,
             'currency' => 'USD',
-            'status' => 'approved'
+            'status' => 'approved',
         ]);
 
         // Create multiple test projects
         $projects = [];
-        
+
         // Project 1 - Active project
         $project1 = Project::create([
             'title' => 'E-commerce Website',
@@ -46,13 +46,13 @@ class TestDataSeeder extends Seeder
             'status' => 'active',
             'client_id' => $user->id,
             'budget' => 5000.00,
-            'deadline' => now()->addDays(30)
+            'deadline' => now()->addDays(30),
         ]);
 
         // Add user as project member
         $project1->members()->create([
             'user_id' => $user->id,
-            'role' => 'lead'
+            'role' => 'lead',
         ]);
 
         // Create tasks for project 1
@@ -62,7 +62,7 @@ class TestDataSeeder extends Seeder
             'description' => 'Build React frontend',
             'status' => 'completed',
             'estimated_hours' => 40,
-            'completed_at' => now()->subDays(1)
+            'completed_at' => now()->subDays(1),
         ]);
 
         $task2 = Task::create([
@@ -70,20 +70,20 @@ class TestDataSeeder extends Seeder
             'title' => 'Backend API',
             'description' => 'Build Laravel API',
             'status' => 'in_progress',
-            'estimated_hours' => 30
+            'estimated_hours' => 30,
         ]);
 
         // Add user as task assignee
         $task1->assignees()->create([
             'user_id' => $user->id,
             'role' => 'developer',
-            'is_primary' => true
+            'is_primary' => true,
         ]);
 
         $task2->assignees()->create([
             'user_id' => $user->id,
             'role' => 'developer',
-            'is_primary' => true
+            'is_primary' => true,
         ]);
 
         // Create time entries for tasks
@@ -93,7 +93,7 @@ class TestDataSeeder extends Seeder
             'trackable_type' => 'App\\Models\\Task',
             'start_time' => now()->subDays(2)->setHour(9),
             'end_time' => now()->subDays(2)->setHour(17),
-            'duration_minutes' => 480 // 8 hours
+            'duration_minutes' => 480, // 8 hours
         ]);
 
         TimeEntry::create([
@@ -102,7 +102,7 @@ class TestDataSeeder extends Seeder
             'trackable_type' => 'App\\Models\\Task',
             'start_time' => now()->subDays(1)->setHour(10),
             'end_time' => now()->subDays(1)->setHour(16),
-            'duration_minutes' => 360 // 6 hours
+            'duration_minutes' => 360, // 6 hours
         ]);
 
         // Project 2 - Completed project
@@ -112,13 +112,13 @@ class TestDataSeeder extends Seeder
             'status' => 'completed',
             'client_id' => $user->id,
             'budget' => 3000.00,
-            'deadline' => now()->subDays(10)
+            'deadline' => now()->subDays(10),
         ]);
 
         // Add user as project member
         $project2->members()->create([
             'user_id' => $user->id,
-            'role' => 'developer'
+            'role' => 'developer',
         ]);
 
         // Create completed task for project 2
@@ -128,13 +128,13 @@ class TestDataSeeder extends Seeder
             'description' => 'Build mobile interface',
             'status' => 'completed',
             'estimated_hours' => 25,
-            'completed_at' => now()->subDays(5)
+            'completed_at' => now()->subDays(5),
         ]);
 
         $task3->assignees()->create([
             'user_id' => $user->id,
             'role' => 'developer',
-            'is_primary' => true
+            'is_primary' => true,
         ]);
 
         // Create time entry for completed task
@@ -144,7 +144,7 @@ class TestDataSeeder extends Seeder
             'trackable_type' => 'App\\Models\\Task',
             'start_time' => now()->subDays(7)->setHour(9),
             'end_time' => now()->subDays(7)->setHour(14),
-            'duration_minutes' => 300 // 5 hours
+            'duration_minutes' => 300, // 5 hours
         ]);
 
         TimeEntry::create([
@@ -153,7 +153,7 @@ class TestDataSeeder extends Seeder
             'trackable_type' => 'App\\Models\\Task',
             'start_time' => now()->subDays(6)->setHour(9),
             'end_time' => now()->subDays(6)->setHour(13),
-            'duration_minutes' => 240 // 4 hours
+            'duration_minutes' => 240, // 4 hours
         ]);
 
         if ($this->command) {
@@ -161,7 +161,7 @@ class TestDataSeeder extends Seeder
             $this->command->info('Projects created: 2');
             $this->command->info('Tasks created: 3');
             $this->command->info('Time entries created: 4');
-            $this->command->info('Total hours logged: ' . (480 + 360 + 300 + 240) / 60 . ' hours');
+            $this->command->info('Total hours logged: '.(480 + 360 + 300 + 240) / 60 .' hours');
         }
     }
 }

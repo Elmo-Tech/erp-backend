@@ -50,7 +50,7 @@ enum ProjectStatus: string
             self::CANCELLED,
         ];
 
-        return array_filter($allStatuses, fn($status) => $status !== $this);
+        return array_filter($allStatuses, fn ($status) => $status !== $this);
     }
 
     /**

@@ -20,7 +20,7 @@ return new class extends Migration
 
             // Unique constraint
             $table->unique(['project_id', 'user_id']);
-            
+
             // Indexes
             $table->index('project_id');
             $table->index('user_id');

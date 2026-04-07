@@ -19,39 +19,39 @@ class MissingPermissionsSeeder extends Seeder
         $permissions = [
             // Time Entry permissions
             'edit_time_entries',
-            
+
             // Attendance permissions
             'edit_attendance',
-            
+
             // Project permissions
             'view_all_projects',
             'view_project_budget',
-            
+
             // Invoice permissions
             'send_invoices',
             'cancel_invoices',
-            
+
             // Task creation permissions (granular)
             'create_main_tasks',
             'create_weekly_tasks',
             'create_subtasks',
-            
+
             // Task edit permissions (granular)
             'edit_main_tasks',
             'edit_weekly_tasks',
             'edit_subtasks',
-            
+
             // Task team & test scenarios
             'manage_task_team',
             'manage_task_test_scenarios',
-            
+
             // Change Request permissions
             'view_change_requests',
             'create_change_requests',
             'approve_change_requests',
             'reject_change_requests',
             'manage_change_requests',
-            
+
             // Milestones permissions
             'view_milestones',
             'create_milestones',
@@ -77,7 +77,7 @@ class MissingPermissionsSeeder extends Seeder
         $adminRole = Role::where('name', 'admin')->first();
         if ($adminRole) {
             $adminPermissions = Permission::whereNotIn('name', [
-                'view_profitability', 
+                'view_profitability',
                 'view_cost',
                 'view_internal_costs',
                 'manage_internal_costs',
@@ -112,7 +112,7 @@ class MissingPermissionsSeeder extends Seeder
                 'edit_milestones',
                 'manage_milestones',
             ];
-            
+
             foreach ($managerNewPermissions as $permission) {
                 $managerRole->givePermissionTo($permission);
             }
@@ -129,7 +129,7 @@ class MissingPermissionsSeeder extends Seeder
                 'create_change_requests',
                 'view_milestones',
             ];
-            
+
             foreach ($developerNewPermissions as $permission) {
                 $developerRole->givePermissionTo($permission);
             }

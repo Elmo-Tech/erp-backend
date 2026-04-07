@@ -79,7 +79,7 @@ class HandoverService
      */
     public function completeHandover(ProjectHandover $handover, User $user): ProjectHandover
     {
-        if (!$handover->isChecklistComplete()) {
+        if (! $handover->isChecklistComplete()) {
             throw new \InvalidArgumentException(__('handover.checklist_incomplete'));
         }
 
@@ -99,7 +99,7 @@ class HandoverService
     {
         $handover->update([
             'status' => HandoverStatus::DISPUTED,
-            'notes' => $handover->notes . "\n\n[DISPUTE]: " . $reason,
+            'notes' => $handover->notes."\n\n[DISPUTE]: ".$reason,
             'updated_by' => $user->id,
         ]);
 

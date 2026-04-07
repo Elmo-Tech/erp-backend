@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\Api\V1\HR;
 
 use App\Http\Controllers\Controller;
-use App\Models\RewardType;
-use App\Models\EmployeeReward;
-use App\Http\Resources\V1\HR\RewardTypeResource;
-use App\Http\Resources\V1\HR\RewardTypeCollection;
 use App\Http\Requests\V1\HR\StoreRewardTypeRequest;
 use App\Http\Requests\V1\HR\UpdateRewardTypeRequest;
-use Illuminate\Http\Request;
+use App\Http\Resources\V1\HR\RewardTypeCollection;
+use App\Http\Resources\V1\HR\RewardTypeResource;
+use App\Models\EmployeeReward;
+use App\Models\RewardType;
 use Illuminate\Http\JsonResponse;
-use Spatie\QueryBuilder\QueryBuilder;
+use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class RewardTypeController extends Controller
 {

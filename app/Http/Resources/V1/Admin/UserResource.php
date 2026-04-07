@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1\Admin;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use OpenApi\Attributes as OA;
@@ -24,26 +25,32 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'updatedAt', type: 'string', format: 'date-time'),
     ]
 )]
+/**
+ * @mixin User
+ */
 class UserResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        /** @var User $user */
+        $user = $this->resource;
+
         return [
-            'userId' => $this->id,
-            'name' => $this->name ?? "",
-            'email' => $this->email ?? "",
-            'emailVerifiedAt' => $this->email_verified_at?->toISOString(),
-            'skills' => $this->skills ?? [],
-            'specialization' => $this->specialization?->value ?? 'fullstack',
-            'specializationLabel' => $this->specialization?->label() ?? 'Full Stack Developer',
-            'specializationColor' => $this->specialization?->color() ?? 'bg-purple-100 text-purple-800',
-            'roles' => $this->roles->pluck('name')->toArray(),
-            'isActive' => (bool) ($this->is_active ?? true),
-            'graceDaysAllowed' => (int) ($this->grace_days_allowed ?? 2),
-            'graceDaysUsed' => (int) ($this->grace_days_used ?? 0),
-            'graceDaysRemaining' => max(0, ($this->grace_days_allowed ?? 2) - ($this->grace_days_used ?? 0)),
-            'createdAt' => $this->created_at?->toISOString() ?? "",
-            'updatedAt' => $this->updated_at?->toISOString() ?? "",
+            'userId' => $user->id,
+            'name' => $user->name ?? '',
+            'email' => $user->email ?? '',
+            'emailVerifiedAt' => $user->email_verified_at?->toISOString(),
+            'skills' => $user->skills ?? [],
+            'specialization' => $user->specialization->value,
+            'specializationLabel' => $user->specialization->label(),
+            'specializationColor' => $user->specialization->color(),
+            'roles' => $user->roles->pluck('name')->toArray(),
+            'isActive' => $user->is_active,
+            'graceDaysAllowed' => (int) ($user->grace_days_allowed ?? 2),
+            'graceDaysUsed' => (int) ($user->grace_days_used ?? 0),
+            'graceDaysRemaining' => max(0, (int) ($user->grace_days_allowed ?? 2) - (int) ($user->grace_days_used ?? 0)),
+            'createdAt' => $user->created_at?->toISOString() ?? '',
+            'updatedAt' => $user->updated_at?->toISOString() ?? '',
         ];
     }
 }

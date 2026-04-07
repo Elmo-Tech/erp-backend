@@ -22,8 +22,8 @@ class BillingService
         return DB::transaction(function () use ($project, $milestoneName) {
             // Load project with contract
             $project->load('contract');
-            
-            if (!$project->contract) {
+
+            if (! $project->contract) {
                 throw new \InvalidArgumentException('Project must have a contract to generate milestone invoices');
             }
 
@@ -41,8 +41,8 @@ class BillingService
 
             // Get milestone details from contract payment plan
             $milestoneDetails = $this->getMilestoneDetails($milestoneName);
-            
-            if (!$milestoneDetails) {
+
+            if (! $milestoneDetails) {
                 throw new \InvalidArgumentException("Unknown milestone: {$milestoneName}");
             }
 
@@ -121,7 +121,7 @@ class BillingService
     public function markAsPaid(Invoice $invoice, array $paymentDetails = []): Invoice
     {
         return DB::transaction(function () use ($invoice, $paymentDetails) {
-            if (!$invoice->isPayable()) {
+            if (! $invoice->isPayable()) {
                 throw new \InvalidArgumentException('Invoice cannot be marked as paid in current status');
             }
 
@@ -153,8 +153,8 @@ class BillingService
     public function generatePendingInvoices(Project $project): array
     {
         $project->load('contract');
-        
-        if (!$project->contract) {
+
+        if (! $project->contract) {
             throw new \InvalidArgumentException('Project must have a contract to generate invoices');
         }
 
@@ -191,7 +191,7 @@ class BillingService
         ];
 
         $triggers = $milestonesTriggers[$milestoneName] ?? [];
-        
+
         return in_array($project->status->value, $triggers);
     }
 
@@ -201,7 +201,7 @@ class BillingService
     private function getMilestoneDetails(string $milestoneName): ?array
     {
         $milestones = $this->getProjectMilestones();
-        
+
         return collect($milestones)->firstWhere('name', $milestoneName);
     }
 
@@ -240,7 +240,7 @@ class BillingService
 
         foreach ($overdueInvoices as $invoice) {
             $invoice->update(['status' => InvoiceStatus::OVERDUE]);
-            
+
             $this->auditService->logInvoiceEvent(
                 action: 'marked_overdue',
                 invoice: $invoice,
@@ -250,7 +250,7 @@ class BillingService
                 ],
                 severity: 'warning'
             );
-            
+
             $count++;
         }
 

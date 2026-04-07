@@ -5,7 +5,6 @@ namespace App\Services\HR;
 use App\Models\Attendance;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 
 class AttendanceService
@@ -21,7 +20,7 @@ class AttendanceService
 
         // Check if already clocked in today
         $existing = Attendance::where('user_id', $user->id)
-            ->where('date', $today)
+            ->whereDate('date', $today)
             ->first();
 
         if ($existing) {
@@ -81,11 +80,11 @@ class AttendanceService
         $today = $now->toDateString();
 
         $attendance = Attendance::where('user_id', $user->id)
-            ->where('date', $today)
+            ->whereDate('date', $today)
             ->whereNull('clock_out')
             ->first();
 
-        if (!$attendance) {
+        if (! $attendance) {
             return null;
         }
 
@@ -102,7 +101,7 @@ class AttendanceService
     public function getTodayAttendance(User $user): ?Attendance
     {
         return Attendance::where('user_id', $user->id)
-            ->where('date', Carbon::today('Africa/Cairo')->toDateString())
+            ->whereDate('date', Carbon::today('Africa/Cairo')->toDateString())
             ->first();
     }
 
@@ -114,11 +113,11 @@ class AttendanceService
         $query = Attendance::where('user_id', $user->id);
 
         if ($startDate) {
-            $query->where('date', '>=', $startDate);
+            $query->whereDate('date', '>=', $startDate);
         }
 
         if ($endDate) {
-            $query->where('date', '<=', $endDate);
+            $query->whereDate('date', '<=', $endDate);
         }
 
         return $query->orderBy('date', 'desc')->paginate($perPage);
@@ -129,33 +128,27 @@ class AttendanceService
      */
     public function getAllAttendance(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        \Log::info('AttendanceService getAllAttendance called with filters:', $filters);
-
         $query = Attendance::with('user');
 
-        if (!empty($filters['userId'])) {
+        if (! empty($filters['userId'])) {
             $userId = is_numeric($filters['userId']) ? (int) $filters['userId'] : $filters['userId'];
-            \Log::info('Applying userId filter:', ['userId' => $userId, 'original' => $filters['userId'], 'type' => gettype($userId)]);
             $query->where('user_id', $userId);
         }
 
-        if (!empty($filters['startDate'])) {
-            \Log::info('Applying startDate filter:', ['startDate' => $filters['startDate']]);
-            $query->where('date', '>=', $filters['startDate']);
+        if (! empty($filters['startDate'])) {
+            $query->whereDate('date', '>=', $filters['startDate']);
         }
 
-        if (!empty($filters['endDate'])) {
-            \Log::info('Applying endDate filter:', ['endDate' => $filters['endDate']]);
-            $query->where('date', '<=', $filters['endDate']);
+        if (! empty($filters['endDate'])) {
+            $query->whereDate('date', '<=', $filters['endDate']);
         }
 
-        if (!empty($filters['date'])) {
-            \Log::info('Applying date filter:', ['date' => $filters['date']]);
-            $query->where('date', $filters['date']);
+        if (! empty($filters['date'])) {
+            $query->whereDate('date', $filters['date']);
         }
 
         // Only show employees
-        $query->whereHas('user', fn($q) => $q->where('is_employee', true));
+        $query->whereHas('user', fn ($q) => $q->where('is_employee', true));
 
         return $query->orderBy('date', 'desc')->paginate($perPage);
     }
@@ -177,7 +170,7 @@ class AttendanceService
         $totalIdleMinutes = $attendances->sum('idle_minutes');
         $totalDeductionMinutes = $attendances->sum('deduction_minutes');
         $graceDaysUsed = $attendances->where('used_grace_day', true)->count();
-        $totalWorkedMinutes = $attendances->sum(fn($a) => $a->getWorkedMinutes());
+        $totalWorkedMinutes = $attendances->sum(fn ($a) => $a->getWorkedMinutes());
 
         // Calculate deduction amount
         $deductionAmount = 0;
@@ -213,7 +206,7 @@ class AttendanceService
 
         while ($start->lte($end)) {
             // Exclude Friday and Saturday (Middle East weekend)
-            if (!$start->isFriday() && !$start->isSaturday()) {
+            if (! $start->isFriday() && ! $start->isSaturday()) {
                 $workDays++;
             }
             $start->addDay();
@@ -237,11 +230,11 @@ class AttendanceService
 
         // Get expected clock in time
         $expectedClockIn = $user->work_start_time ?? '10:00:00';
-        
+
         // Calculate late minutes automatically
-        $expectedTime = Carbon::parse($data['date'] . ' ' . $expectedClockIn);
+        $expectedTime = Carbon::parse($data['date'].' '.$expectedClockIn);
         $lateMinutes = 0;
-        
+
         if ($clockIn->gt($expectedTime)) {
             $lateMinutes = $expectedTime->diffInMinutes($clockIn);
         }
@@ -315,8 +308,8 @@ class AttendanceService
         if ($recalculateLate) {
             $clockIn = $updateData['clock_in'];
             $expectedClockIn = $attendance->expected_clock_in ?? $user->work_start_time ?? '10:00:00';
-            $expectedTime = Carbon::parse($attendance->date->format('Y-m-d') . ' ' . $expectedClockIn);
-            
+            $expectedTime = Carbon::parse($attendance->date->format('Y-m-d').' '.$expectedClockIn);
+
             $lateMinutes = 0;
             if ($clockIn->gt($expectedTime)) {
                 $lateMinutes = $expectedTime->diffInMinutes($clockIn);

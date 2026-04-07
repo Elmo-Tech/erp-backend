@@ -2,14 +2,14 @@
 
 namespace App\Services\Reporting;
 
+use App\Enums\PointTransactionType;
+use App\Enums\TaskStatus;
 use App\Models\Attendance;
 use App\Models\PointTransaction;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
-use App\Enums\PointTransactionType;
-use App\Enums\TaskStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -28,21 +28,21 @@ class EmployeeReviewService
     private function buildPointSignature(
         int $userId,
         int $points,
-        
+
         $createdAt,
         ?string $transactionType,
         ?string $reason
     ): string {
         $timestamp = Carbon::parse($createdAt)->format('Y-m-d H:i');
         $normalizedReason = trim(strtolower($reason ?? ''));
+
         return implode('|', [$userId, $points, $transactionType ?? '', $timestamp, $normalizedReason]);
     }
+
     /**
      * Get comprehensive employee review data.
      *
-     * @param int $userId
-     * @param array $filters ['dateFrom' => string, 'dateTo' => string, 'page' => int, 'perPage' => int, 'forPdf' => bool]
-     * @return array
+     * @param  array  $filters  ['dateFrom' => string, 'dateTo' => string, 'page' => int, 'perPage' => int, 'forPdf' => bool]
      */
     public function getEmployeeReview(int $userId, array $filters = []): array
     {
@@ -62,11 +62,11 @@ class EmployeeReviewService
         $attendance = $this->getAttendanceData($user, $filters);
         $productivity = $this->getProductivityMetrics($user, $filters);
         $points = $this->getPointsData($user, $filters);
-        
+
         // إضافة معلومات أيام السماح والخصومات
         $gracePeriod = $this->getGracePeriodInfo($user, $filters);
         $deductions = $this->getDeductionInfo($user, $filters);
-        
+
         // إضافة تحليلات متقدمة
         $taskPerformance = $this->getTaskPerformanceAnalysis($user, $filters);
         $qualityMetrics = $this->getQualityMetrics($user, $filters);
@@ -74,7 +74,7 @@ class EmployeeReviewService
 
         // Generate project breakdown for Blade template
         $projectBreakdown = $projects['projects'] ?? [];
-        
+
         // Generate weekly statistics for Blade template
         $weeklyStats = $this->getWeeklyStatistics($user, $filters);
 
@@ -119,7 +119,7 @@ class EmployeeReviewService
         $taskCompletionRate = $this->calculateTaskCompletionRate($user, $filters);
         $averageBounceRate = $this->calculateAverageBounceRate($user, $filters);
         $attendanceDays = $this->countAttendanceDays($user, $filters);
-        
+
         // حساب إحصائيات النقاط للفترة
         $pointsStats = $this->calculatePointsStats($user, $filters);
 
@@ -146,10 +146,10 @@ class EmployeeReviewService
             ->whereNotNull('end_time')
             ->with(['trackable']);
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->whereDate('start_time', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->whereDate('start_time', '<=', $filters['dateTo']);
         }
 
@@ -237,8 +237,8 @@ class EmployeeReviewService
      */
     private function getWeeklyStatistics(User $user, array $filters): array
     {
-        $dateFrom = !empty($filters['dateFrom']) ? Carbon::parse($filters['dateFrom']) : Carbon::now()->startOfMonth();
-        $dateTo = !empty($filters['dateTo']) ? Carbon::parse($filters['dateTo']) : Carbon::now()->endOfMonth();
+        $dateFrom = ! empty($filters['dateFrom']) ? Carbon::parse($filters['dateFrom']) : Carbon::now()->startOfMonth();
+        $dateTo = ! empty($filters['dateTo']) ? Carbon::parse($filters['dateTo']) : Carbon::now()->endOfMonth();
 
         // Get all time entries for the period
         $timeEntries = TimeEntry::where('user_id', $user->id)
@@ -259,17 +259,18 @@ class EmployeeReviewService
         while ($currentDate->lte($dateTo)) {
             $weekStart = $currentDate->copy();
             $weekEnd = $currentDate->copy()->endOfWeek();
-            
+
             // Get time entries for this week
             $weekTimeEntries = $timeEntries->filter(function ($entry) use ($weekStart, $weekEnd) {
                 $entryDate = Carbon::parse($entry->start_time);
+
                 return $entryDate->between($weekStart, $weekEnd);
             });
 
             // Calculate daily breakdown
             $dailyBreakdown = [];
             $workingDays = 0;
-            
+
             for ($day = $weekStart->copy(); $day->lte($weekEnd); $day->addDay()) {
                 $dayEntries = $weekTimeEntries->filter(function ($entry) use ($day) {
                     return Carbon::parse($entry->start_time)->isSameDay($day);
@@ -277,7 +278,7 @@ class EmployeeReviewService
 
                 $dayHours = round($dayEntries->sum('duration_minutes') / 60, 1);
                 $attendance = $attendances->get($day->format('Y-m-d'));
-                
+
                 // Determine status
                 $status = 'no_work';
                 if ($dayHours > 0) {
@@ -305,11 +306,11 @@ class EmployeeReviewService
             }
 
             $totalWeekHours = round($weekTimeEntries->sum('duration_minutes') / 60, 1);
-            
+
             if ($totalWeekHours > 0 || $weekStart->lte(Carbon::now())) {
                 $weeklyData[] = [
                     'weekNumber' => $weekStart->weekOfYear,
-                    'dateRange' => $weekStart->format('M j') . ' - ' . $weekEnd->format('M j, Y'),
+                    'dateRange' => $weekStart->format('M j').' - '.$weekEnd->format('M j, Y'),
                     'totalHours' => $totalWeekHours,
                     'workingDays' => $workingDays,
                     'dailyBreakdown' => $dailyBreakdown,
@@ -443,11 +444,11 @@ class EmployeeReviewService
      */
     private function applyDateRangeConstraint(Builder|Relation $query, string $column, array $filters): void
     {
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->whereDate($column, '>=', $filters['dateFrom']);
         }
 
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->whereDate($column, '<=', $filters['dateTo']);
         }
     }
@@ -572,10 +573,10 @@ class EmployeeReviewService
     {
         $query = Attendance::where('user_id', $user->id);
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->where('date', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->where('date', '<=', $filters['dateTo']);
         }
 
@@ -597,8 +598,8 @@ class EmployeeReviewService
             'lateDays' => $attendances->where('is_late', true)->count(),
             'totalLateMinutes' => $attendances->sum('late_minutes'),
             'totalIdleMinutes' => $attendances->sum('idle_minutes'),
-            'averageIdlePerDay' => $attendances->count() > 0 
-                ? round($attendances->sum('idle_minutes') / $attendances->count(), 2) 
+            'averageIdlePerDay' => $attendances->count() > 0
+                ? round($attendances->sum('idle_minutes') / $attendances->count(), 2)
                 : 0,
             'attendanceList' => $attendanceList,
         ];
@@ -616,8 +617,8 @@ class EmployeeReviewService
 
         // Calculate efficiency (tracked time vs idle time)
         $totalWorkMinutes = $totalTrackedMinutes + $totalIdleMinutes;
-        $efficiency = $totalWorkMinutes > 0 
-            ? ($totalTrackedMinutes / $totalWorkMinutes) * 100 
+        $efficiency = $totalWorkMinutes > 0
+            ? ($totalTrackedMinutes / $totalWorkMinutes) * 100
             : 0;
 
         return [
@@ -636,7 +637,7 @@ class EmployeeReviewService
         // Weight: 70% completion rate, 30% quality (inverse of bounce rate)
         $qualityScore = max(0, 100 - ($bounceRate * 100));
         $score = ($completionRate * 0.7) + ($qualityScore * 0.3);
-        
+
         return number_format($score, 2, '.', '');
     }
 
@@ -648,10 +649,10 @@ class EmployeeReviewService
         $query = TimeEntry::where('user_id', $user->id)
             ->whereNotNull('end_time');
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->whereDate('start_time', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->whereDate('start_time', '<=', $filters['dateTo']);
         }
 
@@ -665,10 +666,10 @@ class EmployeeReviewService
     {
         $query = Attendance::where('user_id', $user->id);
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->where('date', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->where('date', '<=', $filters['dateTo']);
         }
 
@@ -717,10 +718,10 @@ class EmployeeReviewService
     {
         $query = Attendance::where('user_id', $user->id);
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->where('date', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->where('date', '<=', $filters['dateTo']);
         }
 
@@ -732,7 +733,7 @@ class EmployeeReviewService
      */
     private function validateDateRange(array $filters): void
     {
-        if (!empty($filters['dateFrom']) && !empty($filters['dateTo'])) {
+        if (! empty($filters['dateFrom']) && ! empty($filters['dateTo'])) {
             $dateFrom = Carbon::parse($filters['dateFrom']);
             $dateTo = Carbon::parse($filters['dateTo']);
 
@@ -745,10 +746,8 @@ class EmployeeReviewService
     /**
      * Get points data for the user from PointTransaction (single source of truth).
      * This method consolidates all point data from the unified PointTransaction system.
-     * 
-     * @param User $user
-     * @param array $filters ['dateFrom', 'dateTo', 'page', 'perPage', 'forPdf']
-     * @return array
+     *
+     * @param  array  $filters  ['dateFrom', 'dateTo', 'page', 'perPage', 'forPdf']
      */
     private function getPointsData(User $user, array $filters): array
     {
@@ -756,19 +755,19 @@ class EmployeeReviewService
 
         $pointTransactionQuery = PointTransaction::where('user_id', $user->id)
             ->whereBetween('created_at', [$pointsWindowFrom, $pointsWindowTo]);
-        
+
         // Get total count
         $totalCount = (clone $pointTransactionQuery)->count();
-        
+
         // Check if this is for PDF generation (get all transactions)
         $forPdf = $filters['forPdf'] ?? false;
-        
+
         if ($forPdf) {
             // For PDF: Get ALL transactions without pagination
             $pointTransactions = $pointTransactionQuery->with('createdBy')
                 ->orderBy('created_at', 'desc')
                 ->get();
-            
+
             $page = 1;
             $perPage = max($totalCount, 1);
         } else {
@@ -788,7 +787,7 @@ class EmployeeReviewService
             $transactionTypeLabel = $this->getPointTransactionTypeLabel($pt);
 
             $allTransactions->push([
-                'transactionId' => 'pt_' . $pt->id,
+                'transactionId' => 'pt_'.$pt->id,
                 'points' => $pt->points,
                 'type' => $transactionTypeLabel,
                 'reason' => $pt->reason ?? '',
@@ -808,7 +807,7 @@ class EmployeeReviewService
         $allPeriodTransactions = PointTransaction::where('user_id', $user->id)
             ->whereBetween('created_at', [$pointsWindowFrom, $pointsWindowTo])
             ->get();
-        
+
         $pointsEarned = $allPeriodTransactions->where('points', '>', 0)->sum('points');
         $pointsDeducted = abs($allPeriodTransactions->where('points', '<', 0)->sum('points'));
         $netChange = $pointsEarned - $pointsDeducted;
@@ -819,6 +818,7 @@ class EmployeeReviewService
         })->map(function ($monthTransactions) {
             $earned = $monthTransactions->where('points', '>', 0)->sum('points');
             $deducted = abs($monthTransactions->where('points', '<', 0)->sum('points'));
+
             return [
                 'earned' => $earned,
                 'deducted' => $deducted,
@@ -827,25 +827,26 @@ class EmployeeReviewService
         });
 
         // Breakdown by source (automatic vs manual) based on type
-        $automaticCount = $allPeriodTransactions->filter(fn($t) => !$this->isManualPointTransaction($t))->count();
-        $manualCount = $allPeriodTransactions->filter(fn($t) => $this->isManualPointTransaction($t))->count();
-        
+        $automaticCount = $allPeriodTransactions->filter(fn ($t) => ! $this->isManualPointTransaction($t))->count();
+        $manualCount = $allPeriodTransactions->filter(fn ($t) => $this->isManualPointTransaction($t))->count();
+
         $bySource = [
             'automatic' => [
                 'count' => $automaticCount,
-                'earned' => $allPeriodTransactions->filter(fn($t) => !$this->isManualPointTransaction($t))->where('points', '>', 0)->sum('points'),
-                'deducted' => abs($allPeriodTransactions->filter(fn($t) => !$this->isManualPointTransaction($t))->where('points', '<', 0)->sum('points')),
+                'earned' => $allPeriodTransactions->filter(fn ($t) => ! $this->isManualPointTransaction($t))->where('points', '>', 0)->sum('points'),
+                'deducted' => abs($allPeriodTransactions->filter(fn ($t) => ! $this->isManualPointTransaction($t))->where('points', '<', 0)->sum('points')),
             ],
             'manual' => [
                 'count' => $manualCount,
-                'earned' => $allPeriodTransactions->filter(fn($t) => $this->isManualPointTransaction($t))->where('points', '>', 0)->sum('points'),
-                'deducted' => abs($allPeriodTransactions->filter(fn($t) => $this->isManualPointTransaction($t))->where('points', '<', 0)->sum('points')),
+                'earned' => $allPeriodTransactions->filter(fn ($t) => $this->isManualPointTransaction($t))->where('points', '>', 0)->sum('points'),
+                'deducted' => abs($allPeriodTransactions->filter(fn ($t) => $this->isManualPointTransaction($t))->where('points', '<', 0)->sum('points')),
             ],
         ];
 
         // Remove rawCreatedAt from final output
         $finalTransactions = $sortedTransactions->map(function ($transaction) {
             unset($transaction['rawCreatedAt']);
+
             return $transaction;
         });
 
@@ -961,36 +962,36 @@ class EmployeeReviewService
     {
         // Default grace period settings (can be moved to config or database)
         $gracePeriodDays = config('attendance.grace_period_days', 5); // 5 days default
-        
+
         // Get attendance data for the period (use threshold-based lateness)
         $lateThreshold = (int) config('attendance.late_threshold_minutes', 15);
         $query = Attendance::where('user_id', $user->id)
             ->where('late_minutes', '>', $lateThreshold);
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->where('date', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->where('date', '<=', $filters['dateTo']);
         }
 
         $lateAttendances = $query->get();
         $lateDaysCount = $lateAttendances->count();
-        
+
         // Calculate remaining grace days
         $remainingDays = max(0, $gracePeriodDays - $lateDaysCount);
         $isExpired = $lateDaysCount > $gracePeriodDays;
 
         // Get first late day to calculate when grace period started
         $firstLateDay = $lateAttendances->sortBy('date')->first();
-        
+
         return [
             'allowedDays' => $gracePeriodDays,
             'daysUsed' => $lateDaysCount,
             'remainingDays' => $remainingDays,
             'isExpired' => $isExpired,
             'firstLateDate' => $firstLateDay?->date,
-            'gracePeriodEndDate' => $firstLateDay ? 
+            'gracePeriodEndDate' => $firstLateDay ?
                 Carbon::parse($firstLateDay->date)->addDays($gracePeriodDays)->format('Y-m-d') : null,
             'daysOverLimit' => max(0, $lateDaysCount - $gracePeriodDays),
         ];
@@ -1004,31 +1005,32 @@ class EmployeeReviewService
         // Default deduction settings (can be moved to config or database)
         $gracePeriodDays = config('attendance.grace_period_days', 5);
         $deductionRatePerMinute = config('attendance.deduction_rate_per_minute', 0.1); // 0.1 points per minute
-        
+
         // Get all late attendances based on threshold
         $lateThreshold = (int) config('attendance.late_threshold_minutes', 15);
         $query = Attendance::where('user_id', $user->id)
             ->where('late_minutes', '>', $lateThreshold);
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->where('date', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->where('date', '<=', $filters['dateTo']);
         }
 
         $lateAttendances = $query->orderBy('date')->get();
-        
+
         // Skip grace period days and calculate deductions for remaining days
         $deductibleAttendances = $lateAttendances->skip($gracePeriodDays);
-        
+
         $totalLateMinutes = $deductibleAttendances->sum('late_minutes');
         $totalDeductions = $totalLateMinutes * $deductionRatePerMinute;
         $daysWithDeductions = $deductibleAttendances->count();
-        
+
         // Breakdown by day
         $dailyDeductions = $deductibleAttendances->map(function ($attendance) use ($deductionRatePerMinute) {
             $deduction = $attendance->late_minutes * $deductionRatePerMinute;
+
             return [
                 'date' => $attendance->date,
                 'lateMinutes' => $attendance->late_minutes,
@@ -1043,6 +1045,7 @@ class EmployeeReviewService
         })->map(function ($monthAttendances) use ($deductionRatePerMinute) {
             $monthLateMinutes = $monthAttendances->sum('late_minutes');
             $monthDeductions = $monthLateMinutes * $deductionRatePerMinute;
+
             return [
                 'lateMinutes' => $monthLateMinutes,
                 'deductions' => round($monthDeductions, 2),
@@ -1058,7 +1061,7 @@ class EmployeeReviewService
             'dailyDeductions' => $dailyDeductions,
             'monthlyDeductions' => $monthlyDeductions,
             'gracePeriodDays' => $gracePeriodDays,
-            'averageDeductionPerDay' => $daysWithDeductions > 0 ? 
+            'averageDeductionPerDay' => $daysWithDeductions > 0 ?
                 round($totalDeductions / $daysWithDeductions, 2) : 0,
         ];
     }
@@ -1071,18 +1074,18 @@ class EmployeeReviewService
     {
         $query = Task::whereHas('assignees', function ($q) use ($user) {
             $q->where('user_id', $user->id)
-              ->where('is_primary', true);
+                ->where('is_primary', true);
         })->where('status', 'completed');
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->whereDate('completed_at', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->whereDate('completed_at', '<=', $filters['dateTo']);
         }
 
         $completedTasks = $query->get();
-        
+
         if ($completedTasks->isEmpty()) {
             return [
                 'totalCompleted' => 0,
@@ -1094,27 +1097,27 @@ class EmployeeReviewService
             ];
         }
 
-        $onTimeTasks = $completedTasks->filter(fn($task) => ($task->delay_days ?? 0) <= 0);
-        $lateTasks = $completedTasks->filter(fn($task) => ($task->delay_days ?? 0) > 0);
-        
+        $onTimeTasks = $completedTasks->filter(fn ($task) => ($task->delay_days ?? 0) <= 0);
+        $lateTasks = $completedTasks->filter(fn ($task) => ($task->delay_days ?? 0) > 0);
+
         $totalCompleted = $completedTasks->count();
         $onTimeCount = $onTimeTasks->count();
         $lateCount = $lateTasks->count();
         $onTimeRate = $totalCompleted > 0 ? ($onTimeCount / $totalCompleted) * 100 : 0;
-        
+
         // Calculate average delay for late tasks only
-        $averageDelayDays = $lateCount > 0 
-            ? $lateTasks->sum('delay_days') / $lateCount 
+        $averageDelayDays = $lateCount > 0
+            ? $lateTasks->sum('delay_days') / $lateCount
             : 0;
 
         // Monthly breakdown
         $byMonth = $completedTasks->groupBy(function ($task) {
             return Carbon::parse($task->completed_at)->format('Y-m');
         })->map(function ($monthTasks) {
-            $monthOnTime = $monthTasks->filter(fn($task) => ($task->delay_days ?? 0) <= 0)->count();
-            $monthLate = $monthTasks->filter(fn($task) => ($task->delay_days ?? 0) > 0)->count();
+            $monthOnTime = $monthTasks->filter(fn ($task) => ($task->delay_days ?? 0) <= 0)->count();
+            $monthLate = $monthTasks->filter(fn ($task) => ($task->delay_days ?? 0) > 0)->count();
             $monthTotal = $monthTasks->count();
-            
+
             return [
                 'total' => $monthTotal,
                 'onTime' => $monthOnTime,
@@ -1139,7 +1142,7 @@ class EmployeeReviewService
     private function getQualityMetrics(User $user, array $filters): array
     {
         $tasks = $this->getPrimaryTasksForPeriod($user, $filters);
-        
+
         if ($tasks->isEmpty()) {
             return [
                 'totalTasks' => 0,
@@ -1176,10 +1179,10 @@ class EmployeeReviewService
         $timeQuery = TimeEntry::where('user_id', $user->id)
             ->whereNotNull('end_time');
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $timeQuery->whereDate('start_time', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $timeQuery->whereDate('start_time', '<=', $filters['dateTo']);
         }
 
@@ -1206,13 +1209,13 @@ class EmployeeReviewService
         // Get tasks completed grouped by week
         $taskQuery = Task::whereHas('assignees', function ($q) use ($user) {
             $q->where('user_id', $user->id)
-              ->where('is_primary', true);
+                ->where('is_primary', true);
         })->where('status', 'completed');
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $taskQuery->whereDate('completed_at', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $taskQuery->whereDate('completed_at', '<=', $filters['dateTo']);
         }
 
@@ -1231,7 +1234,7 @@ class EmployeeReviewService
             return [
                 'week' => $week,
                 'completed' => $weekTasks->count(),
-                'onTime' => $weekTasks->filter(fn($task) => ($task->delay_days ?? 0) <= 0)->count(),
+                'onTime' => $weekTasks->filter(fn ($task) => ($task->delay_days ?? 0) <= 0)->count(),
             ];
         })->values();
 

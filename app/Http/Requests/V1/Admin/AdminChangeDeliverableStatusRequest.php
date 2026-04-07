@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\V1\Admin;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use App\Helpers\ApiResponse;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
 class AdminChangeDeliverableStatusRequest extends FormRequest
@@ -21,7 +21,7 @@ class AdminChangeDeliverableStatusRequest extends FormRequest
             'status' => [
                 'sometimes',
                 'required',
-                Rule::in(['pending', 'submitted', 'under_review', 'approved', 'rejected'])
+                Rule::in(['pending', 'submitted', 'under_review', 'approved', 'rejected']),
             ],
             'reason' => ['nullable', 'string', 'max:2000'],
         ];

@@ -12,7 +12,7 @@ enum MilestoneStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => __('enums.milestone_status.pending'),
             self::DUE => __('enums.milestone_status.due'),
             self::INVOICED => __('enums.milestone_status.invoiced'),
@@ -23,7 +23,7 @@ enum MilestoneStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => 'gray',
             self::DUE => 'yellow',
             self::INVOICED => 'blue',

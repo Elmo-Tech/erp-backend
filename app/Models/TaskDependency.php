@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TaskDependency extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
         'task_id',
@@ -26,8 +26,11 @@ class TaskDependency extends Model
      * Dependency types
      */
     const TYPE_FINISH_TO_START = 'finish_to_start';
+
     const TYPE_START_TO_START = 'start_to_start';
+
     const TYPE_FINISH_TO_FINISH = 'finish_to_finish';
+
     const TYPE_START_TO_FINISH = 'start_to_finish';
 
     /**

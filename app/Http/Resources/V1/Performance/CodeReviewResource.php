@@ -12,11 +12,11 @@ class CodeReviewResource extends JsonResource
         return [
             'reviewId' => $this->id,
             'taskId' => $this->task_id,
-            'taskTitle' => $this->whenLoaded('task', fn() => $this->task->title, ''),
+            'taskTitle' => $this->whenLoaded('task', fn () => $this->task->title, ''),
             'reviewerId' => $this->reviewer_id,
-            'reviewerName' => $this->whenLoaded('reviewer', fn() => $this->reviewer->name, ''),
+            'reviewerName' => $this->whenLoaded('reviewer', fn () => $this->reviewer->name, ''),
             'developerId' => $this->developer_id,
-            'developerName' => $this->whenLoaded('developer', fn() => $this->developer->name, ''),
+            'developerName' => $this->whenLoaded('developer', fn () => $this->developer->name, ''),
             'scores' => [
                 'codeQuality' => (int) ($this->code_quality_score ?? 0),
                 'readability' => (int) ($this->readability_score ?? 0),

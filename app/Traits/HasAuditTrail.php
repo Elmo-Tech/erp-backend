@@ -42,8 +42,8 @@ trait HasAuditTrail
                 $oldValue = $original[$field] ?? null;
 
                 // Determine action type
-                $actionType = $field === 'status' 
-                    ? AuditActionType::STATUS_CHANGE 
+                $actionType = $field === 'status'
+                    ? AuditActionType::STATUS_CHANGE
                     : AuditActionType::DATA_EDIT;
 
                 $model->logAudit(
@@ -149,7 +149,7 @@ trait HasAuditTrail
     protected function getAuditDescription(string $field, $oldValue, $newValue): string
     {
         $fieldLabel = $this->getAuditFieldLabel($field);
-        
+
         if ($field === 'status') {
             return __('audit.status_changed', [
                 'from' => $this->formatAuditValue($field, $oldValue) ?? 'N/A',

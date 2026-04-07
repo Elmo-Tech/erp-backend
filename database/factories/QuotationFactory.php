@@ -31,11 +31,11 @@ class QuotationFactory extends Factory
         $uiUxHours = $this->faker->numberBetween(5, 30);
         $testingHours = $this->faker->numberBetween(5, 20);
         $pmHours = $this->faker->numberBetween(2, 15);
-        
+
         $totalHours = $frontendHours + $backendHours + $uiUxHours + $testingHours + $pmHours;
         $hourlyRate = $this->faker->numberBetween(50, 200);
         $discountPercentage = $this->faker->numberBetween(0, 25);
-        
+
         $grossPrice = $totalHours * $hourlyRate;
         $discountAmount = $grossPrice * ($discountPercentage / 100);
         $finalPrice = $grossPrice - $discountAmount;

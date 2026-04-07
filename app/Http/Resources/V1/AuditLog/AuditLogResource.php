@@ -2,13 +2,17 @@
 
 namespace App\Http\Resources\V1\AuditLog;
 
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * @mixin AuditLog
+ *
  * @OA\Schema(
  *     schema="AuditLogResource",
  *     type="object",
+ *
  *     @OA\Property(property="auditLogId", type="integer", example=1),
  *     @OA\Property(property="userId", type="integer", example=1),
  *     @OA\Property(property="eventType", type="string", example="invoice"),
@@ -54,21 +58,25 @@ class AuditLogResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        /** @var AuditLog $auditLog */
+        $auditLog = $this->resource;
+        $user = $auditLog->user;
+
         return [
-            'id' => $this->id,
-            'userId' => $this->user_id,
-            'userName' => $this->user?->name ?? 'Unknown User',
-            'action' => $this->action,
-            'eventType' => $this->event_type ?? '',
-            'severity' => $this->severity ?? 'info',
-            'description' => $this->description ?? '',
-            'auditableType' => $this->auditable_type ?? '',
-            'auditableId' => $this->auditable_id,
-            'ipAddress' => $this->ip_address ?? '',
-            'userAgent' => $this->user_agent ?? '',
-            'metadata' => $this->metadata ?? [],
-            'createdAt' => $this->created_at?->toISOString() ?? '',
-            'isSensitive' => in_array($this->action, self::SENSITIVE_ACTIONS, true),
+            'id' => $auditLog->id,
+            'userId' => $auditLog->user_id,
+            'userName' => $user ? ($user->name ?? 'Unknown User') : 'Unknown User',
+            'action' => $auditLog->action,
+            'eventType' => $auditLog->event_type ?? '',
+            'severity' => $auditLog->severity ?? 'info',
+            'description' => $auditLog->description ?? '',
+            'auditableType' => $auditLog->auditable_type ?? '',
+            'auditableId' => $auditLog->auditable_id,
+            'ipAddress' => $auditLog->ip_address ?? '',
+            'userAgent' => $auditLog->user_agent ?? '',
+            'metadata' => $auditLog->metadata ?? [],
+            'createdAt' => $auditLog->created_at?->toISOString() ?? '',
+            'isSensitive' => in_array($auditLog->action, self::SENSITIVE_ACTIONS, true),
         ];
     }
 }

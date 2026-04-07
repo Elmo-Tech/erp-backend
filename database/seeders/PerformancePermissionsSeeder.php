@@ -17,11 +17,11 @@ class PerformancePermissionsSeeder extends Seeder
             'manage_performance_evaluations',
             'approve_performance_evaluations',
             'view_bonuses',
-            
+
             // Code Reviews
             'view_all_code_reviews',
             'manage_code_reviews',
-            
+
             // Innovation Logs
             'view_all_innovation_logs',
             'verify_innovation_logs',

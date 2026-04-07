@@ -9,7 +9,6 @@ use App\Models\LeadActivity;
 use App\Models\LeadMeeting;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -55,7 +54,7 @@ class LeadService
     {
         // Check for duplicate email or phone
         $this->checkDuplicates($data);
-        
+
         $lead = Lead::create([
             'name' => $data['name'],
             'project_name' => $data['projectName'] ?? null,
@@ -90,13 +89,13 @@ class LeadService
     private function checkDuplicates(array $data, ?int $excludeId = null): void
     {
         $query = Lead::query();
-        
+
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);
         }
-        
+
         // Check email
-        if (!empty($data['email'])) {
+        if (! empty($data['email'])) {
             $existingByEmail = (clone $query)->where('email', $data['email'])->first();
             if ($existingByEmail) {
                 throw new \InvalidArgumentException(
@@ -104,9 +103,9 @@ class LeadService
                 );
             }
         }
-        
+
         // Check phone
-        if (!empty($data['phone'])) {
+        if (! empty($data['phone'])) {
             $existingByPhone = (clone $query)->where('phone', $data['phone'])->first();
             if ($existingByPhone) {
                 throw new \InvalidArgumentException(
@@ -121,10 +120,10 @@ class LeadService
      */
     private function getTimezoneOffset(?string $country): ?string
     {
-        if (!$country) {
+        if (! $country) {
             return null;
         }
-        
+
         $timezones = [
             'AE' => '+4',
             'SA' => '+3',
@@ -138,7 +137,7 @@ class LeadService
             'JP' => '+9',
             'AU' => '+10',
         ];
-        
+
         return $timezones[strtoupper($country)] ?? null;
     }
 
@@ -211,7 +210,7 @@ class LeadService
         // Update meeting record if meetingId is provided and status indicates meeting completion
         if ($meetingId && $status === LeadStatus::MEETING_COMPLETED->value) {
             $meeting = LeadMeeting::find($meetingId);
-            if (!$meeting) {
+            if (! $meeting) {
                 \Log::warning("Meeting {$meetingId} not found for lead {$lead->id}");
             } elseif ($meeting->lead_id !== $lead->id) {
                 \Log::warning("Meeting {$meetingId} does not belong to lead {$lead->id}");
@@ -319,14 +318,14 @@ class LeadService
      */
     public function getLeadsByStatus(): array
     {
-        $leads = Lead::with(['activities' => fn($q) => $q->latest()->limit(1)])
+        $leads = Lead::with(['activities' => fn ($q) => $q->latest()->limit(1)])
             ->active()
             ->get()
             ->groupBy('status');
 
         $result = [];
         foreach (LeadStatus::cases() as $status) {
-            if (!in_array($status, [LeadStatus::WON, LeadStatus::LOST])) {
+            if (! in_array($status, [LeadStatus::WON, LeadStatus::LOST])) {
                 $result[$status->value] = $leads->get($status->value, collect())->values();
             }
         }

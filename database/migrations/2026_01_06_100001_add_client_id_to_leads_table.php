@@ -15,11 +15,11 @@ return new class extends Migration
         Schema::table('leads', function (Blueprint $table) {
             // Client ID - set when lead is converted to client
             $table->foreignId('client_id')->nullable()->after('id')->constrained('clients')->nullOnDelete();
-            
+
             // Conversion tracking
             $table->timestamp('converted_at')->nullable()->after('loss_reason');
             $table->foreignId('converted_by')->nullable()->after('converted_at')->constrained('users')->nullOnDelete();
-            
+
             // Index
             $table->index('client_id');
             $table->index('converted_at');

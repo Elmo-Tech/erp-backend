@@ -2,9 +2,13 @@
 
 namespace App\Http\Resources\V1\HR;
 
+use App\Models\DeductionRule;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin DeductionRule
+ */
 class DeductionRuleResource extends JsonResource
 {
     /**
@@ -12,27 +16,30 @@ class DeductionRuleResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        /** @var DeductionRule $rule */
+        $rule = $this->resource;
+
         return [
-            'id' => $this->id,
-            'deduction_type_id' => $this->deduction_type_id,
-            'name' => $this->name,
-            'code' => $this->code,
-            'description' => $this->description,
-            'rule_type' => $this->rule_type,
-            'threshold_value' => $this->threshold_value,
-            'threshold_unit' => $this->threshold_unit,
-            'deduction_value' => $this->deduction_value,
-            'deduction_unit' => $this->deduction_unit,
-            'max_deduction_amount' => $this->max_deduction_amount,
-            'repetition_penalty_factor' => $this->repetition_penalty_factor,
-            'grace_period_days' => $this->grace_period_days,
-            'is_active' => $this->is_active,
-            'effective_from' => $this->effective_from?->format('Y-m-d'),
-            'effective_until' => $this->effective_until?->format('Y-m-d'),
-            'conditions' => $this->conditions,
-            'is_effective' => $this->isEffective(),
-            'created_at' => $this->created_at?->toISOString(),
-            'updated_at' => $this->updated_at?->toISOString(),
+            'id' => $rule->id,
+            'deduction_type_id' => $rule->deduction_type_id,
+            'name' => $rule->name,
+            'code' => $rule->code,
+            'description' => $rule->description,
+            'rule_type' => $rule->rule_type,
+            'threshold_value' => $rule->threshold_value,
+            'threshold_unit' => $rule->threshold_unit,
+            'deduction_value' => $rule->deduction_value,
+            'deduction_unit' => $rule->deduction_unit,
+            'max_deduction_amount' => $rule->max_deduction_amount,
+            'repetition_penalty_factor' => $rule->repetition_penalty_factor,
+            'grace_period_days' => $rule->grace_period_days,
+            'is_active' => $rule->is_active,
+            'effective_from' => $rule->effective_from?->format('Y-m-d'),
+            'effective_until' => $rule->effective_until?->format('Y-m-d'),
+            'conditions' => $rule->conditions,
+            'is_effective' => $rule->isEffective(),
+            'created_at' => $rule->created_at?->toISOString(),
+            'updated_at' => $rule->updated_at?->toISOString(),
         ];
     }
 }

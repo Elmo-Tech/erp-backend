@@ -7,14 +7,13 @@ use App\Models\PointTransaction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 /**
  * Unified Point Service
- * 
+ *
  * This service provides a unified interface for point management using PointTransaction
  * as the single source of truth.
- * 
+ *
  * All point operations (automatic and manual) write to PointTransaction only.
  */
 class UnifiedPointService
@@ -47,7 +46,7 @@ class UnifiedPointService
         bool $notify = true
     ): PointTransaction {
         $points = $points ?? $type->defaultPoints();
-        
+
         // Ensure points are negative for deductions
         $points = -abs($points);
 
@@ -73,7 +72,7 @@ class UnifiedPointService
 
             // Create PointTransaction for consistency
             $transactionType = $type ?? ($points > 0 ? PointTransactionType::MANUAL_BONUS : PointTransactionType::MANUAL_DEDUCTION);
-            
+
             $pointTransaction = PointTransaction::create([
                 'user_id' => $user->id,
                 'points' => $points,
@@ -100,20 +99,20 @@ class UnifiedPointService
     {
         // Get from PointTransaction only
         $query = PointTransaction::where('user_id', $user->id);
-        
-        if (!empty($filters['dateFrom'])) {
+
+        if (! empty($filters['dateFrom'])) {
             $query->whereDate('created_at', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->whereDate('created_at', '<=', $filters['dateTo']);
         }
-        
+
         $pointTransactions = $query->with('createdBy')->orderBy('created_at', 'desc')->get();
 
         // Transform to unified format
         $allTransactions = $pointTransactions->map(function ($pt) {
             return [
-                'id' => 'pt_' . $pt->id,
+                'id' => 'pt_'.$pt->id,
                 'points' => $pt->points,
                 'type' => $pt->type->label(),
                 'reason' => $pt->reason ?? '',
@@ -170,7 +169,7 @@ class UnifiedPointService
     {
         // Get all transactions from PointTransaction
         $total = PointTransaction::where('user_id', $user->id)->sum('points');
-        
+
         $user->update(['total_points' => $total]);
 
         return $total;
@@ -187,7 +186,7 @@ class UnifiedPointService
         ?string $reason,
         bool $notify = true
     ): PointTransaction {
-        return DB::transaction(function () use ($user, $points, $type, $source, $reason, $notify) {
+        return DB::transaction(function () use ($user, $points, $type, $source, $reason) {
             // Update user's total points
             $user->increment('total_points', $points);
             $user->refresh();

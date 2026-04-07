@@ -11,7 +11,7 @@ return new class extends Migration
 
     /**
      * Run the migrations.
-     * 
+     *
      * Test scenarios for tasks:
      * - Developer marks as completed
      * - Reviewer verifies and approves/rejects
@@ -27,16 +27,16 @@ return new class extends Migration
             $table->text('expected_result')->nullable();
             $table->enum('status', ['pending', 'passed', 'failed', 'skipped'])->default('pending');
             $table->unsignedInteger('order')->default(0);
-            
+
             // Developer completion
             $table->foreignId('completed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('completed_at')->nullable();
-            
+
             // Reviewer verification
             $table->foreignId('verified_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('verified_at')->nullable();
             $table->text('reviewer_notes')->nullable();
-            
+
             $this->addAuditColumns($table);
             $table->timestamps();
 

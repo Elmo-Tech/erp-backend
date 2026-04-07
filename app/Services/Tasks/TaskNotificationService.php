@@ -15,7 +15,7 @@ class TaskNotificationService
     /**
      * Notify assigned users and configured observers about a task assignment event.
      *
-     * @param Collection<int, User> $assignedUsers
+     * @param  Collection<int, User>  $assignedUsers
      */
     public function sendTaskAssigned(Task $task, User $assigner, Collection $assignedUsers): void
     {
@@ -68,14 +68,14 @@ class TaskNotificationService
     }
 
     /**
-     * @param array<int, int> $excludeUserIds
+     * @param  array<int, int>  $excludeUserIds
      * @return Collection<int, User>
      */
     private function updateRecipients(Task $task, array $excludeUserIds = []): Collection
     {
         return $this->taskAssigneeUsers($task)
             ->merge($this->observerRecipients($task))
-            ->filter(fn ($user) => $user instanceof User && !in_array($user->id, $excludeUserIds, true))
+            ->filter(fn ($user) => $user instanceof User && ! in_array($user->id, $excludeUserIds, true))
             ->unique('id')
             ->values();
     }
@@ -128,4 +128,4 @@ class TaskNotificationService
             ->whereIn('email', $emails)
             ->get();
     }
-};
+}

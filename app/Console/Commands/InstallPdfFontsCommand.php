@@ -33,11 +33,11 @@ class InstallPdfFontsCommand extends Command
     public function handle(): int
     {
         $fontsDir = storage_path('app/fonts');
-        
+
         $this->info('Installing Arabic fonts for PDF generation...');
 
         // Ensure fonts directory exists
-        if (!File::exists($fontsDir)) {
+        if (! File::exists($fontsDir)) {
             File::makeDirectory($fontsDir, 0755, true);
         }
 
@@ -50,6 +50,7 @@ class InstallPdfFontsCommand extends Command
         $this->installFonts($fontsDir);
 
         $this->info('Font installation completed!');
+
         return 0;
     }
 
@@ -61,31 +62,32 @@ class InstallPdfFontsCommand extends Command
         $this->info('Downloading Arabic fonts...');
 
         foreach ($this->fontUrls as $filename => $url) {
-            $fontPath = $fontsDir . '/' . $filename;
-            
+            $fontPath = $fontsDir.'/'.$filename;
+
             if (File::exists($fontPath)) {
                 $this->info("✓ Font already exists: {$filename}");
+
                 continue;
             }
 
             try {
                 $this->info("Downloading {$filename}...");
-                
+
                 $response = Http::timeout(60)->get($url);
-                
+
                 if ($response->successful()) {
                     File::put($fontPath, $response->body());
                     $this->info("✓ Downloaded: {$filename}");
                 } else {
                     $this->error("✗ Failed to download {$filename}: HTTP {$response->status()}");
                 }
-                
+
             } catch (\Exception $e) {
-                $this->error("✗ Error downloading {$filename}: " . $e->getMessage());
-                Log::error("Font download failed", [
+                $this->error("✗ Error downloading {$filename}: ".$e->getMessage());
+                Log::error('Font download failed', [
                     'font' => $filename,
                     'url' => $url,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -104,32 +106,33 @@ class InstallPdfFontsCommand extends Command
         ];
 
         foreach ($fontFiles as $filename => $fontName) {
-            $fontPath = $fontsDir . '/' . $filename;
-            
-            if (!File::exists($fontPath)) {
+            $fontPath = $fontsDir.'/'.$filename;
+
+            if (! File::exists($fontPath)) {
                 $this->warn("Font file not found: {$fontPath}");
-                $this->info("Run with --download option to download fonts automatically");
+                $this->info('Run with --download option to download fonts automatically');
+
                 continue;
             }
 
             try {
                 // Load font using dompdf's font loader
                 $this->info("Installing font: {$fontName}");
-                
+
                 // Create font metrics
                 $this->call('dompdf:install-font', [
                     'font_file' => $fontPath,
                     'font_name' => $fontName,
                 ]);
-                
+
                 $this->info("✓ Installed: {$fontName}");
-                
+
             } catch (\Exception $e) {
-                $this->error("✗ Failed to install {$fontName}: " . $e->getMessage());
-                Log::error("Font installation failed", [
+                $this->error("✗ Failed to install {$fontName}: ".$e->getMessage());
+                Log::error('Font installation failed', [
                     'font' => $fontName,
                     'path' => $fontPath,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -164,9 +167,9 @@ return [
 ];
 PHP;
 
-        $configPath = $fontsDir . '/font_config.php';
+        $configPath = $fontsDir.'/font_config.php';
         File::put($configPath, $configContent);
-        
+
         $this->info("✓ Created font configuration: {$configPath}");
     }
 }

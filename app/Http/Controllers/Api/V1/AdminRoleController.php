@@ -8,7 +8,6 @@ use App\Http\Requests\V1\Admin\StoreRoleRequest;
 use App\Http\Requests\V1\Admin\UpdateRoleRequest;
 use App\Services\Client\AuditLogService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -30,23 +29,30 @@ class AdminRoleController extends Controller
      *     summary="List all roles with permissions",
      *     description="Retrieve all roles with their assigned permissions. Requires manage_roles permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Roles retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Roles retrieved successfully"),
      *             @OA\Property(
      *                 property="data",
      *                 type="array",
+     *
      *                 @OA\Items(
+     *
      *                     @OA\Property(property="id", type="integer", example=1),
      *                     @OA\Property(property="name", type="string", example="admin"),
      *                     @OA\Property(property="guardName", type="string", example="web"),
@@ -54,26 +60,34 @@ class AdminRoleController extends Controller
      *                     @OA\Property(
      *                         property="permissions",
      *                         type="array",
+     *
      *                         @OA\Items(type="string", example="manage_users")
      *                     ),
+     *
      *                     @OA\Property(property="createdAt", type="string", format="date-time", example="2024-01-01T00:00:00Z"),
      *                     @OA\Property(property="updatedAt", type="string", format="date-time", example="2024-01-01T00:00:00Z")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks manage_roles permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to manage roles")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -83,7 +97,7 @@ class AdminRoleController extends Controller
     public function index(): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->can('manage_roles')) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -108,7 +122,7 @@ class AdminRoleController extends Controller
             );
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to retrieve roles: ' . $e->getMessage(),
+                'Failed to retrieve roles: '.$e->getMessage(),
                 500
             );
         }
@@ -122,24 +136,31 @@ class AdminRoleController extends Controller
      *     summary="Get single role with permissions",
      *     description="Retrieve a specific role with its assigned permissions. Requires manage_roles permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Role ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Role retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Role retrieved successfully"),
      *             @OA\Property(
@@ -152,33 +173,44 @@ class AdminRoleController extends Controller
      *                 @OA\Property(
      *                     property="permissions",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="manage_users")
      *                 ),
+     *
      *                 @OA\Property(property="createdAt", type="string", format="date-time", example="2024-01-01T00:00:00Z"),
      *                 @OA\Property(property="updatedAt", type="string", format="date-time", example="2024-01-01T00:00:00Z")
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Role not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Role not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks manage_roles permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to manage roles")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -188,7 +220,7 @@ class AdminRoleController extends Controller
     public function show(int $role): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->can('manage_roles')) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -213,7 +245,7 @@ class AdminRoleController extends Controller
             return ApiResponse::notFound('Role not found');
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to retrieve role: ' . $e->getMessage(),
+                'Failed to retrieve role: '.$e->getMessage(),
                 500
             );
         }
@@ -227,29 +259,38 @@ class AdminRoleController extends Controller
      *     summary="Create new role",
      *     description="Create a new role with specified permissions. Requires manage_roles permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="name", type="string", example="project-manager", description="Role name (must be unique)"),
      *             @OA\Property(
      *                 property="permissions",
      *                 type="array",
+     *
      *                 @OA\Items(type="string", example="manage_projects"),
      *                 description="Array of permission names to assign to this role"
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Role created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Role created successfully"),
      *             @OA\Property(
@@ -262,17 +303,22 @@ class AdminRoleController extends Controller
      *                 @OA\Property(
      *                     property="permissions",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="manage_projects")
      *                 ),
+     *
      *                 @OA\Property(property="createdAt", type="string", format="date-time", example="2024-01-01T00:00:00Z"),
      *                 @OA\Property(property="updatedAt", type="string", format="date-time", example="2024-01-01T00:00:00Z")
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed"),
      *             @OA\Property(
@@ -281,28 +327,37 @@ class AdminRoleController extends Controller
      *                 @OA\Property(
      *                     property="name",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="The name field is required.")
      *                 ),
+     *
      *                 @OA\Property(
      *                     property="permissions",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="The permissions field must be an array.")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks manage_roles permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to manage roles")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -312,7 +367,7 @@ class AdminRoleController extends Controller
     public function store(StoreRoleRequest $request): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->can('manage_roles')) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -326,7 +381,7 @@ class AdminRoleController extends Controller
             ]);
 
             // Assign permissions if provided
-            if (!empty($validatedData['permissions'])) {
+            if (! empty($validatedData['permissions'])) {
                 $role->syncPermissions($validatedData['permissions']);
             }
 
@@ -357,7 +412,7 @@ class AdminRoleController extends Controller
             );
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to create role: ' . $e->getMessage(),
+                'Failed to create role: '.$e->getMessage(),
                 500
             );
         }
@@ -371,36 +426,47 @@ class AdminRoleController extends Controller
      *     summary="Update role permissions",
      *     description="Update role name and permissions. Cannot update protected roles (admin, client, super-admin). Requires manage_roles permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Role ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="name", type="string", example="senior-developer", description="Role name (must be unique)"),
      *             @OA\Property(
      *                 property="permissions",
      *                 type="array",
+     *
      *                 @OA\Items(type="string", example="manage_projects"),
      *                 description="Array of permission names to assign to this role"
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Role updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Role updated successfully"),
      *             @OA\Property(
@@ -413,17 +479,22 @@ class AdminRoleController extends Controller
      *                 @OA\Property(
      *                     property="permissions",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="manage_projects")
      *                 ),
+     *
      *                 @OA\Property(property="createdAt", type="string", format="date-time", example="2024-01-01T00:00:00Z"),
      *                 @OA\Property(property="updatedAt", type="string", format="date-time", example="2024-01-01T00:00:00Z")
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error or protected role",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Cannot update protected role"),
      *             @OA\Property(
@@ -432,31 +503,41 @@ class AdminRoleController extends Controller
      *                 @OA\Property(
      *                     property="role",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="This role is protected and cannot be modified")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Role not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Role not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks manage_roles permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to manage roles")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -466,7 +547,7 @@ class AdminRoleController extends Controller
     public function update(UpdateRoleRequest $request, int $role): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->can('manage_roles')) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -535,7 +616,7 @@ class AdminRoleController extends Controller
             return ApiResponse::notFound('Role not found');
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to update role: ' . $e->getMessage(),
+                'Failed to update role: '.$e->getMessage(),
                 500
             );
         }
@@ -549,32 +630,42 @@ class AdminRoleController extends Controller
      *     summary="Delete role",
      *     description="Delete a role. Cannot delete protected roles (admin, client, super-admin). Requires manage_roles permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Role ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Role deleted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Role deleted successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Cannot delete protected role",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Cannot delete protected role"),
      *             @OA\Property(
@@ -583,31 +674,41 @@ class AdminRoleController extends Controller
      *                 @OA\Property(
      *                     property="role",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="This role is protected and cannot be deleted")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Role not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Role not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks manage_roles permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to manage roles")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -617,7 +718,7 @@ class AdminRoleController extends Controller
     public function destroy(int $role): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->can('manage_roles')) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -656,7 +757,7 @@ class AdminRoleController extends Controller
             return ApiResponse::notFound('Role not found');
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to delete role: ' . $e->getMessage(),
+                'Failed to delete role: '.$e->getMessage(),
                 500
             );
         }
@@ -670,23 +771,30 @@ class AdminRoleController extends Controller
      *     summary="List all permissions",
      *     description="Retrieve all available permissions in the system. Requires manage_roles permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Permissions retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Permissions retrieved successfully"),
      *             @OA\Property(
      *                 property="data",
      *                 type="array",
+     *
      *                 @OA\Items(
+     *
      *                     @OA\Property(property="id", type="integer", example=1),
      *                     @OA\Property(property="name", type="string", example="manage_users"),
      *                     @OA\Property(property="guardName", type="string", example="web"),
@@ -698,18 +806,24 @@ class AdminRoleController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks manage_roles permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to manage roles")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -719,7 +833,7 @@ class AdminRoleController extends Controller
     public function permissions(): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->can('manage_roles')) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -747,7 +861,7 @@ class AdminRoleController extends Controller
             );
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to retrieve permissions: ' . $e->getMessage(),
+                'Failed to retrieve permissions: '.$e->getMessage(),
                 500
             );
         }
@@ -765,21 +879,21 @@ class AdminRoleController extends Controller
             'create_users' => 'User Management',
             'edit_users' => 'User Management',
             'delete_users' => 'User Management',
-            
+
             // Role Management
             'manage_roles' => 'Role Management',
             'view_roles' => 'Role Management',
             'create_roles' => 'Role Management',
             'edit_roles' => 'Role Management',
             'delete_roles' => 'Role Management',
-            
+
             // Client Management
             'manage_clients' => 'Client Management',
             'view_clients' => 'Client Management',
             'create_clients' => 'Client Management',
             'edit_clients' => 'Client Management',
             'delete_clients' => 'Client Management',
-            
+
             // Project Management
             'manage_projects' => 'Project Management',
             'view_projects' => 'Project Management',
@@ -787,22 +901,22 @@ class AdminRoleController extends Controller
             'edit_projects' => 'Project Management',
             'delete_projects' => 'Project Management',
             'approve_project_ui' => 'Project Management',
-            
+
             // Project Members
             'manage_project_members' => 'Project Members',
             'view_project_members' => 'Project Members',
             'add_project_members' => 'Project Members',
             'remove_project_members' => 'Project Members',
-            
+
             // Project Files
             'manage_project_files' => 'Project Files',
             'view_project_files' => 'Project Files',
             'upload_project_files' => 'Project Files',
             'delete_project_files' => 'Project Files',
-            
+
             // Project History
             'view_project_history' => 'Project History',
-            
+
             // Task Management
             'manage_tasks' => 'Task Management',
             'view_tasks' => 'Task Management',
@@ -811,35 +925,35 @@ class AdminRoleController extends Controller
             'delete_tasks' => 'Task Management',
             'view_internal_notes' => 'Task Management',
             'assign_tasks' => 'Task Management',
-            
+
             // Test Scenarios
             'manage_test_scenarios' => 'Test Scenarios',
             'view_test_scenarios' => 'Test Scenarios',
             'create_test_scenarios' => 'Test Scenarios',
             'complete_test_scenarios' => 'Test Scenarios',
             'verify_test_scenarios' => 'Test Scenarios',
-            
+
             // Sales - Leads
             'manage_sales' => 'Sales Management',
             'view_leads' => 'Sales Management',
             'create_leads' => 'Sales Management',
             'edit_leads' => 'Sales Management',
             'delete_leads' => 'Sales Management',
-            
+
             // Sales - Quotations
             'view_quotations' => 'Quotations',
             'create_quotations' => 'Quotations',
             'edit_quotations' => 'Quotations',
             'delete_quotations' => 'Quotations',
             'calculate_quotations' => 'Quotations',
-            
+
             // Invoice Management
             'manage_invoices' => 'Invoice Management',
             'view_invoices' => 'Invoice Management',
             'create_invoices' => 'Invoice Management',
             'edit_invoices' => 'Invoice Management',
             'delete_invoices' => 'Invoice Management',
-            
+
             // Wiki Management
             'manage_wiki' => 'Wiki Management',
             'view_wiki' => 'Wiki Management',
@@ -847,24 +961,24 @@ class AdminRoleController extends Controller
             'edit_wiki' => 'Wiki Management',
             'delete_wiki' => 'Wiki Management',
             'view_encrypted_content' => 'Wiki Management',
-            
+
             // Time Tracking
             'manage_time_entries' => 'Time Tracking',
             'view_time_entries' => 'Time Tracking',
             'start_timer' => 'Time Tracking',
             'stop_timer' => 'Time Tracking',
             'view_all_time_entries' => 'Time Tracking',
-            
+
             // Attendance
             'manage_attendance' => 'Attendance',
             'view_attendance' => 'Attendance',
             'view_all_attendance' => 'Attendance',
             'clock_out' => 'Attendance',
-            
+
             // Dashboard
             'view_dashboard' => 'Dashboard',
             'view_dashboard_overview' => 'Dashboard',
-            
+
             // Reports & Analytics
             'view_reports' => 'Reports & Analytics',
             'view_profitability' => 'Reports & Analytics',
@@ -872,17 +986,17 @@ class AdminRoleController extends Controller
             'view_quality_metrics' => 'Reports & Analytics',
             'view_user_performance' => 'Reports & Analytics',
             'view_attendance_analytics' => 'Reports & Analytics',
-            
+
             // Admin Statistics
             'view_admin_stats' => 'Admin Statistics',
-            
+
             // Financial Data
             'view_internal_costs' => 'Financial Data',
             'manage_internal_costs' => 'Financial Data',
-            
+
             // Security & Audit
             'view_audit_logs' => 'Security & Audit',
-            
+
             // Tags
             'manage_tags' => 'Tags',
             'view_tags' => 'Tags',
@@ -903,21 +1017,21 @@ class AdminRoleController extends Controller
             'create_users' => 'Create new user accounts',
             'edit_users' => 'Edit existing user accounts',
             'delete_users' => 'Delete user accounts',
-            
+
             // Role Management
             'manage_roles' => 'Full role and permission management',
             'view_roles' => 'View roles and permissions',
             'create_roles' => 'Create new roles',
             'edit_roles' => 'Edit existing roles',
             'delete_roles' => 'Delete roles',
-            
+
             // Client Management
             'manage_clients' => 'Full client management capabilities',
             'view_clients' => 'View client information',
             'create_clients' => 'Create new clients',
             'edit_clients' => 'Edit existing clients',
             'delete_clients' => 'Delete clients',
-            
+
             // Project Management
             'manage_projects' => 'Full project management capabilities',
             'view_projects' => 'View project information',
@@ -925,22 +1039,22 @@ class AdminRoleController extends Controller
             'edit_projects' => 'Edit existing projects',
             'delete_projects' => 'Delete projects',
             'approve_project_ui' => 'Approve UI/UX deliverables',
-            
+
             // Project Members
             'manage_project_members' => 'Full project member management',
             'view_project_members' => 'View project team members',
             'add_project_members' => 'Add members to projects',
             'remove_project_members' => 'Remove members from projects',
-            
+
             // Project Files
             'manage_project_files' => 'Full project file management',
             'view_project_files' => 'View project files',
             'upload_project_files' => 'Upload files to projects',
             'delete_project_files' => 'Delete project files',
-            
+
             // Project History
             'view_project_history' => 'View project change history',
-            
+
             // Task Management
             'manage_tasks' => 'Full task management capabilities',
             'view_tasks' => 'View task information',
@@ -949,35 +1063,35 @@ class AdminRoleController extends Controller
             'delete_tasks' => 'Delete tasks',
             'view_internal_notes' => 'View internal task notes',
             'assign_tasks' => 'Assign tasks to team members',
-            
+
             // Test Scenarios
             'manage_test_scenarios' => 'Full test scenario management',
             'view_test_scenarios' => 'View test scenarios',
             'create_test_scenarios' => 'Create test scenarios',
             'complete_test_scenarios' => 'Mark test scenarios as complete',
             'verify_test_scenarios' => 'Verify completed test scenarios',
-            
+
             // Sales - Leads
             'manage_sales' => 'Full sales management capabilities',
             'view_leads' => 'View lead information',
             'create_leads' => 'Create new leads',
             'edit_leads' => 'Edit existing leads',
             'delete_leads' => 'Delete leads',
-            
+
             // Sales - Quotations
             'view_quotations' => 'View quotation information',
             'create_quotations' => 'Create new quotations',
             'edit_quotations' => 'Edit existing quotations',
             'delete_quotations' => 'Delete quotations',
             'calculate_quotations' => 'Calculate quotation pricing',
-            
+
             // Invoice Management
             'manage_invoices' => 'Full invoice management capabilities',
             'view_invoices' => 'View invoice information',
             'create_invoices' => 'Create new invoices',
             'edit_invoices' => 'Edit existing invoices',
             'delete_invoices' => 'Delete invoices',
-            
+
             // Wiki Management
             'manage_wiki' => 'Full wiki management capabilities',
             'view_wiki' => 'View wiki content',
@@ -985,24 +1099,24 @@ class AdminRoleController extends Controller
             'edit_wiki' => 'Edit existing wiki entries',
             'delete_wiki' => 'Delete wiki entries',
             'view_encrypted_content' => 'View encrypted wiki content',
-            
+
             // Time Tracking
             'manage_time_entries' => 'Full time entry management',
             'view_time_entries' => 'View own time entries',
             'start_timer' => 'Start time tracking',
             'stop_timer' => 'Stop time tracking',
             'view_all_time_entries' => 'View all users time entries',
-            
+
             // Attendance
             'manage_attendance' => 'Full attendance management capabilities',
             'view_attendance' => 'View own attendance records',
             'view_all_attendance' => 'View all users attendance records',
             'clock_out' => 'Clock out from work',
-            
+
             // Dashboard
             'view_dashboard' => 'Access dashboard',
             'view_dashboard_overview' => 'View dashboard overview statistics',
-            
+
             // Reports & Analytics
             'view_reports' => 'View system reports',
             'view_profitability' => 'View profitability reports',
@@ -1010,22 +1124,22 @@ class AdminRoleController extends Controller
             'view_quality_metrics' => 'View quality metrics and bounce rates',
             'view_user_performance' => 'View user performance reports',
             'view_attendance_analytics' => 'View attendance analytics',
-            
+
             // Admin Statistics
             'view_admin_stats' => 'View administrative statistics',
-            
+
             // Financial Data
             'view_internal_costs' => 'View internal hourly costs',
             'manage_internal_costs' => 'Manage user internal costs',
-            
+
             // Security & Audit
             'view_audit_logs' => 'View security audit logs',
-            
+
             // Tags
             'manage_tags' => 'Full tag management',
             'view_tags' => 'View available tags',
         ];
 
-        return $descriptions[$permissionName] ?? 'Permission for ' . str_replace('_', ' ', $permissionName);
+        return $descriptions[$permissionName] ?? 'Permission for '.str_replace('_', ' ', $permissionName);
     }
 }

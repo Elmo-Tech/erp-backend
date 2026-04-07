@@ -1,43 +1,47 @@
 <?php
 
-namespace App\Http\Requests\V1\Invoice;
+namespace App\Http\Requests\V1\Invoices;
 
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class UpdateInvoiceRequest extends FormRequest
+class MarkAsPaidRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true; // Authorization handled by middleware
+        return true;
     }
 
     /**
      * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'amount' => 'sometimes|numeric|min:0|max:999999999.99',
-            'dueDate' => 'sometimes|date|after:today',
-            'notes' => 'nullable|string|max:1000',
+            'paymentMethod' => ['nullable', 'string', 'max:100'],
+            'transactionId' => ['nullable', 'string', 'max:255'],
+            'paymentNotes' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
     /**
      * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
      */
     public function messages(): array
     {
         return [
-            'amount.numeric' => __('validation.numeric', ['attribute' => 'amount']),
-            'amount.min' => __('validation.min.numeric', ['attribute' => 'amount', 'min' => 0]),
-            'dueDate.after' => __('validation.after', ['attribute' => 'dueDate', 'date' => 'today']),
+            'paymentMethod.string' => __('validation.string', ['attribute' => 'paymentMethod']),
+            'transactionId.string' => __('validation.string', ['attribute' => 'transactionId']),
+            'paymentNotes.string' => __('validation.string', ['attribute' => 'paymentNotes']),
         ];
     }
 

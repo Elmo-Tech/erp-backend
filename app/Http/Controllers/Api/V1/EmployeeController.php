@@ -8,7 +8,6 @@ use App\Http\Requests\V1\HR\StoreEmployeeRequest;
 use App\Http\Requests\V1\HR\UpdateEmployeeRequest;
 use App\Http\Resources\V1\HR\EmployeeCollection;
 use App\Http\Resources\V1\HR\EmployeeResource;
-use App\Models\User;
 use App\Services\HR\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,9 +32,11 @@ class EmployeeController extends Controller
      *     summary="List all employees",
      *     tags={"Employees"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="isActive", in="query", @OA\Schema(type="boolean")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer", default=15)),
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -43,8 +44,8 @@ class EmployeeController extends Controller
     {
         $filters = [
             'search' => $request->query('filter.search'),
-            'isActive' => $request->has('filter.isActive') 
-                ? filter_var($request->query('filter.isActive'), FILTER_VALIDATE_BOOLEAN) 
+            'isActive' => $request->has('filter.isActive')
+                ? filter_var($request->query('filter.isActive'), FILTER_VALIDATE_BOOLEAN)
                 : null,
         ];
 
@@ -60,7 +61,9 @@ class EmployeeController extends Controller
      *     summary="Create a new employee",
      *     tags={"Employees"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/StoreEmployeeRequest")),
+     *
      *     @OA\Response(response=201, description="Employee created")
      * )
      */
@@ -68,11 +71,11 @@ class EmployeeController extends Controller
     {
         try {
             DB::beginTransaction();
-            
+
             $employee = $this->employeeService->createEmployee($request->validated());
-            
+
             DB::commit();
-            
+
             return ApiResponse::success(
                 new EmployeeResource($employee),
                 __('messages.employee_created'),
@@ -80,6 +83,7 @@ class EmployeeController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
+
             return ApiResponse::error($e->getMessage(), 500);
         }
     }
@@ -90,7 +94,9 @@ class EmployeeController extends Controller
      *     summary="Get employee details",
      *     tags={"Employees"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Success"),
      *     @OA\Response(response=404, description="Not found")
      * )
@@ -99,7 +105,7 @@ class EmployeeController extends Controller
     {
         $employee = $this->employeeService->getEmployee($id);
 
-        if (!$employee) {
+        if (! $employee) {
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
@@ -112,8 +118,11 @@ class EmployeeController extends Controller
      *     summary="Update an employee",
      *     tags={"Employees"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/UpdateEmployeeRequest")),
+     *
      *     @OA\Response(response=200, description="Employee updated"),
      *     @OA\Response(response=404, description="Not found")
      * )
@@ -122,23 +131,24 @@ class EmployeeController extends Controller
     {
         $employee = $this->employeeService->getEmployee($id);
 
-        if (!$employee) {
+        if (! $employee) {
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
         try {
             DB::beginTransaction();
-            
+
             $employee = $this->employeeService->updateEmployee($employee, $request->validated());
-            
+
             DB::commit();
-            
+
             return ApiResponse::success(
                 new EmployeeResource($employee),
                 __('messages.employee_updated')
             );
         } catch (\Exception $e) {
             DB::rollBack();
+
             return ApiResponse::error($e->getMessage(), 500);
         }
     }
@@ -149,9 +159,11 @@ class EmployeeController extends Controller
      *     summary="Get employee performance summary",
      *     tags={"Employees"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Parameter(name="year", in="query", @OA\Schema(type="integer")),
      *     @OA\Parameter(name="month", in="query", @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -159,7 +171,7 @@ class EmployeeController extends Controller
     {
         $employee = $this->employeeService->getEmployee($id);
 
-        if (!$employee) {
+        if (! $employee) {
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
@@ -177,7 +189,9 @@ class EmployeeController extends Controller
      *     summary="Deactivate an employee",
      *     tags={"Employees"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Employee deactivated")
      * )
      */
@@ -185,7 +199,7 @@ class EmployeeController extends Controller
     {
         $employee = $this->employeeService->getEmployee($id);
 
-        if (!$employee) {
+        if (! $employee) {
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
@@ -203,7 +217,9 @@ class EmployeeController extends Controller
      *     summary="Activate an employee",
      *     tags={"Employees"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Employee activated")
      * )
      */
@@ -211,7 +227,7 @@ class EmployeeController extends Controller
     {
         $employee = $this->employeeService->getEmployee($id);
 
-        if (!$employee) {
+        if (! $employee) {
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 

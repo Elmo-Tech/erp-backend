@@ -11,6 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @OA\Schema(
  *     schema="TaskResource",
  *     type="object",
+ *
  *     @OA\Property(property="taskId", type="integer", example=1),
  *     @OA\Property(property="projectId", type="integer", example=1),
  *     @OA\Property(property="parentId", type="integer", nullable=true, example=null),
@@ -68,58 +69,53 @@ class TaskResource extends JsonResource
             'testCompletionPercentage' => $this->getTestCompletionPercentage(),
             'canStartTimer' => $this->canStartTimer(),
             'hasChildren' => $this->hasChildren(),
-            
+
             // Delivery tracking
             'completedAt' => $this->completed_at?->format('Y-m-d\TH:i:s'),
             'delayDays' => $this->delay_days,
             'deliveryStatus' => $this->getDeliveryStatus(),
             'isOverdue' => $this->isOverdue(),
             'daysUntilDue' => $this->getDaysUntilDue(),
-            
+
             // Internal notes - only for authorized users
             'internalReviewerNotes' => $canViewInternal ? ($this->internal_reviewer_notes ?? '') : null,
-            
+
             // Relationships
-            'assignee' => $this->whenLoaded('assignee', fn() => $this->assignee ? [
+            'assignee' => $this->whenLoaded('assignee', fn () => $this->assignee ? [
                 'userId' => $this->assignee->id,
                 'name' => $this->assignee->name,
                 'email' => $this->assignee->email,
                 'avatar' => $this->assignee->avatar,
             ] : null),
-            
-            'assignees' => $this->whenLoaded('assignees', fn() => 
-                TaskAssigneeResource::collection($this->assignees)
+
+            'assignees' => $this->whenLoaded('assignees', fn () => TaskAssigneeResource::collection($this->assignees)
             ),
-            
+
             // Team assignees from Main Task (for Weekly/Subtasks to know available team members)
             'teamAssignees' => $this->getTeamAssignees(),
-            
-            'tags' => $this->whenLoaded('tags', fn() => 
-                TagResource::collection($this->tags)
+
+            'tags' => $this->whenLoaded('tags', fn () => TagResource::collection($this->tags)
             ),
-            
-            'testScenarios' => $this->whenLoaded('testScenarios', fn() => 
-                TaskTestScenarioResource::collection($this->testScenarios)
+
+            'testScenarios' => $this->whenLoaded('testScenarios', fn () => TaskTestScenarioResource::collection($this->testScenarios)
             ),
-            
-            'children' => $this->whenLoaded('children', fn() => 
-                TaskResource::collection($this->children)
+
+            'children' => $this->whenLoaded('children', fn () => TaskResource::collection($this->children)
             ),
-            
-            'deliverables' => $this->whenLoaded('deliverables', fn() => 
-                TaskDeliverableResource::collection($this->deliverables)
+
+            'deliverables' => $this->whenLoaded('deliverables', fn () => TaskDeliverableResource::collection($this->deliverables)
             ),
-            
-            'project' => $this->whenLoaded('project', fn() => [
+
+            'project' => $this->whenLoaded('project', fn () => [
                 'projectId' => $this->project->id,
                 'title' => $this->project->title,
             ]),
-            
-            'parent' => $this->whenLoaded('parent', fn() => $this->parent ? [
+
+            'parent' => $this->whenLoaded('parent', fn () => $this->parent ? [
                 'taskId' => $this->parent->id,
                 'title' => $this->parent->title,
             ] : null),
-            
+
             'createdAt' => $this->created_at?->format('Y-m-d\TH:i:s') ?? '',
             'updatedAt' => $this->updated_at?->format('Y-m-d\TH:i:s') ?? '',
             'createdBy' => $this->created_by,
@@ -140,13 +136,13 @@ class TaskResource extends JsonResource
 
         // Find the Main Task (root ancestor)
         $mainTask = $this->findMainTask();
-        
-        if (!$mainTask) {
+
+        if (! $mainTask) {
             return [];
         }
 
         // Load assignees if not already loaded
-        if (!$mainTask->relationLoaded('assignees')) {
+        if (! $mainTask->relationLoaded('assignees')) {
             $mainTask->load('assignees.user');
         }
 
@@ -159,27 +155,27 @@ class TaskResource extends JsonResource
     private function findMainTask(): ?Task
     {
         $current = $this->resource;
-        
+
         // Walk up the parent chain until we find a Main Task or reach the root
         while ($current->parent_id !== null) {
             $parent = Task::find($current->parent_id);
-            
-            if (!$parent) {
+
+            if (! $parent) {
                 break;
             }
-            
+
             if ($parent->type === TaskType::MAIN) {
                 return $parent;
             }
-            
+
             $current = $parent;
         }
-        
+
         // If current task's parent is null and it's a Main Task, return it
         if ($current->type === TaskType::MAIN) {
             return $current;
         }
-        
+
         return null;
     }
 }

@@ -15,10 +15,7 @@ class LeadConversionService
     /**
      * Convert a lead to a client
      *
-     * @param Lead $lead
-     * @param User $convertedBy
-     * @param array $additionalData Optional additional client data
-     * @return Client
+     * @param  array  $additionalData  Optional additional client data
      */
     public function convertToClient(Lead $lead, User $convertedBy, array $additionalData = []): Client
     {
@@ -55,10 +52,9 @@ class LeadConversionService
      * Convert a lead to client when contract is signed
      * This is called automatically when a contract is signed
      *
-     * @param Lead $lead The lead to convert
-     * @param Contract $contract The signed contract
-     * @param User $user The user performing the conversion
-     * @return Client
+     * @param  Lead  $lead  The lead to convert
+     * @param  Contract  $contract  The signed contract
+     * @param  User  $user  The user performing the conversion
      */
     public function convertLeadToClient(Lead $lead, Contract $contract, User $user): Client
     {
@@ -98,10 +94,6 @@ class LeadConversionService
 
     /**
      * Create portal access for a client
-     *
-     * @param Client $client
-     * @param string $password
-     * @return User
      */
     public function createPortalAccess(Client $client, string $password): User
     {
@@ -127,10 +119,6 @@ class LeadConversionService
 
     /**
      * Link existing lead to a client (for returning clients)
-     *
-     * @param Lead $lead
-     * @param Client $client
-     * @return Lead
      */
     public function linkToExistingClient(Lead $lead, Client $client): Lead
     {
@@ -144,7 +132,6 @@ class LeadConversionService
     /**
      * Check if lead can be converted
      *
-     * @param Lead $lead
      * @return array ['canConvert' => bool, 'reason' => string|null]
      */
     public function canConvert(Lead $lead): array

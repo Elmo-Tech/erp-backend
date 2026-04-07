@@ -1,9 +1,9 @@
 <?php
 
+use App\Traits\CreatedUpdatedByMigration;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use App\Traits\CreatedUpdatedByMigration;
 
 return new class extends Migration
 {
@@ -23,10 +23,10 @@ return new class extends Migration
             $table->string('reason'); // Reason for the change
             $table->enum('type', ['manual', 'automatic'])->default('manual');
             $table->timestamps();
-            
+
             // Add created_by and updated_by columns
             $this->addAuditColumns($table);
-            
+
             // Indexes
             $table->index(['user_id', 'created_at']);
             $table->index('type');

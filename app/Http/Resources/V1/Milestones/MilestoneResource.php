@@ -10,6 +10,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @OA\Schema(
  *     schema="MilestoneResource",
  *     type="object",
+ *
  *     @OA\Property(property="milestoneId", type="integer", example=1),
  *     @OA\Property(property="contractId", type="integer", example=1),
  *     @OA\Property(property="title", type="string", example="Design Phase Payment"),

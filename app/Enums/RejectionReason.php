@@ -13,7 +13,7 @@ enum RejectionReason: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PRICE => __('enums.rejection_reason.price'),
             self::TIMELINE => __('enums.rejection_reason.timeline'),
             self::COMPETITOR => __('enums.rejection_reason.competitor'),

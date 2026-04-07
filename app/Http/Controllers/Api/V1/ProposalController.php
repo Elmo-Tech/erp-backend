@@ -32,12 +32,14 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Get all proposals with pagination and filtering",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="filter[status]", in="query", @OA\Schema(type="string", enum={"draft", "sent", "viewed", "approved", "rejected", "expired"})),
      *     @OA\Parameter(name="filter[leadId]", in="query", @OA\Schema(type="integer")),
      *     @OA\Parameter(name="filter[search]", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Proposals retrieved successfully"),
      *     @OA\Response(response=401, description="Unauthorized")
      * )
@@ -59,11 +61,15 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Create a new proposal",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"leadId", "title"},
+     *
      *             @OA\Property(property="leadId", type="integer", example=1),
      *             @OA\Property(property="templateId", type="integer", example=1),
      *             @OA\Property(property="title", type="string", example="Technical Proposal V1"),
@@ -72,6 +78,7 @@ class ProposalController extends Controller
      *             @OA\Property(property="internalNotes", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=201, description="Proposal created successfully"),
      *     @OA\Response(response=422, description="Validation error")
      * )
@@ -80,12 +87,12 @@ class ProposalController extends Controller
     {
         return DB::transaction(function () use ($request) {
             $validatedData = $request->validated();
-            
+
             // Handle file upload if present (for upload path)
             if ($request->hasFile('file')) {
                 $validatedData['file'] = $request->file('file');
             }
-            
+
             $proposal = $this->proposalService->createProposal(
                 $validatedData,
                 $request->user()
@@ -106,8 +113,10 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Get a single proposal",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Proposal retrieved successfully"),
      *     @OA\Response(response=404, description="Proposal not found")
      * )
@@ -129,16 +138,19 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Update an existing proposal",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\RequestBody(required=true, @OA\JsonContent()),
+     *
      *     @OA\Response(response=200, description="Proposal updated successfully"),
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
     public function update(UpdateProposalRequest $request, Proposal $proposal): JsonResponse
     {
-        if (!$proposal->canBeEdited()) {
+        if (! $proposal->canBeEdited()) {
             return ApiResponse::error(__('proposals.cannot_edit'), 403);
         }
 
@@ -161,15 +173,17 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Delete a proposal",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Proposal deleted successfully"),
      *     @OA\Response(response=404, description="Proposal not found")
      * )
      */
     public function destroy(Proposal $proposal): JsonResponse
     {
-        if (!$proposal->canBeEdited()) {
+        if (! $proposal->canBeEdited()) {
             return ApiResponse::error(__('proposals.cannot_delete'), 403);
         }
 
@@ -185,16 +199,22 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Upload proposal file (PDF/PPT)",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\MediaType(
      *             mediaType="multipart/form-data",
+     *
      *             @OA\Schema(
+     *
      *                 @OA\Property(property="file", type="string", format="binary")
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(response=200, description="File uploaded successfully")
      * )
      */
@@ -223,7 +243,9 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Send proposal to client",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Proposal sent successfully")
      * )
      */
@@ -244,7 +266,9 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Approve proposal",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Proposal approved successfully")
      * )
      */
@@ -265,15 +289,20 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Reject proposal",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"rejectionReason"},
+     *
      *             @OA\Property(property="rejectionReason", type="string"),
      *             @OA\Property(property="rejectionNotes", type="string")
      *         )
      *     ),
+     *
      *     @OA\Response(response=200, description="Proposal rejected successfully")
      * )
      */
@@ -298,16 +327,20 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Create fast track proposal (skip to quotation)",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"leadId", "fastTrackReason"},
+     *
      *             @OA\Property(property="leadId", type="integer"),
      *             @OA\Property(property="title", type="string"),
      *             @OA\Property(property="projectName", type="string"),
      *             @OA\Property(property="fastTrackReason", type="string", example="SaaS Standard Package")
      *         )
      *     ),
+     *
      *     @OA\Response(response=201, description="Fast track proposal created")
      * )
      */
@@ -334,7 +367,9 @@ class ProposalController extends Controller
      *     tags={"Proposals"},
      *     summary="Get proposals expiring soon",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="days", in="query", @OA\Schema(type="integer", default=3)),
+     *
      *     @OA\Response(response=200, description="Expiring proposals retrieved")
      * )
      */

@@ -35,41 +35,54 @@ class QuotationController extends Controller
      *     summary="Get all quotations with pagination and filtering",
      *     description="Retrieve a paginated list of quotations with optional filtering by status and lead ID",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[status]",
      *         in="query",
      *         description="Filter quotations by status",
+     *
      *         @OA\Schema(type="string", enum={"draft", "sent", "accepted", "rejected", "expired"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="filter[leadId]",
      *         in="query",
      *         description="Filter quotations by lead ID",
+     *
      *         @OA\Schema(type="integer")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number for pagination",
+     *
      *         @OA\Schema(type="integer", minimum=1, example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Number of items per page",
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Quotations retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Quotations retrieved successfully"),
      *             @OA\Property(
@@ -78,7 +91,9 @@ class QuotationController extends Controller
      *                 @OA\Property(
      *                     property="quotations",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="quotationId", type="integer", example=1),
      *                         @OA\Property(property="leadId", type="integer", example=1),
      *                         @OA\Property(
@@ -113,10 +128,13 @@ class QuotationController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -130,6 +148,9 @@ class QuotationController extends Controller
             ->allowedFilters([
                 'status',
                 AllowedFilter::exact('lead_id'),
+                AllowedFilter::callback('leadId', function ($query, $value) {
+                    $query->where('lead_id', $value);
+                }),
                 'search' => AllowedFilter::callback('search', function ($query, $value) {
                     $query->where(function ($q) use ($value) {
                         $q->where('quotation_number', 'like', "%{$value}%")
@@ -141,6 +162,7 @@ class QuotationController extends Controller
                     });
                 }),
                 AllowedFilter::scope('expiring_in'),
+                AllowedFilter::scope('expiringIn', 'expiringIn'),
             ])
             ->defaultSort('-created_at')
             ->paginate($request->get('perPage', 15));
@@ -159,17 +181,22 @@ class QuotationController extends Controller
      *     summary="Create a new quotation",
      *     description="Create a new quotation with automatic pricing calculation",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"leadId", "estimations", "hourlyRate", "discountPercentage", "currency"},
+     *
      *             @OA\Property(property="leadId", type="integer", example=1),
      *             @OA\Property(
      *                 property="estimations",
@@ -186,10 +213,13 @@ class QuotationController extends Controller
      *             @OA\Property(property="status", type="string", enum={"draft", "sent", "accepted", "rejected", "expired"}, example="draft")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="Quotation created successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Quotation created successfully"),
      *             @OA\Property(
@@ -226,10 +256,13 @@ class QuotationController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for quotation creation"),
      *             @OA\Property(
@@ -238,15 +271,19 @@ class QuotationController extends Controller
      *                 @OA\Property(
      *                     property="leadId",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="The leadId field is required.")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -257,22 +294,22 @@ class QuotationController extends Controller
     {
         return DB::transaction(function () use ($request) {
             $data = $request->validated();
-            
+
             // Calculate pricing using PricingService
             $pricingBreakdown = $this->pricingService->calculateQuote(
                 $data['estimations'],
                 $data['hourlyRate'],
                 $data['discountPercentage']
             );
-            
+
             // Validate payment plan if provided
-            if (isset($data['paymentPlan']) && !empty($data['paymentPlan'])) {
+            if (isset($data['paymentPlan']) && ! empty($data['paymentPlan'])) {
                 $this->pricingService->validatePaymentPlan($data['paymentPlan']);
             }
-            
+
             // Convert estimations to snake_case for database storage
             $snakeCaseEstimations = $this->pricingService->convertEstimationsToSnakeCase($data['estimations']);
-            
+
             // Prepare quotation data
             $quotationData = [
                 'lead_id' => $data['leadId'],
@@ -285,10 +322,10 @@ class QuotationController extends Controller
                 'expires_at' => isset($data['expiryDate']) ? $data['expiryDate'] : null,
                 'payment_plan' => isset($data['paymentPlan']) ? $data['paymentPlan'] : null,
             ];
-            
+
             // Create quotation with calculated final price
             $quotation = Quotation::create($quotationData);
-            
+
             return ApiResponse::success(
                 new QuotationResource($quotation->load('lead')),
                 'Quotation created successfully',
@@ -305,24 +342,31 @@ class QuotationController extends Controller
      *     summary="Get a single quotation",
      *     description="Retrieve a specific quotation by ID with pricing breakdown",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Quotation ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Quotation retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Quotation retrieved successfully"),
      *             @OA\Property(
@@ -367,18 +411,24 @@ class QuotationController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Quotation not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Quotation not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -401,23 +451,30 @@ class QuotationController extends Controller
      *     summary="Update an existing quotation",
      *     description="Update a quotation with automatic pricing recalculation",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Quotation ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="leadId", type="integer", example=1),
      *             @OA\Property(
      *                 property="estimations",
@@ -434,10 +491,13 @@ class QuotationController extends Controller
      *             @OA\Property(property="status", type="string", enum={"draft", "sent", "accepted", "rejected", "expired"}, example="sent")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Quotation updated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Quotation updated successfully"),
      *             @OA\Property(
@@ -474,10 +534,13 @@ class QuotationController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for quotation update"),
      *             @OA\Property(
@@ -486,23 +549,30 @@ class QuotationController extends Controller
      *                 @OA\Property(
      *                     property="hourlyRate",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="The hourlyRate must be greater than 0.")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Quotation not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Quotation not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -513,61 +583,61 @@ class QuotationController extends Controller
     {
         return DB::transaction(function () use ($request, $quotation) {
             $data = $request->validated();
-            
+
             // Prepare update data
             $updateData = [];
-            
+
             if (isset($data['leadId'])) {
                 $updateData['lead_id'] = $data['leadId'];
             }
-            
+
             if (isset($data['currency'])) {
                 $updateData['currency'] = $data['currency'];
             }
-            
+
             if (isset($data['status'])) {
                 $updateData['status'] = $data['status'];
             }
-            
+
             if (isset($data['expiryDate'])) {
                 $updateData['expires_at'] = $data['expiryDate'];
             }
-            
+
             if (isset($data['paymentPlan'])) {
-                if (!empty($data['paymentPlan'])) {
+                if (! empty($data['paymentPlan'])) {
                     $this->pricingService->validatePaymentPlan($data['paymentPlan']);
                 }
                 $updateData['payment_plan'] = $data['paymentPlan'];
             }
-            
+
             if (isset($data['rejectionReason'])) {
                 $updateData['rejection_reason'] = $data['rejectionReason'];
             }
-            
+
             // Handle pricing-related updates
             $needsPricingRecalculation = false;
             $estimations = $quotation->estimations;
             $hourlyRate = $quotation->hourly_rate;
             $discountPercentage = $quotation->discount_percentage;
-            
+
             if (isset($data['estimations'])) {
                 $estimations = $this->pricingService->convertEstimationsToSnakeCase($data['estimations']);
                 $updateData['estimations'] = $estimations;
                 $needsPricingRecalculation = true;
             }
-            
+
             if (isset($data['hourlyRate'])) {
                 $hourlyRate = $data['hourlyRate'];
                 $updateData['hourly_rate'] = $hourlyRate;
                 $needsPricingRecalculation = true;
             }
-            
+
             if (isset($data['discountPercentage'])) {
                 $discountPercentage = $data['discountPercentage'];
                 $updateData['discount_percentage'] = $discountPercentage;
                 $needsPricingRecalculation = true;
             }
-            
+
             // Recalculate pricing if needed
             if ($needsPricingRecalculation) {
                 $camelCaseEstimations = $this->pricingService->convertEstimationsToCamelCase($estimations);
@@ -578,10 +648,10 @@ class QuotationController extends Controller
                 );
                 $updateData['final_price'] = $pricingBreakdown['finalPrice'];
             }
-            
+
             // Update quotation
             $quotation->update($updateData);
-            
+
             return ApiResponse::success(
                 new QuotationResource($quotation->fresh()->load('lead')),
                 'Quotation updated successfully'
@@ -597,41 +667,54 @@ class QuotationController extends Controller
      *     summary="Delete a quotation",
      *     description="Delete a specific quotation by ID",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
      *         description="Quotation ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Quotation deleted successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Quotation deleted successfully"),
      *             @OA\Property(property="data", type="null")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Quotation not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Quotation not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -656,17 +739,22 @@ class QuotationController extends Controller
      *     summary="Calculate quotation pricing preview",
      *     description="Calculate pricing breakdown without saving the quotation",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"estimations", "hourlyRate", "discountPercentage"},
+     *
      *             @OA\Property(
      *                 property="estimations",
      *                 type="object",
@@ -680,10 +768,13 @@ class QuotationController extends Controller
      *             @OA\Property(property="discountPercentage", type="number", example=10.00)
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Pricing calculated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Pricing calculated successfully"),
      *             @OA\Property(
@@ -696,10 +787,13 @@ class QuotationController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Validation failed for pricing calculation"),
      *             @OA\Property(
@@ -708,23 +802,30 @@ class QuotationController extends Controller
      *                 @OA\Property(
      *                     property="hourlyRate",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="The hourlyRate must be greater than 0.")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Calculation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Pricing calculation failed")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -735,20 +836,20 @@ class QuotationController extends Controller
     {
         try {
             $data = $request->validated();
-            
+
             $pricingBreakdown = $this->pricingService->calculateQuote(
                 $data['estimations'],
                 $data['hourlyRate'],
                 $data['discountPercentage']
             );
-            
+
             return ApiResponse::success(
                 $pricingBreakdown,
                 'Pricing calculated successfully'
             );
         } catch (\InvalidArgumentException $e) {
             return ApiResponse::error(
-                'Pricing calculation failed: ' . $e->getMessage(),
+                'Pricing calculation failed: '.$e->getMessage(),
                 400
             );
         }
@@ -761,6 +862,7 @@ class QuotationController extends Controller
      *     tags={"Quotations"},
      *     summary="Send quotation to client",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Quotation sent successfully")
      * )
      */
@@ -784,6 +886,7 @@ class QuotationController extends Controller
      *     tags={"Quotations"},
      *     summary="Update quotation status",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Status updated successfully")
      * )
      */
@@ -817,21 +920,28 @@ class QuotationController extends Controller
      *     summary="Validate payment plan structure",
      *     description="Validate payment plan percentages and structure without saving",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"paymentPlan", "finalPrice"},
+     *
      *             @OA\Property(
      *                 property="paymentPlan",
      *                 type="array",
+     *
      *                 @OA\Items(
+     *
      *                     @OA\Property(property="milestone", type="string", example="Sign Contract"),
      *                     @OA\Property(property="percentage", type="number", example=50)
      *                 )
@@ -839,10 +949,13 @@ class QuotationController extends Controller
      *             @OA\Property(property="finalPrice", type="number", example=10000.00)
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Payment plan validated successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Payment plan validated successfully"),
      *             @OA\Property(
@@ -855,7 +968,9 @@ class QuotationController extends Controller
      *                     @OA\Property(
      *                         property="payments",
      *                         type="array",
+     *
      *                         @OA\Items(
+     *
      *                             @OA\Property(property="milestone", type="string", example="Sign Contract"),
      *                             @OA\Property(property="percentage", type="number", example=50),
      *                             @OA\Property(property="amount", type="number", example=5000.00),
@@ -868,10 +983,13 @@ class QuotationController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Payment plan validation failed",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Payment plan validation failed"),
      *             @OA\Property(
@@ -880,6 +998,7 @@ class QuotationController extends Controller
      *                 @OA\Property(
      *                     property="paymentPlan",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="Total payment plan percentage must equal 100%")
      *                 )
      *             )
@@ -898,7 +1017,7 @@ class QuotationController extends Controller
 
         try {
             $this->pricingService->validatePaymentPlan($validated['paymentPlan']);
-            
+
             $paymentBreakdown = $this->pricingService->calculatePaymentAmounts(
                 $validated['finalPrice'],
                 $validated['paymentPlan']
@@ -911,7 +1030,7 @@ class QuotationController extends Controller
 
         } catch (\InvalidArgumentException $e) {
             return ApiResponse::validationError([
-                'paymentPlan' => [$e->getMessage()]
+                'paymentPlan' => [$e->getMessage()],
             ], 'Payment plan validation failed');
         }
     }
@@ -923,7 +1042,9 @@ class QuotationController extends Controller
      *     tags={"Quotations"},
      *     summary="Get quotations expiring soon",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="days", in="query", @OA\Schema(type="integer", default=3)),
+     *
      *     @OA\Response(response=200, description="Expiring quotations retrieved")
      * )
      */
@@ -952,6 +1073,7 @@ class QuotationController extends Controller
      *     tags={"Quotations"},
      *     summary="Get overdue quotations",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Overdue quotations retrieved")
      * )
      */

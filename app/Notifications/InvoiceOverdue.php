@@ -34,7 +34,7 @@ class InvoiceOverdue extends Notification implements ShouldQueue
                 'days' => $this->daysOverdue,
             ]))
             ->line(__('Outstanding Amount: :amount :currency', [
-                'amount' => number_format($this->invoice->total_amount, 2),
+                'amount' => number_format($this->invoice->amount, 2),
                 'currency' => $this->invoice->currency,
             ]))
             ->action(__('Pay Now'), url("/invoices/{$this->invoice->id}/pay"))
@@ -49,7 +49,7 @@ class InvoiceOverdue extends Notification implements ShouldQueue
             'invoice_number' => $this->invoice->invoice_number,
             'project_id' => $this->invoice->project_id,
             'project_title' => $this->invoice->project->title,
-            'amount' => $this->invoice->total_amount,
+            'amount' => $this->invoice->amount,
             'currency' => $this->invoice->currency,
             'due_date' => $this->invoice->due_date->toDateString(),
             'days_overdue' => $this->daysOverdue,

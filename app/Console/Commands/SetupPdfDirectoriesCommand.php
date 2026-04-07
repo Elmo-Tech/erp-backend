@@ -34,7 +34,7 @@ class SetupPdfDirectoriesCommand extends Command
 
         foreach ($directories as $directory) {
             try {
-                if (!File::exists($directory)) {
+                if (! File::exists($directory)) {
                     File::makeDirectory($directory, 0755, true);
                     $this->info("✓ Created directory: {$directory}");
                 } else {
@@ -43,19 +43,20 @@ class SetupPdfDirectoriesCommand extends Command
 
                 // Ensure proper permissions
                 chmod($directory, 0755);
-                
+
                 // Create .gitkeep file
-                $gitkeepPath = $directory . '/.gitkeep';
-                if (!File::exists($gitkeepPath)) {
+                $gitkeepPath = $directory.'/.gitkeep';
+                if (! File::exists($gitkeepPath)) {
                     File::put($gitkeepPath, '');
                 }
 
             } catch (\Exception $e) {
-                $this->error("✗ Failed to create directory {$directory}: " . $e->getMessage());
-                Log::error("PDF directory creation failed", [
+                $this->error("✗ Failed to create directory {$directory}: ".$e->getMessage());
+                Log::error('PDF directory creation failed', [
                     'directory' => $directory,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
+
                 return 1;
             }
         }

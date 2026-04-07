@@ -34,24 +34,24 @@ class UserRoleChanged extends Notification implements ShouldQueue
             ->line(__(':changer has updated your role in the system.', [
                 'changer' => $this->changedByName,
             ]))
-            ->line('**' . __('Role Change:') . '**')
+            ->line('**'.__('Role Change:').'**')
             ->line(__('Previous Role: :old', ['old' => ucfirst($this->oldRole)]))
             ->line(__('New Role: :new', ['new' => ucfirst($this->newRole)]));
 
-        if (!empty($this->addedPermissions)) {
-            $message->line('**' . __('New Permissions Added:') . '**');
+        if (! empty($this->addedPermissions)) {
+            $message->line('**'.__('New Permissions Added:').'**');
             foreach (array_slice($this->addedPermissions, 0, 5) as $permission) {
-                $message->line('✓ ' . ucfirst(str_replace('_', ' ', $permission)));
+                $message->line('✓ '.ucfirst(str_replace('_', ' ', $permission)));
             }
             if (count($this->addedPermissions) > 5) {
                 $message->line(__('... and :count more', ['count' => count($this->addedPermissions) - 5]));
             }
         }
 
-        if (!empty($this->removedPermissions)) {
-            $message->line('**' . __('Permissions Removed:') . '**');
+        if (! empty($this->removedPermissions)) {
+            $message->line('**'.__('Permissions Removed:').'**');
             foreach (array_slice($this->removedPermissions, 0, 5) as $permission) {
-                $message->line('✗ ' . ucfirst(str_replace('_', ' ', $permission)));
+                $message->line('✗ '.ucfirst(str_replace('_', ' ', $permission)));
             }
             if (count($this->removedPermissions) > 5) {
                 $message->line(__('... and :count more', ['count' => count($this->removedPermissions) - 5]));

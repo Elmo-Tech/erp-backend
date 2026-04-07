@@ -81,10 +81,10 @@ class PerformanceEvaluation extends Model
         $this->technical_quality_total = $this->bug_severity_score + $this->code_quality_score;
         $this->productivity_total = $this->on_time_delivery_score + $this->flexibility_score;
         $this->soft_skills_total = $this->communication_score + $this->attendance_score + $this->initiative_score;
-        
-        $this->total_score = $this->technical_quality_total 
-            + $this->innovation_score 
-            + $this->productivity_total 
+
+        $this->total_score = $this->technical_quality_total
+            + $this->innovation_score
+            + $this->productivity_total
             + $this->soft_skills_total;
     }
 

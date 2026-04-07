@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\CodeReview;
 use App\Contracts\Trackable;
+use App\Enums\DeliverableStatus;
 use App\Enums\TaskCategory;
+use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Enums\TaskPriority;
-use App\Enums\DeliverableStatus;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model implements Trackable
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'project_id',
@@ -293,7 +292,7 @@ class Task extends Model implements Trackable
      */
     public function areDependenciesSatisfied(): bool
     {
-        return $this->dependencies()->get()->every(fn($dep) => $dep->isSatisfied());
+        return $this->dependencies()->get()->every(fn ($dep) => $dep->isSatisfied());
     }
 
     /**
@@ -301,7 +300,7 @@ class Task extends Model implements Trackable
      */
     public function getUnsatisfiedDependencies()
     {
-        return $this->dependencies()->get()->filter(fn($dep) => !$dep->isSatisfied());
+        return $this->dependencies()->get()->filter(fn ($dep) => ! $dep->isSatisfied());
     }
 
     /**
@@ -319,7 +318,7 @@ class Task extends Model implements Trackable
     {
         $dates = $this->dependencies()
             ->get()
-            ->map(fn($dep) => $dep->getAvailableStartDate())
+            ->map(fn ($dep) => $dep->getAvailableStartDate())
             ->filter();
 
         return $dates->isEmpty() ? null : $dates->max();
@@ -335,12 +334,13 @@ class Task extends Model implements Trackable
             return 0;
         }
 
-        $totalItems = $checklists->sum(fn($list) => $list->items()->count());
+        $totalItems = $checklists->sum(fn ($list) => $list->items()->count());
         if ($totalItems === 0) {
             return 0;
         }
 
-        $completedItems = $checklists->sum(fn($list) => $list->items()->where('is_completed', true)->count());
+        $completedItems = $checklists->sum(fn ($list) => $list->items()->where('is_completed', true)->count());
+
         return round(($completedItems / $totalItems) * 100, 1);
     }
 
@@ -427,7 +427,7 @@ class Task extends Model implements Trackable
             'isEarly' => false,
             'isOnTime' => false,
             'statusText' => 'In Progress',
-            'statusColor' => 'warning'
+            'statusColor' => 'warning',
         ];
 
         if ($this->status === TaskStatus::COMPLETED) {
@@ -435,14 +435,14 @@ class Task extends Model implements Trackable
             if ($this->due_date) {
                 // Task has a due date, calculate delay if not already calculated
                 $delayDays = $this->delay_days;
-                
+
                 // If delay_days is null but we have both due_date and completed_at, calculate it
                 if ($delayDays === null && $this->completed_at && $this->due_date) {
                     $dueDate = $this->due_date->startOfDay();
                     $completedDate = $this->completed_at->startOfDay();
                     $delayDays = (int) $dueDate->diffInDays($completedDate, false);
                 }
-                
+
                 if ($delayDays !== null) {
                     if ($delayDays > 0) {
                         $status['isOverdue'] = true;
@@ -451,23 +451,23 @@ class Task extends Model implements Trackable
                         $status['delayDays'] = $delayDays;
                     } elseif ($delayDays < 0) {
                         $status['isEarly'] = true;
-                        $status['statusText'] = "Completed " . abs($delayDays) . " days early";
+                        $status['statusText'] = 'Completed '.abs($delayDays).' days early';
                         $status['statusColor'] = 'success';
                         $status['delayDays'] = $delayDays;
                     } else {
                         $status['isOnTime'] = true;
-                        $status['statusText'] = "Completed on time";
+                        $status['statusText'] = 'Completed on time';
                         $status['statusColor'] = 'success';
                         $status['delayDays'] = 0;
                     }
                 } else {
                     // Fallback if we still can't calculate delay
-                    $status['statusText'] = "Completed";
+                    $status['statusText'] = 'Completed';
                     $status['statusColor'] = 'success';
                 }
             } else {
                 // Task has no due date
-                $status['statusText'] = "Completed (no due date)";
+                $status['statusText'] = 'Completed (no due date)';
                 $status['statusColor'] = 'success';
             }
         } elseif ($this->due_date && now()->isAfter($this->due_date)) {
@@ -484,7 +484,7 @@ class Task extends Model implements Trackable
             $today = now()->startOfDay();
             $remainingDays = (int) $today->diffInDays($dueDate);
             if ($remainingDays <= 1) {
-                $status['statusText'] = "Due today";
+                $status['statusText'] = 'Due today';
                 $status['statusColor'] = 'warning';
             } elseif ($remainingDays <= 3) {
                 $status['statusText'] = "Due in {$remainingDays} days";
@@ -503,8 +503,8 @@ class Task extends Model implements Trackable
      */
     public function isOverdue(): bool
     {
-        return $this->due_date && 
-               $this->status !== TaskStatus::COMPLETED && 
+        return $this->due_date &&
+               $this->status !== TaskStatus::COMPLETED &&
                now()->isAfter($this->due_date);
     }
 
@@ -513,7 +513,7 @@ class Task extends Model implements Trackable
      */
     public function getDaysUntilDue(): ?int
     {
-        if (!$this->due_date) {
+        if (! $this->due_date) {
             return null;
         }
 
@@ -523,7 +523,7 @@ class Task extends Model implements Trackable
 
         $dueDate = $this->due_date->startOfDay();
         $today = now()->startOfDay();
-        
+
         if ($today->isAfter($dueDate)) {
             // Overdue - return positive number of days overdue
             return (int) $dueDate->diffInDays($today);
@@ -540,6 +540,7 @@ class Task extends Model implements Trackable
             return 100.0;
         }
         $passed = $this->testScenarios()->where('status', 'passed')->count();
+
         return round(($passed / $total) * 100, 2);
     }
 
@@ -549,6 +550,7 @@ class Task extends Model implements Trackable
         if ($total === 0) {
             return true;
         }
+
         return $this->testScenarios()->where('status', 'passed')->count() === $total;
     }
 
@@ -575,8 +577,6 @@ class Task extends Model implements Trackable
     /**
      * Check if timer can be started on this task.
      * Timer is only allowed on leaf tasks (tasks with no children) and not completed tasks.
-     *
-     * @return bool
      */
     public function canStartTimer(): bool
     {
@@ -584,15 +584,13 @@ class Task extends Model implements Trackable
         if ($this->status === TaskStatus::COMPLETED) {
             return false;
         }
-        
+
         // Timer only allowed on leaf tasks (no children)
-        return !$this->children()->exists();
+        return ! $this->children()->exists();
     }
 
     /**
      * Check if this task has any children.
-     *
-     * @return bool
      */
     public function hasChildren(): bool
     {
@@ -604,13 +602,13 @@ class Task extends Model implements Trackable
      */
     public function scopeForUserSpecialization($query, User $user)
     {
-        if (!$user->specialization) {
+        if (! $user->specialization) {
             return $query; // No filtering if no specialization set
         }
 
         // Get compatible task categories for user's specialization
         $compatibleCategories = TaskCategory::getCompatibleCategories($user->specialization);
-        $categoryValues = array_map(fn($category) => $category->value, $compatibleCategories);
+        $categoryValues = array_map(fn ($category) => $category->value, $compatibleCategories);
 
         return $query->whereIn('task_category', $categoryValues);
     }
@@ -626,18 +624,18 @@ class Task extends Model implements Trackable
                 $assigneeQuery->where('user_id', $user->id);
             })
             // OR tasks compatible with user's specialization
-            ->orWhere(function ($compatibleQuery) use ($user) {
-                if ($user->specialization) {
-                    $compatibleCategories = TaskCategory::getCompatibleCategories($user->specialization);
-                    $categoryValues = array_map(fn($category) => $category->value, $compatibleCategories);
-                    
-                    if (!empty($categoryValues)) {
-                        $compatibleQuery->whereIn('task_category', $categoryValues);
+                ->orWhere(function ($compatibleQuery) use ($user) {
+                    if ($user->specialization) {
+                        $compatibleCategories = TaskCategory::getCompatibleCategories($user->specialization);
+                        $categoryValues = array_map(fn ($category) => $category->value, $compatibleCategories);
+
+                        if (! empty($categoryValues)) {
+                            $compatibleQuery->whereIn('task_category', $categoryValues);
+                        }
                     }
-                }
-            })
+                })
             // OR tasks without category (general tasks visible to all)
-            ->orWhereNull('task_category');
+                ->orWhereNull('task_category');
         });
     }
 

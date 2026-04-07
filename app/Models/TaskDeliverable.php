@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
+use App\Enums\DeliverableStatus;
+use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Traits\HasCreatedUpdatedBy;
-use App\Enums\DeliverableStatus;
 
 class TaskDeliverable extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
         'task_id',
@@ -95,7 +95,7 @@ class TaskDeliverable extends Model
     {
         return in_array($this->status, [
             DeliverableStatus::SUBMITTED,
-            DeliverableStatus::UNDER_REVIEW
+            DeliverableStatus::UNDER_REVIEW,
         ]);
     }
 
@@ -104,7 +104,7 @@ class TaskDeliverable extends Model
      */
     public function submit(?string $submissionNotes = null): void
     {
-        if (!$this->canBeSubmitted()) {
+        if (! $this->canBeSubmitted()) {
             throw new \InvalidArgumentException('Deliverable cannot be submitted in current status');
         }
 
@@ -124,11 +124,11 @@ class TaskDeliverable extends Model
         ?string $reviewNotes = null,
         int $pointsAwarded = 0
     ): void {
-        if (!$this->canBeReviewed()) {
+        if (! $this->canBeReviewed()) {
             throw new \InvalidArgumentException('Deliverable cannot be reviewed in current status');
         }
 
-        if (!in_array($status, [DeliverableStatus::APPROVED, DeliverableStatus::REJECTED])) {
+        if (! in_array($status, [DeliverableStatus::APPROVED, DeliverableStatus::REJECTED])) {
             throw new \InvalidArgumentException('Invalid review status');
         }
 

@@ -39,7 +39,7 @@ class UserRemovedFromProject extends Notification implements ShouldQueue
             })
             ->line(__('You no longer have access to this project\'s tasks and resources.'))
             ->line(__('If you have any questions, please contact :remover or your project manager.', [
-                'remover' => $this->removedByName
+                'remover' => $this->removedByName,
             ]));
     }
 

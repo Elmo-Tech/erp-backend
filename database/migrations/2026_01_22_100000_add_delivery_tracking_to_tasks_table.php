@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('tasks', function (Blueprint $table) {
             $table->timestamp('completed_at')->nullable()->after('updated_at');
             $table->integer('delay_days')->nullable()->after('completed_at')->comment('Days delayed from due date (negative if early)');
-            
+
             // Add index for completed_at for reporting queries
             $table->index('completed_at');
         });

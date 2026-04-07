@@ -15,7 +15,7 @@ enum InvoiceStatus: string
      */
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => 'Draft',
             self::SENT => 'Sent',
             self::PAID => 'Paid',
@@ -29,7 +29,7 @@ enum InvoiceStatus: string
      */
     public function canTransitionTo(InvoiceStatus $target): bool
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => in_array($target, [self::SENT, self::CANCELLED]),
             self::SENT => in_array($target, [self::PAID, self::OVERDUE, self::CANCELLED]),
             self::OVERDUE => in_array($target, [self::PAID, self::CANCELLED]),

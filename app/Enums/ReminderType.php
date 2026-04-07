@@ -11,7 +11,7 @@ enum ReminderType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::BEFORE_EVENT => __('enums.reminder_type.before_event'),
             self::AFTER_EVENT => __('enums.reminder_type.after_event'),
             self::CUSTOM => __('enums.reminder_type.custom'),

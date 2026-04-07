@@ -14,7 +14,7 @@ enum QuotationStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => __('enums.quotation_status.draft'),
             self::SENT => __('enums.quotation_status.sent'),
             self::VIEWED => __('enums.quotation_status.viewed'),
@@ -27,7 +27,7 @@ enum QuotationStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => 'gray',
             self::SENT => 'blue',
             self::VIEWED => 'cyan',

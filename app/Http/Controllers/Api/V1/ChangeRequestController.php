@@ -30,6 +30,7 @@ class ChangeRequestController extends Controller
      *     tags={"Change Requests"},
      *     summary="Get change requests for a project",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Change requests retrieved successfully")
      * )
      */
@@ -50,6 +51,7 @@ class ChangeRequestController extends Controller
      *     tags={"Change Requests"},
      *     summary="Create a change request",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=201, description="Change request created successfully")
      * )
      */
@@ -75,6 +77,7 @@ class ChangeRequestController extends Controller
      *     tags={"Change Requests"},
      *     summary="Get a single change request",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Change request retrieved successfully")
      * )
      */
@@ -95,6 +98,7 @@ class ChangeRequestController extends Controller
      *     tags={"Change Requests"},
      *     summary="Update a change request",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Change request updated successfully")
      * )
      */
@@ -119,6 +123,7 @@ class ChangeRequestController extends Controller
      *     tags={"Change Requests"},
      *     summary="Submit change request for review",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Change request submitted successfully")
      * )
      */
@@ -142,6 +147,7 @@ class ChangeRequestController extends Controller
      *     tags={"Change Requests"},
      *     summary="Approve a change request",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Change request approved successfully")
      * )
      */
@@ -166,6 +172,7 @@ class ChangeRequestController extends Controller
      *     tags={"Change Requests"},
      *     summary="Reject a change request",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Change request rejected successfully")
      * )
      */
@@ -192,6 +199,7 @@ class ChangeRequestController extends Controller
      *     tags={"Change Requests"},
      *     summary="Mark change request as implemented",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Change request marked as implemented")
      * )
      */
@@ -215,6 +223,7 @@ class ChangeRequestController extends Controller
      *     tags={"Change Requests"},
      *     summary="Get CR summary for project",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Summary retrieved successfully")
      * )
      */

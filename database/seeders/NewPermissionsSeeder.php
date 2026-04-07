@@ -10,7 +10,7 @@ class NewPermissionsSeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     * 
+     *
      * Adds new permissions for:
      * - Task creation by type (main, weekly, subtask)
      * - Time entry editing
@@ -24,15 +24,15 @@ class NewPermissionsSeeder extends Seeder
             'create_main_tasks',
             'create_weekly_tasks',
             'create_subtasks',
-            
+
             // Task Edit Permissions
             'edit_main_tasks',
             'edit_weekly_tasks',
             'edit_subtasks',
-            
+
             // Time Entry Permissions
             'edit_time_entries',
-            
+
             // Attendance Permissions
             'edit_attendance',
         ];

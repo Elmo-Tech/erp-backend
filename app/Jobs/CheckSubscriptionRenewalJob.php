@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Enums\ContractStatus;
-use App\Enums\LeadStatus;
 use App\Models\Contract;
 use App\Models\User;
 use App\Notifications\SubscriptionRenewalReminderNotification;
@@ -40,8 +39,8 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
     {
         try {
             // Define the reminder periods to check
-            $reminderPeriods = $this->daysBeforeExpiry 
-                ? [$this->daysBeforeExpiry] 
+            $reminderPeriods = $this->daysBeforeExpiry
+                ? [$this->daysBeforeExpiry]
                 : [30, 7, 1];
 
             foreach ($reminderPeriods as $days) {
@@ -54,11 +53,11 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
             Log::info('CheckSubscriptionRenewalJob: Completed successfully');
 
         } catch (\Exception $e) {
-            Log::error('CheckSubscriptionRenewalJob failed: ' . $e->getMessage(), [
+            Log::error('CheckSubscriptionRenewalJob failed: '.$e->getMessage(), [
                 'exception' => $e,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             throw $e;
         }
     }
@@ -101,10 +100,10 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
         foreach ($expiredContracts as $contract) {
             // Check if this is the first time we're processing this expiration
             $shouldProcessToday = $contract->end_date === now()->toDateString();
-            
+
             if ($shouldProcessToday) {
                 $this->sendExpiryNotification($contract);
-                
+
                 // Optionally: suspend the service
                 // $this->suspendService($contract);
             }
@@ -121,7 +120,7 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
 
         // Get client notification data
         $clientData = $this->getClientNotificationData($contract);
-        
+
         if ($clientData) {
             try {
                 $clientData['notifyable']->notify(
@@ -133,7 +132,7 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
                 );
                 Log::info("Sent {$days}-day reminder to client for contract {$contract->contract_number}");
             } catch (\Exception $e) {
-                Log::error("Failed to send {$days}-day reminder to client: " . $e->getMessage(), [
+                Log::error("Failed to send {$days}-day reminder to client: ".$e->getMessage(), [
                     'contract_id' => $contract->id,
                 ]);
             }
@@ -141,20 +140,20 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
 
         // Send notification to reference person (sales responsible)
         $referencePerson = $this->getReferencePerson($contract);
-        
+
         if ($referencePerson) {
             try {
                 $referencePerson->notify(
                     new SubscriptionRenewalReminderNotification(
                         $contract,
                         $days,
-                        $reminderType . '_internal', // Different type for internal notification
+                        $reminderType.'_internal', // Different type for internal notification
                         $referencePerson
                     )
                 );
                 Log::info("Sent {$days}-day reminder to reference person for contract {$contract->contract_number}");
             } catch (\Exception $e) {
-                Log::error("Failed to send {$days}-day reminder to reference person: " . $e->getMessage(), [
+                Log::error("Failed to send {$days}-day reminder to reference person: ".$e->getMessage(), [
                     'contract_id' => $contract->id,
                     'reference_person_id' => $referencePerson->id,
                 ]);
@@ -169,7 +168,7 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
     {
         // Send to client
         $clientData = $this->getClientNotificationData($contract);
-        
+
         if ($clientData) {
             try {
                 $clientData['notifyable']->notify(
@@ -181,13 +180,13 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
                 );
                 Log::info("Sent expiry notification to client for contract {$contract->contract_number}");
             } catch (\Exception $e) {
-                Log::error("Failed to send expiry notification to client: " . $e->getMessage());
+                Log::error('Failed to send expiry notification to client: '.$e->getMessage());
             }
         }
 
         // Send to reference person
         $referencePerson = $this->getReferencePerson($contract);
-        
+
         if ($referencePerson) {
             try {
                 $referencePerson->notify(
@@ -200,7 +199,7 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
                 );
                 Log::info("Sent expiry notification to reference person for contract {$contract->contract_number}");
             } catch (\Exception $e) {
-                Log::error("Failed to send expiry notification to reference person: " . $e->getMessage());
+                Log::error('Failed to send expiry notification to reference person: '.$e->getMessage());
             }
         }
     }
@@ -214,11 +213,11 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
         // Option 1: Get from quotation -> lead -> assigned user (as contact)
         if ($contract->quotation && $contract->quotation->lead) {
             $lead = $contract->quotation->lead;
-            
+
             // If lead has been converted to client
             if ($lead->client_id && $lead->client) {
                 $client = $lead->client;
-                
+
                 // Get client user account if exists
                 if ($client->user_id) {
                     return [
@@ -227,7 +226,7 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
                         'name' => $client->name,
                     ];
                 }
-                
+
                 // Otherwise notify via client email
                 return [
                     'notifyable' => null, // Will handle via ShouldQueue
@@ -235,7 +234,7 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
                     'name' => $client->name,
                 ];
             }
-            
+
             // If not converted, use lead contact info
             return [
                 'notifyable' => null,
@@ -246,8 +245,8 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
 
         // Option 2: Get from contract party_two data
         $partyTwo = $contract->party_two ?? [];
-        
-        if (!empty($partyTwo['email'])) {
+
+        if (! empty($partyTwo['email'])) {
             return [
                 'notifyable' => null,
                 'email' => $partyTwo['email'],
@@ -256,6 +255,7 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
         }
 
         Log::warning("Could not find client notification data for contract {$contract->id}");
+
         return null;
     }
 
@@ -267,7 +267,7 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
         // Option 1: Get from quotation -> lead -> assignedTo
         if ($contract->quotation && $contract->quotation->lead) {
             $lead = $contract->quotation->lead;
-            
+
             if ($lead->assignedTo) {
                 return $lead->assignedTo;
             }
@@ -284,7 +284,7 @@ class CheckSubscriptionRenewalJob implements ShouldQueue
             $salesLead = $contract->project->team->first(function ($member) {
                 return $member->hasRole(['sales_manager', 'sales_rep', 'account_manager']);
             });
-            
+
             if ($salesLead) {
                 return $salesLead;
             }

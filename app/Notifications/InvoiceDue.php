@@ -25,8 +25,8 @@ class InvoiceDue extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $dueText = $this->daysUntilDue === 0 
-            ? __('today') 
+        $dueText = $this->daysUntilDue === 0
+            ? __('today')
             : __(':days days', ['days' => $this->daysUntilDue]);
 
         return (new MailMessage)

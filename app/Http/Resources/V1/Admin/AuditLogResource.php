@@ -27,6 +27,4 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'isSensitive', type: 'boolean', example: true, description: 'Indicates if this is a security-sensitive action'),
     ]
 )]
-class AuditLogResource extends BaseAuditLogResource
-{
-}
+class AuditLogResource extends BaseAuditLogResource {}

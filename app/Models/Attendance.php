@@ -7,6 +7,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property \Illuminate\Support\Carbon|null $date
+ * @property \Illuminate\Support\Carbon|null $clock_in
+ * @property \Illuminate\Support\Carbon|null $clock_out
+ * @property int $late_minutes
+ * @property bool $is_late
+ * @property int $idle_minutes
+ * @property int $deduction_minutes
+ * @property bool $used_grace_day
+ * @property string|null $expected_clock_in
+ * @property string|null $expected_clock_out
+ * @property string|null $notes
+ * @property-read User $user
+ */
 class Attendance extends Model
 {
     use HasFactory;
@@ -14,7 +30,7 @@ class Attendance extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $fillable = [
         'user_id',
@@ -60,23 +76,23 @@ class Attendance extends Model
 
     /**
      * Calculate late minutes based on expected clock-in time.
-     * 
+     *
      * @return int Minutes late (0 if on time or early)
      */
     public function calculateLateMinutes(): int
     {
-        if (!$this->expected_clock_in || !$this->clock_in) {
+        if (! $this->expected_clock_in || ! $this->clock_in) {
             return 0;
         }
 
-        $expectedTime = Carbon::parse($this->date->format('Y-m-d') . ' ' . $this->expected_clock_in);
+        $expectedTime = Carbon::parse($this->date->format('Y-m-d').' '.$this->expected_clock_in);
         $actualTime = Carbon::parse($this->clock_in);
 
         if ($actualTime->lte($expectedTime)) {
             return 0;
         }
 
-        return $expectedTime->diffInMinutes($actualTime);
+        return (int) $expectedTime->diffInMinutes($actualTime);
     }
 
     /**
@@ -88,14 +104,14 @@ class Attendance extends Model
      * - If late > threshold minutes AND no grace days: Deduct in threshold-minute increments
      *   (e.g., 20 min late with 15 threshold = 15 min deduction, 40 min late = 30 min deduction)
      *
-     * @param User $user The user to check grace days for
+     * @param  User  $user  The user to check grace days for
      * @return array{deduction_minutes: int, used_grace_day: bool}
      */
     public function calculateDeduction(User $user): array
     {
         $lateMinutes = $this->late_minutes ?? $this->calculateLateMinutes();
         $lateThreshold = (int) config('attendance.late_threshold_minutes', 15);
-        
+
         // Not late enough to matter
         if ($lateMinutes <= $lateThreshold) {
             return ['deduction_minutes' => 0, 'used_grace_day' => false];
@@ -109,17 +125,15 @@ class Attendance extends Model
         // Calculate deduction in threshold-minute increments
         // 16-30 min (threshold=15) = 15 min deduction, 31-45 min = 30 min deduction, etc.
         $deductionMinutes = floor($lateMinutes / $lateThreshold) * $lateThreshold;
-        
+
         return ['deduction_minutes' => (int) $deductionMinutes, 'used_grace_day' => false];
     }
 
     /**
      * Calculate idle minutes for this attendance record.
-     * 
+     *
      * Formula: (clock_out - clock_in in minutes) - Sum(TimeEntry duration_minutes for user on that date)
      * Returns 0 if clock_out is not set or if calculation results in negative value.
-     *
-     * @return int
      */
     public function calculateIdleMinutes(): int
     {

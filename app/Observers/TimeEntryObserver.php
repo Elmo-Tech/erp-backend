@@ -22,9 +22,6 @@ class TimeEntryObserver
      *
      * When a time entry is created or updated for a Task, recalculate
      * the total_time_spent for that task and all its ancestors.
-     *
-     * @param TimeEntry $timeEntry
-     * @return void
      */
     public function saved(TimeEntry $timeEntry): void
     {
@@ -39,9 +36,6 @@ class TimeEntryObserver
      *
      * When a time entry is deleted from a Task, recalculate
      * the total_time_spent for that task and all its ancestors.
-     *
-     * @param TimeEntry $timeEntry
-     * @return void
      */
     public function deleted(TimeEntry $timeEntry): void
     {
@@ -59,14 +53,11 @@ class TimeEntryObserver
      * 1. Collect the task and all its ancestors
      * 2. Update from leaf to root (bottom-up)
      * 3. Each task's total_time_spent = direct time entries + sum of children's total_time_spent
-     *
-     * @param int $taskId
-     * @return void
      */
     private function recalculateTaskTime(int $taskId): void
     {
         $task = Task::find($taskId);
-        if (!$task) {
+        if (! $task) {
             return;
         }
 

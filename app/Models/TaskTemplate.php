@@ -5,13 +5,12 @@ namespace App\Models;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TaskTemplate extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -66,12 +65,12 @@ class TaskTemplate extends Model
         $task = Task::create($taskData);
 
         // Create subtasks if defined
-        if (!empty($this->subtasks)) {
+        if (! empty($this->subtasks)) {
             foreach ($this->subtasks as $index => $subtaskData) {
                 Task::create([
                     'parent_id' => $task->id,
                     'project_id' => $task->project_id,
-                    'title' => $subtaskData['title'] ?? "Subtask " . ($index + 1),
+                    'title' => $subtaskData['title'] ?? 'Subtask '.($index + 1),
                     'description' => $subtaskData['description'] ?? null,
                     'status' => $subtaskData['status'] ?? 'pending',
                     'priority' => $subtaskData['priority'] ?? $task->priority,

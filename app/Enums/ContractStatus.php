@@ -13,7 +13,7 @@ enum ContractStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => __('enums.contract_status.draft'),
             self::PENDING_SIGNATURE => __('enums.contract_status.pending_signature'),
             self::SIGNED => __('enums.contract_status.signed'),
@@ -25,7 +25,7 @@ enum ContractStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => 'gray',
             self::PENDING_SIGNATURE => 'yellow',
             self::SIGNED => 'blue',

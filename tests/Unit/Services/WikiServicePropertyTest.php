@@ -14,28 +14,28 @@ use Tests\TestCase;
 
 /**
  * Property-Based Tests for WikiService
- * 
+ *
  * Feature: project-management-wiki
  * Tests encryption/decryption functionality for project wikis
  */
 class WikiServicePropertyTest extends TestCase
 {
-    use TestTrait, RefreshDatabase;
+    use RefreshDatabase, TestTrait;
 
     private WikiService $wikiService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->wikiService = new WikiService();
+        $this->wikiService = new WikiService;
     }
 
     /**
      * Property 3: Wiki Encryption Round Trip
-     * 
-     * For any wiki content string, encrypting it via WikiService (with isEncrypted=true) 
+     *
+     * For any wiki content string, encrypting it via WikiService (with isEncrypted=true)
      * and then retrieving it via getDecryptedWiki SHALL return the original content unchanged.
-     * 
+     *
      * **Validates: Requirements 4.2, 4.3, 4.5**
      */
     public function test_wiki_encryption_round_trip(): void
@@ -45,7 +45,7 @@ class WikiServicePropertyTest extends TestCase
             ->forAll(
                 Generator\string(), // random content string
                 Generator\suchThat(
-                    fn($s) => strlen($s) > 0 && strlen($s) <= 255,
+                    fn ($s) => strlen($s) > 0 && strlen($s) <= 255,
                     Generator\string()
                 ), // title (non-empty, max 255 chars)
                 Generator\choose(1, 100) // random seed for unique identifiers
@@ -53,25 +53,26 @@ class WikiServicePropertyTest extends TestCase
             ->then(function ($content, $title, $seed) {
                 // Skip empty content as it's a trivial case
                 if (empty($content)) {
-                    $content = 'Default content ' . $seed;
+                    $content = 'Default content '.$seed;
                 }
 
                 // Ensure title is not empty
                 if (empty($title)) {
-                    $title = 'Wiki Title ' . $seed;
+                    $title = 'Wiki Title '.$seed;
                 }
 
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'Wiki Test User ' . $seed . '_' . uniqid(),
-                    'email' => 'wikiuser' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Wiki Test User '.$seed.'_'.uniqid(),
+                    'email' => 'wikiuser'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
+                    'client_id' => $client->id,
                 ]);
 
                 // Create wiki with encryption enabled
@@ -122,10 +123,10 @@ class WikiServicePropertyTest extends TestCase
 
     /**
      * Property 3: Wiki Encryption Round Trip - Update Scenario
-     * 
-     * For any wiki entry, updating the content with encryption enabled and then 
+     *
+     * For any wiki entry, updating the content with encryption enabled and then
      * retrieving it SHALL return the updated content unchanged.
-     * 
+     *
      * **Validates: Requirements 4.2, 4.3, 4.5**
      */
     public function test_wiki_encryption_round_trip_on_update(): void
@@ -140,28 +141,29 @@ class WikiServicePropertyTest extends TestCase
             ->then(function ($originalContent, $updatedContent, $seed) {
                 // Ensure content is not empty
                 if (empty($originalContent)) {
-                    $originalContent = 'Original content ' . $seed;
+                    $originalContent = 'Original content '.$seed;
                 }
                 if (empty($updatedContent)) {
-                    $updatedContent = 'Updated content ' . $seed;
+                    $updatedContent = 'Updated content '.$seed;
                 }
 
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'Wiki Update User ' . $seed . '_' . uniqid(),
-                    'email' => 'wikiupdate' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Wiki Update User '.$seed.'_'.uniqid(),
+                    'email' => 'wikiupdate'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
+                    'client_id' => $client->id,
                 ]);
 
                 // Create wiki with encryption enabled
                 $wiki = $this->wikiService->createWiki($project, [
-                    'title' => 'Test Wiki ' . $seed,
+                    'title' => 'Test Wiki '.$seed,
                     'content' => $originalContent,
                     'isEncrypted' => true,
                 ]);
@@ -187,10 +189,10 @@ class WikiServicePropertyTest extends TestCase
 
     /**
      * Property 3: Wiki Encryption Round Trip - Non-Encrypted Content
-     * 
-     * For any wiki content stored without encryption, retrieving it via 
+     *
+     * For any wiki content stored without encryption, retrieving it via
      * getDecryptedWiki SHALL return the original content unchanged.
-     * 
+     *
      * **Validates: Requirements 4.2, 4.3, 4.5**
      */
     public function test_wiki_non_encrypted_round_trip(): void
@@ -204,25 +206,26 @@ class WikiServicePropertyTest extends TestCase
             ->then(function ($content, $seed) {
                 // Ensure content is not empty
                 if (empty($content)) {
-                    $content = 'Non-encrypted content ' . $seed;
+                    $content = 'Non-encrypted content '.$seed;
                 }
 
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'Non-Enc User ' . $seed . '_' . uniqid(),
-                    'email' => 'nonenc' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Non-Enc User '.$seed.'_'.uniqid(),
+                    'email' => 'nonenc'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
+                    'client_id' => $client->id,
                 ]);
 
                 // Create wiki WITHOUT encryption
                 $wiki = $this->wikiService->createWiki($project, [
-                    'title' => 'Non-Encrypted Wiki ' . $seed,
+                    'title' => 'Non-Encrypted Wiki '.$seed,
                     'content' => $content,
                     'isEncrypted' => false,
                 ]);
@@ -246,10 +249,10 @@ class WikiServicePropertyTest extends TestCase
 
     /**
      * Property 4: Encrypted Content Not Stored in Plaintext
-     * 
-     * For any wiki entry created with isEncrypted=true, the raw content stored 
+     *
+     * For any wiki entry created with isEncrypted=true, the raw content stored
      * in the database SHALL NOT equal the original plaintext content.
-     * 
+     *
      * **Validates: Requirements 4.2**
      */
     public function test_encrypted_content_not_stored_in_plaintext(): void
@@ -258,7 +261,7 @@ class WikiServicePropertyTest extends TestCase
             ->limitTo(3)
             ->forAll(
                 Generator\suchThat(
-                    fn($s) => strlen($s) >= 5, // Ensure content is long enough to be meaningful
+                    fn ($s) => strlen($s) >= 5, // Ensure content is long enough to be meaningful
                     Generator\string()
                 ),
                 Generator\choose(1, 100) // random seed
@@ -266,25 +269,26 @@ class WikiServicePropertyTest extends TestCase
             ->then(function ($content, $seed) {
                 // Ensure content is not empty and has meaningful length
                 if (empty($content) || strlen($content) < 5) {
-                    $content = 'Sensitive content that should be encrypted ' . $seed;
+                    $content = 'Sensitive content that should be encrypted '.$seed;
                 }
 
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'Plaintext Test User ' . $seed . '_' . uniqid(),
-                    'email' => 'plaintext' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Plaintext Test User '.$seed.'_'.uniqid(),
+                    'email' => 'plaintext'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
+                    'client_id' => $client->id,
                 ]);
 
                 // Create wiki with encryption enabled
                 $wiki = $this->wikiService->createWiki($project, [
-                    'title' => 'Encrypted Wiki ' . $seed,
+                    'title' => 'Encrypted Wiki '.$seed,
                     'content' => $content,
                     'isEncrypted' => true,
                 ]);
@@ -315,10 +319,10 @@ class WikiServicePropertyTest extends TestCase
 
     /**
      * Property 4: Encrypted Content Not Stored in Plaintext - Database Verification
-     * 
-     * For any wiki entry with isEncrypted=true, querying the database directly 
+     *
+     * For any wiki entry with isEncrypted=true, querying the database directly
      * SHALL NOT reveal the plaintext content.
-     * 
+     *
      * **Validates: Requirements 4.2**
      */
     public function test_encrypted_content_not_in_database_plaintext(): void
@@ -330,24 +334,25 @@ class WikiServicePropertyTest extends TestCase
             )
             ->then(function ($seed) {
                 // Use a unique, identifiable content string
-                $content = 'UNIQUE_PLAINTEXT_MARKER_' . $seed . '_' . uniqid();
+                $content = 'UNIQUE_PLAINTEXT_MARKER_'.$seed.'_'.uniqid();
 
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'DB Check User ' . $seed . '_' . uniqid(),
-                    'email' => 'dbcheck' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'DB Check User '.$seed.'_'.uniqid(),
+                    'email' => 'dbcheck'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
+                    'client_id' => $client->id,
                 ]);
 
                 // Create wiki with encryption enabled
                 $wiki = $this->wikiService->createWiki($project, [
-                    'title' => 'DB Check Wiki ' . $seed,
+                    'title' => 'DB Check Wiki '.$seed,
                     'content' => $content,
                     'isEncrypted' => true,
                 ]);
@@ -375,10 +380,10 @@ class WikiServicePropertyTest extends TestCase
 
     /**
      * Property 4: Non-Encrypted Content IS Stored in Plaintext
-     * 
-     * For any wiki entry created with isEncrypted=false, the raw content stored 
+     *
+     * For any wiki entry created with isEncrypted=false, the raw content stored
      * in the database SHALL equal the original content (no encryption applied).
-     * 
+     *
      * **Validates: Requirements 4.2**
      */
     public function test_non_encrypted_content_stored_in_plaintext(): void
@@ -392,25 +397,26 @@ class WikiServicePropertyTest extends TestCase
             ->then(function ($content, $seed) {
                 // Ensure content is not empty
                 if (empty($content)) {
-                    $content = 'Non-encrypted plaintext ' . $seed;
+                    $content = 'Non-encrypted plaintext '.$seed;
                 }
 
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'Non-Enc DB User ' . $seed . '_' . uniqid(),
-                    'email' => 'nonencdb' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Non-Enc DB User '.$seed.'_'.uniqid(),
+                    'email' => 'nonencdb'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $this->actingAs($user);
+                $client = $this->ensureClientProfile($user);
 
                 // Create a project
                 $project = Project::factory()->create([
-                    'client_id' => $user->id,
+                    'client_id' => $client->id,
                 ]);
 
                 // Create wiki WITHOUT encryption
                 $wiki = $this->wikiService->createWiki($project, [
-                    'title' => 'Non-Encrypted DB Wiki ' . $seed,
+                    'title' => 'Non-Encrypted DB Wiki '.$seed,
                     'content' => $content,
                     'isEncrypted' => false,
                 ]);

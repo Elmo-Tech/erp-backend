@@ -17,7 +17,7 @@ enum IndustrySector: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::MEDICAL => __('enums.industry_sector.medical'),
             self::ECOMMERCE => __('enums.industry_sector.ecommerce'),
             self::REAL_ESTATE => __('enums.industry_sector.real_estate'),
@@ -33,7 +33,7 @@ enum IndustrySector: string
 
     public function icon(): string
     {
-        return match($this) {
+        return match ($this) {
             self::MEDICAL => '🏥',
             self::ECOMMERCE => '🛒',
             self::REAL_ESTATE => '🏢',

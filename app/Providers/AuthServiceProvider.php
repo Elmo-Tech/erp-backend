@@ -2,22 +2,22 @@
 
 namespace App\Providers;
 
-use App\Models\Invoice;
-use App\Models\Project;
-use App\Models\Task;
 use App\Models\DeductionType;
-use App\Models\RewardType;
 use App\Models\EmployeeDeduction;
 use App\Models\EmployeeReward;
+use App\Models\Invoice;
+use App\Models\Project;
+use App\Models\RewardType;
 use App\Models\SalaryAdjustment;
-use App\Policies\InvoicePolicy;
-use App\Policies\ProjectPolicy;
-use App\Policies\TaskPolicy;
+use App\Models\Task;
 use App\Policies\DeductionTypePolicy;
-use App\Policies\RewardTypePolicy;
 use App\Policies\EmployeeDeductionPolicy;
 use App\Policies\EmployeeRewardPolicy;
+use App\Policies\InvoicePolicy;
+use App\Policies\ProjectPolicy;
+use App\Policies\RewardTypePolicy;
 use App\Policies\SalaryAdjustmentPolicy;
+use App\Policies\TaskPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider

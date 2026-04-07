@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 /**
  * Simple Unit Tests for InvoiceResource
- * 
+ *
  * Validates: Requirements 3.7, 10.2
  */
 class InvoiceResourceSimpleTest extends TestCase
@@ -26,13 +26,14 @@ class InvoiceResourceSimpleTest extends TestCase
     {
         // Create required models
         $client = User::factory()->create();
+        $clientProfile = $this->ensureClientProfile($client);
         $creator = User::factory()->create();
-        
+
         $project = Project::factory()->create([
-            'client_id' => $client->id,
+            'client_id' => $clientProfile->id,
             'created_by' => $creator->id,
         ]);
-        
+
         $invoice = Invoice::factory()->create([
             'project_id' => $project->id,
             'invoice_number' => 'INV-TEST-001',
@@ -44,36 +45,36 @@ class InvoiceResourceSimpleTest extends TestCase
             'created_by' => $creator->id,
             'updated_by' => $creator->id,
         ]);
-        
+
         // Transform using InvoiceResource
         $resource = new InvoiceResource($invoice);
         $response = $resource->toArray(request());
-        
+
         // Verify all expected camelCase keys exist
         $expectedKeys = [
             'invoiceId', 'projectId', 'invoiceNumber', 'amount', 'currency',
             'status', 'statusLabel', 'dueDate', 'paidAt', 'notes',
             'isOverdue', 'isPayable', 'createdBy', 'updatedBy',
-            'createdAt', 'updatedAt'
+            'createdAt', 'updatedAt',
         ];
-        
+
         foreach ($expectedKeys as $key) {
-            $this->assertArrayHasKey($key, $response, 
+            $this->assertArrayHasKey($key, $response,
                 "InvoiceResource should contain camelCase key: {$key}");
         }
-        
+
         // Verify no snake_case keys exist
         $forbiddenKeys = [
-            'invoice_id', 'project_id', 'invoice_number', 'due_date', 
-            'paid_at', 'is_overdue', 'is_payable', 'created_by', 
-            'updated_by', 'created_at', 'updated_at'
+            'invoice_id', 'project_id', 'invoice_number', 'due_date',
+            'paid_at', 'is_overdue', 'is_payable', 'created_by',
+            'updated_by', 'created_at', 'updated_at',
         ];
-        
+
         foreach ($forbiddenKeys as $key) {
             $this->assertArrayNotHasKey($key, $response,
                 "InvoiceResource should NOT contain snake_case key: {$key}");
         }
-        
+
         // Verify data integrity
         $this->assertEquals($invoice->id, $response['invoiceId']);
         $this->assertEquals($invoice->project_id, $response['projectId']);
@@ -85,11 +86,11 @@ class InvoiceResourceSimpleTest extends TestCase
         $this->assertEquals($invoice->notes, $response['notes']);
         $this->assertEquals($invoice->created_by, $response['createdBy']);
         $this->assertEquals($invoice->updated_by, $response['updatedBy']);
-        
+
         // Verify boolean methods
         $this->assertEquals($invoice->isOverdue(), $response['isOverdue']);
         $this->assertEquals($invoice->isPayable(), $response['isPayable']);
-        
+
         // Verify date formatting
         $this->assertEquals($invoice->due_date->toDateString(), $response['dueDate']);
         $this->assertEquals($invoice->created_at->toISOString(), $response['createdAt']);
@@ -104,28 +105,29 @@ class InvoiceResourceSimpleTest extends TestCase
     {
         // Create required models
         $client = User::factory()->create();
+        $clientProfile = $this->ensureClientProfile($client);
         $creator = User::factory()->create();
-        
+
         $project = Project::factory()->create([
-            'client_id' => $client->id,
+            'client_id' => $clientProfile->id,
             'created_by' => $creator->id,
         ]);
-        
+
         $paidAt = Carbon::now();
-        
+
         $invoice = Invoice::factory()->create([
             'project_id' => $project->id,
             'status' => 'paid',
             'paid_at' => $paidAt,
             'created_by' => $creator->id,
         ]);
-        
+
         // Transform using InvoiceResource
         $resource = new InvoiceResource($invoice);
         $response = $resource->toArray(request());
-        
+
         // Verify paid_at is properly formatted (allow for microsecond differences)
-        $this->assertStringStartsWith($paidAt->format('Y-m-d\TH:i:s'), $response['paidAt']);
+        $this->assertStringStartsWith($paidAt->utc()->format('Y-m-d\TH:i:s'), $response['paidAt']);
         $this->assertEquals('paid', $response['status']);
         $this->assertFalse($response['isPayable']); // Paid invoices are not payable
     }

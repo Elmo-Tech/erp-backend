@@ -26,8 +26,10 @@ class StoreInvoiceRequest extends FormRequest
     {
         return [
             'projectId' => ['required', 'integer', 'exists:projects,id'],
+            'contractId' => ['nullable', 'integer', 'exists:contracts,id'],
+            'milestoneName' => ['nullable', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'currency' => ['nullable', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
+            'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
             'dueDate' => ['required', 'date', 'after:today'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
@@ -44,9 +46,14 @@ class StoreInvoiceRequest extends FormRequest
             'projectId.required' => 'The projectId field is required.',
             'projectId.integer' => 'The projectId must be an integer.',
             'projectId.exists' => 'The selected projectId does not exist.',
+            'contractId.integer' => 'The contractId must be an integer.',
+            'contractId.exists' => 'The selected contractId does not exist.',
+            'milestoneName.string' => 'The milestoneName must be a string.',
+            'milestoneName.max' => 'The milestoneName may not be greater than 255 characters.',
             'amount.required' => 'The amount field is required.',
             'amount.numeric' => 'The amount must be a valid number.',
             'amount.min' => 'The amount must be greater than 0.',
+            'currency.required' => 'The currency field is required.',
             'currency.string' => 'The currency must be a string.',
             'currency.size' => 'The currency must be exactly 3 characters.',
             'currency.regex' => 'The currency must be a valid 3-letter uppercase currency code (e.g., USD, EUR).',
@@ -61,7 +68,6 @@ class StoreInvoiceRequest extends FormRequest
     /**
      * Handle a failed validation attempt.
      *
-     * @param Validator $validator
      * @throws HttpResponseException
      */
     protected function failedValidation(Validator $validator): void

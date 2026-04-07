@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use App\Models\Project;
-use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
@@ -38,7 +37,7 @@ class UserAddedToProject extends Notification implements ShouldQueue
                 'adder' => $this->addedByName,
                 'project' => $this->project->title,
             ]))
-            ->line('**' . __('Project Details:') . '**')
+            ->line('**'.__('Project Details:').'**')
             ->line(__('Project: :title', ['title' => $this->project->title]))
             ->line(__('Client: :client', ['client' => $clientName]))
             ->line(__('Status: :status', ['status' => __(ucfirst(str_replace('_', ' ', $this->project->status?->value ?? 'draft')))]))
@@ -48,7 +47,7 @@ class UserAddedToProject extends Notification implements ShouldQueue
             })
             ->when($this->project->description, function ($message) {
                 return $message->line(__('Description: :description', [
-                    'description' => substr($this->project->description, 0, 150) . '...'
+                    'description' => substr($this->project->description, 0, 150).'...',
                 ]));
             })
             ->action(__('View Project'), url("/dashboard/projects/{$this->project->id}"))

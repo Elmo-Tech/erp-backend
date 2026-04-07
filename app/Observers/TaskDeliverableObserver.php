@@ -2,9 +2,9 @@
 
 namespace App\Observers;
 
-use App\Models\TaskDeliverable;
-use App\Models\TaskActivity;
 use App\Enums\DeliverableStatus;
+use App\Models\TaskActivity;
+use App\Models\TaskDeliverable;
 
 /**
  * Observer for TaskDeliverable model to log activities and handle status changes.
@@ -58,14 +58,14 @@ class TaskDeliverableObserver
             ];
 
             $action = $statusChangeMap[$newStatus->value] ?? 'deliverable_status_changed';
-            
+
             $description = match ($newStatus) {
                 DeliverableStatus::SUBMITTED => "Submitted deliverable: {$deliverable->title}",
                 DeliverableStatus::UNDER_REVIEW => "Started reviewing deliverable: {$deliverable->title}",
-                DeliverableStatus::APPROVED => "Approved deliverable: {$deliverable->title}" . 
-                    ($deliverable->points_awarded ? " (+{$deliverable->points_awarded} points)" : ""),
-                DeliverableStatus::REJECTED => "Rejected deliverable: {$deliverable->title}" . 
-                    ($deliverable->points_awarded < 0 ? " ({$deliverable->points_awarded} points)" : ""),
+                DeliverableStatus::APPROVED => "Approved deliverable: {$deliverable->title}".
+                    ($deliverable->points_awarded ? " (+{$deliverable->points_awarded} points)" : ''),
+                DeliverableStatus::REJECTED => "Rejected deliverable: {$deliverable->title}".
+                    ($deliverable->points_awarded < 0 ? " ({$deliverable->points_awarded} points)" : ''),
                 default => "Changed deliverable status: {$deliverable->title}",
             };
 

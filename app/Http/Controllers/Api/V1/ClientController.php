@@ -6,14 +6,14 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Client\StoreClientRequest;
 use App\Http\Requests\V1\Client\UpdateClientRequest;
-use App\Http\Resources\V1\Client\ClientResource;
 use App\Http\Resources\V1\Client\ClientCollection;
+use App\Http\Resources\V1\Client\ClientResource;
 use App\Models\Client;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
 use OpenApi\Annotations as OA;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 /**
  * @OA\Tag(
@@ -35,10 +35,12 @@ class ClientController extends Controller
      *     tags={"Clients"},
      *     summary="Get all clients",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="filter[search]", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="filter[status]", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -72,7 +74,9 @@ class ClientController extends Controller
      *     tags={"Clients"},
      *     summary="Create a new client",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\RequestBody(required=true),
+     *
      *     @OA\Response(response=201, description="Created")
      * )
      */
@@ -94,7 +98,9 @@ class ClientController extends Controller
      *     tags={"Clients"},
      *     summary="Get a single client",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -115,8 +121,11 @@ class ClientController extends Controller
      *     tags={"Clients"},
      *     summary="Update a client",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\RequestBody(required=true),
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -137,7 +146,9 @@ class ClientController extends Controller
      *     tags={"Clients"},
      *     summary="Delete a client",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */

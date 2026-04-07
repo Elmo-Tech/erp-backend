@@ -9,7 +9,7 @@ enum CommissionType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::MARKUP => __('enums.commission_type.markup'),
             self::MARGIN => __('enums.commission_type.margin'),
         };
@@ -17,7 +17,7 @@ enum CommissionType: string
 
     public function description(): string
     {
-        return match($this) {
+        return match ($this) {
             self::MARKUP => __('enums.commission_type.markup_desc'),
             self::MARGIN => __('enums.commission_type.margin_desc'),
         };

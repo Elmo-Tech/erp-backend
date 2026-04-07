@@ -2,13 +2,17 @@
 
 namespace App\Http\Resources\V1\Contract;
 
+use App\Models\Contract;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * @mixin Contract
+ *
  * @OA\Schema(
  *     schema="ContractResource",
  *     type="object",
+ *
  *     @OA\Property(property="contractId", type="integer", example=1),
  *     @OA\Property(property="contractNumber", type="string", example="CT-2026-0001"),
  *     @OA\Property(property="quotationId", type="integer", example=1),
@@ -77,52 +81,59 @@ class ContractResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        /** @var Contract $contract */
+        $contract = $this->resource;
+
         return [
-            'contractId' => $this->id,
-            'contractNumber' => $this->contract_number ?? "",
-            'quotationId' => $this->quotation_id,
-            'projectId' => $this->project_id,
-            'templateId' => $this->template_id,
-            'title' => $this->title ?? "",
-            'status' => $this->status->value,
-            'content' => $this->content ?? "",
-            'totalAmount' => (float) $this->total_amount,
-            'currency' => $this->currency ?? "USD",
-            'paymentTerms' => $this->payment_terms ?? "",
-            'startDate' => $this->start_date?->toDateString(),
-            'endDate' => $this->end_date?->toDateString(),
-            'signedAt' => $this->signed_at?->toISOString(),
-            'signedByClient' => $this->signed_by_client ?? "",
-            'createdAt' => $this->created_at->toISOString(),
-            'updatedAt' => $this->updated_at->toISOString(),
-            
+            'contractId' => $contract->id,
+            'contractNumber' => $contract->contract_number ?? '',
+            'quotationId' => $contract->quotation_id,
+            'projectId' => $contract->project_id,
+            'templateId' => $contract->template_id,
+            'title' => $contract->title ?? '',
+            'status' => $contract->status->value,
+            'content' => $contract->content ?? '',
+            'totalAmount' => (float) $contract->total_amount,
+            'currency' => $contract->currency ?? 'USD',
+            'paymentTerms' => $contract->payment_terms ?? '',
+            'startDate' => $contract->start_date?->toDateString(),
+            'endDate' => $contract->end_date?->toDateString(),
+            'signedAt' => $contract->signed_at?->toISOString(),
+            'signedByClient' => $contract->signed_by_client ?? '',
+            'createdAt' => $contract->created_at?->toISOString() ?? '',
+            'updatedAt' => $contract->updated_at?->toISOString() ?? '',
+
             // Party information
-            'partyOne' => $this->party_one ?? [],
-            'partyTwo' => $this->party_two ?? [],
-            
+            'partyOne' => $contract->party_one ?? [],
+            'partyTwo' => $contract->party_two ?? [],
+
             // Relationships
-            'quotation' => $this->whenLoaded('quotation', function () {
+            'quotation' => $this->whenLoaded('quotation', function () use ($contract) {
+                $quotation = $contract->quotation;
+
                 return [
-                    'quotationId' => $this->quotation->id,
-                    'finalPrice' => (float) $this->quotation->final_price,
-                    'currency' => $this->quotation->currency,
-                    'status' => $this->quotation->status->value,
-                    'lead' => $this->whenLoaded('quotation.lead', function () {
+                    'quotationId' => $quotation->id,
+                    'finalPrice' => (float) $quotation->final_price,
+                    'currency' => $quotation->currency,
+                    'status' => $quotation->status->value,
+                    'lead' => $this->whenLoaded('quotation.lead', function () use ($quotation) {
+                        $lead = $quotation->lead;
+
                         return [
-                            'leadId' => $this->quotation->lead->id,
-                            'name' => $this->quotation->lead->name ?? "",
-                            'email' => $this->quotation->lead->email ?? "",
-                            'company' => $this->quotation->lead->company ?? "",
+                            'leadId' => $lead->id,
+                            'name' => $lead->name ?? '',
+                            'email' => $lead->email ?? '',
+                            'company' => $lead->company ?? '',
                         ];
                     }),
                 ];
             }),
-            
-            'project' => $this->whenLoaded('project', function () {
-                return $this->project ? [
-                    'projectId' => $this->project->id,
-                    'title' => $this->project->title ?? "",
-                    'status' => $this->project->status->value,
+
+            'project' => $this->whenLoaded('project', function () use ($contract) {
+                return $contract->project ? [
+                    'projectId' => $contract->project->id,
+                    'title' => $contract->project->title ?? '',
+                    'status' => $contract->project->status->value,
                 ] : null;
             }),
         ];

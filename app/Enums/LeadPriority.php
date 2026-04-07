@@ -11,7 +11,7 @@ enum LeadPriority: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::LOW => __('enums.lead_priority.low'),
             self::MEDIUM => __('enums.lead_priority.medium'),
             self::HIGH => __('enums.lead_priority.high'),
@@ -21,7 +21,7 @@ enum LeadPriority: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::LOW => 'gray',
             self::MEDIUM => 'blue',
             self::HIGH => 'orange',

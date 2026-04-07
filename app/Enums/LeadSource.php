@@ -14,7 +14,7 @@ enum LeadSource: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::FACEBOOK => __('enums.lead_source.facebook'),
             self::GOOGLE => __('enums.lead_source.google'),
             self::LINKEDIN => __('enums.lead_source.linkedin'),

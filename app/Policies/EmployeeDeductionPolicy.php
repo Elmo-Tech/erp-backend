@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\EmployeeDeduction;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class EmployeeDeductionPolicy
@@ -27,7 +27,7 @@ class EmployeeDeductionPolicy
         if ($user->id === $employeeDeduction->user_id) {
             return true;
         }
-        
+
         return $user->hasRole(['admin', 'hr_manager', 'manager']);
     }
 
@@ -64,7 +64,7 @@ class EmployeeDeductionPolicy
         if ($user->id === $employeeDeduction->user_id) {
             return false;
         }
-        
+
         return $user->hasRole(['admin', 'hr_manager']);
     }
 

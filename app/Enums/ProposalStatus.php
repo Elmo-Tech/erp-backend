@@ -13,7 +13,7 @@ enum ProposalStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => __('enums.proposal_status.draft'),
             self::SENT => __('enums.proposal_status.sent'),
             self::VIEWED => __('enums.proposal_status.viewed'),
@@ -25,7 +25,7 @@ enum ProposalStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => 'gray',
             self::SENT => 'blue',
             self::VIEWED => 'cyan',

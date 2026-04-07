@@ -25,10 +25,10 @@ class ReviewDeliverableRequest extends FormRequest
     public function rules(): array
     {
         $isApproval = $this->routeIs('*.approve');
-        
+
         return [
             'pointsAwarded' => $isApproval ? ['integer', 'min:1', 'max:10'] : ['integer', 'min:1', 'max:5'],
-            'pointsDeducted' => !$isApproval ? ['integer', 'min:1', 'max:5'] : ['integer', 'min:1', 'max:5'],
+            'pointsDeducted' => ! $isApproval ? ['integer', 'min:1', 'max:5'] : ['integer', 'min:1', 'max:5'],
             'reviewNotes' => $isApproval ? ['nullable', 'string', 'max:1000'] : ['required', 'string', 'max:1000'],
         ];
     }

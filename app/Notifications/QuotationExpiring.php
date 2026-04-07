@@ -16,7 +16,7 @@ class QuotationExpiring extends Notification implements ShouldQueue
     public function __construct(
         public Quotation $quotation
     ) {
-        $this->daysUntilExpiry = $quotation->expires_at ? 
+        $this->daysUntilExpiry = $quotation->expires_at ?
             now()->diffInDays($quotation->expires_at, false) : 0;
     }
 
@@ -29,8 +29,8 @@ class QuotationExpiring extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $expiryText = $this->daysUntilExpiry === 0 
-            ? __('today') 
+        $expiryText = $this->daysUntilExpiry === 0
+            ? __('today')
             : __('in :days days', ['days' => $this->daysUntilExpiry]);
 
         return (new MailMessage)

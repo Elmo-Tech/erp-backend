@@ -34,7 +34,7 @@ class InnovationLogVerified extends Notification implements ShouldQueue
             ->line(__('Impact Level: :impact', ['impact' => ucfirst($this->innovationLog->impact_level)]))
             ->when($this->innovationLog->points_awarded > 0, function ($message) {
                 return $message->line(__('Points Awarded: :points points', [
-                    'points' => $this->innovationLog->points_awarded
+                    'points' => $this->innovationLog->points_awarded,
                 ]));
             })
             ->action(__('View Innovation'), url("/dashboard/performance/innovation-logs/{$this->innovationLog->id}"))

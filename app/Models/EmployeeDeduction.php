@@ -9,10 +9,35 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property int $deduction_type_id
+ * @property \Illuminate\Support\Carbon|null $deduction_date
+ * @property float|int|string $amount
+ * @property string|null $reason
+ * @property string $status
+ * @property int|null $attendance_id
+ * @property int|null $late_minutes
+ * @property int|null $approved_by
+ * @property \Illuminate\Support\Carbon|null $approved_at
+ * @property string|null $rejection_reason
+ * @property string $deductible_type
+ * @property int $deductible_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read User|null $user
+ * @property-read DeductionType|null $deductionType
+ * @property-read Attendance|null $attendance
+ * @property-read User|null $approver
+ */
 class EmployeeDeduction extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
+    /**
+     * @var list<string>
+     */
     protected $fillable = [
         'user_id',
         'deduction_type_id',
@@ -29,6 +54,9 @@ class EmployeeDeduction extends Model
         'deductible_id',
     ];
 
+    /**
+     * @var array<string, string>
+     */
     protected $casts = [
         'deduction_date' => 'date',
         'amount' => 'decimal:2',
@@ -40,8 +68,11 @@ class EmployeeDeduction extends Model
      * Status constants
      */
     const STATUS_PENDING = 'pending';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_REJECTED = 'rejected';
+
     const STATUS_CANCELLED = 'cancelled';
 
     /**
@@ -122,7 +153,7 @@ class EmployeeDeduction extends Model
      */
     public function approve(int $approverId): bool
     {
-        if (!$this->canBeApproved()) {
+        if (! $this->canBeApproved()) {
             return false;
         }
 
@@ -140,7 +171,7 @@ class EmployeeDeduction extends Model
      */
     public function reject(int $approverId, string $reason): bool
     {
-        if (!$this->canBeApproved()) {
+        if (! $this->canBeApproved()) {
             return false;
         }
 

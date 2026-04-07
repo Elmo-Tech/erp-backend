@@ -2,7 +2,6 @@
 
 namespace App\Observers;
 
-use App\Enums\PointTransactionType;
 use App\Enums\TaskType;
 use App\Models\TaskTestScenario;
 use App\Services\Points\UnifiedPointService;
@@ -33,30 +32,27 @@ class TaskTestScenarioObserver
      *
      * This method is called before the model is saved to the database.
      * It handles point awards/deductions when test scenarios are verified.
-     *
-     * @param TaskTestScenario $scenario
-     * @return void
      */
     public function updating(TaskTestScenario $scenario): void
     {
         // Only process if verification status is being changed
-        if (!$scenario->isDirty('verified_at') || !$scenario->verified_at) {
+        if (! $scenario->isDirty('verified_at') || ! $scenario->verified_at) {
             return;
         }
 
         // Load the task relationship if not already loaded
-        if (!$scenario->relationLoaded('task')) {
+        if (! $scenario->relationLoaded('task')) {
             $scenario->load('task');
         }
 
         // Only award points for WEEKLY tasks
-        if (!$this->shouldAwardPoints($scenario)) {
+        if (! $this->shouldAwardPoints($scenario)) {
             return;
         }
 
         // Get the task assignee (the developer who worked on this)
         $assignee = $scenario->task->assignee;
-        if (!$assignee) {
+        if (! $assignee) {
             return;
         }
 
@@ -71,9 +67,6 @@ class TaskTestScenarioObserver
     /**
      * Determine if points should be awarded for this test scenario.
      * Points are only awarded for test scenarios belonging to WEEKLY tasks.
-     *
-     * @param TaskTestScenario $scenario
-     * @return bool
      */
     private function shouldAwardPoints(TaskTestScenario $scenario): bool
     {

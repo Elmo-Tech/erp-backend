@@ -7,7 +7,7 @@ return [
     'no_permission' => 'ليس لديك صلاحية لتنفيذ هذا الإجراء',
     'unauthorized' => 'غير مصرح بالوصول',
     'unauthorized_send_invoice' => 'ليس لديك صلاحية لإرسال الفواتير',
-    
+
     // Users
     'users_retrieved' => 'تم جلب المستخدمين بنجاح',
     'user_retrieved' => 'تم جلب المستخدم بنجاح',
@@ -48,7 +48,7 @@ return [
     'invoice_created_from_milestone' => 'تم إنشاء الفاتورة من المرحلة بنجاح',
     'invoice_linked_to_milestone' => 'تم ربط الفاتورة بالمرحلة بنجاح',
     'milestone_already_has_invoice' => 'المرحلة مرتبطة بفاتورة بالفعل',
-    
+
     // Invoices
     'invoices_retrieved' => 'تم جلب الفواتير بنجاح',
     'invoice_retrieved' => 'تم جلب الفاتورة بنجاح',
@@ -60,7 +60,7 @@ return [
     'milestone_invoice_generated' => 'تم إنشاء فاتورة المرحلة بنجاح',
     'pending_invoices_generated' => 'تم إنشاء الفواتير المعلقة بنجاح',
     'cannot_delete_non_draft_invoice' => 'يمكن حذف المسودات فقط',
-    
+
     // Audit Logs
     'audit_logs_retrieved' => 'تم جلب سجلات المراجعة بنجاح',
     'audit_log_retrieved' => 'تم جلب سجل المراجعة بنجاح',
@@ -126,7 +126,7 @@ return [
     'admin_deliverable_reset' => 'تم إعادة تعيين المخرج إلى حالة الانتظار بنجاح',
     'admin_deliverable_approved' => 'تم الموافقة على المخرج بشكل مباشر بنجاح',
     'admin_deliverable_rejected' => 'تم رفض المخرج بشكل مباشر بنجاح',
-    
+
     // Activities
     'activities_retrieved' => 'تم استرداد الأنشطة بنجاح',
     'activity_created' => 'تم إنشاء النشاط بنجاح',

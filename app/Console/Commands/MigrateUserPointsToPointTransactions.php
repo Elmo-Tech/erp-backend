@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Models\UserPoint;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class MigrateUserPointsToPointTransactions extends Command
 {
@@ -41,8 +40,9 @@ class MigrateUserPointsToPointTransactions extends Command
 
         if ($userId) {
             $user = User::find($userId);
-            if (!$user) {
+            if (! $user) {
                 $this->error("User with ID {$userId} not found.");
+
                 return 1;
             }
             $query->where('user_id', $userId);
@@ -60,10 +60,11 @@ class MigrateUserPointsToPointTransactions extends Command
 
         if ($userPoints->isEmpty()) {
             $this->warn('No UserPoint records found for the given filters.');
+
             return 0;
         }
 
-        $this->info('Found UserPoint records: ' . $userPoints->count());
+        $this->info('Found UserPoint records: '.$userPoints->count());
         if ($isDryRun) {
             $this->warn('DRY RUN: No records will be written.');
         }
@@ -90,10 +91,11 @@ class MigrateUserPointsToPointTransactions extends Command
 
                 if ($exists) {
                     $skipped++;
+
                     continue;
                 }
 
-                if (!$isDryRun) {
+                if (! $isDryRun) {
                     PointTransaction::create([
                         'user_id' => $up->user_id,
                         'points' => $up->points_change,

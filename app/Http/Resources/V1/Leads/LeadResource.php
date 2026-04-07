@@ -49,12 +49,12 @@ class LeadResource extends JsonResource
             'nextFollowUpAt' => $this->next_follow_up_at?->toISOString() ?? '',
             'notes' => $this->notes ?? '',
             'lossReason' => $this->loss_reason ?? '',
-            
+
             // Conversion fields
             'clientId' => $this->client_id ?? 0,
             'convertedAt' => $this->converted_at?->toISOString() ?? '',
             'convertedBy' => $this->converted_by ?? 0,
-            'convertedByName' => $this->whenLoaded('convertedBy', fn() => $this->convertedBy?->name ?? ''),
+            'convertedByName' => $this->whenLoaded('convertedBy', fn () => $this->convertedBy?->name ?? ''),
             'isConverted' => $this->isConverted(),
             'client' => $this->whenLoaded('client', function () {
                 return [
@@ -63,18 +63,18 @@ class LeadResource extends JsonResource
                     'company' => $this->client->company ?? '',
                 ];
             }),
-            
+
             'createdAt' => $this->created_at?->toISOString() ?? '',
             'updatedAt' => $this->updated_at?->toISOString() ?? '',
             'createdBy' => $this->created_by ?? 0,
             'updatedBy' => $this->updated_by ?? 0,
-            
+
             // Relations (when loaded)
             'activities' => LeadActivityResource::collection($this->whenLoaded('activities')),
             'allActivities' => ActivityResource::collection($this->whenLoaded('allActivities')),
             'meetings' => LeadMeetingResource::collection($this->whenLoaded('meetings')),
-            'quotationsCount' => $this->whenLoaded('quotations', fn() => $this->quotations->count()),
-            'proposalsCount' => $this->whenLoaded('proposals', fn() => $this->proposals->count()),
+            'quotationsCount' => $this->whenLoaded('quotations', fn () => $this->quotations->count()),
+            'proposalsCount' => $this->whenLoaded('proposals', fn () => $this->proposals->count()),
         ];
     }
 }

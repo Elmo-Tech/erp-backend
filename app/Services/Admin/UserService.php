@@ -57,7 +57,7 @@ class UserService
         ]);
 
         // Assign roles if provided
-        if (!empty($data['roles'])) {
+        if (! empty($data['roles'])) {
             $user->syncRoles($data['roles']);
         }
 
@@ -163,6 +163,7 @@ class UserService
 
         // Remove roles and delete
         $user->syncRoles([]);
+
         return $user->delete();
     }
 
@@ -172,7 +173,7 @@ class UserService
     public function toggleUserStatus(User $user): User
     {
         $oldStatus = $user->is_active;
-        $user->is_active = !$user->is_active;
+        $user->is_active = ! $user->is_active;
         $user->save();
 
         $this->auditLogService->log(

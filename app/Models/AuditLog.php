@@ -8,6 +8,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property int|null $user_id
+ * @property string|null $event_type
+ * @property string $action
+ * @property string|null $auditable_type
+ * @property int|null $auditable_id
+ * @property string|null $severity
+ * @property string|null $description
+ * @property string|null $ip_address
+ * @property string|null $user_agent
+ * @property array<string, mixed>|null $metadata
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property-read User|null $user
+ */
 class AuditLog extends Model
 {
     use HasFactory;
@@ -74,7 +89,7 @@ class AuditLog extends Model
 
     private static function inferEventType(?string $action): string
     {
-        if (!$action) {
+        if (! $action) {
             return 'system_action';
         }
 
@@ -87,7 +102,7 @@ class AuditLog extends Model
 
     private static function inferSeverity(?string $action): string
     {
-        if (!$action) {
+        if (! $action) {
             return 'info';
         }
 
@@ -104,7 +119,7 @@ class AuditLog extends Model
             ? Str::of($action)->replace('_', ' ')->headline()->value()
             : 'Audit event';
 
-        if (!$auditableType || !$auditableId) {
+        if (! $auditableType || ! $auditableId) {
             return $formattedAction;
         }
 

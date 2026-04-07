@@ -48,6 +48,7 @@ class TaskChecklist extends Model
         }
 
         $completed = $this->items()->where('is_completed', true)->count();
+
         return round(($completed / $total) * 100, 1);
     }
 

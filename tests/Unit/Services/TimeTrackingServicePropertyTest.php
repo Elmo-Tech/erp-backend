@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Contracts\Trackable;
+use App\Enums\LeadSource;
 use App\Models\Lead;
 use App\Models\Quotation;
 use App\Models\TimeEntry;
@@ -16,29 +17,29 @@ use Tests\TestCase;
 
 /**
  * Property-Based Tests for TimeTrackingService
- * 
+ *
  * Feature: sales-pricing-engine, Property 6: Polymorphic Time Tracking
  * Validates: Requirements 5.3
  */
 class TimeTrackingServicePropertyTest extends TestCase
 {
-    use TestTrait, RefreshDatabase;
+    use RefreshDatabase, TestTrait;
 
     private TimeTrackingService $timeTrackingService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->timeTrackingService = new TimeTrackingService();
+        $this->timeTrackingService = new TimeTrackingService;
     }
 
     /**
      * Property 6: Polymorphic Time Tracking
-     * 
-     * For any entity implementing the Trackable interface (Lead, Quotation), 
-     * the TimeTrackingService SHALL successfully start a timer and create a 
+     *
+     * For any entity implementing the Trackable interface (Lead, Quotation),
+     * the TimeTrackingService SHALL successfully start a timer and create a
      * TimeEntry with correct trackable_type and trackable_id.
-     * 
+     *
      * **Validates: Requirements 5.3**
      */
     public function test_polymorphic_time_tracking(): void
@@ -52,8 +53,8 @@ class TimeTrackingServicePropertyTest extends TestCase
             ->then(function ($entityType, $seed) {
                 // Create a user for the timer
                 $user = User::factory()->create([
-                    'name' => 'Test User ' . $seed . '_' . uniqid(),
-                    'email' => 'user' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Test User '.$seed.'_'.uniqid(),
+                    'email' => 'user'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 // Create the trackable entity based on type
@@ -126,10 +127,10 @@ class TimeTrackingServicePropertyTest extends TestCase
 
     /**
      * Property 6: Polymorphic Time Tracking - Multiple Entity Types
-     * 
-     * For any combination of different Trackable entity types, the TimeTrackingService 
+     *
+     * For any combination of different Trackable entity types, the TimeTrackingService
      * SHALL handle each type correctly and maintain proper polymorphic relationships.
-     * 
+     *
      * **Validates: Requirements 5.3**
      */
     public function test_polymorphic_time_tracking_multiple_entity_types(): void
@@ -142,8 +143,8 @@ class TimeTrackingServicePropertyTest extends TestCase
             ->then(function ($seed) {
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'Multi Test User ' . $seed . '_' . uniqid(),
-                    'email' => 'multiuser' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Multi Test User '.$seed.'_'.uniqid(),
+                    'email' => 'multiuser'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 // Create different types of trackable entities
@@ -201,10 +202,10 @@ class TimeTrackingServicePropertyTest extends TestCase
 
     /**
      * Property 6: Polymorphic Time Tracking - Trackable Display Names
-     * 
-     * For any Trackable entity, the getTrackableDisplayName method SHALL return 
+     *
+     * For any Trackable entity, the getTrackableDisplayName method SHALL return
      * a meaningful string that identifies the entity.
-     * 
+     *
      * **Validates: Requirements 5.3**
      */
     public function test_polymorphic_time_tracking_display_names(): void
@@ -232,7 +233,7 @@ class TimeTrackingServicePropertyTest extends TestCase
                     $this->assertStringContainsString($trackable->name, $displayName,
                         'Lead display name should contain lead name');
                 } elseif ($entityType === 'quotation') {
-                    $this->assertStringContainsString((string)$trackable->id, $displayName,
+                    $this->assertStringContainsString((string) $trackable->id, $displayName,
                         'Quotation display name should contain quotation ID');
                     $this->assertStringContainsString($trackable->lead->name, $displayName,
                         'Quotation display name should contain lead name');
@@ -242,10 +243,10 @@ class TimeTrackingServicePropertyTest extends TestCase
 
     /**
      * Property 6: Polymorphic Time Tracking - Service Methods Integration
-     * 
-     * For any Trackable entity, all TimeTrackingService methods SHALL work 
+     *
+     * For any Trackable entity, all TimeTrackingService methods SHALL work
      * correctly with the polymorphic relationship.
-     * 
+     *
      * **Validates: Requirements 5.3**
      */
     public function test_polymorphic_time_tracking_service_methods(): void
@@ -258,8 +259,8 @@ class TimeTrackingServicePropertyTest extends TestCase
             )
             ->then(function ($entityType, $seed) {
                 $user = User::factory()->create([
-                    'name' => 'Service Test User ' . $seed . '_' . uniqid(),
-                    'email' => 'serviceuser' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Service Test User '.$seed.'_'.uniqid(),
+                    'email' => 'serviceuser'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $trackable = $this->createTrackableEntity($entityType, $seed);
@@ -305,10 +306,10 @@ class TimeTrackingServicePropertyTest extends TestCase
 
     /**
      * Property 7: Timer Duration Calculation
-     * 
-     * For any timer that is started and then stopped, the duration_minutes SHALL 
+     *
+     * For any timer that is started and then stopped, the duration_minutes SHALL
      * equal the difference in minutes between end_time and start_time (rounded down).
-     * 
+     *
      * **Validates: Requirements 5.4, 5.5**
      */
     public function test_timer_duration_calculation(): void
@@ -323,8 +324,8 @@ class TimeTrackingServicePropertyTest extends TestCase
             ->then(function ($entityType, $durationSeconds, $seed) {
                 // Create a user for the timer
                 $user = User::factory()->create([
-                    'name' => 'Duration Test User ' . $seed . '_' . uniqid(),
-                    'email' => 'durationuser' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Duration Test User '.$seed.'_'.uniqid(),
+                    'email' => 'durationuser'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 // Create the trackable entity
@@ -403,10 +404,10 @@ class TimeTrackingServicePropertyTest extends TestCase
 
     /**
      * Property 7: Timer Duration Calculation - Edge Cases
-     * 
-     * For any timer with various edge case durations, the duration calculation 
+     *
+     * For any timer with various edge case durations, the duration calculation
      * SHALL handle edge cases correctly (very short durations, exact minute boundaries).
-     * 
+     *
      * **Validates: Requirements 5.4, 5.5**
      */
     public function test_timer_duration_calculation_edge_cases(): void
@@ -430,8 +431,8 @@ class TimeTrackingServicePropertyTest extends TestCase
             ->then(function ($durationSeconds, $seed) {
                 // Create a user for the timer
                 $user = User::factory()->create([
-                    'name' => 'Edge Case User ' . $seed . '_' . uniqid(),
-                    'email' => 'edgeuser' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Edge Case User '.$seed.'_'.uniqid(),
+                    'email' => 'edgeuser'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 // Create a lead for testing
@@ -464,10 +465,10 @@ class TimeTrackingServicePropertyTest extends TestCase
 
     /**
      * Property 7: Timer Duration Calculation - Multiple Timers
-     * 
-     * For any sequence of multiple timers for the same user, each timer's duration 
+     *
+     * For any sequence of multiple timers for the same user, each timer's duration
      * SHALL be calculated independently and correctly.
-     * 
+     *
      * **Validates: Requirements 5.4, 5.5**
      */
     public function test_timer_duration_calculation_multiple_timers(): void
@@ -481,8 +482,8 @@ class TimeTrackingServicePropertyTest extends TestCase
             ->then(function ($timerCount, $seed) {
                 // Create a user for the timers
                 $user = User::factory()->create([
-                    'name' => 'Multi Timer User ' . $seed . '_' . uniqid(),
-                    'email' => 'multitimeruser' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Multi Timer User '.$seed.'_'.uniqid(),
+                    'email' => 'multitimeruser'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 $createdTimers = [];
@@ -541,10 +542,10 @@ class TimeTrackingServicePropertyTest extends TestCase
 
     /**
      * Property 8: Single Active Timer Per User
-     * 
-     * For any user with an active timer (end_time is null), attempting to start 
+     *
+     * For any user with an active timer (end_time is null), attempting to start
      * a new timer SHALL throw a RuntimeException.
-     * 
+     *
      * **Validates: Requirements 5.9**
      */
     public function test_single_active_timer_per_user(): void
@@ -559,8 +560,8 @@ class TimeTrackingServicePropertyTest extends TestCase
             ->then(function ($firstEntityType, $secondEntityType, $seed) {
                 // Create a user for the timer
                 $user = User::factory()->create([
-                    'name' => 'Single Timer User ' . $seed . '_' . uniqid(),
-                    'email' => 'singletimer' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Single Timer User '.$seed.'_'.uniqid(),
+                    'email' => 'singletimer'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 // Create two different trackable entities
@@ -598,7 +599,7 @@ class TimeTrackingServicePropertyTest extends TestCase
                 // Attempt to start second timer - this should throw RuntimeException
                 $exceptionThrown = false;
                 $exceptionMessage = '';
-                
+
                 try {
                     $this->timeTrackingService->startTimer($user, $secondTrackable);
                 } catch (RuntimeException $e) {
@@ -665,10 +666,10 @@ class TimeTrackingServicePropertyTest extends TestCase
 
     /**
      * Property 8: Single Active Timer Per User - Multiple Users
-     * 
-     * For any multiple users, each user SHALL be able to have their own active timer 
+     *
+     * For any multiple users, each user SHALL be able to have their own active timer
      * independently, but each individual user SHALL be limited to one active timer.
-     * 
+     *
      * **Validates: Requirements 5.9**
      */
     public function test_single_active_timer_per_user_multiple_users(): void
@@ -687,8 +688,8 @@ class TimeTrackingServicePropertyTest extends TestCase
                 // Create multiple users and trackable entities
                 for ($i = 0; $i < $userCount; $i++) {
                     $users[] = User::factory()->create([
-                        'name' => 'Multi User ' . $i . '_' . $seed . '_' . uniqid(),
-                        'email' => 'multiuser' . $i . '_' . $seed . '_' . uniqid() . '@example.com',
+                        'name' => 'Multi User '.$i.'_'.$seed.'_'.uniqid(),
+                        'email' => 'multiuser'.$i.'_'.$seed.'_'.uniqid().'@example.com',
                     ]);
 
                     $trackables[] = $this->createTrackableEntity('lead', $seed + $i);
@@ -748,10 +749,10 @@ class TimeTrackingServicePropertyTest extends TestCase
 
     /**
      * Property 8: Single Active Timer Per User - Edge Cases
-     * 
-     * For any user, the single active timer constraint SHALL be enforced 
+     *
+     * For any user, the single active timer constraint SHALL be enforced
      * even in edge cases (same trackable entity, different trackable types).
-     * 
+     *
      * **Validates: Requirements 5.9**
      */
     public function test_single_active_timer_per_user_edge_cases(): void
@@ -765,8 +766,8 @@ class TimeTrackingServicePropertyTest extends TestCase
             ->then(function ($entityType, $seed) {
                 // Create a user
                 $user = User::factory()->create([
-                    'name' => 'Edge Case User ' . $seed . '_' . uniqid(),
-                    'email' => 'edgecaseuser' . $seed . '_' . uniqid() . '@example.com',
+                    'name' => 'Edge Case User '.$seed.'_'.uniqid(),
+                    'email' => 'edgecaseuser'.$seed.'_'.uniqid().'@example.com',
                 ]);
 
                 // Create a trackable entity
@@ -834,17 +835,17 @@ class TimeTrackingServicePropertyTest extends TestCase
         switch ($type) {
             case 'lead':
                 return Lead::factory()->create([
-                    'name' => 'Test Lead ' . $seed . '_' . uniqid(),
-                    'email' => 'lead' . $seed . '_' . uniqid() . '@example.com',
-                    'company' => 'Test Company ' . $seed,
-                    'source' => 'Test Source',
+                    'name' => 'Test Lead '.$seed.'_'.uniqid(),
+                    'email' => 'lead'.$seed.'_'.uniqid().'@example.com',
+                    'company' => 'Test Company '.$seed,
+                    'source' => LeadSource::WEBSITE,
                 ]);
 
             case 'quotation':
                 $lead = Lead::factory()->create([
-                    'name' => 'Quotation Lead ' . $seed . '_' . uniqid(),
-                    'email' => 'quotationlead' . $seed . '_' . uniqid() . '@example.com',
-                    'company' => 'Quotation Company ' . $seed,
+                    'name' => 'Quotation Lead '.$seed.'_'.uniqid(),
+                    'email' => 'quotationlead'.$seed.'_'.uniqid().'@example.com',
+                    'company' => 'Quotation Company '.$seed,
                 ]);
 
                 return Quotation::factory()->create([

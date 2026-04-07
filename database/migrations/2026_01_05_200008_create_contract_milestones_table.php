@@ -19,11 +19,11 @@ return new class extends Migration
             $table->decimal('amount', 15, 2);
             $table->decimal('percentage', 5, 2); // % of total
             $table->date('due_date')->nullable();
-            
+
             // Event-based trigger
             $table->string('trigger_type')->default('date'); // immediate, project_status, deliverable, date
             $table->string('trigger_value', 100)->nullable(); // e.g., 'design_approved', 'beta_delivered'
-            
+
             // Status
             $table->string('status')->default('pending'); // pending, due, invoiced, paid, overdue
             $table->foreignId('invoice_id')->nullable()->constrained('invoices')->nullOnDelete();

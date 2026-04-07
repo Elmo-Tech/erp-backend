@@ -7,11 +7,12 @@ use App\Models\PointTransaction;
 use App\Models\User;
 use App\Services\Reporting\EmployeeReviewService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
  * Tests for PointTransaction as the single source of truth.
- * 
+ *
  * These tests verify that:
  * 1. Only PointTransaction records are returned in point history
  * 2. UserPoint records (legacy) are NOT returned
@@ -21,7 +22,7 @@ class EmployeeReviewPointsDeduplicationTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function it_returns_only_point_transaction_records_in_points_history(): void
     {
         $user = User::factory()->create();
@@ -50,11 +51,11 @@ class EmployeeReviewPointsDeduplicationTest extends TestCase
 
         // Only PointTransaction should be returned
         $this->assertCount(1, $review['points']['transactions']);
-        $this->assertSame('pt_' . $pt->id, $review['points']['transactions'][0]['transactionId']);
+        $this->assertSame('pt_'.$pt->id, $review['points']['transactions'][0]['transactionId']);
         $this->assertSame('automatic', $review['points']['transactions'][0]['source']);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_return_user_point_records(): void
     {
         $user = User::factory()->create();
@@ -94,10 +95,10 @@ class EmployeeReviewPointsDeduplicationTest extends TestCase
 
         // Only PointTransaction should be returned, UserPoint should be ignored
         $this->assertCount(1, $review['points']['transactions']);
-        $this->assertSame('pt_' . $pt->id, $review['points']['transactions'][0]['transactionId']);
+        $this->assertSame('pt_'.$pt->id, $review['points']['transactions'][0]['transactionId']);
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_correct_points_stats_from_point_transaction_only(): void
     {
         $user = User::factory()->create();

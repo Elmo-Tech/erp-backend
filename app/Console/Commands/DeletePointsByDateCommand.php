@@ -4,9 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\PointTransaction;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class DeletePointsByDateCommand extends Command
 {
@@ -43,11 +43,12 @@ class DeletePointsByDateCommand extends Command
             $targetDate = Carbon::createFromFormat('Y-m-d', $date);
         } catch (\Exception $e) {
             $this->error('Invalid date format. Please use YYYY-MM-DD format.');
+
             return 1;
         }
 
         $this->info("🗓️  Target Date: {$targetDate->format('Y-m-d')}");
-        
+
         if ($isDryRun) {
             $this->warn('🔍 DRY RUN MODE - No actual deletions will be performed');
         }
@@ -58,11 +59,12 @@ class DeletePointsByDateCommand extends Command
         // Apply user filter if specified
         if ($userId) {
             $user = User::find($userId);
-            if (!$user) {
+            if (! $user) {
                 $this->error("User with ID {$userId} not found.");
+
                 return 1;
             }
-            
+
             $pointTransactionQuery->where('user_id', $userId);
             $this->info("👤 Filtering for user: {$user->name} (ID: {$userId})");
         }
@@ -82,6 +84,7 @@ class DeletePointsByDateCommand extends Command
 
         if ($pointTransactions->isEmpty()) {
             $this->warn('No records found for the specified criteria.');
+
             return 0;
         }
 
@@ -95,7 +98,7 @@ class DeletePointsByDateCommand extends Command
         foreach ($affectedUsers as $user) {
             $userPtCount = $pointTransactions->where('user_id', $user->id)->count();
             $totalPointsToDelete = $pointTransactions->where('user_id', $user->id)->sum('points');
-            
+
             $this->line("  • {$user->name} (ID: {$user->id}) - Current: {$user->total_points} points");
             $this->line("    - PointTransactions: {$userPtCount}");
             $this->line("    - Points to remove: {$totalPointsToDelete}");
@@ -104,9 +107,9 @@ class DeletePointsByDateCommand extends Command
         // Show detailed records if not too many
         if ($pointTransactions->count() <= 20) {
             $this->info("\n📋 DETAILED RECORDS:");
-            
+
             if ($pointTransactions->isNotEmpty()) {
-                $this->info("Point Transactions:");
+                $this->info('Point Transactions:');
                 foreach ($pointTransactions as $pt) {
                     $this->line("  • ID: {$pt->id} | User: {$pt->user->name} | Points: {$pt->points} | Type: {$pt->type->value} | Reason: {$pt->reason}");
                 }
@@ -114,48 +117,50 @@ class DeletePointsByDateCommand extends Command
         }
 
         // Confirm deletion
-        if (!$isDryRun) {
-            if (!$this->confirm("\n⚠️  Are you sure you want to delete these records? This action cannot be undone!")) {
+        if (! $isDryRun) {
+            if (! $this->confirm("\n⚠️  Are you sure you want to delete these records? This action cannot be undone!")) {
                 $this->info('Operation cancelled.');
+
                 return 0;
             }
         }
 
         if ($isDryRun) {
             $this->info("\n✅ Dry run completed. No records were deleted.");
+
             return 0;
         }
 
         // Perform deletion in transaction
         DB::transaction(function () use ($pointTransactionQuery, $affectedUsers) {
             $this->info("\n🗑️  Deleting records...");
-            
+
             // Delete records
             $deletedPt = $pointTransactionQuery->delete();
-            
+
             $this->info("Deleted {$deletedPt} Point Transactions");
-            
+
             // Recalculate user totals
             $this->info("\n🔄 Recalculating user point totals...");
-            
+
             foreach ($affectedUsers as $user) {
                 $user->refresh();
-                
+
                 // Calculate total from remaining PointTransactions
                 $totalFromPt = PointTransaction::where('user_id', $user->id)->sum('points');
-                
+
                 $newTotal = $totalFromPt;
                 $oldTotal = $user->total_points;
-                
+
                 $user->update(['total_points' => $newTotal]);
-                
+
                 $this->line("  • {$user->name}: {$oldTotal} → {$newTotal} points");
             }
         });
 
         $this->info("\n✅ Operation completed successfully!");
         $this->info("All point transactions from {$targetDate->format('Y-m-d')} have been deleted and user totals recalculated.");
-        
+
         return 0;
     }
 }

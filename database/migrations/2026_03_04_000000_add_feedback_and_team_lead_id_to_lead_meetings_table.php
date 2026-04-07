@@ -15,7 +15,7 @@ return new class extends Migration
         Schema::table('lead_meetings', function (Blueprint $table) {
             // Feedback column for meeting feedback
             $table->text('feedback')->nullable()->after('outcome');
-            
+
             // Team lead ID - references users table
             $table->foreignId('team_lead_id')
                 ->nullable()

@@ -7,7 +7,7 @@ return [
     'no_permission' => 'You do not have permission to perform this action',
     'unauthorized' => 'Unauthorized access',
     'unauthorized_send_invoice' => 'You do not have permission to send invoices',
-    
+
     // Users
     'users_retrieved' => 'Users retrieved successfully',
     'user_retrieved' => 'User retrieved successfully',
@@ -48,7 +48,7 @@ return [
     'invoice_created_from_milestone' => 'Invoice created from milestone successfully',
     'invoice_linked_to_milestone' => 'Invoice linked to milestone successfully',
     'milestone_already_has_invoice' => 'Milestone already has an invoice linked',
-    
+
     // Invoices
     'invoices_retrieved' => 'Invoices retrieved successfully',
     'invoice_retrieved' => 'Invoice retrieved successfully',
@@ -60,7 +60,7 @@ return [
     'milestone_invoice_generated' => 'Milestone invoice generated successfully',
     'pending_invoices_generated' => 'Pending invoices generated successfully',
     'cannot_delete_non_draft_invoice' => 'Only draft invoices can be deleted',
-    
+
     // Audit Logs
     'audit_logs_retrieved' => 'Audit logs retrieved successfully',
     'audit_log_retrieved' => 'Audit log retrieved successfully',
@@ -126,7 +126,7 @@ return [
     'admin_deliverable_reset' => 'Deliverable reset to pending status successfully',
     'admin_deliverable_approved' => 'Deliverable force approved successfully',
     'admin_deliverable_rejected' => 'Deliverable force rejected successfully',
-    
+
     // Activities
     'activities_retrieved' => 'Activities retrieved successfully',
     'activity_created' => 'Activity created successfully',

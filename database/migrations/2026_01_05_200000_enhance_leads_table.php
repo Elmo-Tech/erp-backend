@@ -15,7 +15,7 @@ return new class extends Migration
             // Reference tracking (polymorphic)
             $table->string('reference_type')->nullable()->after('source'); // sales_rep, client_referral, employee
             $table->unsignedBigInteger('reference_id')->nullable()->after('reference_type');
-            
+
             // Additional lead info
             $table->string('phone', 20)->nullable()->after('email');
             $table->string('country', 100)->nullable()->after('company');
@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestamp('next_follow_up_at')->nullable()->after('last_contact_at');
             $table->text('notes')->nullable()->after('next_follow_up_at');
             $table->string('loss_reason')->nullable()->after('notes'); // price, timeline, competitor, budget, scope, other
-            
+
             // Indexes
             $table->index('priority');
             $table->index('reference_type');
@@ -45,7 +45,7 @@ return new class extends Migration
             $table->dropIndex(['reference_type']);
             $table->dropIndex(['reference_type', 'reference_id']);
             $table->dropIndex(['next_follow_up_at']);
-            
+
             $table->dropColumn([
                 'reference_type',
                 'reference_id',

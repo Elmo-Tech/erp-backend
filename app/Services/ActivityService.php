@@ -120,7 +120,7 @@ class ActivityService
     /**
      * Get activities needing outcome
      */
-    public function getActivitiesNeedingOutcome(User $user = null): \Illuminate\Database\Eloquent\Collection
+    public function getActivitiesNeedingOutcome(?User $user = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = Activity::needsOutcome()->with(['subject', 'assignedTo']);
 
@@ -136,10 +136,10 @@ class ActivityService
      */
     private function handleSpecialActivityTypes(Activity $activity, Model $subject, User $user): void
     {
-        if ($activity->type === ActivityType::MEETING && 
-            str_contains(strtolower($activity->title), 'technical') || 
+        if ($activity->type === ActivityType::MEETING &&
+            str_contains(strtolower($activity->title), 'technical') ||
             str_contains(strtolower($activity->description ?? ''), 'technical')) {
-            
+
             $this->notifyTechnicalTeam($activity, $subject, $user);
         }
     }

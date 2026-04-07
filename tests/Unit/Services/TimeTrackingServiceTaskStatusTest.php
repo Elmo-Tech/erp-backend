@@ -15,7 +15,7 @@ use Tests\TestCase;
 
 /**
  * Tests for TimeTrackingService Task Status Auto-Update
- * 
+ *
  * Validates that starting a timer on a task automatically:
  * 1. Changes status from TODO to IN_PROGRESS
  * 2. Sets start_date to today if not already set
@@ -29,7 +29,7 @@ class TimeTrackingServiceTaskStatusTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->timeTrackingService = new TimeTrackingService();
+        $this->timeTrackingService = new TimeTrackingService;
     }
 
     /**
@@ -40,7 +40,7 @@ class TimeTrackingServiceTaskStatusTest extends TestCase
         // Create user and client
         $user = User::factory()->create();
         $client = Client::factory()->create();
-        
+
         // Create project with explicit client
         $project = Project::factory()->create([
             'client_id' => $client->id,
@@ -85,7 +85,7 @@ class TimeTrackingServiceTaskStatusTest extends TestCase
         // Create user and client
         $user = User::factory()->create();
         $client = Client::factory()->create();
-        
+
         // Create project with explicit client
         $project = Project::factory()->create([
             'client_id' => $client->id,
@@ -126,7 +126,7 @@ class TimeTrackingServiceTaskStatusTest extends TestCase
         // Create user and client
         $user = User::factory()->create();
         $client = Client::factory()->create();
-        
+
         // Create project with explicit client
         $project = Project::factory()->create([
             'client_id' => $client->id,
@@ -167,7 +167,7 @@ class TimeTrackingServiceTaskStatusTest extends TestCase
         // Create user and client
         $user = User::factory()->create();
         $client = Client::factory()->create();
-        
+
         // Create project with explicit client
         $project = Project::factory()->create([
             'client_id' => $client->id,

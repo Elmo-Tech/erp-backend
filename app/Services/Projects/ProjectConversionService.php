@@ -14,7 +14,7 @@ class ProjectConversionService
     /**
      * Create a new ProjectConversionService instance.
      *
-     * @param ProjectHistoryService $historyService Service for recording project history
+     * @param  ProjectHistoryService  $historyService  Service for recording project history
      */
     public function __construct(
         private ProjectHistoryService $historyService
@@ -27,12 +27,13 @@ class ProjectConversionService
      * ensures no project already exists for this quotation, and creates
      * a new project with the quotation's final_price as budget.
      *
-     * @param int $quotationId The ID of the quotation to convert
-     * @param array $additionalData Optional additional project data:
-     *                              - title: string (optional, defaults to "Project for {company}")
-     *                              - description: string (optional)
-     *                              - deadline: string|Carbon (optional)
+     * @param  int  $quotationId  The ID of the quotation to convert
+     * @param  array  $additionalData  Optional additional project data:
+     *                                 - title: string (optional, defaults to "Project for {company}")
+     *                                 - description: string (optional)
+     *                                 - deadline: string|Carbon (optional)
      * @return Project The newly created project
+     *
      * @throws InvalidArgumentException If quotation status is not 'accepted'
      * @throws RuntimeException If a project already exists for this quotation
      */
@@ -57,11 +58,18 @@ class ProjectConversionService
 
         // Generate default title if not provided
         $defaultTitle = $this->generateDefaultTitle($quotation);
+        $clientId = $quotation->lead?->client_id;
+
+        if (! $clientId) {
+            throw new RuntimeException(
+                'Cannot convert a quotation to a project before the lead has been converted to a client.'
+            );
+        }
 
         // Create project with data from quotation
         $project = Project::create([
             'quotation_id' => $quotation->id,
-            'client_id' => $quotation->lead_id, // Lead becomes the client
+            'client_id' => $clientId,
             'title' => $additionalData['title'] ?? $defaultTitle,
             'description' => $additionalData['description'] ?? null,
             'status' => ProjectStatus::DRAFT,
@@ -84,17 +92,17 @@ class ProjectConversionService
     /**
      * Generate a default project title based on the quotation's lead.
      *
-     * @param Quotation $quotation The quotation being converted
+     * @param  Quotation  $quotation  The quotation being converted
      * @return string The generated title
      */
     private function generateDefaultTitle(Quotation $quotation): string
     {
         $lead = $quotation->lead;
-        
+
         if ($lead->company) {
             return "Project for {$lead->company}";
         }
-        
+
         return "Project for {$lead->name}";
     }
 }

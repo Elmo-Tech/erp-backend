@@ -2,9 +2,11 @@
 
 namespace App\Http\Resources\V1\HR;
 
+use App\Models\RewardType;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @mixin RewardType */
 class RewardTypeResource extends JsonResource
 {
     /**
@@ -12,20 +14,23 @@ class RewardTypeResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        /** @var RewardType $rewardType */
+        $rewardType = $this->resource;
+
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'code' => $this->code,
-            'description' => $this->description,
-            'calculation_type' => $this->calculation_type,
-            'base_amount' => $this->base_amount,
-            'is_active' => $this->is_active,
-            'requires_approval' => $this->requires_approval,
-            'criteria' => $this->criteria,
-            'multipliers' => $this->multipliers,
+            'id' => $rewardType->id,
+            'name' => $rewardType->name,
+            'code' => $rewardType->code,
+            'description' => $rewardType->description,
+            'calculation_type' => $rewardType->calculation_type,
+            'base_amount' => $rewardType->base_amount,
+            'is_active' => $rewardType->is_active,
+            'requires_approval' => $rewardType->requires_approval,
+            'criteria' => $rewardType->criteria,
+            'multipliers' => $rewardType->multipliers,
             'employee_rewards_count' => $this->whenCounted('employeeRewards'),
-            'created_at' => $this->created_at?->toISOString(),
-            'updated_at' => $this->updated_at?->toISOString(),
+            'created_at' => $rewardType->created_at?->toISOString(),
+            'updated_at' => $rewardType->updated_at?->toISOString(),
         ];
     }
 }

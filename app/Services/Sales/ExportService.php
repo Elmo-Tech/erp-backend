@@ -9,7 +9,6 @@ use App\Models\Lead;
 use App\Models\Proposal;
 use App\Models\Quotation;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 
 class ExportService
 {
@@ -21,19 +20,19 @@ class ExportService
         $query = Lead::with(['techLead:id,name', 'client:id,name']);
 
         // Apply filters
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['startDate'])) {
+        if (! empty($filters['startDate'])) {
             $query->whereDate('created_at', '>=', $filters['startDate']);
         }
 
-        if (!empty($filters['endDate'])) {
+        if (! empty($filters['endDate'])) {
             $query->whereDate('created_at', '<=', $filters['endDate']);
         }
 
-        if (!empty($filters['source'])) {
+        if (! empty($filters['source'])) {
             $query->where('source', $filters['source']);
         }
 
@@ -55,7 +54,7 @@ class ExportService
                 'Created At',
                 'Last Contact',
             ],
-            'data' => $leads->map(fn($lead) => [
+            'data' => $leads->map(fn ($lead) => [
                 $lead->id,
                 $lead->name,
                 $lead->email,
@@ -70,7 +69,7 @@ class ExportService
                 $lead->created_at->format('Y-m-d H:i'),
                 $lead->last_contact_at?->format('Y-m-d H:i'),
             ])->toArray(),
-            'filename' => 'leads_export_' . now()->format('Y-m-d_His'),
+            'filename' => 'leads_export_'.now()->format('Y-m-d_His'),
             'totalCount' => $leads->count(),
         ];
     }
@@ -82,15 +81,15 @@ class ExportService
     {
         $query = Proposal::with(['lead:id,name,company', 'techLead:id,name']);
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['startDate'])) {
+        if (! empty($filters['startDate'])) {
             $query->whereDate('created_at', '>=', $filters['startDate']);
         }
 
-        if (!empty($filters['endDate'])) {
+        if (! empty($filters['endDate'])) {
             $query->whereDate('created_at', '<=', $filters['endDate']);
         }
 
@@ -109,7 +108,7 @@ class ExportService
                 'Expiry Date',
                 'Created At',
             ],
-            'data' => $proposals->map(fn($p) => [
+            'data' => $proposals->map(fn ($p) => [
                 $p->id,
                 $p->proposal_number,
                 $p->title,
@@ -121,7 +120,7 @@ class ExportService
                 $p->expiry_date?->format('Y-m-d'),
                 $p->created_at->format('Y-m-d H:i'),
             ])->toArray(),
-            'filename' => 'proposals_export_' . now()->format('Y-m-d_His'),
+            'filename' => 'proposals_export_'.now()->format('Y-m-d_His'),
             'totalCount' => $proposals->count(),
         ];
     }
@@ -133,15 +132,15 @@ class ExportService
     {
         $query = Quotation::with(['lead:id,name,company']);
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['startDate'])) {
+        if (! empty($filters['startDate'])) {
             $query->whereDate('created_at', '>=', $filters['startDate']);
         }
 
-        if (!empty($filters['endDate'])) {
+        if (! empty($filters['endDate'])) {
             $query->whereDate('created_at', '<=', $filters['endDate']);
         }
 
@@ -161,7 +160,7 @@ class ExportService
                 'Valid Until',
                 'Created At',
             ],
-            'data' => $quotations->map(fn($q) => [
+            'data' => $quotations->map(fn ($q) => [
                 $q->id,
                 $q->quotation_number,
                 $q->lead?->name,
@@ -174,7 +173,7 @@ class ExportService
                 $q->valid_until?->format('Y-m-d'),
                 $q->created_at->format('Y-m-d H:i'),
             ])->toArray(),
-            'filename' => 'quotations_export_' . now()->format('Y-m-d_His'),
+            'filename' => 'quotations_export_'.now()->format('Y-m-d_His'),
             'totalCount' => $quotations->count(),
         ];
     }

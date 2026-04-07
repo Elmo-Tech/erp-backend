@@ -22,14 +22,12 @@ class TimeTrackingService
     ) {
         $this->attendanceService = $attendanceService ?? app(AttendanceService::class);
     }
+
     /**
      * Start a timer for a trackable entity.
      * Creates attendance record if first timer of the day.
      * Auto-updates task status from TODO to IN_PROGRESS and sets start_date.
      *
-     * @param User $user
-     * @param Trackable $trackable
-     * @return TimeEntry
      * @throws RuntimeException
      * @throws InvalidArgumentException
      */
@@ -44,7 +42,7 @@ class TimeTrackingService
         // Validate task hierarchy - timer only allowed on leaf tasks (no children)
         if ($trackable instanceof Task) {
             $this->validateTaskCanHaveTimer($trackable);
-            
+
             // Auto-update task status and start_date
             $this->updateTaskOnTimerStart($trackable);
         }
@@ -69,7 +67,6 @@ class TimeTrackingService
      * Validate that a task can have a timer started on it.
      * Timer is only allowed on leaf tasks (tasks with no children).
      *
-     * @param Task $task
      * @throws InvalidArgumentException
      */
     private function validateTaskCanHaveTimer(Task $task): void
@@ -80,8 +77,8 @@ class TimeTrackingService
         if ($hasChildren) {
             $taskType = $task->type === 'main' ? 'Main Task' : 'Weekly Task';
             throw new InvalidArgumentException(
-                "Cannot start timer on {$taskType} that has child tasks. " .
-                "Please start the timer on a subtask instead."
+                "Cannot start timer on {$taskType} that has child tasks. ".
+                'Please start the timer on a subtask instead.'
             );
         }
     }
@@ -89,9 +86,6 @@ class TimeTrackingService
     /**
      * Update task status and start_date when timer starts.
      * Changes status from TODO to IN_PROGRESS and sets start_date to today if not set.
-     *
-     * @param Task $task
-     * @return void
      */
     private function updateTaskOnTimerStart(Task $task): void
     {
@@ -108,7 +102,7 @@ class TimeTrackingService
         }
 
         // Update task if there are changes
-        if (!empty($updates)) {
+        if (! empty($updates)) {
             $task->update($updates);
         }
     }
@@ -116,15 +110,13 @@ class TimeTrackingService
     /**
      * Stop the active timer for a user.
      *
-     * @param User $user
-     * @return TimeEntry
      * @throws RuntimeException
      */
     public function stopTimer(User $user): TimeEntry
     {
         $activeTimer = $this->getActiveTimer($user);
 
-        if (!$activeTimer) {
+        if (! $activeTimer) {
             throw new RuntimeException('No active timer found for this user.');
         }
 
@@ -145,9 +137,6 @@ class TimeTrackingService
 
     /**
      * Get the active timer for a user.
-     *
-     * @param User $user
-     * @return TimeEntry|null
      */
     public function getActiveTimer(User $user): ?TimeEntry
     {
@@ -159,7 +148,6 @@ class TimeTrackingService
     /**
      * Get time entries for a specific trackable entity.
      *
-     * @param Trackable $trackable
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function getTimeEntriesForTrackable(Trackable $trackable)
@@ -172,9 +160,6 @@ class TimeTrackingService
 
     /**
      * Get total time spent on a trackable entity in minutes.
-     *
-     * @param Trackable $trackable
-     * @return int
      */
     public function getTotalTimeForTrackable(Trackable $trackable): int
     {
@@ -188,9 +173,6 @@ class TimeTrackingService
      * Ensure attendance record exists for today.
      * Creates a new attendance record with clock_in if not exists.
      * Uses AttendanceService for proper deduction calculation.
-     *
-     * @param User $user
-     * @return Attendance
      */
     private function ensureAttendanceRecord(User $user): Attendance
     {
@@ -202,18 +184,16 @@ class TimeTrackingService
      * Clock out and calculate idle time for a user.
      * Uses AttendanceService for proper clock-out.
      *
-     * @param User $user
-     * @return Attendance
      * @throws ModelNotFoundException
      */
     public function clockOut(User $user): Attendance
     {
         $attendance = $this->attendanceService->clockOut($user);
-        
-        if (!$attendance) {
+
+        if (! $attendance) {
             throw new ModelNotFoundException('No attendance record found for today.');
         }
-        
+
         return $attendance;
     }
 }

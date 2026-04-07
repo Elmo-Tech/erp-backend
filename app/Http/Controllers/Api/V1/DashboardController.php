@@ -8,7 +8,6 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Invoice;
-use App\Models\Lead;
 use App\Models\PointTransaction;
 use App\Models\Project;
 use App\Models\Quotation;
@@ -18,7 +17,6 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use OpenApi\Attributes as OA;
 
@@ -119,11 +117,11 @@ class DashboardController extends Controller
                 return $this->getDeveloperDashboard($user, $startOfMonth, $startOfLastMonth, $endOfLastMonth);
             }
         } catch (\Exception $e) {
-            Log::error('Dashboard overview error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+            Log::error('Dashboard overview error: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
             ]);
-            
-            return ApiResponse::error('Failed to load dashboard data: ' . $e->getMessage(), 500);
+
+            return ApiResponse::error('Failed to load dashboard data: '.$e->getMessage(), 500);
         }
     }
 
@@ -416,6 +414,7 @@ class DashboardController extends Controller
         if ($previous > 0) {
             return round((($current - $previous) / $previous) * 100, 1);
         }
+
         return $current > 0 ? 100 : 0;
     }
 
@@ -462,7 +461,7 @@ class DashboardController extends Controller
                 ->map(function ($task) {
                     return [
                         'activityId' => $task->id,
-                        'action' => 'Task updated: ' . $task->title,
+                        'action' => 'Task updated: '.$task->title,
                         'user' => $task->assignee?->name ?? 'System',
                         'time' => $task->updated_at->diffForHumans(),
                         'type' => 'task',
@@ -471,7 +470,7 @@ class DashboardController extends Controller
                 });
             $activities = $activities->merge($recentTasks);
         } catch (\Exception $e) {
-            Log::warning('Error fetching team activities: ' . $e->getMessage());
+            Log::warning('Error fetching team activities: '.$e->getMessage());
         }
 
         return $activities
@@ -479,6 +478,7 @@ class DashboardController extends Controller
             ->take(4)
             ->map(function ($activity) {
                 unset($activity['timestamp']);
+
                 return $activity;
             })
             ->values()
@@ -501,7 +501,7 @@ class DashboardController extends Controller
                 ->map(function ($task) {
                     return [
                         'activityId' => $task->id,
-                        'action' => 'Task: ' . $task->title,
+                        'action' => 'Task: '.$task->title,
                         'user' => 'You',
                         'time' => $task->updated_at->diffForHumans(),
                         'type' => 'task',
@@ -518,6 +518,7 @@ class DashboardController extends Controller
                 ->get()
                 ->map(function ($entry) {
                     $duration = round($entry->duration_minutes / 60, 1);
+
                     return [
                         'activityId' => $entry->id + 5000,
                         'action' => "Logged {$duration}h of work",
@@ -529,7 +530,7 @@ class DashboardController extends Controller
                 });
             $activities = $activities->merge($recentTimeEntries);
         } catch (\Exception $e) {
-            Log::warning('Error fetching user activities: ' . $e->getMessage());
+            Log::warning('Error fetching user activities: '.$e->getMessage());
         }
 
         return $activities
@@ -537,6 +538,7 @@ class DashboardController extends Controller
             ->take(4)
             ->map(function ($activity) {
                 unset($activity['timestamp']);
+
                 return $activity;
             })
             ->values()
@@ -550,7 +552,7 @@ class DashboardController extends Controller
     {
         // Handle both enum and string values
         $statusValue = $status instanceof \BackedEnum ? $status->value : $status;
-        
+
         return match ($statusValue) {
             'draft' => 'Draft',
             'active' => 'Active',
@@ -580,7 +582,7 @@ class DashboardController extends Controller
                 ->map(function ($task) {
                     return [
                         'activityId' => $task->id,
-                        'action' => 'New task added: ' . $task->title,
+                        'action' => 'New task added: '.$task->title,
                         'user' => $task->assignee?->name ?? 'System',
                         'time' => $task->created_at->diffForHumans(),
                         'type' => 'task',
@@ -597,7 +599,7 @@ class DashboardController extends Controller
                 ->map(function ($project) {
                     return [
                         'activityId' => $project->id + 1000,
-                        'action' => 'Project updated: ' . $project->title,
+                        'action' => 'Project updated: '.$project->title,
                         'user' => 'System',
                         'time' => $project->updated_at->diffForHumans(),
                         'type' => 'project',
@@ -614,7 +616,7 @@ class DashboardController extends Controller
                 ->map(function ($quotation) {
                     return [
                         'activityId' => $quotation->id + 2000,
-                        'action' => 'Quotation created for ' . ($quotation->lead?->name ?? 'Unknown'),
+                        'action' => 'Quotation created for '.($quotation->lead?->name ?? 'Unknown'),
                         'user' => 'System',
                         'time' => $quotation->created_at->diffForHumans(),
                         'type' => 'quotation',
@@ -623,7 +625,7 @@ class DashboardController extends Controller
                 });
             $activities = $activities->merge($recentQuotations);
         } catch (\Exception $e) {
-            Log::warning('Error fetching recent activities: ' . $e->getMessage());
+            Log::warning('Error fetching recent activities: '.$e->getMessage());
         }
 
         // Sort by timestamp and take top 4
@@ -632,6 +634,7 @@ class DashboardController extends Controller
             ->take(4)
             ->map(function ($activity) {
                 unset($activity['timestamp']);
+
                 return $activity;
             })
             ->values()

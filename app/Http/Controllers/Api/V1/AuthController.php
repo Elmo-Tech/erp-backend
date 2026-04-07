@@ -23,7 +23,7 @@ class AuthController extends Controller
     ) {
         // Apply locale middleware to all methods
         $this->middleware('locale');
-        
+
         // Apply auth middleware only to logout
         $this->middleware('auth:sanctum')->only(['logout', 'profile', 'updateProfile', 'updateAvatar']);
     }
@@ -115,7 +115,7 @@ class AuthController extends Controller
     {
         $credentials = $request->validated();
 
-        if (!Auth::attempt($credentials)) {
+        if (! Auth::attempt($credentials)) {
             return ApiResponse::error('Invalid credentials', [], 401);
         }
 
@@ -126,7 +126,7 @@ class AuthController extends Controller
         return ApiResponse::success([
             'tokenDetails' => [
                 'token' => $token,
-                'expiresIn' => $expiration
+                'expiresIn' => $expiration,
             ],
             'profile' => new LoginProfileResource($user),
             'role' => $user->roles->first()->name ?? 'guest',
@@ -228,7 +228,7 @@ class AuthController extends Controller
         return ApiResponse::success([
             'tokenDetails' => [
                 'token' => $token,
-                'expiresIn' => $expiration
+                'expiresIn' => $expiration,
             ],
             'profile' => new LoginProfileResource($user),
             'role' => $user->roles->first()->name ?? 'user',
@@ -426,7 +426,7 @@ class AuthController extends Controller
 
         // Store new avatar
         $path = $request->file('avatar')->store('avatars', 'public');
-        
+
         $user->update([
             'avatar' => $path,
         ]);
@@ -495,7 +495,7 @@ class AuthController extends Controller
         $user = $request->user();
 
         // Verify current password
-        if (!Hash::check($request->current_password, $user->password)) {
+        if (! Hash::check($request->current_password, $user->password)) {
             return ApiResponse::error('Current password is incorrect', [], 422);
         }
 

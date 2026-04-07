@@ -13,29 +13,30 @@ use Tests\TestCase;
 
 /**
  * Property-Based Tests for StoreInvoiceRequest Validation
- * 
+ *
  * Feature: client-portal-security, Property 13: Invoice Amount Validation
  * Validates: Requirements 3.4
  */
 class StoreInvoiceRequestPropertyTest extends TestCase
 {
-    use TestTrait, RefreshDatabase;
+    use RefreshDatabase, TestTrait;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create a test project for validation
         $user = User::factory()->create();
-        $this->testProject = Project::factory()->create(['client_id' => $user->id]);
+        $client = $this->ensureClientProfile($user);
+        $this->testProject = Project::factory()->create(['client_id' => $client->id]);
     }
 
     /**
      * Property 13: Invoice Amount Validation - Positive Amount Required
-     * 
+     *
      * For any invoice creation request, the amount field SHALL be required,
      * numeric, and greater than 0. Any amount less than or equal to 0 SHALL be rejected.
-     * 
+     *
      * **Validates: Requirements 3.4**
      */
     public function test_amount_must_be_positive_number(): void
@@ -59,10 +60,10 @@ class StoreInvoiceRequestPropertyTest extends TestCase
                     'amount' => $invalidAmount,
                     'currency' => 'USD',
                     'dueDate' => now()->addDays(30)->format('Y-m-d'),
-                    'notes' => 'Test invoice'
+                    'notes' => 'Test invoice',
                 ];
 
-                $request = new StoreInvoiceRequest();
+                $request = new StoreInvoiceRequest;
                 $validator = Validator::make($requestData, $request->rules());
 
                 // Invalid amounts should fail validation
@@ -73,9 +74,9 @@ class StoreInvoiceRequestPropertyTest extends TestCase
 
     /**
      * Property 13: Invoice Amount Validation - Valid Positive Amounts Pass
-     * 
+     *
      * For any positive numeric amount greater than 0, the validation SHALL pass.
-     * 
+     *
      * **Validates: Requirements 3.4**
      */
     public function test_positive_amounts_pass_validation(): void
@@ -91,10 +92,10 @@ class StoreInvoiceRequestPropertyTest extends TestCase
                     'amount' => $validAmount,
                     'currency' => 'USD',
                     'dueDate' => now()->addDays(30)->format('Y-m-d'),
-                    'notes' => 'Test invoice'
+                    'notes' => 'Test invoice',
                 ];
 
-                $request = new StoreInvoiceRequest();
+                $request = new StoreInvoiceRequest;
                 $validator = Validator::make($requestData, $request->rules());
 
                 // Valid positive amounts should pass validation
@@ -105,10 +106,10 @@ class StoreInvoiceRequestPropertyTest extends TestCase
 
     /**
      * Property 13: Invoice Amount Validation - Currency Format Validation
-     * 
+     *
      * For any currency field, it SHALL be exactly 3 uppercase letters or null.
      * Invalid currency formats SHALL be rejected.
-     * 
+     *
      * **Validates: Requirements 3.4**
      */
     public function test_currency_format_validation(): void
@@ -133,10 +134,10 @@ class StoreInvoiceRequestPropertyTest extends TestCase
                     'amount' => 100.00,
                     'currency' => $invalidCurrency,
                     'dueDate' => now()->addDays(30)->format('Y-m-d'),
-                    'notes' => 'Test invoice'
+                    'notes' => 'Test invoice',
                 ];
 
-                $request = new StoreInvoiceRequest();
+                $request = new StoreInvoiceRequest;
                 $validator = Validator::make($requestData, $request->rules());
 
                 // Invalid currency formats should fail validation
@@ -146,13 +147,13 @@ class StoreInvoiceRequestPropertyTest extends TestCase
     }
 
     /**
-     * Property 13: Invoice Amount Validation - Nullable Currency Validation
-     * 
-     * For null or empty currency values, validation SHALL pass since currency is nullable.
-     * 
+     * Property 13: Invoice Amount Validation - Currency Is Required
+     *
+     * For null or empty currency values, validation SHALL fail since currency is required.
+     *
      * **Validates: Requirements 3.4**
      */
-    public function test_nullable_currency_passes(): void
+    public function test_currency_is_required(): void
     {
         $this
             ->limitTo(3)
@@ -168,23 +169,23 @@ class StoreInvoiceRequestPropertyTest extends TestCase
                     'amount' => 100.00,
                     'currency' => $nullableCurrency,
                     'dueDate' => now()->addDays(30)->format('Y-m-d'),
-                    'notes' => 'Test invoice'
+                    'notes' => 'Test invoice',
                 ];
 
-                $request = new StoreInvoiceRequest();
+                $request = new StoreInvoiceRequest;
                 $validator = Validator::make($requestData, $request->rules());
 
-                // Null/empty currency should pass validation
-                $this->assertFalse($validator->fails());
-                $this->assertFalse($validator->errors()->has('currency'));
+                // Null/empty currency should fail validation
+                $this->assertTrue($validator->fails());
+                $this->assertTrue($validator->errors()->has('currency'));
             });
     }
 
     /**
      * Property 13: Invoice Amount Validation - Valid Currency Codes Pass
-     * 
+     *
      * For any valid 3-letter uppercase currency code, validation SHALL pass.
-     * 
+     *
      * **Validates: Requirements 3.4**
      */
     public function test_valid_currency_codes_pass(): void
@@ -200,10 +201,10 @@ class StoreInvoiceRequestPropertyTest extends TestCase
                     'amount' => 100.00,
                     'currency' => $validCurrency,
                     'dueDate' => now()->addDays(30)->format('Y-m-d'),
-                    'notes' => 'Test invoice'
+                    'notes' => 'Test invoice',
                 ];
 
-                $request = new StoreInvoiceRequest();
+                $request = new StoreInvoiceRequest;
                 $validator = Validator::make($requestData, $request->rules());
 
                 // Valid currency codes should pass validation
@@ -214,10 +215,10 @@ class StoreInvoiceRequestPropertyTest extends TestCase
 
     /**
      * Property 13: Invoice Amount Validation - Due Date Must Be Future
-     * 
+     *
      * For any due date that is today or in the past, validation SHALL fail.
      * Only future dates SHALL pass validation.
-     * 
+     *
      * **Validates: Requirements 3.4**
      */
     public function test_due_date_must_be_future(): void
@@ -229,16 +230,16 @@ class StoreInvoiceRequestPropertyTest extends TestCase
             )
             ->then(function ($daysOffset) {
                 $pastOrTodayDate = now()->addDays($daysOffset)->format('Y-m-d');
-                
+
                 $requestData = [
                     'projectId' => $this->testProject->id,
                     'amount' => 100.00,
                     'currency' => 'USD',
                     'dueDate' => $pastOrTodayDate,
-                    'notes' => 'Test invoice'
+                    'notes' => 'Test invoice',
                 ];
 
-                $request = new StoreInvoiceRequest();
+                $request = new StoreInvoiceRequest;
                 $validator = Validator::make($requestData, $request->rules());
 
                 // Past or today dates should fail validation
@@ -249,9 +250,9 @@ class StoreInvoiceRequestPropertyTest extends TestCase
 
     /**
      * Property 13: Invoice Amount Validation - Future Due Dates Pass
-     * 
+     *
      * For any due date in the future, validation SHALL pass.
-     * 
+     *
      * **Validates: Requirements 3.4**
      */
     public function test_future_due_dates_pass(): void
@@ -263,16 +264,16 @@ class StoreInvoiceRequestPropertyTest extends TestCase
             )
             ->then(function ($daysOffset) {
                 $futureDate = now()->addDays($daysOffset)->format('Y-m-d');
-                
+
                 $requestData = [
                     'projectId' => $this->testProject->id,
                     'amount' => 100.00,
                     'currency' => 'USD',
                     'dueDate' => $futureDate,
-                    'notes' => 'Test invoice'
+                    'notes' => 'Test invoice',
                 ];
 
-                $request = new StoreInvoiceRequest();
+                $request = new StoreInvoiceRequest;
                 $validator = Validator::make($requestData, $request->rules());
 
                 // Future dates should pass validation

@@ -77,8 +77,8 @@ class BonusCalculationService
                 'totalEmployees' => count($results),
                 'totalBonusAmount' => round($totalBonuses, 2),
                 'byTier' => $this->groupByTier($results),
-                'averageScore' => count($results) > 0 
-                    ? round(collect($results)->avg('totalScore'), 2) 
+                'averageScore' => count($results) > 0
+                    ? round(collect($results)->avg('totalScore'), 2)
                     : 0,
             ],
         ];
@@ -122,7 +122,7 @@ class BonusCalculationService
             ->orderByDesc('evaluated_at')
             ->limit($limit)
             ->get()
-            ->map(fn($eval) => [
+            ->map(fn ($eval) => [
                 'periodId' => $eval->evaluation_period_id,
                 'periodName' => $eval->period->name,
                 'totalScore' => $eval->total_score,

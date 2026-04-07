@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Middleware to set application locale based on Accept-Language header.
- * 
+ *
  * Supports: en (English), ar (Arabic)
  * Default: en (English)
  */
@@ -24,22 +24,16 @@ class SetLocaleMiddleware
 
     /**
      * Default locale when none is provided or unsupported.
-     *
-     * @var string
      */
     protected string $defaultLocale = 'en';
 
     /**
      * Handle an incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function handle(Request $request, Closure $next): Response
     {
         $locale = $this->parseLocale($request->header('Accept-Language'));
-        
+
         App::setLocale($locale);
 
         return $next($request);
@@ -47,9 +41,6 @@ class SetLocaleMiddleware
 
     /**
      * Parse the Accept-Language header and return a supported locale.
-     *
-     * @param  string|null  $acceptLanguage
-     * @return string
      */
     protected function parseLocale(?string $acceptLanguage): string
     {

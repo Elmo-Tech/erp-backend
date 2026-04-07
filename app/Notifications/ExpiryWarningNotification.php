@@ -55,18 +55,18 @@ class ExpiryWarningNotification extends Notification implements ShouldQueue
 
     private function getTitle(): string
     {
-        return match($this->type) {
+        return match ($this->type) {
             'proposal' => $this->expirable->title ?? $this->expirable->proposal_number,
-            'quotation' => $this->expirable->quotation_number ?? 'Quotation #' . $this->expirable->id,
-            default => 'Item #' . $this->expirable->id,
+            'quotation' => $this->expirable->quotation_number ?? 'Quotation #'.$this->expirable->id,
+            default => 'Item #'.$this->expirable->id,
         };
     }
 
     private function getUrl(): string
     {
-        return match($this->type) {
-            'proposal' => url('/proposals/' . $this->expirable->id),
-            'quotation' => url('/quotations/' . $this->expirable->id),
+        return match ($this->type) {
+            'proposal' => url('/proposals/'.$this->expirable->id),
+            'quotation' => url('/quotations/'.$this->expirable->id),
             default => url('/'),
         };
     }

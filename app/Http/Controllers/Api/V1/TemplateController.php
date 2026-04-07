@@ -27,7 +27,9 @@ class TemplateController extends Controller
      *     tags={"Templates"},
      *     summary="Get proposal templates",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="type", in="query", @OA\Schema(type="string")),
+     *
      *     @OA\Response(response=200, description="Templates retrieved successfully")
      * )
      */
@@ -45,6 +47,7 @@ class TemplateController extends Controller
      *     tags={"Templates"},
      *     summary="Create proposal template",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=201, description="Template created successfully")
      * )
      */
@@ -70,6 +73,7 @@ class TemplateController extends Controller
      *     tags={"Templates"},
      *     summary="Update proposal template",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Template updated successfully")
      * )
      */
@@ -95,6 +99,7 @@ class TemplateController extends Controller
      *     tags={"Templates"},
      *     summary="Delete proposal template",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Template deleted successfully")
      * )
      */
@@ -112,6 +117,7 @@ class TemplateController extends Controller
      *     tags={"Templates"},
      *     summary="Generate proposal from template",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Proposal generated successfully")
      * )
      */
@@ -143,6 +149,7 @@ class TemplateController extends Controller
      *     tags={"Templates"},
      *     summary="Get contract templates",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Templates retrieved successfully")
      * )
      */
@@ -160,6 +167,7 @@ class TemplateController extends Controller
      *     tags={"Templates"},
      *     summary="Create contract template",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=201, description="Template created successfully")
      * )
      */
@@ -185,6 +193,7 @@ class TemplateController extends Controller
      *     tags={"Templates"},
      *     summary="Update contract template",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Template updated successfully")
      * )
      */
@@ -210,6 +219,7 @@ class TemplateController extends Controller
      *     tags={"Templates"},
      *     summary="Delete contract template",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Template deleted successfully")
      * )
      */
@@ -227,6 +237,7 @@ class TemplateController extends Controller
      *     tags={"Templates"},
      *     summary="Generate contract from template",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Contract generated successfully")
      * )
      */

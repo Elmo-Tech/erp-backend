@@ -25,8 +25,8 @@ class LeadFollowUpReminder extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $subject = $this->isOverdue 
-            ? __('Overdue Lead Follow-up') 
+        $subject = $this->isOverdue
+            ? __('Overdue Lead Follow-up')
             : __('Lead Follow-up Reminder');
 
         $message = (new MailMessage)

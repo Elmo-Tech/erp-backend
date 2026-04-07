@@ -4,11 +4,9 @@ namespace App\Services\Reporting;
 
 use App\Enums\TaskStatus;
 use App\Models\Attendance;
-use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
@@ -27,8 +25,7 @@ class UserPerformanceService
     /**
      * Get performance metrics for a user.
      *
-     * @param User $user
-     * @param array $filters ['dateFrom' => string, 'dateTo' => string]
+     * @param  array  $filters  ['dateFrom' => string, 'dateTo' => string]
      * @return array{
      *     userId: int,
      *     name: string,
@@ -73,8 +70,7 @@ class UserPerformanceService
     /**
      * Get performance metrics for all users.
      *
-     * @param array $filters ['dateFrom' => string, 'dateTo' => string]
-     * @return Collection
+     * @param  array  $filters  ['dateFrom' => string, 'dateTo' => string]
      */
     public function getAllUserPerformance(array $filters = []): Collection
     {
@@ -94,7 +90,7 @@ class UserPerformanceService
     /**
      * Get attendance analytics.
      *
-     * @param array $filters ['dateFrom' => string, 'dateTo' => string]
+     * @param  array  $filters  ['dateFrom' => string, 'dateTo' => string]
      * @return array{
      *     totalLateMinutes: int,
      *     averageIdleTime: float,
@@ -109,10 +105,10 @@ class UserPerformanceService
         // Build attendance query with filters
         $attendanceQuery = Attendance::with('user');
 
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $attendanceQuery->where('date', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $attendanceQuery->where('date', '<=', $filters['dateTo']);
         }
 
@@ -137,10 +133,6 @@ class UserPerformanceService
 
     /**
      * Calculate total tracked time for a user in minutes.
-     *
-     * @param User $user
-     * @param array $filters
-     * @return int
      */
     private function calculateUserTrackedTime(User $user, array $filters): int
     {
@@ -148,10 +140,10 @@ class UserPerformanceService
             ->whereNotNull('end_time'); // Only completed time entries
 
         // Apply date range filter
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->whereDate('start_time', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->whereDate('start_time', '<=', $filters['dateTo']);
         }
 
@@ -160,20 +152,16 @@ class UserPerformanceService
 
     /**
      * Calculate total idle time for a user in minutes.
-     *
-     * @param User $user
-     * @param array $filters
-     * @return int
      */
     private function calculateUserIdleTime(User $user, array $filters): int
     {
         $query = Attendance::where('user_id', $user->id);
 
         // Apply date range filter
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->where('date', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->where('date', '<=', $filters['dateTo']);
         }
 
@@ -183,23 +171,19 @@ class UserPerformanceService
     /**
      * Calculate task completion rate for a user (PRIMARY assignees only).
      * This ensures accurate performance metrics by only counting tasks the user is primarily responsible for.
-     *
-     * @param User $user
-     * @param array $filters
-     * @return float
      */
     private function calculateTaskCompletionRate(User $user, array $filters): float
     {
         $taskQuery = Task::whereHas('assignees', function ($q) use ($user) {
             $q->where('user_id', $user->id)
-              ->where('is_primary', true); // Only primary assignees
+                ->where('is_primary', true); // Only primary assignees
         });
 
         // Apply date range filter on task creation
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $taskQuery->whereDate('created_at', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $taskQuery->whereDate('created_at', '<=', $filters['dateTo']);
         }
 
@@ -217,23 +201,19 @@ class UserPerformanceService
     /**
      * Calculate average bounce rate for a user (PRIMARY assignees only).
      * This ensures accurate quality metrics by only counting tasks the user is primarily responsible for.
-     *
-     * @param User $user
-     * @param array $filters
-     * @return float
      */
     private function calculateUserBounceRate(User $user, array $filters): float
     {
         $taskQuery = Task::whereHas('assignees', function ($q) use ($user) {
             $q->where('user_id', $user->id)
-              ->where('is_primary', true); // Only primary assignees
+                ->where('is_primary', true); // Only primary assignees
         });
 
         // Apply date range filter on task creation
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $taskQuery->whereDate('created_at', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $taskQuery->whereDate('created_at', '<=', $filters['dateTo']);
         }
 
@@ -250,20 +230,16 @@ class UserPerformanceService
 
     /**
      * Count attendance days for a user.
-     *
-     * @param User $user
-     * @param array $filters
-     * @return int
      */
     private function countAttendanceDays(User $user, array $filters): int
     {
         $query = Attendance::where('user_id', $user->id);
 
         // Apply date range filter
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->where('date', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $query->where('date', '<=', $filters['dateTo']);
         }
 
@@ -273,9 +249,7 @@ class UserPerformanceService
     /**
      * Get users with excessive idle time.
      *
-     * @param array $filters
-     * @param int $threshold Idle time threshold in minutes
-     * @return Collection
+     * @param  int  $threshold  Idle time threshold in minutes
      */
     private function getUsersWithExcessiveIdle(array $filters, int $threshold = self::DEFAULT_EXCESSIVE_IDLE_THRESHOLD): Collection
     {
@@ -283,10 +257,10 @@ class UserPerformanceService
             ->where('idle_minutes', '>', $threshold);
 
         // Apply date range filter
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $attendanceQuery->where('date', '>=', $filters['dateFrom']);
         }
-        if (!empty($filters['dateTo'])) {
+        if (! empty($filters['dateTo'])) {
             $attendanceQuery->where('date', '<=', $filters['dateTo']);
         }
 
@@ -311,12 +285,11 @@ class UserPerformanceService
     /**
      * Validate date range filters.
      *
-     * @param array $filters
      * @throws InvalidArgumentException
      */
     private function validateDateRange(array $filters): void
     {
-        if (!empty($filters['dateFrom']) && !empty($filters['dateTo'])) {
+        if (! empty($filters['dateFrom']) && ! empty($filters['dateTo'])) {
             $dateFrom = \Carbon\Carbon::parse($filters['dateFrom']);
             $dateTo = \Carbon\Carbon::parse($filters['dateTo']);
 

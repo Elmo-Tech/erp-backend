@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\RecurringTaskConfig;
-use App\Models\Task;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -29,8 +28,8 @@ class GenerateRecurringTasksCommand extends Command
      */
     public function handle(): int
     {
-        $date = $this->option('date') 
-            ? Carbon::parse($this->option('date')) 
+        $date = $this->option('date')
+            ? Carbon::parse($this->option('date'))
             : Carbon::today();
 
         $dryRun = $this->option('dry-run');
@@ -45,9 +44,10 @@ class GenerateRecurringTasksCommand extends Command
         $skipped = 0;
 
         foreach ($configs as $config) {
-            if (!$config->templateTask) {
+            if (! $config->templateTask) {
                 $this->warn("Config {$config->id} has no template task. Skipping.");
                 $skipped++;
+
                 continue;
             }
 
@@ -60,7 +60,7 @@ class GenerateRecurringTasksCommand extends Command
                         $task = $config->generateNextTask();
                         if ($task) {
                             $this->line("Generated task: {$task->title} (ID: {$task->id})");
-                            Log::info("Generated recurring task", [
+                            Log::info('Generated recurring task', [
                                 'task_id' => $task->id,
                                 'config_id' => $config->id,
                                 'template_id' => $config->template_task_id,
@@ -69,7 +69,7 @@ class GenerateRecurringTasksCommand extends Command
                         }
                     } catch (\Exception $e) {
                         $this->error("Failed to generate task for config {$config->id}: {$e->getMessage()}");
-                        Log::error("Failed to generate recurring task", [
+                        Log::error('Failed to generate recurring task', [
                             'config_id' => $config->id,
                             'error' => $e->getMessage(),
                         ]);

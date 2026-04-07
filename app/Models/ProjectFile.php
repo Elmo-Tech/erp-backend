@@ -8,9 +8,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * @property int $project_id
+ * @property string $name
+ * @property string $type
+ * @property string|null $file_path
+ * @property string|null $url
+ * @property bool $is_client_visible
+ * @property array<int, string>|null $visible_to_roles
+ * @property-read Project $project
+ */
 class ProjectFile extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
         'project_id',
@@ -68,29 +78,31 @@ class ProjectFile extends Model
      */
     public function canUserView(User $user): bool
     {
+        /** @var Project $project */
+        $project = $this->project;
+
         // Admin can see everything
         if ($user->hasRole('super-admin') || $user->hasRole('admin')) {
             return true;
         }
 
         // Check if user is a project member
-        $isMember = $this->project->members()->where('user_id', $user->id)->exists();
+        $isMember = $project->members()->where('user_id', $user->id)->exists();
         if ($isMember) {
             return true;
         }
 
         // Check client visibility
         if ($user->hasRole('client') && $this->is_client_visible) {
-            return $this->project->client_id === $user->id;
+            return $project->client_id === $user->client?->id;
         }
 
         // Check role-based visibility
-        if ($this->visible_to_roles) {
-            foreach ($user->roles as $role) {
-                if (in_array($role->name, $this->visible_to_roles)) {
-                    return true;
-                }
-            }
+        if (is_array($this->visible_to_roles)) {
+            return $user->roles
+                ->pluck('name')
+                ->intersect($this->visible_to_roles)
+                ->isNotEmpty();
         }
 
         return false;

@@ -21,7 +21,7 @@ class MilestoneInvoicePermissionsSeeder extends Seeder
             'create_milestone_invoice',
             'mark_milestone_paid',
             'link_milestone_invoice',
-            
+
             // Invoice from milestone
             'send_invoices',
             'cancel_invoices',

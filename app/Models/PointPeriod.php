@@ -77,7 +77,7 @@ class PointPeriod extends Model
             ->orderByDesc('total_points')
             ->limit($limit)
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'userId' => $item->user_id,
                 'name' => $item->user->name,
                 'email' => $item->user->email,
@@ -91,7 +91,7 @@ class PointPeriod extends Model
      */
     public function isClosed(): bool
     {
-        return !$this->is_active && $this->closed_at !== null;
+        return ! $this->is_active && $this->closed_at !== null;
     }
 
     /**

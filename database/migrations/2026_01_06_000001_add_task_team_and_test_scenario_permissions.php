@@ -8,7 +8,7 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
+     *
      * Adds permissions for:
      * - Managing task team (assignees) on Main/Weekly tasks
      * - Managing test scenarios on Main/Weekly tasks
@@ -48,7 +48,7 @@ return new class extends Migration
     public function down(): void
     {
         $permissions = ['manage_task_team', 'manage_task_test_scenarios'];
-        
+
         foreach ($permissions as $permission) {
             Permission::where('name', $permission)->delete();
         }

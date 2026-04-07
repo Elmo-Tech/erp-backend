@@ -36,10 +36,10 @@ class LeadStatusChanged extends Notification implements ShouldQueue
                 'changer' => $this->changedByName,
                 'company' => $this->lead->company,
             ]))
-            ->line('**' . __('Status Change:') . '**')
+            ->line('**'.__('Status Change:').'**')
             ->line(__('Previous Status: :old', ['old' => __(ucfirst(str_replace('_', ' ', $this->oldStatus)))]))
             ->line(__('New Status: :new', ['new' => __(ucfirst(str_replace('_', ' ', $this->newStatus)))]))
-            ->line('**' . __('Lead Details:') . '**')
+            ->line('**'.__('Lead Details:').'**')
             ->line(__('Company: :company', ['company' => $this->lead->company]))
             ->line(__('Contact: :contact', ['contact' => $this->lead->name]))
             ->when($this->reason, function ($message) {

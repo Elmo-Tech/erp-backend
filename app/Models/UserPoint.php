@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
+use App\Enums\PointTransactionType;
+use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Traits\HasCreatedUpdatedBy;
-use App\Enums\PointTransactionType;
 
 class UserPoint extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
         'user_id',

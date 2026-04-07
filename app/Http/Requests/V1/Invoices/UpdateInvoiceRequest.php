@@ -2,12 +2,10 @@
 
 namespace App\Http\Requests\V1\Invoices;
 
-use App\Enums\InvoiceStatus;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Validation\Rule;
 
 class UpdateInvoiceRequest extends FormRequest
 {
@@ -27,11 +25,9 @@ class UpdateInvoiceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => ['sometimes', 'numeric', 'min:0.01'],
-            'currency' => ['sometimes', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
-            'status' => ['sometimes', Rule::enum(InvoiceStatus::class)],
+            'amount' => ['sometimes', 'numeric', 'min:0', 'max:999999999.99'],
             'dueDate' => ['sometimes', 'date', 'after:today'],
-            'notes' => ['sometimes', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
@@ -44,11 +40,8 @@ class UpdateInvoiceRequest extends FormRequest
     {
         return [
             'amount.numeric' => 'The amount must be a valid number.',
-            'amount.min' => 'The amount must be greater than 0.',
-            'currency.string' => 'The currency must be a string.',
-            'currency.size' => 'The currency must be exactly 3 characters.',
-            'currency.regex' => 'The currency must be a valid 3-letter uppercase currency code (e.g., USD, EUR).',
-            'status.enum' => 'The selected status is invalid. Valid values are: draft, sent, paid, overdue, cancelled.',
+            'amount.min' => 'The amount must be at least 0.',
+            'amount.max' => 'The amount may not be greater than 999999999.99.',
             'dueDate.date' => 'The dueDate must be a valid date.',
             'dueDate.after' => 'The dueDate must be a future date.',
             'notes.string' => 'The notes must be a string.',
@@ -59,7 +52,6 @@ class UpdateInvoiceRequest extends FormRequest
     /**
      * Handle a failed validation attempt.
      *
-     * @param Validator $validator
      * @throws HttpResponseException
      */
     protected function failedValidation(Validator $validator): void

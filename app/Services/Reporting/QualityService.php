@@ -4,7 +4,6 @@ namespace App\Services\Reporting;
 
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
@@ -14,7 +13,6 @@ class QualityService
     /**
      * Calculate bounce rate statistics for a project.
      *
-     * @param Project $project
      * @return array{
      *     totalBounces: int,
      *     totalTasks: int,
@@ -24,7 +22,7 @@ class QualityService
     public function getProjectBounceRate(Project $project): array
     {
         $tasks = Task::where('project_id', $project->id)->get();
-        
+
         $totalBounces = $tasks->sum('reopen_count');
         $totalTasks = $tasks->count();
         $averageBounceRate = $totalTasks > 0 ? $totalBounces / $totalTasks : 0;
@@ -40,8 +38,7 @@ class QualityService
      * Get bounce rate per developer (PRIMARY assignees only).
      * This ensures accurate quality metrics by only counting tasks developers are primarily responsible for.
      *
-     * @param array $filters ['dateFrom' => string, 'dateTo' => string]
-     * @return Collection
+     * @param  array  $filters  ['dateFrom' => string, 'dateTo' => string]
      */
     public function getBounceRateByDeveloper(array $filters = []): Collection
     {
@@ -57,22 +54,22 @@ class QualityService
 
         // Group by primary developer and calculate bounce rates
         $developerStats = collect();
-        
+
         foreach ($tasks as $task) {
             $primaryAssignees = $task->assignees()->where('is_primary', true)->get();
-            
+
             foreach ($primaryAssignees as $assignee) {
                 $userId = $assignee->user_id;
                 $userName = $assignee->user->name;
-                
-                if (!$developerStats->has($userId)) {
+
+                if (! $developerStats->has($userId)) {
                     $developerStats[$userId] = [
                         'userId' => $userId,
                         'userName' => $userName,
                         'tasks' => collect(),
                     ];
                 }
-                
+
                 $developerStats[$userId]['tasks']->push($task);
             }
         }
@@ -97,14 +94,12 @@ class QualityService
     /**
      * Get top N tasks with highest bounce rates (PRIMARY assignees only).
      *
-     * @param int $limit
-     * @param array $filters ['dateFrom' => string, 'dateTo' => string]
-     * @return Collection
+     * @param  array  $filters  ['dateFrom' => string, 'dateTo' => string]
      */
     public function getTopBouncingTasks(int $limit = 10, array $filters = []): Collection
     {
         if ($limit <= 0) {
-            throw new InvalidArgumentException("Limit must be greater than 0");
+            throw new InvalidArgumentException('Limit must be greater than 0');
         }
 
         $query = Task::with(['project', 'assignees.user'])
@@ -146,13 +141,13 @@ class QualityService
     public function getQualityOverview(): array
     {
         $allTasks = Task::all();
-        
+
         $totalBounces = $allTasks->sum('reopen_count');
         $totalTasks = $allTasks->count();
         $tasksWithBounces = $allTasks->where('reopen_count', '>', 0)->count();
-        
+
         $overallBounceRate = $totalTasks > 0 ? $totalBounces / $totalTasks : 0;
-        
+
         // Quality score is inverse of bounce rate (higher is better)
         // Scale from 0-100, where 100 is perfect (no bounces)
         $qualityScore = $totalTasks > 0 ? max(0, 100 - ($overallBounceRate * 100)) : 100;
@@ -167,18 +162,14 @@ class QualityService
 
     /**
      * Apply date range filters to the query.
-     *
-     * @param Builder $query
-     * @param array $filters
-     * @return void
      */
     private function applyDateFilters(Builder $query, array $filters): void
     {
-        if (!empty($filters['dateFrom'])) {
+        if (! empty($filters['dateFrom'])) {
             $query->where('created_at', '>=', $filters['dateFrom']);
         }
-        
-        if (!empty($filters['dateTo'])) {
+
+        if (! empty($filters['dateTo'])) {
             $query->where('created_at', '<=', $filters['dateTo']);
         }
     }

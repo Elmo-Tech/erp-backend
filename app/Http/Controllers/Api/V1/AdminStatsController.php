@@ -36,17 +36,22 @@ class AdminStatsController extends Controller
      *     summary="Get admin dashboard overview statistics",
      *     description="Retrieve comprehensive dashboard statistics including profitability, quality metrics, and performance overview. Requires view_admin_stats permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Admin overview statistics retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Admin overview statistics retrieved successfully"),
      *             @OA\Property(
@@ -77,7 +82,9 @@ class AdminStatsController extends Controller
      *                     @OA\Property(
      *                         property="usersWithExcessiveIdle",
      *                         type="array",
+     *
      *                         @OA\Items(
+     *
      *                             @OA\Property(property="userId", type="integer", example=3),
      *                             @OA\Property(property="userName", type="string", example="John Doe"),
      *                             @OA\Property(property="totalExcessiveIdleMinutes", type="integer", example=180),
@@ -89,18 +96,24 @@ class AdminStatsController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks view_admin_stats permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to view admin statistics")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -110,7 +123,7 @@ class AdminStatsController extends Controller
     public function overview(): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('view_admin_stats')) {
+        if (! auth()->user()->can('view_admin_stats')) {
             return ApiResponse::forbidden('You do not have permission to view admin statistics');
         }
 
@@ -136,7 +149,7 @@ class AdminStatsController extends Controller
             );
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to retrieve admin overview statistics: ' . $e->getMessage(),
+                'Failed to retrieve admin overview statistics: '.$e->getMessage(),
                 500
             );
         }
@@ -150,59 +163,78 @@ class AdminStatsController extends Controller
      *     summary="Get project profitability report",
      *     description="Retrieve detailed profitability report for all projects with filtering and pagination. Requires both view_admin_stats AND view_internal_costs permissions.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="status",
      *         in="query",
      *         description="Filter projects by status",
+     *
      *         @OA\Schema(type="string", enum={"active", "completed", "on_hold", "cancelled"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateFrom",
      *         in="query",
      *         description="Filter projects created from this date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2024-01-01")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateTo",
      *         in="query",
      *         description="Filter projects created up to this date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2024-12-31")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="sortBy",
      *         in="query",
      *         description="Sort results by field",
+     *
      *         @OA\Schema(type="string", enum={"profit", "margin", "budget"}, example="profit")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="sortDirection",
      *         in="query",
      *         description="Sort direction",
+     *
      *         @OA\Schema(type="string", enum={"asc", "desc"}, example="desc")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number for pagination",
+     *
      *         @OA\Schema(type="integer", minimum=1, example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="perPage",
      *         in="query",
      *         description="Number of items per page",
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=100, example=15)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Profitability report retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Profitability report retrieved successfully"),
      *             @OA\Property(
@@ -211,7 +243,9 @@ class AdminStatsController extends Controller
      *                 @OA\Property(
      *                     property="projects",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="projectId", type="integer", example=1),
      *                         @OA\Property(property="title", type="string", example="E-commerce Website"),
      *                         @OA\Property(property="budget", type="string", example="50000.00"),
@@ -232,18 +266,24 @@ class AdminStatsController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks required permissions",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to view profitability data")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Invalid filter parameters"),
      *             @OA\Property(
@@ -252,15 +292,19 @@ class AdminStatsController extends Controller
      *                 @OA\Property(
      *                     property="sortBy",
      *                     type="array",
+     *
      *                     @OA\Items(type="string", example="Invalid sort field. Allowed: profit, margin, budget")
      *                 )
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -270,7 +314,7 @@ class AdminStatsController extends Controller
     public function profitability(Request $request): JsonResponse
     {
         // Check both required permissions
-        if (!auth()->user()->can('view_admin_stats') || !auth()->user()->can('view_internal_costs')) {
+        if (! auth()->user()->can('view_admin_stats') || ! auth()->user()->can('view_internal_costs')) {
             return ApiResponse::forbidden('You do not have permission to view profitability data');
         }
 
@@ -322,7 +366,7 @@ class AdminStatsController extends Controller
             );
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to retrieve profitability report: ' . $e->getMessage(),
+                'Failed to retrieve profitability report: '.$e->getMessage(),
                 500
             );
         }
@@ -336,35 +380,46 @@ class AdminStatsController extends Controller
      *     summary="Get quality metrics including bounce rates",
      *     description="Retrieve comprehensive quality metrics including bounce rates by developer and top bouncing tasks. Requires view_admin_stats permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateFrom",
      *         in="query",
      *         description="Filter data from this date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2024-01-01")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateTo",
      *         in="query",
      *         description="Filter data up to this date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2024-12-31")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="limit",
      *         in="query",
      *         description="Limit for top bouncing tasks",
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=50, example=10)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Quality metrics retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Quality metrics retrieved successfully"),
      *             @OA\Property(
@@ -381,7 +436,9 @@ class AdminStatsController extends Controller
      *                 @OA\Property(
      *                     property="bounceRateByDeveloper",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="userId", type="integer", example=1),
      *                         @OA\Property(property="userName", type="string", example="John Doe"),
      *                         @OA\Property(property="totalBounces", type="integer", example=5),
@@ -392,7 +449,9 @@ class AdminStatsController extends Controller
      *                 @OA\Property(
      *                     property="topBouncingTasks",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="taskId", type="integer", example=15),
      *                         @OA\Property(property="title", type="string", example="Fix login bug"),
      *                         @OA\Property(property="projectTitle", type="string", example="E-commerce Website"),
@@ -404,18 +463,24 @@ class AdminStatsController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks view_admin_stats permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to view admin statistics")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -425,7 +490,7 @@ class AdminStatsController extends Controller
     public function quality(Request $request): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('view_admin_stats')) {
+        if (! auth()->user()->can('view_admin_stats')) {
             return ApiResponse::forbidden('You do not have permission to view admin statistics');
         }
 
@@ -461,7 +526,7 @@ class AdminStatsController extends Controller
             );
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to retrieve quality metrics: ' . $e->getMessage(),
+                'Failed to retrieve quality metrics: '.$e->getMessage(),
                 500
             );
         }
@@ -475,35 +540,46 @@ class AdminStatsController extends Controller
      *     summary="Get user performance metrics",
      *     description="Retrieve comprehensive user performance metrics including tracked time, idle time, task completion rates, and bounce rates. Requires view_admin_stats permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateFrom",
      *         in="query",
      *         description="Filter data from this date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2024-01-01")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateTo",
      *         in="query",
      *         description="Filter data up to this date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2024-12-31")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="User performance metrics retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="User performance metrics retrieved successfully"),
      *             @OA\Property(
      *                 property="data",
      *                 type="array",
+     *
      *                 @OA\Items(
+     *
      *                     @OA\Property(property="userId", type="integer", example=1),
      *                     @OA\Property(property="name", type="string", example="John Doe"),
      *                     @OA\Property(property="totalTrackedMinutes", type="integer", example=2400),
@@ -515,18 +591,24 @@ class AdminStatsController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks view_admin_stats permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to view admin statistics")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -536,7 +618,7 @@ class AdminStatsController extends Controller
     public function userPerformance(Request $request): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('view_admin_stats')) {
+        if (! auth()->user()->can('view_admin_stats')) {
             return ApiResponse::forbidden('You do not have permission to view admin statistics');
         }
 
@@ -559,7 +641,7 @@ class AdminStatsController extends Controller
             );
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to retrieve user performance metrics: ' . $e->getMessage(),
+                'Failed to retrieve user performance metrics: '.$e->getMessage(),
                 500
             );
         }
@@ -573,29 +655,38 @@ class AdminStatsController extends Controller
      *     summary="Get attendance analytics",
      *     description="Retrieve comprehensive attendance analytics including late arrivals, idle time statistics, and users with excessive idle time. Requires view_admin_stats permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateFrom",
      *         in="query",
      *         description="Filter data from this date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2024-01-01")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateTo",
      *         in="query",
      *         description="Filter data up to this date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2024-12-31")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Attendance analytics retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Attendance analytics retrieved successfully"),
      *             @OA\Property(
@@ -606,7 +697,9 @@ class AdminStatsController extends Controller
      *                 @OA\Property(
      *                     property="usersWithExcessiveIdle",
      *                     type="array",
+     *
      *                     @OA\Items(
+     *
      *                         @OA\Property(property="userId", type="integer", example=3),
      *                         @OA\Property(property="userName", type="string", example="John Doe"),
      *                         @OA\Property(property="totalExcessiveIdleMinutes", type="integer", example=180),
@@ -617,18 +710,24 @@ class AdminStatsController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks view_admin_stats permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to view admin statistics")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -638,7 +737,7 @@ class AdminStatsController extends Controller
     public function attendance(Request $request): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('view_admin_stats')) {
+        if (! auth()->user()->can('view_admin_stats')) {
             return ApiResponse::forbidden('You do not have permission to view admin statistics');
         }
 
@@ -661,7 +760,7 @@ class AdminStatsController extends Controller
             );
         } catch (\Exception $e) {
             return ApiResponse::error(
-                'Failed to retrieve attendance analytics: ' . $e->getMessage(),
+                'Failed to retrieve attendance analytics: '.$e->getMessage(),
                 500
             );
         }
@@ -675,36 +774,47 @@ class AdminStatsController extends Controller
      *     summary="Get comprehensive employee review",
      *     description="Retrieve detailed employee performance review including time tracking, tasks, projects, attendance, and productivity metrics. Requires view_admin_stats permission.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=true,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, example="en")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="userId",
      *         in="path",
      *         required=true,
      *         description="User ID",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateFrom",
      *         in="query",
      *         description="Filter data from this date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2024-01-01")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateTo",
      *         in="query",
      *         description="Filter data up to this date (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2024-12-31")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Employee review retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Employee review retrieved successfully"),
      *             @OA\Property(
@@ -777,26 +887,35 @@ class AdminStatsController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Forbidden - User lacks view_admin_stats permission",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="You do not have permission to view admin statistics")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="User not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="User not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthorized",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Unauthorized")
      *         )
@@ -806,7 +925,7 @@ class AdminStatsController extends Controller
     public function employeeReview(Request $request, int $userId): JsonResponse
     {
         // Check permission
-        if (!auth()->user()->can('view_admin_stats')) {
+        if (! auth()->user()->can('view_admin_stats')) {
             return ApiResponse::forbidden('You do not have permission to view admin statistics');
         }
 
@@ -830,7 +949,7 @@ class AdminStatsController extends Controller
             \Log::info('Employee Review Request', [
                 'userId' => $userId,
                 'filters' => $filters,
-                'user' => auth()->user()->name
+                'user' => auth()->user()->name,
             ]);
 
             // Get employee review data
@@ -842,7 +961,7 @@ class AdminStatsController extends Controller
                 'projects_count' => $reviewData['projects']['total'] ?? 'N/A',
                 'trends_weeks' => count($reviewData['trends']['weeklyTimeTracking'] ?? []),
                 'has_projects_array' => isset($reviewData['projects']['projects']),
-                'projects_array_count' => count($reviewData['projects']['projects'] ?? [])
+                'projects_array_count' => count($reviewData['projects']['projects'] ?? []),
             ]);
 
             return ApiResponse::success(
@@ -864,7 +983,7 @@ class AdminStatsController extends Controller
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             if ($request->boolean('debug') || config('app.debug')) {
@@ -882,7 +1001,7 @@ class AdminStatsController extends Controller
                 ], 500);
             }
 
-            return ApiResponse::error('Failed to retrieve employee review: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to retrieve employee review: '.$e->getMessage(), 500);
         }
     }
 
@@ -894,71 +1013,93 @@ class AdminStatsController extends Controller
      *     operationId="exportEmployeeReview",
      *     tags={"Admin Stats"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="userId",
      *         in="path",
      *         required=true,
      *         description="ID of the user to export review for",
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateFrom",
      *         in="query",
      *         required=false,
      *         description="Start date for the review period (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2026-01-01")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="dateTo",
      *         in="query",
      *         required=false,
      *         description="End date for the review period (YYYY-MM-DD)",
+     *
      *         @OA\Schema(type="string", format="date", example="2026-01-22")
      *     ),
+     *
      *     @OA\Parameter(
      *         name="Accept-Language",
      *         in="header",
      *         required=false,
      *         description="Language preference",
+     *
      *         @OA\Schema(type="string", enum={"en", "ar"}, default="en")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="PDF file download",
+     *
      *         @OA\MediaType(
      *             mediaType="application/pdf",
+     *
      *             @OA\Schema(
      *                 type="string",
      *                 format="binary",
      *                 description="PDF file containing employee performance review"
      *             )
      *         ),
+     *
      *         @OA\Header(
      *             header="Content-Disposition",
      *             description="Attachment filename",
+     *
      *             @OA\Schema(type="string", example="attachment; filename=employee_review_John_Doe_2026-01-01_to_2026-01-22.pdf")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=403,
      *         description="Access denied - insufficient permissions",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Access denied. You do not have permission to view admin statistics.")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="User not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="User not found")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=500,
      *         description="Server error during PDF generation",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="success", type="boolean", example=false),
      *             @OA\Property(property="message", type="string", example="Failed to export employee review: PDF generation error")
      *         )
@@ -971,7 +1112,7 @@ class AdminStatsController extends Controller
     {
         try {
             // Check permission
-            if (!$request->user()->can('view_admin_stats')) {
+            if (! $request->user()->can('view_admin_stats')) {
                 return ApiResponse::error(
                     'Access denied. You do not have permission to view admin statistics.',
                     403
@@ -998,7 +1139,7 @@ class AdminStatsController extends Controller
 
             // Get locale from request header (Accept-Language)
             $locale = $request->header('Accept-Language', 'en');
-            if (!in_array($locale, ['ar', 'en'])) {
+            if (! in_array($locale, ['ar', 'en'])) {
                 $locale = 'en';
             }
 
@@ -1007,13 +1148,13 @@ class AdminStatsController extends Controller
 
             // Get employee review data
             $reviewData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
-            
+
             // Add locale to review data for PDF generation
             $reviewData['locale'] = $locale;
-            
+
             // Add forPdf flag to get ALL transactions without pagination
             $filters['forPdf'] = true;
-            
+
             // Get complete points data for PDF (all transactions)
             $completePointsData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
             $reviewData['points'] = $completePointsData['points'];
@@ -1022,29 +1163,29 @@ class AdminStatsController extends Controller
                 // Generate filename with date range if provided
                 $dateRange = '';
                 if (isset($filters['dateFrom']) && isset($filters['dateTo'])) {
-                    $dateRange = '_' . $filters['dateFrom'] . '_to_' . $filters['dateTo'];
+                    $dateRange = '_'.$filters['dateFrom'].'_to_'.$filters['dateTo'];
                 }
-                $fileName = 'Employee Review' . str_replace(' ', ' ', $user->name) . $dateRange . '.pdf';
-                
+                $fileName = 'Employee Review'.str_replace(' ', ' ', $user->name).$dateRange.'.pdf';
+
                 // Use PdfService for robust PDF generation with Arabic-safe options
                 $pdfOptions = [
                     'defaultFont' => 'DejaVu Sans', // Always use DejaVu Sans for Arabic support
                     'isRemoteEnabled' => false, // Disable for security and reliability
                     'enableFontSubsetting' => false, // Critical: Never enable for Arabic text
                 ];
-                
+
                 return $this->pdfService->downloadPdf('reports.employee-review', $reviewData, $fileName, $pdfOptions);
-                
+
             } catch (Throwable $pdfException) {
                 // Log the error for debugging
                 \Log::error('Employee Review PDF Export Failed', [
                     'user_id' => $userId,
                     'filters' => $filters,
                     'error' => $pdfException->getMessage(),
-                    'trace' => $pdfException->getTraceAsString()
+                    'trace' => $pdfException->getTraceAsString(),
                 ]);
-                
-                throw new \RuntimeException('PDF generation failed: ' . $pdfException->getMessage(), previous: $pdfException);
+
+                throw new \RuntimeException('PDF generation failed: '.$pdfException->getMessage(), previous: $pdfException);
             }
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -1078,14 +1219,12 @@ class AdminStatsController extends Controller
                 ], 500);
             }
 
-            return ApiResponse::error('Failed to export employee review: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to export employee review: '.$e->getMessage(), 500);
         }
     }
 
     /**
      * Ensure PDF directories exist with proper permissions
-     * 
-     * @return void
      */
     private function ensurePdfDirectoriesExist(): void
     {
@@ -1098,22 +1237,21 @@ class AdminStatsController extends Controller
         ];
 
         foreach ($directories as $directory) {
-            if (!is_dir($directory)) {
+            if (! is_dir($directory)) {
                 try {
                     mkdir($directory, 0755, true);
-                    
+
                     // Create .gitkeep file to ensure directory is tracked
-                    $gitkeepFile = $directory . '/.gitkeep';
-                    if (!file_exists($gitkeepFile)) {
+                    $gitkeepFile = $directory.'/.gitkeep';
+                    if (! file_exists($gitkeepFile)) {
                         file_put_contents($gitkeepFile, '');
                     }
-                    
+
                     \Log::info("Created PDF directory: {$directory}");
                 } catch (\Exception $e) {
-                    \Log::warning("Failed to create PDF directory {$directory}: " . $e->getMessage());
+                    \Log::warning("Failed to create PDF directory {$directory}: ".$e->getMessage());
                 }
             }
         }
     }
-
 }

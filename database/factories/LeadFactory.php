@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\LeadSource;
 use App\Enums\LeadStatus;
 use App\Models\Lead;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -14,7 +15,7 @@ class LeadFactory extends Factory
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<\Illuminate\Database\Eloquent\Model>
+     * @var class-string<Lead>
      */
     protected $model = Lead::class;
 
@@ -29,7 +30,7 @@ class LeadFactory extends Factory
             'name' => $this->faker->name(),
             'email' => $this->faker->unique()->safeEmail(),
             'company' => $this->faker->company(),
-            'source' => $this->faker->randomElement(['Website', 'Referral', 'Social Media', 'Cold Call', 'Email Campaign']),
+            'source' => $this->faker->randomElement(LeadSource::cases()),
             'status' => $this->faker->randomElement(LeadStatus::cases()),
         ];
     }

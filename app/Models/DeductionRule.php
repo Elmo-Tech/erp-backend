@@ -8,9 +8,30 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property int $deduction_type_id
+ * @property string $name
+ * @property string|null $code
+ * @property string|null $description
+ * @property string $rule_type
+ * @property float|int|string $threshold_value
+ * @property string|null $threshold_unit
+ * @property float|int|string $deduction_value
+ * @property string|null $deduction_unit
+ * @property float|int|string $max_deduction_amount
+ * @property float|int|string $repetition_penalty_factor
+ * @property int $grace_period_days
+ * @property bool $is_active
+ * @property \Illuminate\Support\Carbon|null $effective_from
+ * @property \Illuminate\Support\Carbon|null $effective_until
+ * @property array<string, mixed>|null $conditions
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class DeductionRule extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'deduction_type_id',
@@ -47,15 +68,20 @@ class DeductionRule extends Model
      * Rule types
      */
     const RULE_TYPE_FIXED = 'fixed';
+
     const RULE_TYPE_TIERED = 'tiered';
+
     const RULE_TYPE_ACCUMULATIVE = 'accumulative';
+
     const RULE_TYPE_PERCENTAGE = 'percentage';
 
     /**
      * Deduction units
      */
     const UNIT_AMOUNT = 'amount';
+
     const UNIT_PERCENTAGE = 'percentage';
+
     const UNIT_DAYS_SALARY = 'days_salary';
 
     /**
@@ -71,7 +97,7 @@ class DeductionRule extends Model
      */
     public function calculateDeduction(int $occurrences, float $baseSalary, array $context = []): float
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return 0;
         }
 
@@ -146,6 +172,7 @@ class DeductionRule extends Model
     protected function calculateAccumulativeDeduction(int $occurrences, float $baseSalary): float
     {
         $excessOccurrences = max(0, $occurrences - $this->threshold_value);
+
         return $this->convertToAmount($this->deduction_value * $excessOccurrences, $baseSalary);
     }
 
@@ -159,6 +186,7 @@ class DeductionRule extends Model
         }
 
         $percentage = $this->deduction_value * $occurrences;
+
         return ($baseSalary * $percentage) / 100;
     }
 
@@ -196,7 +224,7 @@ class DeductionRule extends Model
      */
     public function isEffective(): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 

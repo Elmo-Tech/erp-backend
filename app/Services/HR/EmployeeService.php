@@ -2,9 +2,9 @@
 
 namespace App\Services\HR;
 
-use App\Models\User;
-use App\Models\TaskAssignee;
 use App\Models\Attendance;
+use App\Models\TaskAssignee;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -27,7 +27,7 @@ class EmployeeService
                     });
             });
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -80,7 +80,7 @@ class EmployeeService
         ]);
 
         // Assign role if provided
-        if (!empty($data['role'])) {
+        if (! empty($data['role'])) {
             $employee->assignRole($data['role']);
         }
 
@@ -114,14 +114,14 @@ class EmployeeService
             }
         }
 
-        if (!empty($data['password'])) {
+        if (! empty($data['password'])) {
             $updateData['password'] = Hash::make($data['password']);
         }
 
         $employee->update($updateData);
 
         // Update role if provided
-        if (!empty($data['role'])) {
+        if (! empty($data['role'])) {
             $employee->syncRoles([$data['role']]);
         }
 
@@ -200,7 +200,7 @@ class EmployeeService
                 'pointsEarned' => $taskPoints,
                 'totalPoints' => $employee->total_points,
                 'projectsWorkedOn' => $projectsWorkedOn->count(),
-                'projects' => $projectsWorkedOn->map(fn($p) => [
+                'projects' => $projectsWorkedOn->map(fn ($p) => [
                     'projectId' => $p->id,
                     'title' => $p->title,
                 ]),
@@ -222,6 +222,7 @@ class EmployeeService
     public function deactivateEmployee(User $employee): User
     {
         $employee->update(['is_active' => false]);
+
         return $employee;
     }
 
@@ -231,6 +232,7 @@ class EmployeeService
     public function activateEmployee(User $employee): User
     {
         $employee->update(['is_active' => true]);
+
         return $employee;
     }
 }

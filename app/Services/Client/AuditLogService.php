@@ -81,7 +81,7 @@ class AuditLogService
     {
         $description = Str::headline(str_replace('_', ' ', $action));
 
-        if (!$auditable) {
+        if (! $auditable) {
             return $description;
         }
 

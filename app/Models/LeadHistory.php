@@ -8,6 +8,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+/**
+ * @property int $id
+ * @property string $auditable_type
+ * @property int $auditable_id
+ * @property AuditActionType $action_type
+ * @property string|null $field_name
+ * @property string|null $old_value
+ * @property string|null $new_value
+ * @property string|null $description
+ * @property string|null $reason
+ * @property array<string, mixed>|null $metadata
+ * @property int $changed_by
+ * @property string|null $ip_address
+ * @property string|null $user_agent
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property-read User $changedByUser
+ */
 class LeadHistory extends Model
 {
     use HasFactory;

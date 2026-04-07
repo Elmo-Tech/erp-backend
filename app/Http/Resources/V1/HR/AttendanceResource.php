@@ -2,13 +2,17 @@
 
 namespace App\Http\Resources\V1\HR;
 
+use App\Models\Attendance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * @mixin Attendance
+ *
  * @OA\Schema(
  *     schema="HRAttendanceResource",
  *     type="object",
+ *
  *     @OA\Property(property="attendanceId", type="integer", example=1),
  *     @OA\Property(property="userId", type="integer", example=1),
  *     @OA\Property(property="date", type="string", format="date", example="2026-01-05"),
@@ -31,29 +35,32 @@ class AttendanceResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        /** @var Attendance $attendance */
+        $attendance = $this->resource;
+
         return [
-            'attendanceId' => $this->id,
-            'userId' => $this->user_id,
-            'date' => $this->date?->format('Y-m-d'),
-            'clockIn' => $this->clock_in?->format('Y-m-d\TH:i:s'),
-            'clockOut' => $this->clock_out?->format('Y-m-d\TH:i:s'),
-            'expectedClockIn' => $this->expected_clock_in,
-            'expectedClockOut' => $this->expected_clock_out,
-            'lateMinutes' => (int) $this->late_minutes,
-            'isLate' => (bool) $this->is_late,
-            'idleMinutes' => (int) $this->idle_minutes,
-            'deductionMinutes' => (int) $this->deduction_minutes,
-            'usedGraceDay' => (bool) $this->used_grace_day,
-            'workedMinutes' => $this->getWorkedMinutes(),
-            'isClockedIn' => $this->isClockedIn(),
-            'notes' => $this->notes ?? '',
-            
-            'user' => $this->whenLoaded('user', fn() => [
-                'userId' => $this->user->id,
-                'name' => $this->user->name,
-                'email' => $this->user->email,
-                'avatar' => $this->user->avatar,
-                'graceDaysRemaining' => max(0, $this->user->grace_days_allowed - $this->user->grace_days_used),
+            'attendanceId' => $attendance->id,
+            'userId' => $attendance->user_id,
+            'date' => $attendance->date?->format('Y-m-d'),
+            'clockIn' => $attendance->clock_in?->format('Y-m-d\TH:i:s'),
+            'clockOut' => $attendance->clock_out?->format('Y-m-d\TH:i:s'),
+            'expectedClockIn' => $attendance->expected_clock_in,
+            'expectedClockOut' => $attendance->expected_clock_out,
+            'lateMinutes' => (int) $attendance->late_minutes,
+            'isLate' => $attendance->is_late,
+            'idleMinutes' => (int) $attendance->idle_minutes,
+            'deductionMinutes' => (int) $attendance->deduction_minutes,
+            'usedGraceDay' => $attendance->used_grace_day,
+            'workedMinutes' => $attendance->getWorkedMinutes(),
+            'isClockedIn' => $attendance->isClockedIn(),
+            'notes' => $attendance->notes ?? '',
+
+            'user' => $this->whenLoaded('user', fn () => [
+                'userId' => $attendance->user->id,
+                'name' => $attendance->user->name,
+                'email' => $attendance->user->email,
+                'avatar' => $attendance->user->avatar,
+                'graceDaysRemaining' => max(0, $attendance->user->grace_days_allowed - $attendance->user->grace_days_used),
             ]),
         ];
     }

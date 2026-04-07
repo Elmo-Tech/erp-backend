@@ -5,7 +5,6 @@ namespace App\Observers;
 use App\Enums\ProjectStatus;
 use App\Jobs\AutoApproveUIJob;
 use App\Models\Project;
-use App\Models\User;
 use App\Notifications\ProjectDeadlineApproachingNotification;
 use App\Notifications\ProjectStatusChangedNotification;
 use App\Services\AuditService;
@@ -48,14 +47,11 @@ class ProjectObserver
      * - Storing previous_status when transitioning to on_hold
      * - Scheduling AutoApproveUIJob when entering ui_ux status
      * - Canceling scheduled job when leaving ui_ux status
-     *
-     * @param Project $project
-     * @return void
      */
     public function updating(Project $project): void
     {
         // Only process if status is being changed
-        if (!$project->isDirty('status')) {
+        if (! $project->isDirty('status')) {
             return;
         }
 
@@ -90,9 +86,6 @@ class ProjectObserver
      *
      * This method is called after the model has been saved to the database.
      * It records status changes in the project history for audit trail.
-     *
-     * @param Project $project
-     * @return void
      */
     public function updated(Project $project): void
     {
@@ -157,11 +150,6 @@ class ProjectObserver
 
     /**
      * Notify team members about project status change.
-     *
-     * @param Project $project
-     * @param string|null $oldStatus
-     * @param string $newStatus
-     * @return void
      */
     private function notifyTeamAboutStatusChange(Project $project, ?string $oldStatus, string $newStatus): void
     {
@@ -187,13 +175,10 @@ class ProjectObserver
 
     /**
      * Check if project deadline is approaching and notify team.
-     *
-     * @param Project $project
-     * @return void
      */
     private function checkDeadlineApproaching(Project $project): void
     {
-        if (!$project->deadline) {
+        if (! $project->deadline) {
             return;
         }
 
@@ -221,9 +206,6 @@ class ProjectObserver
      *
      * The job will automatically approve UI/UX deliverables if the client
      * hasn't responded within 21 days.
-     *
-     * @param Project $project
-     * @return void
      */
     private function scheduleAutoApprovalJob(Project $project): void
     {
@@ -235,7 +217,7 @@ class ProjectObserver
         // Note: The actual job ID storage depends on the queue driver
         // For database queue, we can use the job's chain ID or a custom identifier
         // For simplicity, we store a timestamp-based identifier
-        $project->auto_approval_job_id = 'auto_approve_' . $project->id . '_' . time();
+        $project->auto_approval_job_id = 'auto_approve_'.$project->id.'_'.time();
     }
 
     /**
@@ -245,9 +227,6 @@ class ProjectObserver
      * - Client manually approves before 21 days
      * - Project status changes away from ui_ux
      * - Project is cancelled
-     *
-     * @param Project $project
-     * @return void
      */
     private function cancelAutoApprovalJob(Project $project): void
     {
@@ -260,19 +239,14 @@ class ProjectObserver
 
     /**
      * Handle automatic billing when project status changes.
-     * 
+     *
      * This method implements the Event-Based Billing system from Expansion Pack 4.
      * It automatically generates invoices for completed milestones based on project status.
-     *
-     * @param Project $project
-     * @param string|null $oldStatus
-     * @param string $newStatus
-     * @return void
      */
     private function handleAutomaticBilling(Project $project, ?string $oldStatus, string $newStatus): void
     {
         // Only process if project has a contract
-        if (!$project->contract) {
+        if (! $project->contract) {
             return;
         }
 
@@ -291,9 +265,9 @@ class ProjectObserver
         // Generate invoices based on status transitions
         try {
             $generatedInvoices = $this->billingService->generatePendingInvoices($project);
-            
-            if (!empty($generatedInvoices)) {
-                Log::info("Auto-generated {count} invoices for project {project}", [
+
+            if (! empty($generatedInvoices)) {
+                Log::info('Auto-generated {count} invoices for project {project}', [
                     'count' => count($generatedInvoices),
                     'project' => $project->id,
                     'status_change' => "{$oldStatus} -> {$newStatus}",
@@ -313,7 +287,7 @@ class ProjectObserver
                 );
             }
         } catch (\Exception $e) {
-            Log::error("Failed to auto-generate invoices for project {project}: {error}", [
+            Log::error('Failed to auto-generate invoices for project {project}: {error}', [
                 'project' => $project->id,
                 'error' => $e->getMessage(),
                 'status_change' => "{$oldStatus} -> {$newStatus}",

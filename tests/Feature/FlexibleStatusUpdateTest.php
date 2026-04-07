@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -25,7 +26,7 @@ class FlexibleStatusUpdateTest extends TestCase
         $this->user->assignRole('admin');
     }
 
-    /** @test */
+    #[Test]
     public function can_update_task_status_flexibly()
     {
         $task = Task::factory()->create([
@@ -36,7 +37,7 @@ class FlexibleStatusUpdateTest extends TestCase
         $response = $this->actingAs($this->user)
             ->patchJson("/api/v1/tasks/{$task->id}/status", [
                 'status' => 'completed',
-                'reason' => 'Task completed directly'
+                'reason' => 'Task completed directly',
             ]);
 
         $response->assertOk()
@@ -49,7 +50,7 @@ class FlexibleStatusUpdateTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function can_update_project_status_flexibly()
     {
         $project = Project::factory()->create([
@@ -60,7 +61,7 @@ class FlexibleStatusUpdateTest extends TestCase
         $response = $this->actingAs($this->user)
             ->patchJson("/api/v1/projects/{$project->id}/status", [
                 'status' => 'completed',
-                'reason' => 'Project completed directly'
+                'reason' => 'Project completed directly',
             ]);
 
         $response->assertOk()
@@ -73,7 +74,7 @@ class FlexibleStatusUpdateTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function tracks_bug_bounce_when_task_moves_from_testing_to_in_progress()
     {
         $task = Task::factory()->create([
@@ -84,7 +85,7 @@ class FlexibleStatusUpdateTest extends TestCase
         $response = $this->actingAs($this->user)
             ->patchJson("/api/v1/tasks/{$task->id}/status", [
                 'status' => 'in_progress',
-                'reason' => 'Found bugs during testing'
+                'reason' => 'Found bugs during testing',
             ]);
 
         $response->assertOk();
@@ -96,14 +97,14 @@ class FlexibleStatusUpdateTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function validates_status_enum_values()
     {
         $task = Task::factory()->create();
 
         $response = $this->actingAs($this->user)
             ->patchJson("/api/v1/tasks/{$task->id}/status", [
-                'status' => 'invalid_status'
+                'status' => 'invalid_status',
             ]);
 
         $response->assertStatus(422)
@@ -111,7 +112,7 @@ class FlexibleStatusUpdateTest extends TestCase
             ->assertJsonValidationErrors(['status']);
     }
 
-    /** @test */
+    #[Test]
     public function prevents_same_status_update()
     {
         $task = Task::factory()->create([
@@ -120,11 +121,11 @@ class FlexibleStatusUpdateTest extends TestCase
 
         $response = $this->actingAs($this->user)
             ->patchJson("/api/v1/tasks/{$task->id}/status", [
-                'status' => 'completed'
+                'status' => 'completed',
             ]);
 
         $response->assertOk();
-        
+
         // Should return success but no actual change
         $this->assertDatabaseHas('tasks', [
             'id' => $task->id,

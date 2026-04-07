@@ -22,7 +22,7 @@ class TaskTestScenarioPointsTest extends TestCase
             'type' => TaskType::WEEKLY,
             'assigned_to' => $user->id,
         ]);
-        
+
         $scenario = TaskTestScenario::factory()->create([
             'task_id' => $task->id,
             'status' => 'pending',
@@ -39,7 +39,7 @@ class TaskTestScenarioPointsTest extends TestCase
         // Assert
         $user->refresh();
         $this->assertEquals(1, $user->total_points);
-        
+
         // Check PointTransaction was created
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $user->id,
@@ -60,7 +60,7 @@ class TaskTestScenarioPointsTest extends TestCase
             'type' => TaskType::WEEKLY,
             'assigned_to' => $user->id,
         ]);
-        
+
         $scenario = TaskTestScenario::factory()->create([
             'task_id' => $task->id,
             'status' => 'pending',
@@ -77,7 +77,7 @@ class TaskTestScenarioPointsTest extends TestCase
         // Assert
         $user->refresh();
         $this->assertEquals(4, $user->total_points);
-        
+
         // Check PointTransaction was created
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $user->id,
@@ -98,7 +98,7 @@ class TaskTestScenarioPointsTest extends TestCase
             'type' => TaskType::MAIN,
             'assigned_to' => $user->id,
         ]);
-        
+
         $scenario = TaskTestScenario::factory()->create([
             'task_id' => $task->id,
             'status' => 'pending',
@@ -115,7 +115,7 @@ class TaskTestScenarioPointsTest extends TestCase
         // Assert - No points should be awarded
         $user->refresh();
         $this->assertEquals(0, $user->total_points);
-        
+
         // Check no PointTransaction was created
         $this->assertDatabaseMissing('point_transactions', [
             'user_id' => $user->id,
@@ -132,7 +132,7 @@ class TaskTestScenarioPointsTest extends TestCase
             'type' => TaskType::SUBTASK,
             'assigned_to' => $user->id,
         ]);
-        
+
         $scenario = TaskTestScenario::factory()->create([
             'task_id' => $task->id,
             'status' => 'pending',
@@ -149,7 +149,7 @@ class TaskTestScenarioPointsTest extends TestCase
         // Assert - No points should be awarded
         $user->refresh();
         $this->assertEquals(0, $user->total_points);
-        
+
         // Check no PointTransaction was created
         $this->assertDatabaseMissing('point_transactions', [
             'user_id' => $user->id,
@@ -165,7 +165,7 @@ class TaskTestScenarioPointsTest extends TestCase
             'type' => TaskType::WEEKLY,
             'assigned_to' => null, // No assignee
         ]);
-        
+
         $scenario = TaskTestScenario::factory()->create([
             'task_id' => $task->id,
             'status' => 'pending',
@@ -194,7 +194,7 @@ class TaskTestScenarioPointsTest extends TestCase
             'type' => TaskType::WEEKLY,
             'assigned_to' => $user->id,
         ]);
-        
+
         $scenario = TaskTestScenario::factory()->create([
             'task_id' => $task->id,
             'status' => 'pending',
@@ -210,7 +210,7 @@ class TaskTestScenarioPointsTest extends TestCase
         // Assert - No points should be awarded
         $user->refresh();
         $this->assertEquals(0, $user->total_points);
-        
+
         // Check no PointTransaction was created
         $this->assertDatabaseMissing('point_transactions', [
             'user_id' => $user->id,

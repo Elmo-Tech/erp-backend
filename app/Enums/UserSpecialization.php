@@ -14,7 +14,7 @@ enum UserSpecialization: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::BACKEND => 'Backend Developer',
             self::FRONTEND => 'Frontend Developer',
             self::FULLSTACK => 'Full Stack Developer',
@@ -27,7 +27,7 @@ enum UserSpecialization: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::BACKEND => 'bg-blue-100 text-blue-800',
             self::FRONTEND => 'bg-green-100 text-green-800',
             self::FULLSTACK => 'bg-purple-100 text-purple-800',
@@ -43,7 +43,7 @@ enum UserSpecialization: string
      */
     public function getCompatibleTaskTypes(): array
     {
-        return match($this) {
+        return match ($this) {
             self::BACKEND => ['backend', 'api', 'database', 'server'],
             self::FRONTEND => ['frontend', 'ui', 'component', 'styling'],
             self::FULLSTACK => ['backend', 'frontend', 'api', 'database', 'ui', 'component'],
@@ -56,7 +56,7 @@ enum UserSpecialization: string
 
     public static function getAllOptions(): array
     {
-        return array_map(fn($case) => [
+        return array_map(fn ($case) => [
             'value' => $case->value,
             'label' => $case->label(),
             'color' => $case->color(),

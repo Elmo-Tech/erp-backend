@@ -33,7 +33,7 @@ class DeliverableReviewed extends Notification implements ShouldQueue
         $isApproved = $this->status === 'approved';
 
         $message = (new MailMessage)
-            ->subject($isApproved 
+            ->subject($isApproved
                 ? __('Deliverable Approved: :name', ['name' => $this->deliverable->name])
                 : __('Deliverable Rejected: :name', ['name' => $this->deliverable->name])
             )
@@ -42,20 +42,20 @@ class DeliverableReviewed extends Notification implements ShouldQueue
                 ? __(':reviewer has approved your deliverable! 🎉', ['reviewer' => $this->reviewerName])
                 : __(':reviewer has rejected your deliverable and requested changes.', ['reviewer' => $this->reviewerName])
             )
-            ->line('**' . __('Deliverable Details:') . '**')
+            ->line('**'.__('Deliverable Details:').'**')
             ->line(__('Deliverable: :name', ['name' => $this->deliverable->name]))
             ->line(__('Task: :task', ['task' => $taskTitle]))
             ->line(__('Project: :project', ['project' => $projectName]))
             ->line(__('Status: :status', ['status' => $isApproved ? __('Approved') : __('Rejected')]));
 
         if ($this->reviewNotes) {
-            $message->line('**' . __('Reviewer Notes:') . '**')
-                    ->line($this->reviewNotes);
+            $message->line('**'.__('Reviewer Notes:').'**')
+                ->line($this->reviewNotes);
         }
 
         return $message
             ->action(__('View Task'), url("/dashboard/tasks/{$this->deliverable->task_id}"))
-            ->line($isApproved 
+            ->line($isApproved
                 ? __('Great work! Keep up the excellent performance.')
                 : __('Please review the feedback and resubmit the deliverable.')
             );

@@ -14,19 +14,19 @@ return new class extends Migration
         Schema::table('contracts', function (Blueprint $table) {
             // Add file_number field (unique, nullable)
             $table->string('file_number', 50)->unique()->nullable()->after('contract_number');
-            
+
             // Add task_id foreign key (nullable)
             $table->foreignId('task_id')->nullable()->constrained('tasks')->nullOnDelete()->after('quotation_id');
-            
+
             // Add preparation_deadline (date, nullable)
             $table->date('preparation_deadline')->nullable()->after('template_id');
-            
+
             // Add expiry_date (date, nullable) - calculated from expiryDays
             $table->date('expiry_date')->nullable()->after('end_date');
-            
+
             // Add project_duration (string, nullable)
             $table->string('project_duration', 100)->nullable()->after('expiry_date');
-            
+
             // Add deliverables (json, nullable)
             $table->json('deliverables')->nullable()->after('content');
         });

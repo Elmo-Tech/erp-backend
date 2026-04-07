@@ -8,9 +8,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $code
+ * @property string|null $description
+ * @property string $calculation_type
+ * @property float|int|string $amount
+ * @property bool $is_active
+ * @property bool $requires_approval
+ * @property int $grace_period_minutes
+ * @property array<string, mixed>|null $rules
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, DeductionRule> $deductionRules
+ */
 class DeductionType extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy, SoftDeletes;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -36,8 +51,11 @@ class DeductionType extends Model
      * Calculation types
      */
     const CALCULATION_FIXED = 'fixed';
+
     const CALCULATION_PER_OCCURRENCE = 'per_occurrence';
+
     const CALCULATION_PERCENTAGE = 'percentage';
+
     const CALCULATION_PER_MINUTE = 'per_minute';
 
     /**
@@ -54,6 +72,14 @@ class DeductionType extends Model
     public function deductionRules(): HasMany
     {
         return $this->hasMany(DeductionRule::class);
+    }
+
+    /**
+     * Backward-compatible alias used by legacy controllers/resources.
+     */
+    public function rules(): HasMany
+    {
+        return $this->deductionRules();
     }
 
     /**

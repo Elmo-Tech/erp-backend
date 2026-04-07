@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\SalaryAdjustment;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class SalaryAdjustmentPolicy
@@ -27,7 +27,7 @@ class SalaryAdjustmentPolicy
         if ($user->id === $salaryAdjustment->user_id) {
             return true;
         }
-        
+
         return $user->hasRole(['admin', 'hr_manager', 'manager']);
     }
 

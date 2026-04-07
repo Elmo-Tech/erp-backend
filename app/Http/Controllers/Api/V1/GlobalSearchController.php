@@ -31,10 +31,12 @@ class GlobalSearchController extends Controller
      *     summary="Search across all entities",
      *     description="Search leads, proposals, quotations, clients, and projects",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="q", in="query", required=true, description="Search query", @OA\Schema(type="string", minLength=2)),
      *     @OA\Parameter(name="types[]", in="query", description="Entity types to search", @OA\Schema(type="array", @OA\Items(type="string", enum={"leads", "proposals", "quotations", "clients", "projects"}))),
      *     @OA\Parameter(name="limit", in="query", description="Results limit per type", @OA\Schema(type="integer", default=10)),
+     *
      *     @OA\Response(response=200, description="Search results retrieved successfully"),
      *     @OA\Response(response=422, description="Validation error")
      * )

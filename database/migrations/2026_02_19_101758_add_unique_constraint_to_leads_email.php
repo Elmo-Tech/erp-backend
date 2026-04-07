@@ -2,14 +2,14 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
+     *
      * This migration adds a unique constraint to the leads.email column.
      * Before adding the constraint, it handles any duplicate emails by:
      * 1. Finding all duplicate emails
@@ -20,7 +20,7 @@ return new class extends Migration
     {
         // Step 1: Handle duplicate emails before adding unique constraint
         $this->handleDuplicateEmails();
-        
+
         // Step 2: Add unique constraint
         Schema::table('leads', function (Blueprint $table) {
             $table->unique('email', 'idx_leads_email_unique');
@@ -51,15 +51,15 @@ return new class extends Migration
             // Skip the first (newest) lead, update the rest
             foreach ($leads->skip(1) as $lead) {
                 $timestamp = now()->timestamp;
-                $newEmail = $lead->email . '_duplicate_' . $timestamp . '_' . $lead->id;
-                
+                $newEmail = $lead->email.'_duplicate_'.$timestamp.'_'.$lead->id;
+
                 DB::table('leads')
                     ->where('id', $lead->id)
                     ->update([
                         'email' => $newEmail,
-                        'updated_at' => now()
+                        'updated_at' => now(),
                     ]);
-                
+
                 // Log this change in audit_logs if the table exists
                 try {
                     DB::table('audit_logs')->insert([
@@ -73,7 +73,7 @@ return new class extends Migration
                         'user_agent' => 'Migration Script',
                         'severity' => 'info',
                         'created_at' => now(),
-                        'updated_at' => now()
+                        'updated_at' => now(),
                     ]);
                 } catch (\Exception $e) {
                     // Silently fail if audit_logs doesn't exist or has issues

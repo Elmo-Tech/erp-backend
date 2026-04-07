@@ -33,7 +33,7 @@ enum TaskCategory: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::BACKEND => 'Backend Development',
             self::FRONTEND => 'Frontend Development',
             self::API => 'API Development',
@@ -65,7 +65,7 @@ enum TaskCategory: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::BACKEND, self::API, self::DATABASE, self::SERVER => 'bg-blue-100 text-blue-800',
             self::FRONTEND, self::UI, self::COMPONENT, self::STYLING => 'bg-green-100 text-green-800',
             self::DESIGN, self::PROTOTYPE, self::WIREFRAME, self::UX, self::UI_UX => 'bg-pink-100 text-pink-800',
@@ -82,12 +82,13 @@ enum TaskCategory: string
     public function isCompatibleWith(UserSpecialization $specialization): bool
     {
         $compatibleTypes = $specialization->getCompatibleTaskTypes();
+
         return in_array($this->value, $compatibleTypes);
     }
 
     public static function getAllOptions(): array
     {
-        return array_map(fn($case) => [
+        return array_map(fn ($case) => [
             'value' => $case->value,
             'label' => $case->label(),
             'color' => $case->color(),
@@ -99,6 +100,6 @@ enum TaskCategory: string
      */
     public static function getCompatibleCategories(UserSpecialization $specialization): array
     {
-        return array_filter(self::cases(), fn($category) => $category->isCompatibleWith($specialization));
+        return array_filter(self::cases(), fn ($category) => $category->isCompatibleWith($specialization));
     }
 }

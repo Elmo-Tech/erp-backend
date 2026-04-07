@@ -39,8 +39,6 @@ class UpdateProjectRequest extends FormRequest
 
     /**
      * Configure the validator instance.
-     *
-     * @param Validator $validator
      */
     public function withValidator(Validator $validator): void
     {
@@ -57,7 +55,7 @@ class UpdateProjectRequest extends FormRequest
     {
         $project = $this->route('project');
 
-        if (!$project instanceof Project) {
+        if (! $project instanceof Project) {
             return;
         }
 
@@ -66,7 +64,7 @@ class UpdateProjectRequest extends FormRequest
 
         // Check if budget is actually different from current value
         if ($budgetChanged && (float) $this->input('budget') !== (float) $project->budget) {
-            if (!$this->filled('reason')) {
+            if (! $this->filled('reason')) {
                 $validator->errors()->add('reason', 'A reason is required when changing the budget.');
             }
         }
@@ -77,7 +75,7 @@ class UpdateProjectRequest extends FormRequest
             $newDeadline = $this->input('deadline');
 
             if ($currentDeadline !== $newDeadline) {
-                if (!$this->filled('reason')) {
+                if (! $this->filled('reason')) {
                     $validator->errors()->add('reason', 'A reason is required when changing the deadline.');
                 }
             }
@@ -89,13 +87,13 @@ class UpdateProjectRequest extends FormRequest
      */
     private function validateStatusTransition(Validator $validator): void
     {
-        if (!$this->filled('status')) {
+        if (! $this->filled('status')) {
             return;
         }
 
         $project = $this->route('project');
 
-        if (!$project instanceof Project) {
+        if (! $project instanceof Project) {
             return;
         }
 
@@ -118,15 +116,15 @@ class UpdateProjectRequest extends FormRequest
             }
         }
 
-        if (!$currentStatus->canTransitionTo($newStatus)) {
+        if (! $currentStatus->canTransitionTo($newStatus)) {
             $allowedTransitions = array_map(
-                fn(ProjectStatus $s) => $s->value,
+                fn (ProjectStatus $s) => $s->value,
                 $currentStatus->allowedTransitions()
             );
 
             $allowedList = empty($allowedTransitions)
                 ? 'No transitions allowed from this status.'
-                : 'Allowed transitions: ' . implode(', ', $allowedTransitions);
+                : 'Allowed transitions: '.implode(', ', $allowedTransitions);
 
             $validator->errors()->add(
                 'status',
@@ -159,7 +157,6 @@ class UpdateProjectRequest extends FormRequest
     /**
      * Handle a failed validation attempt.
      *
-     * @param Validator $validator
      * @throws HttpResponseException
      */
     protected function failedValidation(Validator $validator): void

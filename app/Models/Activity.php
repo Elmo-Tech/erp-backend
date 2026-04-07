@@ -10,9 +10,26 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+/**
+ * @property int $id
+ * @property int $subject_id
+ * @property string $subject_type
+ * @property ActivityType $type
+ * @property ActivityStatus $status
+ * @property string|null $title
+ * @property string|null $description
+ * @property string|null $outcome_summary
+ * @property bool $is_completed
+ * @property \Illuminate\Support\Carbon|null $scheduled_at
+ * @property \Illuminate\Support\Carbon|null $completed_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Model|null $subject
+ * @property-read User|null $assignedTo
+ */
 class Activity extends Model
 {
-    use HasFactory, HasCreatedUpdatedBy;
+    use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
         'subject_id',
@@ -84,7 +101,7 @@ class Activity extends Model
     /**
      * Mark activity as completed
      */
-    public function markAsCompleted(string $outcomeSummary = null): void
+    public function markAsCompleted(?string $outcomeSummary = null): void
     {
         $this->update([
             'status' => ActivityStatus::COMPLETED,

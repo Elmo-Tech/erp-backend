@@ -2,15 +2,14 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\InnovationCategory;
-use App\Enums\ImpactLevel;
-use App\Models\User;
 use App\Models\InnovationLog;
+use App\Models\User;
 use Illuminate\Console\Command;
 
 class CreateTestInnovationLogCommand extends Command
 {
     protected $signature = 'create:test-innovation-log';
+
     protected $description = 'Create test innovation log data';
 
     public function handle()
@@ -18,8 +17,9 @@ class CreateTestInnovationLogCommand extends Command
         $this->info('🚀 Creating test innovation log...');
 
         $user = User::first();
-        if (!$user) {
+        if (! $user) {
             $this->error('No users found. Please create a user first.');
+
             return;
         }
 
@@ -36,8 +36,8 @@ class CreateTestInnovationLogCommand extends Command
         ]);
 
         $this->info("✅ Created innovation log: {$innovationLog->tool_name}");
-        $this->info("📧 This should trigger notifications to admins");
-        
+        $this->info('📧 This should trigger notifications to admins');
+
         // Check notifications
         $notificationCount = \DB::table('notifications')->count();
         $this->info("📊 Total notifications in database: {$notificationCount}");

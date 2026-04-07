@@ -15,7 +15,9 @@ class TimerUpdated implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public string $action; // 'started', 'stopped'
+
     public ?array $timeEntry;
+
     public int $userId;
 
     /**
@@ -25,7 +27,7 @@ class TimerUpdated implements ShouldBroadcastNow
     {
         $this->userId = $userId;
         $this->action = $action;
-        $this->timeEntry = $timeEntry 
+        $this->timeEntry = $timeEntry
             ? (new TimeEntryResource($timeEntry->load('trackable')))->resolve()
             : null;
     }
@@ -38,7 +40,7 @@ class TimerUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('user.' . $this->userId),
+            new PrivateChannel('user.'.$this->userId),
         ];
     }
 

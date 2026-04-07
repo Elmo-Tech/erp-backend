@@ -4,16 +4,15 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\V1\HR\AttendanceResource;
 use App\Http\Resources\V1\HR\AttendanceCollection;
+use App\Http\Resources\V1\HR\AttendanceResource;
 use App\Models\Attendance;
-use App\Models\EmployeeDeduction;
 use App\Models\DeductionType;
+use App\Models\EmployeeDeduction;
 use App\Models\User;
 use App\Services\HR\AttendanceService;
 use App\Services\Sales\TimeTrackingService;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
@@ -40,6 +39,7 @@ class AttendanceController extends Controller
      *     tags={"Attendance"},
      *     summary="Get current user's attendance for today",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -72,6 +72,7 @@ class AttendanceController extends Controller
      *     tags={"Attendance"},
      *     summary="Clock out for the day",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -81,7 +82,7 @@ class AttendanceController extends Controller
 
         $attendance = $this->attendanceService->clockOut($user);
 
-        if (!$attendance) {
+        if (! $attendance) {
             return ApiResponse::error(__('messages.no_attendance_record'), 404);
         }
 
@@ -98,6 +99,7 @@ class AttendanceController extends Controller
      *     tags={"Attendance"},
      *     summary="Get attendance history for current user",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -123,8 +125,10 @@ class AttendanceController extends Controller
      *     tags={"Attendance"},
      *     summary="Get monthly attendance summary",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(name="year", in="query", @OA\Schema(type="integer")),
      *     @OA\Parameter(name="month", in="query", @OA\Schema(type="integer")),
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -146,24 +150,27 @@ class AttendanceController extends Controller
      *     tags={"Attendance"},
      *     summary="Get all employees attendance (admin)",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
     public function all(Request $request): JsonResponse
     {
-        if (!$request->user()->can('view_all_attendance')) {
+        if (! $request->user()->can('view_all_attendance')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
-        $filters = [
-            'userId' => $request->query('filter.userId'),
-            'startDate' => $request->query('filter.startDate'),
-            'endDate' => $request->query('filter.endDate'),
-            'date' => $request->query('filter.date'),
-        ];
+        $filter = $request->query('filter', []);
+        if (! is_array($filter)) {
+            $filter = [];
+        }
 
-        // Debug: Log the received filters
-        \Log::info('Attendance filters received:', $filters);
+        $filters = [
+            'userId' => $filter['userId'] ?? $request->query('filter.userId') ?? $request->query('filter_userId') ?? $request->query('userId'),
+            'startDate' => $filter['startDate'] ?? $request->query('filter.startDate') ?? $request->query('filter_startDate') ?? $request->query('startDate'),
+            'endDate' => $filter['endDate'] ?? $request->query('filter.endDate') ?? $request->query('filter_endDate') ?? $request->query('endDate'),
+            'date' => $filter['date'] ?? $request->query('filter.date') ?? $request->query('filter_date') ?? $request->query('date'),
+        ];
 
         $perPage = (int) $request->query('perPage', 15);
         $attendances = $this->attendanceService->getAllAttendance($filters, $perPage);
@@ -179,10 +186,13 @@ class AttendanceController extends Controller
      *     summary="Create attendance record (admin)",
      *     description="Creates attendance record and auto-calculates late minutes, grace day usage, and deductions based on clock-in time vs expected time.",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"userId", "date", "clockIn"},
+     *
      *             @OA\Property(property="userId", type="integer", example=1),
      *             @OA\Property(property="date", type="string", format="date", example="2026-01-06"),
      *             @OA\Property(property="clockIn", type="string", format="date-time", example="2026-01-06T10:00:00"),
@@ -190,6 +200,7 @@ class AttendanceController extends Controller
      *             @OA\Property(property="notes", type="string", nullable=true)
      *         )
      *     ),
+     *
      *     @OA\Response(response=201, description="Created"),
      *     @OA\Response(response=403, description="Unauthorized"),
      *     @OA\Response(response=422, description="Validation error")
@@ -197,7 +208,7 @@ class AttendanceController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        if (!$request->user()->can('manage_attendance')) {
+        if (! $request->user()->can('manage_attendance')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
@@ -223,7 +234,7 @@ class AttendanceController extends Controller
         $attendance = $this->attendanceService->createAttendance($validated, $request->user());
 
         // Handle manual grace day if specified
-        if (!empty($validated['isGraceDay'])) {
+        if (! empty($validated['isGraceDay'])) {
             $user = $attendance->user;
             if ($user->hasGraceDaysRemaining()) {
                 $user->useGraceDay();
@@ -232,7 +243,7 @@ class AttendanceController extends Controller
         }
 
         // Handle manual deduction if specified
-        if (!empty($validated['deductionMinutes']) && $validated['deductionMinutes'] > 0) {
+        if (! empty($validated['deductionMinutes']) && $validated['deductionMinutes'] > 0) {
             $user = $attendance->user;
             $this->createAttendanceDeduction($attendance, $user, $validated['deductionMinutes']);
         }
@@ -251,18 +262,19 @@ class AttendanceController extends Controller
      *     tags={"Attendance"},
      *     summary="Update attendance record (admin)",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Success")
      * )
      */
     public function update(Request $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('manage_attendance')) {
+        if (! $request->user()->can('manage_attendance')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
         $attendance = Attendance::find($id);
 
-        if (!$attendance) {
+        if (! $attendance) {
             return ApiResponse::error(__('messages.attendance_not_found'), 404);
         }
 
@@ -283,13 +295,13 @@ class AttendanceController extends Controller
      */
     public function addDeduction(Request $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('manage_attendance')) {
+        if (! $request->user()->can('manage_attendance')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
         $attendance = Attendance::find($id);
 
-        if (!$attendance) {
+        if (! $attendance) {
             return ApiResponse::error(__('messages.attendance_not_found'), 404);
         }
 
@@ -314,9 +326,9 @@ class AttendanceController extends Controller
         ]);
 
         // Update attendance record with deduction minutes
-        if (!empty($validated['late_minutes'])) {
+        if (! empty($validated['late_minutes'])) {
             $attendance->update([
-                'deduction_minutes' => ($attendance->deduction_minutes ?? 0) + $validated['late_minutes']
+                'deduction_minutes' => ($attendance->deduction_minutes ?? 0) + $validated['late_minutes'],
             ]);
         }
 
@@ -332,20 +344,20 @@ class AttendanceController extends Controller
      */
     public function markGraceDay(Request $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('manage_attendance')) {
+        if (! $request->user()->can('manage_attendance')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
         $attendance = Attendance::find($id);
 
-        if (!$attendance) {
+        if (! $attendance) {
             return ApiResponse::error(__('messages.attendance_not_found'), 404);
         }
 
         $user = $attendance->user;
 
         // Check if user has grace days remaining
-        if (!$user->hasGraceDaysRemaining()) {
+        if (! $user->hasGraceDaysRemaining()) {
             return ApiResponse::error('No grace days remaining for this employee', 422);
         }
 
@@ -364,22 +376,22 @@ class AttendanceController extends Controller
      */
     public function removeGraceDay(Request $request, int $id): JsonResponse
     {
-        if (!$request->user()->can('manage_attendance')) {
+        if (! $request->user()->can('manage_attendance')) {
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
         $attendance = Attendance::find($id);
 
-        if (!$attendance) {
+        if (! $attendance) {
             return ApiResponse::error(__('messages.attendance_not_found'), 404);
         }
 
-        if (!$attendance->used_grace_day) {
+        if (! $attendance->used_grace_day) {
             return ApiResponse::error('This attendance record does not use a grace day', 422);
         }
 
         $user = $attendance->user;
-        
+
         // Restore the grace day
         $user->restoreGraceDay();
         $attendance->update(['used_grace_day' => false]);
@@ -397,8 +409,8 @@ class AttendanceController extends Controller
     {
         // Get or create a default deduction type for attendance
         $deductionType = DeductionType::where('name', 'Attendance Deduction')->first();
-        
-        if (!$deductionType) {
+
+        if (! $deductionType) {
             $deductionType = DeductionType::create([
                 'name' => 'Attendance Deduction',
                 'description' => 'Deduction for attendance violations',

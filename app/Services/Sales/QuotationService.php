@@ -54,8 +54,8 @@ class QuotationService
     {
         return DB::transaction(function () use ($data, $user) {
             // Calculate expiry date from expiryDays
-            $expiryDate = isset($data['expiryDays']) 
-                ? now()->addDays($data['expiryDays'])->toDateString() 
+            $expiryDate = isset($data['expiryDays'])
+                ? now()->addDays($data['expiryDays'])->toDateString()
                 : ($data['expiryDate'] ?? null);
 
             // Generate quotation number
@@ -64,8 +64,8 @@ class QuotationService
 
             // Calculate pricing from items or basePrice
             $basePrice = $data['basePrice'] ?? 0;
-            
-            if (!empty($data['items'])) {
+
+            if (! empty($data['items'])) {
                 // Calculate from items
                 $pricing = $this->pricingService->calculateFromItems(
                     $data['items'],
@@ -80,13 +80,13 @@ class QuotationService
                 // Calculate from basePrice with discount
                 $discountType = $data['discountType'] ?? 'percent';
                 $discountValue = $data['discountValue'] ?? 0;
-                
+
                 if ($discountType === 'percent') {
                     $discountAmount = $basePrice * ($discountValue / 100);
                 } else {
                     $discountAmount = $discountValue;
                 }
-                
+
                 $finalPrice = $basePrice - $discountAmount;
                 $discountPercentage = $basePrice > 0 ? ($discountAmount / $basePrice) * 100 : 0;
             }
@@ -95,10 +95,10 @@ class QuotationService
             $commissionType = $data['commissionType'] ?? null;
             $commissionValue = $data['commissionValue'] ?? 0;
             $commissionCalculation = $data['commissionCalculation'] ?? 'add';
-            
+
             $commissionAmount = 0;
             $commissionPercentage = 0;
-            
+
             if ($commissionType && $commissionValue > 0) {
                 if ($commissionType === CommissionType::MARKUP->value || $commissionType === 'percent') {
                     $commissionPercentage = $commissionValue;
@@ -110,7 +110,7 @@ class QuotationService
                     $commissionAmount = $commissionValue;
                     $commissionPercentage = $finalPrice > 0 ? ($commissionValue / $finalPrice) * 100 : 0;
                 }
-                
+
                 $finalPrice = $finalPrice + $commissionAmount;
 
                 if ($commissionCalculation === 'deduct') {
@@ -154,7 +154,7 @@ class QuotationService
             ]);
 
             // Create items (if provided)
-            if (!empty($data['items'])) {
+            if (! empty($data['items'])) {
                 foreach ($data['items'] as $index => $item) {
                     QuotationItem::create([
                         'quotation_id' => $quotation->id,
@@ -171,12 +171,12 @@ class QuotationService
 
             // Create milestones (required)
             $milestones = $data['milestones'] ?? [];
-            
-            if (!empty($milestones)) {
+
+            if (! empty($milestones)) {
                 foreach ($milestones as $index => $milestone) {
                     // Calculate amount based on final price and percentage
                     $milestoneAmount = $finalPrice * ($milestone['percentage'] / 100);
-                    
+
                     QuotationMilestone::create([
                         'quotation_id' => $quotation->id,
                         'name' => $milestone['name'],
@@ -238,12 +238,12 @@ class QuotationService
             // Update milestones if provided
             if (isset($data['milestones'])) {
                 $quotation->milestones()->delete();
-                
+
                 $finalPrice = $quotation->fresh()->final_price;
-                
+
                 foreach ($data['milestones'] as $index => $milestone) {
                     $milestoneAmount = $finalPrice * ($milestone['percentage'] / 100);
-                    
+
                     QuotationMilestone::create([
                         'quotation_id' => $quotation->id,
                         'name' => $milestone['name'],
@@ -298,7 +298,7 @@ class QuotationService
      */
     public function markAsViewed(Quotation $quotation): Quotation
     {
-        if (!$quotation->viewed_at) {
+        if (! $quotation->viewed_at) {
             $quotation->update([
                 'viewed_at' => now(),
                 'status' => QuotationStatus::VIEWED,
@@ -379,8 +379,8 @@ class QuotationService
     public function calculatePricing(array $data): array
     {
         $basePrice = $data['basePrice'] ?? 0;
-        
-        if (!empty($data['items'])) {
+
+        if (! empty($data['items'])) {
             return $this->pricingService->calculateFromItems(
                 $data['items'],
                 $data['discountPercentage'] ?? 0,
@@ -388,19 +388,19 @@ class QuotationService
                 $data['commissionPercentage'] ?? 0
             );
         }
-        
+
         // Calculate from base price
         $discountType = $data['discountType'] ?? 'percent';
         $discountValue = $data['discountValue'] ?? 0;
-        
+
         if ($discountType === 'percent') {
             $discountAmount = $basePrice * ($discountValue / 100);
         } else {
             $discountAmount = $discountValue;
         }
-        
+
         $finalPrice = $basePrice - $discountAmount;
-        
+
         return [
             'basePrice' => $basePrice,
             'discountType' => $discountType,

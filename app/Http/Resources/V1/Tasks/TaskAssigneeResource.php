@@ -9,6 +9,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @OA\Schema(
  *     schema="TaskAssigneeResource",
  *     type="object",
+ *
  *     @OA\Property(property="assigneeId", type="integer", example=1),
  *     @OA\Property(property="taskId", type="integer", example=1),
  *     @OA\Property(property="userId", type="integer", example=2),
@@ -29,7 +30,7 @@ class TaskAssigneeResource extends JsonResource
             'role' => $this->role,
             'isPrimary' => (bool) $this->is_primary,
             'pointsEarned' => (int) $this->points_earned,
-            'user' => $this->whenLoaded('user', fn() => [
+            'user' => $this->whenLoaded('user', fn () => [
                 'userId' => $this->user->id,
                 'name' => $this->user->name,
                 'email' => $this->user->email,
