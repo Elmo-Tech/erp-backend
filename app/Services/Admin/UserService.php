@@ -3,7 +3,7 @@
 namespace App\Services\Admin;
 
 use App\Models\User;
-use App\Services\Client\AuditLogService;
+use App\Modules\Client\Actions\LogClientAuditAction;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -12,7 +12,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 class UserService
 {
     public function __construct(
-        private AuditLogService $auditLogService
+        private LogClientAuditAction $auditLogService
     ) {}
 
     /**

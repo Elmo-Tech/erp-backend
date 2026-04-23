@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\ContractStatus;
+use App\Modules\Client\Models\Client;
+use App\Modules\Project\Models\Project;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

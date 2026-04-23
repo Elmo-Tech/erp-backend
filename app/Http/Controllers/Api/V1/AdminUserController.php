@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\Client\AuditLogService;
+use App\Modules\Client\Actions\LogClientAuditAction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +15,7 @@ use OpenApi\Annotations as OA;
 class AdminUserController extends Controller
 {
     public function __construct(
-        private AuditLogService $auditLogService
+        private LogClientAuditAction $auditLogService
     ) {
         // Apply middleware using Laravel 12 approach
         $this->middleware(['auth:sanctum', 'locale']);

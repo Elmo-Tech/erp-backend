@@ -2,11 +2,11 @@
 
 namespace Tests\Unit\Http\Controllers;
 
-use App\Enums\ProjectStatus;
+use App\Modules\Project\Enums\ProjectStatus;
 use App\Models\AuditLog;
-use App\Models\Client;
-use App\Models\Project;
-use App\Models\ProjectHistory;
+use App\Modules\Client\Models\Client;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectHistory;
 use App\Models\User;
 use Carbon\Carbon;
 use Eris\Generator;

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\HandoverStatus;
+use App\Modules\Project\Models\Project;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

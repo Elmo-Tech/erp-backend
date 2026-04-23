@@ -6,7 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Admin\StoreRoleRequest;
 use App\Http\Requests\V1\Admin\UpdateRoleRequest;
-use App\Services\Client\AuditLogService;
+use App\Modules\Client\Actions\LogClientAuditAction;
 use Illuminate\Http\JsonResponse;
 use OpenApi\Annotations as OA;
 use Spatie\Permission\Models\Permission;
@@ -15,7 +15,7 @@ use Spatie\Permission\Models\Role;
 class AdminRoleController extends Controller
 {
     public function __construct(
-        private AuditLogService $auditLogService
+        private LogClientAuditAction $auditLogService
     ) {
         // Apply middleware using Laravel 12 approach
         $this->middleware(['auth:sanctum', 'locale']);

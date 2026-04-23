@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Models\Contract;
 use App\Models\Invoice;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use Illuminate\Support\Facades\DB;
 
 class BillingService

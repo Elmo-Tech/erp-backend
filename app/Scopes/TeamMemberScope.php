@@ -38,7 +38,7 @@ class TeamMemberScope implements Scope
         }
 
         // Apply filtering - only show projects where user is a member
-        if ($model instanceof \App\Models\Project) {
+        if ($model instanceof \App\Modules\Project\Models\Project) {
             $builder->whereHas('members', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             });

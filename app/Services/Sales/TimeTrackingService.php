@@ -152,8 +152,12 @@ class TimeTrackingService
      */
     public function getTimeEntriesForTrackable(Trackable $trackable)
     {
+        $trackableType = method_exists($trackable, 'getMorphClass')
+            ? $trackable->getMorphClass()
+            : get_class($trackable);
+
         return TimeEntry::where('trackable_id', $trackable->getKey())
-            ->where('trackable_type', get_class($trackable))
+            ->where('trackable_type', $trackableType)
             ->orderBy('start_time', 'desc')
             ->get();
     }
@@ -163,8 +167,12 @@ class TimeTrackingService
      */
     public function getTotalTimeForTrackable(Trackable $trackable): int
     {
+        $trackableType = method_exists($trackable, 'getMorphClass')
+            ? $trackable->getMorphClass()
+            : get_class($trackable);
+
         return TimeEntry::where('trackable_id', $trackable->getKey())
-            ->where('trackable_type', get_class($trackable))
+            ->where('trackable_type', $trackableType)
             ->whereNotNull('end_time')
             ->sum('duration_minutes');
     }

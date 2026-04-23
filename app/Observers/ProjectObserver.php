@@ -2,14 +2,14 @@
 
 namespace App\Observers;
 
-use App\Enums\ProjectStatus;
+use App\Modules\Project\Enums\ProjectStatus;
 use App\Jobs\AutoApproveUIJob;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Notifications\ProjectDeadlineApproachingNotification;
 use App\Notifications\ProjectStatusChangedNotification;
 use App\Services\AuditService;
 use App\Services\BillingService;
-use App\Services\Projects\ProjectHistoryService;
+use App\Modules\Project\Actions\ProjectHistoryAction;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -34,7 +34,7 @@ class ProjectObserver
      * Create a new observer instance.
      */
     public function __construct(
-        private ProjectHistoryService $historyService,
+        private ProjectHistoryAction $historyService,
         private BillingService $billingService,
         private AuditService $auditService
     ) {}

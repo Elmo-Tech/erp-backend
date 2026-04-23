@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
@@ -65,7 +65,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                 for ($i = 0; $i < $numEntries; $i++) {
                     TimeEntry::factory()->create([
                         'user_id' => $user->id,
-                        'trackable_type' => Project::class,
+                        'trackable_type' => (new Project)->getMorphClass(),
                         'trackable_id' => $project->id,
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(), // Ensure it's completed
@@ -121,7 +121,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                 for ($i = 0; $i < $numEntries; $i++) {
                     TimeEntry::factory()->create([
                         'user_id' => $user->id,
-                        'trackable_type' => Project::class,
+                        'trackable_type' => (new Project)->getMorphClass(),
                         'trackable_id' => $project->id,
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(),
@@ -171,7 +171,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                 for ($i = 0; $i < $numEntries; $i++) {
                     TimeEntry::factory()->create([
                         'user_id' => $user->id,
-                        'trackable_type' => Project::class,
+                        'trackable_type' => (new Project)->getMorphClass(),
                         'trackable_id' => $project->id,
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(),
@@ -228,7 +228,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                 for ($i = 0; $i < $projectEntries; $i++) {
                     TimeEntry::factory()->create([
                         'user_id' => $user->id,
-                        'trackable_type' => Project::class,
+                        'trackable_type' => (new Project)->getMorphClass(),
                         'trackable_id' => $project->id,
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(),
@@ -258,7 +258,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                 $otherProject = Project::factory()->create();
                 TimeEntry::factory()->create([
                     'user_id' => $user->id,
-                    'trackable_type' => Project::class,
+                    'trackable_type' => (new Project)->getMorphClass(),
                     'trackable_id' => $otherProject->id,
                     'duration_minutes' => $durationMinutes,
                     'end_time' => now(),
@@ -305,7 +305,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                 for ($i = 0; $i < $numEntries; $i++) {
                     TimeEntry::factory()->create([
                         'user_id' => $user->id,
-                        'trackable_type' => Project::class,
+                        'trackable_type' => (new Project)->getMorphClass(),
                         'trackable_id' => $project->id,
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(),
@@ -351,7 +351,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                 for ($i = 0; $i < $numEntries; $i++) {
                     TimeEntry::factory()->create([
                         'user_id' => $user->id,
-                        'trackable_type' => Project::class,
+                        'trackable_type' => (new Project)->getMorphClass(),
                         'trackable_id' => $project->id,
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(),
@@ -402,7 +402,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                 for ($i = 0; $i < $completedEntries; $i++) {
                     TimeEntry::factory()->create([
                         'user_id' => $user->id,
-                        'trackable_type' => Project::class,
+                        'trackable_type' => (new Project)->getMorphClass(),
                         'trackable_id' => $project->id,
                         'duration_minutes' => $durationMinutes,
                         'end_time' => now(), // Completed
@@ -415,7 +415,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                 for ($i = 0; $i < $activeEntries; $i++) {
                     TimeEntry::factory()->create([
                         'user_id' => $user->id,
-                        'trackable_type' => Project::class,
+                        'trackable_type' => (new Project)->getMorphClass(),
                         'trackable_id' => $project->id,
                         'duration_minutes' => $durationMinutes,
                         'end_time' => null, // Active (not completed)
@@ -428,7 +428,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                     'Total cost should only include completed time entries, excluding active ones');
 
                 // Verify that active entries are not included by checking the count
-                $totalTimeEntries = TimeEntry::where('trackable_type', Project::class)
+                $totalTimeEntries = TimeEntry::where('trackable_type', (new Project)->getMorphClass())
                     ->where('trackable_id', $project->id)
                     ->count();
 
@@ -436,7 +436,7 @@ class ProfitabilityServicePropertyTest extends TestCase
                     'Total time entries should include both completed and active');
 
                 // But only completed entries should affect cost
-                $completedTimeEntries = TimeEntry::where('trackable_type', Project::class)
+                $completedTimeEntries = TimeEntry::where('trackable_type', (new Project)->getMorphClass())
                     ->where('trackable_id', $project->id)
                     ->whereNotNull('end_time')
                     ->count();

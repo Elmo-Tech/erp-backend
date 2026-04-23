@@ -3,7 +3,7 @@
 namespace Tests\Unit\Http\Requests;
 
 use App\Http\Requests\V1\Invoices\StoreInvoiceRequest;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\User;
 use Eris\Generator;
 use Eris\TestTrait;

@@ -2,15 +2,15 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\Project;
-use App\Services\Client\ProgressService;
+use App\Modules\Project\Models\Project;
+use App\Modules\Client\Actions\CalculateProjectProgressAction;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Property-Based Tests for ProgressService
+ * Property-Based Tests for CalculateProjectProgressAction
  *
  * Feature: client-portal-security, Property 5: Progress Calculation
  * Validates: Requirements 6.1, 6.2, 6.3, 6.4
@@ -19,12 +19,12 @@ class ProgressServicePropertyTest extends TestCase
 {
     use RefreshDatabase, TestTrait;
 
-    private ProgressService $progressService;
+    private CalculateProjectProgressAction $progressService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->progressService = new ProgressService;
+        $this->progressService = new CalculateProjectProgressAction;
     }
 
     /**

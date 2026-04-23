@@ -2,9 +2,9 @@
 
 namespace Tests\Unit\Http\Resources;
 
-use App\Http\Resources\V1\Client\ClientInvoiceResource;
+use App\Modules\Client\Resources\ClientInvoiceResource;
 use App\Models\Invoice;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\User;
 use Carbon\Carbon;
 use Eris\Generator;

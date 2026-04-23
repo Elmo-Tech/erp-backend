@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Enums\ProjectStatus;
-use App\Models\Client;
-use App\Models\Project;
+use App\Modules\Project\Enums\ProjectStatus;
+use App\Modules\Client\Models\Client;
+use App\Modules\Project\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Project>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Project\Models\Project>
  */
 class ProjectFactory extends Factory
 {

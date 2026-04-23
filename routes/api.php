@@ -10,9 +10,6 @@ use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChangeRequestController;
-use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
-use App\Http\Controllers\Api\V1\Client\ClientProjectController;
-use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\CodeReviewController;
 use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\DashboardController;
@@ -29,11 +26,6 @@ use App\Http\Controllers\Api\V1\LeadHistoryController;
 use App\Http\Controllers\Api\V1\MilestoneController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PerformanceEvaluationController;
-use App\Http\Controllers\Api\V1\ProjectController;
-use App\Http\Controllers\Api\V1\ProjectFileController;
-use App\Http\Controllers\Api\V1\ProjectHistoryController;
-use App\Http\Controllers\Api\V1\ProjectMemberController;
-use App\Http\Controllers\Api\V1\ProjectWikiController;
 use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\SalesAnalyticsController;
@@ -131,14 +123,6 @@ Route::prefix('v1')->group(function () {
     Route::get('quotations/{quotation}/history', [LeadHistoryController::class, 'quotationHistory'])->name('quotations.history');
     Route::get('audit/recent', [LeadHistoryController::class, 'recentActivity'])->name('audit.recent');
     Route::get('audit/user/{userId}', [LeadHistoryController::class, 'userActivity'])->name('audit.user');
-
-    // Client Management Routes
-    Route::apiResource('clients', ClientController::class);
-
-    // Client Portal Access Routes
-    Route::post('clients/{client}/portal-access', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'create'])->name('clients.portal-access.create');
-    Route::delete('clients/{client}/portal-access', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'revoke'])->name('clients.portal-access.revoke');
-    Route::post('clients/{client}/portal-access/reset-password', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'resetPassword'])->name('clients.portal-access.reset-password');
 
     // Proposal Management Routes (Technical Proposals)
     Route::apiResource('proposals', ProposalController::class);
@@ -257,41 +241,6 @@ Route::prefix('v1')->group(function () {
     Route::post('employees/{id}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
     Route::post('employees/{id}/activate', [EmployeeController::class, 'activate'])->name('employees.activate');
 
-    // Project Management Routes
-    // All routes have auth:sanctum and locale middleware applied in controllers
-
-    // Project CRUD Routes
-    Route::apiResource('projects', ProjectController::class);
-
-    // Pinned Projects Routes
-    Route::get('projects/pinned', [ProjectController::class, 'pinned'])->name('projects.pinned');
-    Route::post('projects/{project}/pin', [ProjectController::class, 'pin'])->name('projects.pin');
-    Route::delete('projects/{project}/pin', [ProjectController::class, 'unpin'])->name('projects.unpin');
-
-    // Project Status Update Route (flexible status transitions)
-    Route::patch('projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.update-status');
-
-    // Project Conversion Route (convert quotation to project)
-    Route::post('projects/convert', [ProjectController::class, 'convert'])->name('projects.convert');
-
-    // Direct Project Creation Route (create project for client without quotation)
-    Route::post('projects/direct', [ProjectController::class, 'storeDirect'])->name('projects.store-direct');
-
-    // Project UI Approval Route (manual approval of UI/UX deliverables)
-    Route::post('projects/{project}/approve-ui', [ProjectController::class, 'approveUI'])->name('projects.approve-ui');
-
-    // Project History Route (audit trail)
-    Route::get('projects/{project}/history', [ProjectHistoryController::class, 'index'])->name('projects.history');
-
-    // Project Wiki Routes (nested resource)
-    Route::apiResource('projects.wikis', ProjectWikiController::class);
-
-    // Project Files Routes
-    Route::apiResource('projects.files', ProjectFileController::class);
-
-    // Project Members Routes
-    Route::apiResource('projects.members', ProjectMemberController::class)->except(['show']);
-
     // Task Management Routes
     // All routes have auth:sanctum and locale middleware applied in controller
 
@@ -355,21 +304,6 @@ Route::prefix('v1')->group(function () {
     Route::delete('tasks/{taskId}/deliverables/{deliverableId}', [TaskDeliverableController::class, 'destroy'])->name('tasks.deliverables.destroy');
     Route::post('tasks/{taskId}/deliverables/{deliverableId}/submit', [TaskDeliverableController::class, 'submit'])->name('tasks.deliverables.submit');
     Route::post('tasks/{taskId}/deliverables/{deliverableId}/review', [TaskDeliverableController::class, 'review'])->name('tasks.deliverables.review');
-
-    // Client Portal Routes
-    // All routes have auth:sanctum, locale, and role:client middleware applied in controllers
-    // ClientScope automatically filters data to client's own records
-    Route::prefix('client')->middleware(['auth:sanctum', 'locale', 'role:client'])->group(function () {
-        // Client Project Routes
-        Route::get('projects', [ClientProjectController::class, 'index'])->name('client.projects.index');
-        Route::get('projects/{project}', [ClientProjectController::class, 'show'])->name('client.projects.show');
-        Route::post('projects/{project}/approve-ui', [ClientProjectController::class, 'approveUI'])->name('client.projects.approve-ui');
-
-        // Client Invoice Routes
-        Route::get('invoices', [ClientInvoiceController::class, 'index'])->name('client.invoices.index');
-        Route::get('invoices/{invoice}', [ClientInvoiceController::class, 'show'])->name('client.invoices.show');
-        Route::post('invoices/{invoice}/pay', [ClientInvoiceController::class, 'pay'])->name('client.invoices.pay');
-    });
 
     // Admin Invoice Management Routes
     // All routes have auth:sanctum and locale middleware applied at route level

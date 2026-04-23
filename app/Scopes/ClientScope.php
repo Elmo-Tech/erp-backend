@@ -35,7 +35,7 @@ class ClientScope implements Scope
         }
 
         // Apply filtering based on model type
-        if ($model instanceof \App\Models\Project) {
+        if ($model instanceof \App\Modules\Project\Models\Project) {
             $builder->where('client_id', $clientId);
         } elseif ($model instanceof \App\Models\Invoice) {
             $builder->whereHas('project', function ($query) use ($clientId) {

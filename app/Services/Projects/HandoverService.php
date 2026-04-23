@@ -3,7 +3,7 @@
 namespace App\Services\Projects;
 
 use App\Enums\HandoverStatus;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\ProjectHandover;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;

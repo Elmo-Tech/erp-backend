@@ -9,7 +9,7 @@ use App\Http\Requests\V1\ChangeRequests\UpdateChangeRequestRequest;
 use App\Http\Resources\V1\ChangeRequests\ChangeRequestCollection;
 use App\Http\Resources\V1\ChangeRequests\ChangeRequestResource;
 use App\Models\ChangeRequest;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Services\Projects\ChangeRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

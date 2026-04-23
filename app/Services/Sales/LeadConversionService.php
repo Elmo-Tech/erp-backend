@@ -4,7 +4,7 @@ namespace App\Services\Sales;
 
 use App\Enums\ClientStatus;
 use App\Enums\LeadStatus;
-use App\Models\Client;
+use App\Modules\Client\Models\Client;
 use App\Models\Contract;
 use App\Models\Lead;
 use App\Models\User;

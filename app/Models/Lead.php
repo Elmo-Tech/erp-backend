@@ -9,6 +9,7 @@ use App\Enums\LeadSource;
 use App\Enums\LeadStatus;
 use App\Enums\LeadTemperature;
 use App\Enums\ReferenceType;
+use App\Modules\Client\Models\Client;
 use App\Traits\HasAuditTrail;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

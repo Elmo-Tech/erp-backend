@@ -4,7 +4,7 @@ namespace App\Services\Projects;
 
 use App\Enums\ChangeRequestStatus;
 use App\Models\ChangeRequest;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\AllowedFilter;

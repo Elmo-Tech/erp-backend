@@ -6,7 +6,7 @@ use App\Models\DeductionType;
 use App\Models\EmployeeDeduction;
 use App\Models\EmployeeReward;
 use App\Models\Invoice;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\RewardType;
 use App\Models\SalaryAdjustment;
 use App\Models\Task;

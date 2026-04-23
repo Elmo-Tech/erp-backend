@@ -4,7 +4,7 @@ namespace Tests\Unit\Http\Resources;
 
 use App\Http\Resources\V1\Invoices\InvoiceResource;
 use App\Models\Invoice;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\User;
 use Carbon\Carbon;
 use Eris\Generator;

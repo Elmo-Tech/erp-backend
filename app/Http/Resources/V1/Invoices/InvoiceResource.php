@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\V1\Invoices;
 
-use App\Http\Resources\V1\Projects\ProjectResource;
+use App\Modules\Project\Resources\ProjectResource;
 use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

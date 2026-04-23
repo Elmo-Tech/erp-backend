@@ -5,14 +5,14 @@ namespace App\Services\Sales;
 use App\Enums\ContractStatus;
 use App\Enums\MilestoneStatus;
 use App\Enums\MilestoneTriggerType;
-use App\Enums\ProjectStatus;
+use App\Modules\Project\Enums\ProjectStatus;
 use App\Enums\QuotationStatus;
 use App\Models\Contract;
 use App\Models\ContractMilestone;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\Quotation;
 use App\Models\User;
-use App\Services\Projects\ProjectConversionService;
+use App\Modules\Project\Actions\ConvertQuotationToProjectAction;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +22,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 class ContractService
 {
     public function __construct(
-        private ProjectConversionService $projectConversionService,
+        private ConvertQuotationToProjectAction $projectConversionService,
         private LeadConversionService $leadConversionService
     ) {}
 

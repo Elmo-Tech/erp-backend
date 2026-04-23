@@ -10,7 +10,10 @@ use App\Http\Resources\V1\Invoices\InvoiceResource;
 use App\Http\Resources\V1\Milestones\MilestoneResource;
 use App\Models\ContractMilestone;
 use App\Models\Invoice;
-use App\Services\Client\InvoiceService;
+use App\Modules\Client\Actions\CreateMilestoneInvoiceAction;
+use App\Modules\Client\Actions\LinkInvoiceToMilestoneAction;
+use App\Modules\Client\Actions\MarkInvoiceAsPaidAction;
+use App\Modules\Client\Actions\SendInvoiceAction;
 use App\Services\Sales\ContractService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +23,10 @@ use OpenApi\Annotations as OA;
 class MilestoneController extends Controller
 {
     public function __construct(
-        private InvoiceService $invoiceService,
+        private CreateMilestoneInvoiceAction $createMilestoneInvoiceAction,
+        private LinkInvoiceToMilestoneAction $linkInvoiceToMilestoneAction,
+        private MarkInvoiceAsPaidAction $markInvoiceAsPaidAction,
+        private SendInvoiceAction $sendInvoiceAction,
         private ContractService $contractService
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
@@ -124,14 +130,14 @@ class MilestoneController extends Controller
         $milestone = ContractMilestone::with(['contract.project'])->findOrFail($id);
 
         try {
-            $invoice = $this->invoiceService->createFromMilestone($milestone, $request->validated());
+            $invoice = $this->createMilestoneInvoiceAction->execute($milestone, $request->validated());
 
             // Send immediately if requested
             if ($request->boolean('sendImmediately')) {
                 if (! $request->user()->can('send_invoices')) {
                     return ApiResponse::error(__('messages.unauthorized_send_invoice'), [], 403);
                 }
-                $invoice = $this->invoiceService->sendInvoice($invoice);
+                $invoice = $this->sendInvoiceAction->execute($invoice);
             }
 
             return ApiResponse::success([
@@ -240,7 +246,7 @@ class MilestoneController extends Controller
         $invoice = Invoice::withoutGlobalScopes()->findOrFail($request->invoiceId);
 
         try {
-            $this->invoiceService->linkToMilestone($invoice, $milestone);
+            $this->linkInvoiceToMilestoneAction->execute($invoice, $milestone);
 
             return ApiResponse::success([
                 'milestone' => new MilestoneResource($milestone->fresh(['invoice'])),
@@ -334,7 +340,7 @@ class MilestoneController extends Controller
 
             // If milestone has linked invoice, mark it as paid too
             if ($milestone->invoice) {
-                $this->invoiceService->markAsPaid($milestone->invoice);
+                $this->markInvoiceAsPaidAction->execute($milestone->invoice);
             }
 
             $milestone = $this->contractService->markMilestonePaid($milestone, $invoiceId);

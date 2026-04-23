@@ -2,10 +2,10 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\Project;
-use App\Models\ProjectWiki;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectWiki;
 use App\Models\User;
-use App\Services\Projects\WikiService;
+use App\Modules\Project\Actions\ProjectWikiAction;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
 
 /**
- * Property-Based Tests for WikiService
+ * Property-Based Tests for ProjectWikiAction
  *
  * Feature: project-management-wiki
  * Tests encryption/decryption functionality for project wikis
@@ -22,18 +22,18 @@ class WikiServicePropertyTest extends TestCase
 {
     use RefreshDatabase, TestTrait;
 
-    private WikiService $wikiService;
+    private ProjectWikiAction $wikiService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->wikiService = new WikiService;
+        $this->wikiService = new ProjectWikiAction;
     }
 
     /**
      * Property 3: Wiki Encryption Round Trip
      *
-     * For any wiki content string, encrypting it via WikiService (with isEncrypted=true)
+     * For any wiki content string, encrypting it via ProjectWikiAction (with isEncrypted=true)
      * and then retrieving it via getDecryptedWiki SHALL return the original content unchanged.
      *
      * **Validates: Requirements 4.2, 4.3, 4.5**

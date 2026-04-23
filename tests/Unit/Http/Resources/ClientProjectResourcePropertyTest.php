@@ -2,11 +2,11 @@
 
 namespace Tests\Unit\Http\Resources;
 
-use App\Http\Resources\V1\Client\ClientProjectResource;
+use App\Modules\Client\Resources\ClientProjectResource;
 use App\Models\Invoice;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\User;
-use App\Services\Client\ProgressService;
+use App\Modules\Client\Actions\CalculateProjectProgressAction;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -213,7 +213,7 @@ class ClientProjectResourcePropertyTest extends TestCase
                     'ClientProjectResource should not expose completed task count');
 
                 // For projects without tasks relationship, progress should be 0
-                // (This tests the ProgressService edge case handling)
+                // (This tests the CalculateProjectProgressAction edge case handling)
                 if (! method_exists($project, 'tasks') || $project->tasks()->count() === 0) {
                     $this->assertEquals(0, $response['progressPercentage'],
                         'Projects without tasks should have 0% progress');

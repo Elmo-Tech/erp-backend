@@ -2,7 +2,7 @@
 
 namespace App\Services\Reporting;
 
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -189,7 +189,7 @@ class ProfitabilityService
     {
         // Get direct project time entries
         $projectTimeEntries = TimeEntry::with('user')
-            ->where('trackable_type', Project::class)
+            ->where('trackable_type', $project->getMorphClass())
             ->where('trackable_id', $project->id)
             ->whereNotNull('end_time') // Only completed time entries
             ->get();

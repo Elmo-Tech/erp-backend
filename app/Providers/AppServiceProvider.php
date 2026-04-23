@@ -6,7 +6,7 @@ use App\Events\NotificationCreated;
 use App\Events\TimerUpdated;
 use App\Models\CodeReview;
 use App\Models\InnovationLog;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\Task;
 use App\Models\TaskDeliverable;
 use App\Models\TaskTestScenario;

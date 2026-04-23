@@ -4,8 +4,8 @@ namespace Tests\Unit\Services;
 
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Models\Client;
-use App\Models\Project;
+use App\Modules\Client\Models\Client;
+use App\Modules\Project\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Sales\TimeTrackingService;

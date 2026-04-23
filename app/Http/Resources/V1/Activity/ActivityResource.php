@@ -4,7 +4,7 @@ namespace App\Http\Resources\V1\Activity;
 
 use App\Models\Activity;
 use App\Models\Lead;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

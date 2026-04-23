@@ -4,9 +4,9 @@ namespace Tests\Unit\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
-use App\Models\Project;
-use App\Services\Client\AuditLogService;
-use App\Services\Client\InvoiceService;
+use App\Modules\Project\Models\Project;
+use App\Modules\Client\Actions\LogClientAuditAction;
+use App\Modules\Client\Actions\InvoiceWorkflowAction;
 use Carbon\Carbon;
 use Eris\Generator;
 use Eris\TestTrait;
@@ -14,7 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Property-Based Tests for InvoiceService
+ * Property-Based Tests for InvoiceWorkflowAction
  *
  * Feature: client-portal-security, Property 12: Overdue Invoice Processing
  * Validates: Requirements 3.8, 18.2, 18.3
@@ -23,15 +23,15 @@ class InvoiceServicePropertyTest extends TestCase
 {
     use RefreshDatabase, TestTrait;
 
-    private InvoiceService $invoiceService;
+    private InvoiceWorkflowAction $invoiceService;
 
-    private AuditLogService $auditLogService;
+    private LogClientAuditAction $auditLogService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->auditLogService = new AuditLogService;
-        $this->invoiceService = new InvoiceService($this->auditLogService);
+        $this->auditLogService = new LogClientAuditAction;
+        $this->invoiceService = new InvoiceWorkflowAction($this->auditLogService);
     }
 
     protected function tearDown(): void

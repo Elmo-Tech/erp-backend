@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\ProjectStatus;
+use App\Modules\Project\Enums\ProjectStatus;
 use App\Enums\TaskStatus;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;

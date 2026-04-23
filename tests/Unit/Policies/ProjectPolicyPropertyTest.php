@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Policies;
 
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\User;
 use App\Policies\ProjectPolicy;
 use Eris\Generator;

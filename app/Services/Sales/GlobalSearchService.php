@@ -2,9 +2,9 @@
 
 namespace App\Services\Sales;
 
-use App\Models\Client;
+use App\Modules\Client\Models\Client;
 use App\Models\Lead;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\Proposal;
 use App\Models\Quotation;
 use Illuminate\Support\Collection;

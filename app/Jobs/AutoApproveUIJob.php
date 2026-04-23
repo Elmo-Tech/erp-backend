@@ -2,9 +2,9 @@
 
 namespace App\Jobs;
 
-use App\Enums\ProjectStatus;
-use App\Models\Project;
-use App\Services\Projects\ProjectHistoryService;
+use App\Modules\Project\Enums\ProjectStatus;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Actions\ProjectHistoryAction;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -46,7 +46,7 @@ class AutoApproveUIJob implements ShouldQueue
      * 6. Records the auto-approval in project history
      * 7. Clears the auto_approval_job_id
      */
-    public function handle(ProjectHistoryService $historyService): void
+    public function handle(ProjectHistoryAction $historyService): void
     {
         $project = Project::find($this->projectId);
 

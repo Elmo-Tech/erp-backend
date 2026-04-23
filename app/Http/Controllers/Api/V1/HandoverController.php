@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\ProjectHandover;
 use App\Services\Projects\HandoverService;
 use Illuminate\Http\JsonResponse;

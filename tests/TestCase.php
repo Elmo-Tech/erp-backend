@@ -2,7 +2,7 @@
 
 namespace Tests;
 
-use App\Models\Client;
+use App\Modules\Client\Models\Client;
 use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 

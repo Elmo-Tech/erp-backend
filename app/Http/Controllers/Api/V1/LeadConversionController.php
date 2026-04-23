@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Leads\ConvertLeadRequest;
-use App\Http\Resources\V1\Client\ClientResource;
+use App\Modules\Client\Resources\ClientResource;
 use App\Models\Lead;
 use App\Services\Sales\LeadConversionService;
 use Illuminate\Http\JsonResponse;

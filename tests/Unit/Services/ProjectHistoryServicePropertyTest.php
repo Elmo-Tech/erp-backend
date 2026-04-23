@@ -2,18 +2,18 @@
 
 namespace Tests\Unit\Services;
 
-use App\Enums\ProjectStatus;
-use App\Models\Project;
-use App\Models\ProjectHistory;
+use App\Modules\Project\Enums\ProjectStatus;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectHistory;
 use App\Models\User;
-use App\Services\Projects\ProjectHistoryService;
+use App\Modules\Project\Actions\ProjectHistoryAction;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Property-Based Tests for ProjectHistoryService
+ * Property-Based Tests for ProjectHistoryAction
  *
  * Feature: project-management-wiki, Property 7: History Records Created on Update
  * Validates: Requirements 3.2, 9.2, 9.3
@@ -22,12 +22,12 @@ class ProjectHistoryServicePropertyTest extends TestCase
 {
     use RefreshDatabase, TestTrait;
 
-    private ProjectHistoryService $historyService;
+    private ProjectHistoryAction $historyService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->historyService = new ProjectHistoryService;
+        $this->historyService = new ProjectHistoryAction;
     }
 
     /**

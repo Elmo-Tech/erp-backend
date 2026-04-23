@@ -11,7 +11,7 @@ use App\Http\Requests\V1\Invoices\UpdateInvoiceRequest;
 use App\Http\Resources\V1\Invoices\InvoiceCollection;
 use App\Http\Resources\V1\Invoices\InvoiceResource;
 use App\Models\Invoice;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Services\AuditService;
 use App\Services\BillingService;
 use Illuminate\Http\JsonResponse;

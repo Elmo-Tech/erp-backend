@@ -6,7 +6,7 @@ use App\Enums\PointTransactionType;
 use App\Enums\TaskStatus;
 use App\Models\Attendance;
 use App\Models\PointTransaction;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;

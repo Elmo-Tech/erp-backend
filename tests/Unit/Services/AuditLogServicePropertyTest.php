@@ -3,9 +3,9 @@
 namespace Tests\Unit\Services;
 
 use App\Models\AuditLog;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\User;
-use App\Services\Client\AuditLogService;
+use App\Modules\Client\Actions\LogClientAuditAction;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 /**
- * Property-Based Tests for AuditLogService
+ * Property-Based Tests for LogClientAuditAction
  *
  * Feature: client-portal-security, Property 9: Audit Logging
  * Validates: Requirements 16.1, 16.2, 16.3, 16.4, 16.5
@@ -22,14 +22,14 @@ class AuditLogServicePropertyTest extends TestCase
 {
     use RefreshDatabase, TestTrait;
 
-    private AuditLogService $auditLogService;
+    private LogClientAuditAction $auditLogService;
 
     private User $testUser;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->auditLogService = new AuditLogService;
+        $this->auditLogService = new LogClientAuditAction;
 
         // Create a test user for authentication
         $this->testUser = User::factory()->create();

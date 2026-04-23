@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

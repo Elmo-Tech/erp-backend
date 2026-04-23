@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\InvoiceStatus;
-use App\Enums\ProjectStatus;
+use App\Modules\Project\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Invoice;
 use App\Models\PointTransaction;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\Quotation;
 use App\Models\Task;
 use App\Models\TimeEntry;

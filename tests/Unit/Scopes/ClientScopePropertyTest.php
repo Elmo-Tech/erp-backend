@@ -3,7 +3,7 @@
 namespace Tests\Unit\Scopes;
 
 use App\Models\Invoice;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\User;
 use App\Scopes\ClientScope;
 use Eris\Generator;

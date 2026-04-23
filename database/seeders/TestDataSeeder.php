@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Lead;
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\Quotation;
 use App\Models\Task;
 use App\Models\TimeEntry;

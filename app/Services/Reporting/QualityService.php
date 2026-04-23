@@ -2,7 +2,7 @@
 
 namespace App\Services\Reporting;
 
-use App\Models\Project;
+use App\Modules\Project\Models\Project;
 use App\Models\Task;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
