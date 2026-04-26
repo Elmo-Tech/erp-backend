@@ -5,6 +5,7 @@ namespace App\Traits;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 trait HasCreatedUpdatedBy
 {
@@ -15,13 +16,18 @@ trait HasCreatedUpdatedBy
     {
         static::creating(function ($model) {
             if (Auth::check()) {
-                $model->created_by = Auth::id();
-                $model->updated_by = Auth::id();
+                if (Schema::hasColumn($model->getTable(), 'created_by')) {
+                    $model->created_by = Auth::id();
+                }
+
+                if (Schema::hasColumn($model->getTable(), 'updated_by')) {
+                    $model->updated_by = Auth::id();
+                }
             }
         });
 
         static::updating(function ($model) {
-            if (Auth::check()) {
+            if (Auth::check() && Schema::hasColumn($model->getTable(), 'updated_by')) {
                 $model->updated_by = Auth::id();
             }
         });

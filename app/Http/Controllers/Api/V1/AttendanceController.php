@@ -6,9 +6,11 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\HR\AttendanceCollection;
 use App\Http\Resources\V1\HR\AttendanceResource;
+use App\Http\Resources\V1\HR\EmployeeDeductionResource;
 use App\Models\Attendance;
 use App\Models\DeductionType;
 use App\Models\EmployeeDeduction;
+use App\Models\TimeEntry;
 use App\Models\User;
 use App\Services\HR\AttendanceService;
 use App\Services\Sales\TimeTrackingService;
@@ -51,7 +53,7 @@ class AttendanceController extends Controller
         $attendance = $this->attendanceService->getTodayAttendance($user);
         $activeTimer = $this->timeTrackingService->getActiveTimer($user);
 
-        $totalWorkedMinutes = \App\Models\TimeEntry::where('user_id', $user->id)
+        $totalWorkedMinutes = TimeEntry::where('user_id', $user->id)
             ->whereDate('start_time', $today)
             ->whereNotNull('end_time')
             ->sum('duration_minutes');
@@ -306,34 +308,48 @@ class AttendanceController extends Controller
         }
 
         $validated = $request->validate([
-            'deduction_type_id' => 'required|exists:deduction_types,id',
-            'amount' => 'required|numeric|min:0',
+            'deduction_type_id' => 'nullable|integer',
+            'amount' => 'nullable|numeric|min:0',
             'reason' => 'nullable|string|max:500',
             'late_minutes' => 'nullable|integer|min:0',
         ]);
 
+        $deductionMinutes = (int) ($validated['late_minutes'] ?? 0);
+        $deductionType = null;
+
+        if (! empty($validated['deduction_type_id'])) {
+            $deductionType = DeductionType::find($validated['deduction_type_id']);
+        }
+
+        $deductionType ??= $this->getAttendanceDeductionType();
+        $amount = $deductionMinutes > 0
+            ? $this->calculateAttendanceDeductionAmount($attendance->user, $deductionMinutes)
+            : (float) ($validated['amount'] ?? 0);
+
         $deduction = EmployeeDeduction::create([
             'user_id' => $attendance->user_id,
-            'deduction_type_id' => $validated['deduction_type_id'],
+            'deduction_type_id' => $deductionType->id,
             'deduction_date' => $attendance->date,
-            'amount' => $validated['amount'],
+            'amount' => round($amount, 2),
             'reason' => $validated['reason'] ?? 'Manual deduction from attendance',
             'status' => EmployeeDeduction::STATUS_APPROVED,
             'attendance_id' => $attendance->id,
-            'late_minutes' => $validated['late_minutes'] ?? 0,
+            'late_minutes' => $deductionMinutes,
+            'deductible_type' => Attendance::class,
+            'deductible_id' => $attendance->id,
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
         ]);
 
         // Update attendance record with deduction minutes
-        if (! empty($validated['late_minutes'])) {
+        if ($deductionMinutes > 0) {
             $attendance->update([
-                'deduction_minutes' => ($attendance->deduction_minutes ?? 0) + $validated['late_minutes'],
+                'deduction_minutes' => ($attendance->deduction_minutes ?? 0) + $deductionMinutes,
             ]);
         }
 
         return ApiResponse::success(
-            new \App\Http\Resources\V1\HR\EmployeeDeductionResource($deduction->load(['user', 'deductionType'])),
+            new EmployeeDeductionResource($deduction->load(['user', 'deductionType'])),
             'Deduction added successfully',
             201
         );
@@ -407,23 +423,8 @@ class AttendanceController extends Controller
      */
     protected function createAttendanceDeduction(Attendance $attendance, User $user, int $deductionMinutes): EmployeeDeduction
     {
-        // Get or create a default deduction type for attendance
-        $deductionType = DeductionType::where('name', 'Attendance Deduction')->first();
-
-        if (! $deductionType) {
-            $deductionType = DeductionType::create([
-                'name' => 'Attendance Deduction',
-                'description' => 'Deduction for attendance violations',
-                'is_active' => true,
-            ]);
-        }
-
-        // Calculate amount based on user's hourly rate
-        $hourlyRate = 0;
-        if ($user->salary && $user->work_hours_per_day) {
-            $hourlyRate = $user->salary / (30 * $user->work_hours_per_day);
-        }
-        $amount = ($deductionMinutes / 60) * $hourlyRate;
+        $deductionType = $this->getAttendanceDeductionType();
+        $amount = $this->calculateAttendanceDeductionAmount($user, $deductionMinutes);
 
         return EmployeeDeduction::create([
             'user_id' => $user->id,
@@ -434,8 +435,35 @@ class AttendanceController extends Controller
             'status' => EmployeeDeduction::STATUS_APPROVED,
             'attendance_id' => $attendance->id,
             'late_minutes' => $deductionMinutes,
+            'deductible_type' => Attendance::class,
+            'deductible_id' => $attendance->id,
             'approved_by' => auth()->id(),
             'approved_at' => now(),
         ]);
+    }
+
+    protected function getAttendanceDeductionType(): DeductionType
+    {
+        return DeductionType::firstOrCreate(
+            ['code' => 'ATTENDANCE_DEDUCTION'],
+            [
+                'name' => 'Attendance Deduction',
+                'description' => 'Deduction for attendance violations',
+                'calculation_type' => DeductionType::CALCULATION_PER_MINUTE,
+                'amount' => 0,
+                'is_active' => true,
+                'requires_approval' => false,
+            ]
+        );
+    }
+
+    protected function calculateAttendanceDeductionAmount(User $user, int $deductionMinutes): float
+    {
+        $hourlyRate = 0;
+        if ($user->salary && $user->work_hours_per_day) {
+            $hourlyRate = $user->salary / (30 * $user->work_hours_per_day);
+        }
+
+        return ($deductionMinutes / 60) * $hourlyRate;
     }
 }
