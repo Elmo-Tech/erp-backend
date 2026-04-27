@@ -4,8 +4,8 @@ namespace App\Observers;
 
 use App\Models\InnovationLog;
 use App\Modules\User\Models\User;
-use App\Notifications\InnovationLogSubmitted;
-use App\Notifications\InnovationLogVerified;
+use App\Modules\Notification\Notifications\InnovationLogSubmitted;
+use App\Modules\Notification\Notifications\InnovationLogVerified;
 use Illuminate\Support\Facades\Notification;
 
 class InnovationLogObserver

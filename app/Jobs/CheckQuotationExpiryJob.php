@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Quotation;
 use App\Modules\User\Models\User;
-use App\Notifications\QuotationExpiring;
+use App\Modules\Notification\Notifications\QuotationExpiring;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

@@ -5,9 +5,9 @@ namespace App\Console\Commands;
 use App\Models\InnovationLog;
 use App\Modules\Task\Models\Task;
 use App\Modules\User\Models\User;
-use App\Notifications\InnovationLogSubmitted;
-use App\Notifications\InnovationLogVerified;
-use App\Notifications\TaskAssigned;
+use App\Modules\Notification\Notifications\InnovationLogSubmitted;
+use App\Modules\Notification\Notifications\InnovationLogVerified;
+use App\Modules\Notification\Notifications\TaskAssigned;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Notification;
 

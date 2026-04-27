@@ -54,6 +54,7 @@ class ModuleServiceProvider extends ServiceProvider
             'App\Models\Contract' => \App\Modules\Contract\Models\Contract::class,
             'App\Models\ContractMilestone' => \App\Modules\Contract\Models\ContractMilestone::class,
             'App\Models\ContractTemplate' => \App\Modules\Contract\Models\ContractTemplate::class,
+            'App\Models\ProposalTemplate' => \App\Modules\Template\Models\ProposalTemplate::class,
         ]);
     }
 

@@ -2,107 +2,54 @@
 
 namespace App\Services\Sales;
 
-use App\Models\ContractTemplate;
-use App\Models\ProposalTemplate;
+use App\Modules\Template\Models\ProposalTemplate;
+use App\Modules\Contract\Models\ContractTemplate;
+use App\Modules\Template\Actions\GetTemplatesAction;
+use App\Modules\Template\Actions\CreateProposalTemplateAction;
+use App\Modules\Template\Actions\CreateContractTemplateAction;
+use App\Modules\Template\Actions\UpdateProposalTemplateAction;
+use App\Modules\Template\Actions\UpdateContractTemplateAction;
+use App\Modules\Template\Actions\RenderTemplateAction;
 use App\Models\Quotation;
 use App\Modules\User\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 
 class TemplateService
 {
-    /**
-     * Get active proposal templates
-     */
+    public function __construct(
+        private GetTemplatesAction $getTemplatesAction,
+        private CreateProposalTemplateAction $createProposalTemplateAction,
+        private CreateContractTemplateAction $createContractTemplateAction,
+        private UpdateProposalTemplateAction $updateProposalTemplateAction,
+        private UpdateContractTemplateAction $updateContractTemplateAction,
+        private RenderTemplateAction $renderTemplateAction
+    ) {}
+
     public function getProposalTemplates(?string $type = null): Collection
     {
-        $query = ProposalTemplate::active();
-
-        if ($type) {
-            $query->where('type', $type);
-        }
-
-        return $query->orderBy('name')->get();
+        return $this->getTemplatesAction->getProposalTemplates($type);
     }
 
-    /**
-     * Get active contract templates
-     */
     public function getContractTemplates(?string $type = null): Collection
     {
-        $query = ContractTemplate::active();
-
-        if ($type) {
-            $query->where('type', $type);
-        }
-
-        return $query->orderBy('name')->get();
+        return $this->getTemplatesAction->getContractTemplates($type);
     }
 
-    /**
-     * Create proposal template
-     */
     public function createProposalTemplate(array $data, User $user): ProposalTemplate
     {
-        return ProposalTemplate::create([
-            'name' => $data['name'],
-            'type' => $data['type'],
-            'content' => $data['content'],
-            'placeholders' => $data['placeholders'] ?? [],
-            'is_active' => $data['isActive'] ?? true,
-            'created_by' => $user->id,
-            'updated_by' => $user->id,
-        ]);
+        return $this->createProposalTemplateAction->execute($data, $user);
     }
 
-    /**
-     * Create contract template
-     */
     public function createContractTemplate(array $data, User $user): ContractTemplate
     {
-        return ContractTemplate::create([
-            'name' => $data['name'],
-            'type' => $data['type'],
-            'content' => $data['content'],
-            'placeholders' => $data['placeholders'] ?? [],
-            'is_active' => $data['isActive'] ?? true,
-            'created_by' => $user->id,
-            'updated_by' => $user->id,
-        ]);
+        return $this->createContractTemplateAction->execute($data, $user);
     }
 
-    /**
-     * Generate content from proposal template
-     */
     public function generateProposalContent(ProposalTemplate $template, Quotation $quotation, array $customValues = []): string
     {
-        $lead = $quotation->lead;
-
-        $replacements = [
-            '{{clientName}}' => $lead->name,
-            '{{clientCompany}}' => $lead->company ?? '',
-            '{{clientEmail}}' => $lead->email,
-            '{{quotationNumber}}' => $quotation->quotation_number ?? '',
-            '{{totalPrice}}' => number_format($quotation->final_price, 2),
-            '{{currency}}' => $quotation->currency,
-            '{{date}}' => now()->format('Y-m-d'),
-            '{{expiryDate}}' => $quotation->expiry_date?->format('Y-m-d') ?? '',
-        ];
-
-        // Add custom values
-        foreach ($customValues as $key => $value) {
-            $replacements["{{{$key}}}"] = $value;
-        }
-
-        return str_replace(
-            array_keys($replacements),
-            array_values($replacements),
-            $template->content
-        );
+        return $this->renderTemplateAction->renderProposal($template, $quotation, $customValues);
     }
 
-    /**
-     * Generate content from contract template
-     */
     public function generateContractContent(
         ContractTemplate $template,
         array $partyOne,
@@ -111,63 +58,23 @@ class TemplateService
         string $currency,
         array $customValues = []
     ): string {
-        $replacements = [
-            '{{partyOneName}}' => $partyOne['company'] ?? '',
-            '{{partyOneRepresentative}}' => $partyOne['representative'] ?? '',
-            '{{partyOneTitle}}' => $partyOne['title'] ?? '',
-            '{{partyOneAddress}}' => $partyOne['address'] ?? '',
-            '{{partyTwoName}}' => $partyTwo['company'] ?? $partyTwo['name'] ?? '',
-            '{{partyTwoRepresentative}}' => $partyTwo['representative'] ?? '',
-            '{{partyTwoTitle}}' => $partyTwo['title'] ?? '',
-            '{{partyTwoAddress}}' => $partyTwo['address'] ?? '',
-            '{{totalAmount}}' => number_format($totalAmount, 2),
-            '{{currency}}' => $currency,
-            '{{date}}' => now()->format('Y-m-d'),
-        ];
-
-        // Add custom values
-        foreach ($customValues as $key => $value) {
-            $replacements["{{{$key}}}"] = $value;
-        }
-
-        return str_replace(
-            array_keys($replacements),
-            array_values($replacements),
-            $template->content
+        return $this->renderTemplateAction->renderContract(
+            $template,
+            $partyOne,
+            $partyTwo,
+            $totalAmount,
+            $currency,
+            $customValues
         );
     }
 
-    /**
-     * Update proposal template
-     */
     public function updateProposalTemplate(ProposalTemplate $template, array $data, User $user): ProposalTemplate
     {
-        $template->update([
-            'name' => $data['name'] ?? $template->name,
-            'type' => $data['type'] ?? $template->type,
-            'content' => $data['content'] ?? $template->content,
-            'placeholders' => $data['placeholders'] ?? $template->placeholders,
-            'is_active' => $data['isActive'] ?? $template->is_active,
-            'updated_by' => $user->id,
-        ]);
-
-        return $template->fresh();
+        return $this->updateProposalTemplateAction->execute($template, $data, $user);
     }
 
-    /**
-     * Update contract template
-     */
     public function updateContractTemplate(ContractTemplate $template, array $data, User $user): ContractTemplate
     {
-        $template->update([
-            'name' => $data['name'] ?? $template->name,
-            'type' => $data['type'] ?? $template->type,
-            'content' => $data['content'] ?? $template->content,
-            'placeholders' => $data['placeholders'] ?? $template->placeholders,
-            'is_active' => $data['isActive'] ?? $template->is_active,
-            'updated_by' => $user->id,
-        ]);
-
-        return $template->fresh();
+        return $this->updateContractTemplateAction->execute($template, $data, $user);
     }
 }

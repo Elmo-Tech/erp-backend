@@ -5,7 +5,7 @@ namespace App\Jobs;
 use App\Enums\ContractStatus;
 use App\Models\Contract;
 use App\Modules\User\Models\User;
-use App\Notifications\SubscriptionRenewalReminderNotification;
+use App\Modules\Notification\Notifications\SubscriptionRenewalReminderNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

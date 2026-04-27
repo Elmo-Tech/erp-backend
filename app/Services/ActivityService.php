@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Enums\ActivityType;
 use App\Models\Activity;
 use App\Modules\User\Models\User;
-use App\Notifications\InnovationLogSubmitted;
+use App\Modules\Notification\Notifications\InnovationLogSubmitted;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Notification;
 

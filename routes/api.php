@@ -3,12 +3,10 @@
 use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\Admin\AdminDeliverableController;
 use App\Http\Controllers\Api\V1\AdminRoleController;
-use App\Http\Controllers\Api\V1\AdminStatsController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\ChangeRequestController;
 use App\Http\Controllers\Api\V1\CodeReviewController;
-use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EnumController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\GlobalSearchController;
@@ -16,13 +14,11 @@ use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InnovationLogController;
 use App\Http\Controllers\Api\V1\MilestoneController;
-use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PerformanceEvaluationController;
 use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\SalesAnalyticsController;
 use App\Http\Controllers\Api\V1\SalesDashboardController;
-use App\Http\Controllers\Api\V1\TemplateController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -105,20 +101,7 @@ Route::prefix('v1')->group(function () {
     Route::post('handovers/{handover}/complete', [HandoverController::class, 'complete'])->name('handovers.complete');
     Route::post('handovers/{handover}/dispute', [HandoverController::class, 'dispute'])->name('handovers.dispute');
 
-    // Template Routes
-    Route::prefix('templates')->group(function () {
-        Route::get('proposals', [TemplateController::class, 'proposalTemplates'])->name('templates.proposals.index');
-        Route::post('proposals', [TemplateController::class, 'storeProposalTemplate'])->name('templates.proposals.store');
-        Route::put('proposals/{template}', [TemplateController::class, 'updateProposalTemplate'])->name('templates.proposals.update');
-        Route::delete('proposals/{template}', [TemplateController::class, 'destroyProposalTemplate'])->name('templates.proposals.destroy');
-        Route::post('proposals/{template}/generate', [TemplateController::class, 'generateProposal'])->name('templates.proposals.generate');
-
-        Route::get('contracts', [TemplateController::class, 'contractTemplates'])->name('templates.contracts.index');
-        Route::post('contracts', [TemplateController::class, 'storeContractTemplate'])->name('templates.contracts.store');
-        Route::put('contracts/{template}', [TemplateController::class, 'updateContractTemplate'])->name('templates.contracts.update');
-        Route::delete('contracts/{template}', [TemplateController::class, 'destroyContractTemplate'])->name('templates.contracts.destroy');
-        Route::post('contracts/{template}/generate', [TemplateController::class, 'generateContract'])->name('templates.contracts.generate');
-    });
+    // Template Routes → Moved to app/Modules/Template/Routes/api.php
 
     // Sales Analytics Routes
     Route::prefix('analytics')->group(function () {
@@ -148,32 +131,12 @@ Route::prefix('v1')->group(function () {
         Route::patch('{id}/mark-paid', [MilestoneController::class, 'markPaid'])->name('milestones.mark-paid');
     });
 
-    // Dashboard Routes
-    Route::get('dashboard/overview', [DashboardController::class, 'overview'])->middleware(['auth:sanctum', 'locale'])->name('dashboard.overview');
-
-    // Notification Routes
-    Route::prefix('notifications')->group(function () {
-        Route::get('/', [NotificationController::class, 'index'])->name('notifications.index');
-        Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
-        Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
-        Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
-    });
+    // Dashboard Routes → Moved to app/Modules/Dashboard/Routes/api.php
+    // Admin Stats Routes → Moved to app/Modules/Report/Routes/api.php
 
     // Admin Routes
     // All routes have auth:sanctum and locale middleware applied in controllers
     Route::prefix('admin')->group(function () {
-        // Admin Statistics Routes
-        Route::prefix('stats')->group(function () {
-            Route::get('overview', [AdminStatsController::class, 'overview'])->name('admin.stats.overview');
-            Route::get('profitability', [AdminStatsController::class, 'profitability'])->name('admin.stats.profitability');
-            Route::get('quality', [AdminStatsController::class, 'quality'])->name('admin.stats.quality');
-            Route::get('user-performance', [AdminStatsController::class, 'userPerformance'])->name('admin.stats.user-performance');
-            Route::get('attendance', [AdminStatsController::class, 'attendance'])->name('admin.stats.attendance');
-            // More specific route first
-            Route::get('employee-review/{userId}/export', [AdminStatsController::class, 'exportEmployeeReview'])->name('admin.stats.employee-review.export');
-            Route::get('employee-review/{userId}', [AdminStatsController::class, 'employeeReview'])->name('admin.stats.employee-review');
-        });
-
         // Admin Role Management Routes
         Route::apiResource('roles', AdminRoleController::class);
         Route::get('permissions', [AdminRoleController::class, 'permissions'])->name('admin.permissions');
@@ -261,7 +224,7 @@ Route::prefix('v1')->group(function () {
         Route::get('leads', [ExportController::class, 'exportLeads'])->name('export.leads');
         Route::get('proposals', [ExportController::class, 'exportProposals'])->name('export.proposals');
         Route::get('quotations', [ExportController::class, 'exportQuotations'])->name('export.quotations');
-        Route::get('sales-report', [ExportController::class, 'salesReport'])->name('export.sales-report');
+        // sales-report → Moved to app/Modules/Report/Routes/api.php
     });
 
     // HR Deductions & Rewards Routes

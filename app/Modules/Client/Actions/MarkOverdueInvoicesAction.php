@@ -4,7 +4,7 @@ namespace App\Modules\Client\Actions;
 
 use App\Enums\InvoiceStatus;
 use App\Modules\Invoice\Models\Invoice;
-use App\Notifications\InvoiceOverdue;
+use App\Modules\Notification\Notifications\InvoiceOverdue;
 use Carbon\Carbon;
 
 class MarkOverdueInvoicesAction

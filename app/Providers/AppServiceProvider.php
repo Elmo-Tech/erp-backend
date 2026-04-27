@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Events\NotificationCreated;
+use App\Modules\Notification\Events\NotificationCreated;
 use App\Events\TimerUpdated;
 use App\Models\CodeReview;
 use App\Models\InnovationLog;
