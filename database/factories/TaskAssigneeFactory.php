@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Models\Task;
-use App\Models\TaskAssignee;
+use App\Modules\Task\Models\Task;
+use App\Modules\Task\Models\TaskAssignee;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\TaskAssignee>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Task\Models\TaskAssignee>
  */
 class TaskAssigneeFactory extends Factory
 {

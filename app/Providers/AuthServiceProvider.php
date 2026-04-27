@@ -9,7 +9,7 @@ use App\Models\Invoice;
 use App\Modules\Project\Models\Project;
 use App\Models\RewardType;
 use App\Models\SalaryAdjustment;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Policies\DeductionTypePolicy;
 use App\Policies\EmployeeDeductionPolicy;
 use App\Policies\EmployeeRewardPolicy;

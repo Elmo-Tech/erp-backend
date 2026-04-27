@@ -6,7 +6,7 @@ use App\Contracts\Trackable;
 use App\Enums\TaskStatus;
 use App\Events\TimerUpdated;
 use App\Models\Attendance;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use App\Services\HR\AttendanceService;

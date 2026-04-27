@@ -3,8 +3,8 @@
 namespace App\Observers;
 
 use App\Enums\DeliverableStatus;
-use App\Models\TaskActivity;
-use App\Models\TaskDeliverable;
+use App\Modules\Task\Models\TaskActivity;
+use App\Modules\Task\Models\TaskDeliverable;
 
 /**
  * Observer for TaskDeliverable model to log activities and handle status changes.

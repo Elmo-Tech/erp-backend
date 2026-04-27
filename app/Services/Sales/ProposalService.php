@@ -11,7 +11,7 @@ use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Models\Lead;
 use App\Models\Proposal;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;

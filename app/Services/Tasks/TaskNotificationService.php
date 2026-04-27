@@ -2,7 +2,7 @@
 
 namespace App\Services\Tasks;
 
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\User;
 use App\Notifications\TaskAssigned;
 use App\Notifications\TaskCommentAdded;

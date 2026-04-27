@@ -4,7 +4,7 @@ namespace App\Observers;
 
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Services\Points\UnifiedPointService;
 
 /**
@@ -74,7 +74,7 @@ class TaskObserver
             if ($task->due_date) {
                 $dueDate = $task->due_date->startOfDay();
                 $completedDate = $task->completed_at->startOfDay();
-                $delayDays = (int) $dueDate->diffInDays($completedDate, false);
+                $delayDays = (int) round($dueDate->diffInDays($completedDate, false));
                 $task->delay_days = $delayDays;
 
                 // Task is on time if completed on or before due date

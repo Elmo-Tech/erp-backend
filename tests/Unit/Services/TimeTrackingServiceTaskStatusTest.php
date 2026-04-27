@@ -6,7 +6,7 @@ use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\User;
 use App\Services\Sales\TimeTrackingService;
 use Carbon\Carbon;

@@ -11,7 +11,7 @@ use App\Models\Invoice;
 use App\Models\PointTransaction;
 use App\Modules\Project\Models\Project;
 use App\Models\Quotation;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Carbon\Carbon;

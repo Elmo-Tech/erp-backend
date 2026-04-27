@@ -8,7 +8,7 @@ use App\Models\CodeReview;
 use App\Models\EvaluationPeriod;
 use App\Models\InnovationLog;
 use App\Models\PerformanceEvaluation;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 

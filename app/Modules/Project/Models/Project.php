@@ -6,7 +6,7 @@ use App\Contracts\Trackable;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Models\Invoice;
 use App\Models\Quotation;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use App\Modules\Client\Models\Client;

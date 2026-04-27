@@ -4,7 +4,7 @@ namespace App\Services\Reporting;
 
 use App\Enums\TaskStatus;
 use App\Models\Attendance;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Illuminate\Support\Collection;

@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Models\Task;
-use App\Models\TaskTestScenario;
+use App\Modules\Task\Models\Task;
+use App\Modules\Task\Models\TaskTestScenario;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\TaskTestScenario>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Task\Models\TaskTestScenario>
  */
 class TaskTestScenarioFactory extends Factory
 {

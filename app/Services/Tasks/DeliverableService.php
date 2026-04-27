@@ -4,9 +4,9 @@ namespace App\Services\Tasks;
 
 use App\Enums\DeliverableStatus;
 use App\Enums\PointTransactionType;
-use App\Models\Task;
-use App\Models\TaskActivity;
-use App\Models\TaskDeliverable;
+use App\Modules\Task\Models\Task;
+use App\Modules\Task\Models\TaskActivity;
+use App\Modules\Task\Models\TaskDeliverable;
 use App\Models\User;
 use App\Notifications\DeliverableReviewed;
 use App\Notifications\DeliverableSubmitted;

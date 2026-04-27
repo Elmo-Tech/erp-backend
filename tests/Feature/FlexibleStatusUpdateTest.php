@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Enums\TaskStatus;
 use App\Modules\Project\Models\Project;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;

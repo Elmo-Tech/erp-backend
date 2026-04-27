@@ -3,7 +3,7 @@
 namespace App\Services\Reporting;
 
 use App\Modules\Project\Models\Project;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;

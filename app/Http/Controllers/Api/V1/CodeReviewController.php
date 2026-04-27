@@ -9,7 +9,7 @@ use App\Http\Requests\V1\Performance\UpdateCodeReviewRequest;
 use App\Http\Resources\V1\Performance\CodeReviewCollection;
 use App\Http\Resources\V1\Performance\CodeReviewResource;
 use App\Models\CodeReview;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\User;
 use App\Services\Performance\CodeReviewService;
 use Illuminate\Http\JsonResponse;

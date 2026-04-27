@@ -30,6 +30,18 @@ class ModuleServiceProvider extends ServiceProvider
     {
         Relation::morphMap([
             'App\Models\Project' => \App\Modules\Project\Models\Project::class,
+            'App\Models\RecurringTaskConfig' => \App\Modules\Task\Models\RecurringTaskConfig::class,
+            'App\Models\Task' => \App\Modules\Task\Models\Task::class,
+            'App\Models\TaskActivity' => \App\Modules\Task\Models\TaskActivity::class,
+            'App\Models\TaskAssignee' => \App\Modules\Task\Models\TaskAssignee::class,
+            'App\Models\TaskChecklist' => \App\Modules\Task\Models\TaskChecklist::class,
+            'App\Models\TaskChecklistItem' => \App\Modules\Task\Models\TaskChecklistItem::class,
+            'App\Models\TaskDeliverable' => \App\Modules\Task\Models\TaskDeliverable::class,
+            'App\Models\TaskDependency' => \App\Modules\Task\Models\TaskDependency::class,
+            'App\Models\TaskLabel' => \App\Modules\Task\Models\TaskLabel::class,
+            'App\Models\TaskTemplate' => \App\Modules\Task\Models\TaskTemplate::class,
+            'App\Models\TaskTestScenario' => \App\Modules\Task\Models\TaskTestScenario::class,
+            'App\Models\TaskTimeEstimate' => \App\Modules\Task\Models\TaskTimeEstimate::class,
         ]);
     }
 

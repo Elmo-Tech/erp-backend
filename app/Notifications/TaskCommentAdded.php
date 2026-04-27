@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;

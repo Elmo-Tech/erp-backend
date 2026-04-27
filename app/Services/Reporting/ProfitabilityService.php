@@ -196,7 +196,7 @@ class ProfitabilityService
 
         // Get task time entries for all tasks in this project
         $taskTimeEntries = TimeEntry::with('user')
-            ->where('trackable_type', \App\Models\Task::class)
+            ->where('trackable_type', \App\Modules\Task\Models\Task::class)
             ->whereIn('trackable_id', function ($query) use ($project) {
                 $query->select('id')
                     ->from('tasks')

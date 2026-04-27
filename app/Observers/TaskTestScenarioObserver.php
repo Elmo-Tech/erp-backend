@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Enums\TaskType;
-use App\Models\TaskTestScenario;
+use App\Modules\Task\Models\TaskTestScenario;
 use App\Services\Points\UnifiedPointService;
 
 /**

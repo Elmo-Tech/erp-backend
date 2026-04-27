@@ -12,6 +12,7 @@ use App\Http\Resources\V1\TimeEntries\TimeEntryResource;
 use App\Models\Lead;
 use App\Models\Quotation;
 use App\Models\TimeEntry;
+use App\Modules\Task\Models\Task;
 use App\Services\Sales\TimeTrackingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -293,7 +294,7 @@ class TimeEntryController extends Controller
             $trackableClass = match ($data['trackableType']) {
                 'lead' => Lead::class,
                 'quotation' => Quotation::class,
-                'task' => 'App\\Models\\Task', // For future implementation
+                'task' => Task::class,
                 default => null
             };
 

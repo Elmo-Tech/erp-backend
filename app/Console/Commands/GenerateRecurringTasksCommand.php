@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\RecurringTaskConfig;
+use App\Modules\Task\Models\RecurringTaskConfig;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;

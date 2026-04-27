@@ -7,7 +7,7 @@ use App\Enums\TaskStatus;
 use App\Models\Attendance;
 use App\Models\PointTransaction;
 use App\Modules\Project\Models\Project;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Carbon\Carbon;
@@ -21,7 +21,7 @@ class EmployeeReviewService
     /**
      * Cache filtered primary tasks per request to keep the reporting sections aligned.
      *
-     * @var array<string, \Illuminate\Support\Collection<int, \App\Models\Task>>
+     * @var array<string, \Illuminate\Support\Collection<int, \App\Modules\Task\Models\Task>>
      */
     private array $primaryTasksCache = [];
 

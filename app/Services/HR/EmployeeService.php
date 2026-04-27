@@ -3,7 +3,7 @@
 namespace App\Services\HR;
 
 use App\Models\Attendance;
-use App\Models\TaskAssignee;
+use App\Modules\Task\Models\TaskAssignee;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;

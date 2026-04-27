@@ -30,8 +30,6 @@ use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\SalesAnalyticsController;
 use App\Http\Controllers\Api\V1\SalesDashboardController;
-use App\Http\Controllers\Api\V1\TaskController;
-use App\Http\Controllers\Api\V1\TaskDeliverableController;
 use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -240,70 +238,6 @@ Route::prefix('v1')->group(function () {
     Route::get('employees/{id}/performance', [EmployeeController::class, 'performance'])->name('employees.performance');
     Route::post('employees/{id}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
     Route::post('employees/{id}/activate', [EmployeeController::class, 'activate'])->name('employees.activate');
-
-    // Task Management Routes
-    // All routes have auth:sanctum and locale middleware applied in controller
-
-    // My Assigned Tasks Route (tasks where user is team member) - MUST be before apiResource
-    Route::get('tasks/my-assigned', [TaskController::class, 'myAssignedTasks'])->name('tasks.my-assigned');
-
-    // Task CRUD Routes
-    Route::apiResource('tasks', TaskController::class);
-
-    // Task Dependencies Routes
-    Route::get('tasks/{task}/dependencies', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'index'])->name('tasks.dependencies.index');
-    Route::post('tasks/{task}/dependencies', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'store'])->name('tasks.dependencies.store');
-    Route::delete('task-dependencies/{dependency}', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'destroy'])->name('task-dependencies.destroy');
-
-    // Task Templates Routes
-    Route::apiResource('task-templates', \App\Http\Controllers\Api\V1\TaskTemplateController::class);
-    Route::post('task-templates/{template}/instantiate', [\App\Http\Controllers\Api\V1\TaskTemplateController::class, 'instantiate'])->name('task-templates.instantiate');
-
-    // Recurring Tasks Routes
-    Route::apiResource('recurring-tasks', \App\Http\Controllers\Api\V1\RecurringTaskController::class);
-    Route::post('recurring-tasks/{config}/generate', [\App\Http\Controllers\Api\V1\RecurringTaskController::class, 'generate'])->name('recurring-tasks.generate');
-
-    // Task Status Update Route (flexible status transitions)
-    Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
-
-    // Task Mark Complete Route (with timeline validation)
-    Route::post('tasks/{task}/mark-complete', [TaskController::class, 'markComplete'])->name('tasks.mark-complete');
-
-    // Task Children Route (for lazy loading hierarchy)
-    Route::get('tasks/{task}/children', [TaskController::class, 'children'])->name('tasks.children');
-
-    // Task Assignees Routes
-    Route::post('tasks/{task}/assignees', [TaskController::class, 'addAssignee'])->name('tasks.assignees.add');
-    Route::delete('tasks/{task}/assignees/{userId}', [TaskController::class, 'removeAssignee'])->name('tasks.assignees.remove');
-
-    // Task Test Scenarios Routes
-    Route::get('tasks/{task}/test-scenarios', [TaskController::class, 'testScenarios'])->name('tasks.test-scenarios.index');
-    Route::post('tasks/{task}/test-scenarios', [TaskController::class, 'addTestScenario'])->name('tasks.test-scenarios.add');
-    Route::post('test-scenarios/{scenario}/complete', [TaskController::class, 'completeTestScenario'])->name('test-scenarios.complete');
-    Route::post('test-scenarios/{scenario}/verify', [TaskController::class, 'verifyTestScenario'])->name('test-scenarios.verify');
-
-    // Task Activities & Comments Routes
-    Route::get('tasks/{task}/activities', [TaskController::class, 'activities'])->name('tasks.activities');
-    Route::post('tasks/{task}/comments', [TaskController::class, 'addComment'])->name('tasks.comments.add');
-
-    // Tags Route
-    Route::get('tags', [TaskController::class, 'tags'])->name('tags.index');
-
-    // Project Tasks Route (get tasks for a specific project with hierarchy)
-    Route::get('projects/{projectId}/tasks', [TaskController::class, 'projectTasks'])->name('projects.tasks');
-
-    // Project Points Summary Route
-    Route::get('projects/{projectId}/points-summary', [TaskController::class, 'pointsSummary'])->name('projects.points-summary');
-
-    // Task Deliverables Routes
-    // All routes have auth:sanctum and locale middleware applied in controller
-    Route::get('tasks/{taskId}/deliverables', [TaskDeliverableController::class, 'index'])->name('tasks.deliverables.index');
-    Route::post('tasks/{taskId}/deliverables', [TaskDeliverableController::class, 'store'])->name('tasks.deliverables.store');
-    Route::get('tasks/{taskId}/deliverables/{deliverableId}', [TaskDeliverableController::class, 'show'])->name('tasks.deliverables.show');
-    Route::put('tasks/{taskId}/deliverables/{deliverableId}', [TaskDeliverableController::class, 'update'])->name('tasks.deliverables.update');
-    Route::delete('tasks/{taskId}/deliverables/{deliverableId}', [TaskDeliverableController::class, 'destroy'])->name('tasks.deliverables.destroy');
-    Route::post('tasks/{taskId}/deliverables/{deliverableId}/submit', [TaskDeliverableController::class, 'submit'])->name('tasks.deliverables.submit');
-    Route::post('tasks/{taskId}/deliverables/{deliverableId}/review', [TaskDeliverableController::class, 'review'])->name('tasks.deliverables.review');
 
     // Admin Invoice Management Routes
     // All routes have auth:sanctum and locale middleware applied at route level

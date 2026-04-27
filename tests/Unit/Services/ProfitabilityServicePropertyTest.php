@@ -3,7 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Modules\Project\Models\Project;
-use App\Models\Task;
+use App\Modules\Task\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use App\Services\Reporting\ProfitabilityService;

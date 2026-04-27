@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\RecurringTaskConfig;
+use App\Modules\Task\Models\RecurringTaskConfig;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
