@@ -47,6 +47,13 @@ class ModuleServiceProvider extends ServiceProvider
             'App\Models\TaskTestScenario' => \App\Modules\Task\Models\TaskTestScenario::class,
             'App\Models\TaskTimeEstimate' => \App\Modules\Task\Models\TaskTimeEstimate::class,
             'App\Models\TimeEntry' => \App\Modules\TimeEntry\Models\TimeEntry::class,
+            'App\Models\Lead' => \App\Modules\Lead\Models\Lead::class,
+            'App\Models\LeadActivity' => \App\Modules\Lead\Models\LeadActivity::class,
+            'App\Models\LeadMeeting' => \App\Modules\Lead\Models\LeadMeeting::class,
+            'App\Models\LeadHistory' => \App\Modules\Lead\Models\LeadHistory::class,
+            'App\Models\Contract' => \App\Modules\Contract\Models\Contract::class,
+            'App\Models\ContractMilestone' => \App\Modules\Contract\Models\ContractMilestone::class,
+            'App\Models\ContractTemplate' => \App\Modules\Contract\Models\ContractTemplate::class,
         ]);
     }
 

@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\ChangeRequestController;
 use App\Http\Controllers\Api\V1\CodeReviewController;
-use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EnumController;
 use App\Http\Controllers\Api\V1\ExportController;
@@ -16,8 +15,6 @@ use App\Http\Controllers\Api\V1\GlobalSearchController;
 use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InnovationLogController;
-use App\Http\Controllers\Api\V1\LeadController;
-use App\Http\Controllers\Api\V1\LeadHistoryController;
 use App\Http\Controllers\Api\V1\MilestoneController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PerformanceEvaluationController;
@@ -49,21 +46,8 @@ Route::prefix('v1')->group(function () {
 
     // Sales & Pricing Engine Routes
     // All routes have auth:sanctum and locale middleware applied in controllers
-
-    // Lead Management Routes
-    Route::apiResource('leads', LeadController::class);
-    Route::get('leads-kanban', [LeadController::class, 'kanban'])->name('leads.kanban');
-    Route::get('leads-follow-ups', [LeadController::class, 'followUps'])->name('leads.follow-ups');
-    Route::patch('leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
-    Route::get('leads/{lead}/activities', [LeadController::class, 'activities'])->name('leads.activities');
-    Route::post('leads/{lead}/activities', [LeadController::class, 'addActivity'])->name('leads.add-activity');
-    Route::get('leads/{lead}/meetings', [LeadController::class, 'meetings'])->name('leads.meetings');
-    Route::post('leads/{lead}/meetings', [LeadController::class, 'scheduleMeeting'])->name('leads.schedule-meeting');
-    Route::put('leads/{lead}/meetings/{meeting}', [LeadController::class, 'updateMeeting'])->name('leads.update-meeting');
-
-    // Lead Conversion Routes
-    Route::get('leads/{lead}/can-convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'canConvert'])->name('leads.can-convert');
-    Route::post('leads/{lead}/convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'convert'])->name('leads.convert');
+    // Lead Management Routes → Moved to app/Modules/Lead/Routes/api.php
+    // Contract Management Routes → Moved to app/Modules/Contract/Routes/api.php
 
     // Activity Management Routes
     Route::apiResource('activities', ActivityController::class);
@@ -79,14 +63,7 @@ Route::prefix('v1')->group(function () {
     Route::get('schedule/today', [ActivityController::class, 'todaySchedule'])->name('schedule.today');
     Route::get('schedule/upcoming', [ActivityController::class, 'upcomingSchedule'])->name('schedule.upcoming');
 
-    // Audit Trail Routes
-    Route::get('leads/{lead}/history', [LeadHistoryController::class, 'leadHistory'])->name('leads.history');
-    Route::get('leads/{lead}/full-history', [LeadHistoryController::class, 'leadFullHistory'])->name('leads.full-history');
-    Route::get('leads/{lead}/history-stats', [LeadHistoryController::class, 'leadHistoryStats'])->name('leads.history-stats');
-    Route::get('proposals/{proposal}/history', [LeadHistoryController::class, 'proposalHistory'])->name('proposals.history');
-    Route::get('quotations/{quotation}/history', [LeadHistoryController::class, 'quotationHistory'])->name('quotations.history');
-    Route::get('audit/recent', [LeadHistoryController::class, 'recentActivity'])->name('audit.recent');
-    Route::get('audit/user/{userId}', [LeadHistoryController::class, 'userActivity'])->name('audit.user');
+    // Audit Trail Routes → Moved to app/Modules/Lead/Routes/api.php
 
     // Proposal Management Routes (Technical Proposals)
     Route::apiResource('proposals', ProposalController::class);
@@ -106,20 +83,7 @@ Route::prefix('v1')->group(function () {
     Route::get('quotations-expiring', [QuotationController::class, 'expiring'])->name('quotations.expiring');
     Route::get('quotations-overdue', [QuotationController::class, 'overdue'])->name('quotations.overdue');
 
-    // Contract Management Routes
-    Route::get('contracts/milestones/due', [ContractController::class, 'dueMilestones'])->name('contracts.milestones.due');
-    Route::patch('contracts/milestones/{milestone}/paid', [ContractController::class, 'markMilestonePaid'])->name('contracts.milestones.paid');
-    Route::post('contracts', [ContractController::class, 'store'])->name('contracts.store');
-    Route::post('contracts/from-quotation/{quotation}', [ContractController::class, 'createFromQuotation'])->name('contracts.create-from-quotation');
-    Route::post('quotations/{quotation}/contract', [ContractController::class, 'createFromQuotation'])->name('contracts.generate-from-quotation');
-    Route::post('contracts/{contract}/sign', [ContractController::class, 'sign'])->name('contracts.sign');
-    Route::patch('contracts/{contract}/sign', [ContractController::class, 'signPatch'])->name('contracts.sign.patch');
-    Route::post('contracts/{contract}/activate', [ContractController::class, 'activate'])->name('contracts.activate');
-    Route::patch('contracts/{contract}/status', [ContractController::class, 'updateStatus'])->name('contracts.update-status');
-    Route::get('contracts', [ContractController::class, 'index'])->name('contracts.index');
-    Route::get('contracts/{contract}', [ContractController::class, 'show'])->name('contracts.show');
-    Route::put('contracts/{contract}', [ContractController::class, 'update'])->name('contracts.update');
-    Route::delete('contracts/{contract}', [ContractController::class, 'destroy'])->name('contracts.destroy');
+    // Contract Management Routes → Moved to app/Modules/Contract/Routes/api.php
 
     // Change Request Routes
     Route::get('projects/{project}/change-requests', [ChangeRequestController::class, 'index'])->name('change-requests.index');
