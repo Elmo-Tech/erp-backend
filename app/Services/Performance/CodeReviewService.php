@@ -5,7 +5,7 @@ namespace App\Services\Performance;
 use App\Enums\CodeReviewStatus;
 use App\Models\CodeReview;
 use App\Modules\Task\Models\Task;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Support\Carbon;
 
 class CodeReviewService

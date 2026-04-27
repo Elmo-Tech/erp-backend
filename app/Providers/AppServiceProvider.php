@@ -10,7 +10,7 @@ use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskDeliverable;
 use App\Modules\Task\Models\TaskTestScenario;
-use App\Models\TimeEntry;
+use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Observers\CodeReviewObserver;
 use App\Observers\InnovationLogObserver;
 use App\Observers\ProjectObserver;

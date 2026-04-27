@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Http\Resources;
 
-use App\Http\Resources\V1\Admin\AdminUserResource;
-use App\Models\User;
+use App\Modules\User\Resources\AdminUserResource;
+use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;

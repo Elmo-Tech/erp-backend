@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\PointTransactionType;
 use App\Models\PointTransaction;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Services\Reporting\EmployeeReviewService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -64,7 +64,7 @@ class EmployeeReviewPointsDeduplicationTest extends TestCase
         $this->travelTo($createdAt);
 
         // Create a legacy UserPoint (should NOT appear in results)
-        \App\Models\UserPoint::create([
+        \App\Modules\User\Models\UserPoint::create([
             'user_id' => $user->id,
             'points_change' => -2,
             'points_before' => 10,

@@ -4,7 +4,7 @@ namespace Tests\Unit\Services;
 
 use App\Models\AuditLog;
 use App\Modules\Project\Models\Project;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Modules\Client\Actions\LogClientAuditAction;
 use Eris\Generator;
 use Eris\TestTrait;

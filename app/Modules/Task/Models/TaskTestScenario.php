@@ -2,7 +2,7 @@
 
 namespace App\Modules\Task\Models;
 
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
 use Database\Factories\TaskTestScenarioFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

@@ -5,7 +5,7 @@ namespace Tests\Unit\Policies;
 use App\Enums\InvoiceStatus;
 use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Policies\InvoicePolicy;
 use Eris\Generator;
 use Eris\TestTrait;

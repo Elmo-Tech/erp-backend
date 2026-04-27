@@ -8,7 +8,7 @@ use App\Enums\ReminderType;
 use App\Models\ActivityReminder;
 use App\Models\LeadActivity;
 use App\Models\LeadMeeting;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;

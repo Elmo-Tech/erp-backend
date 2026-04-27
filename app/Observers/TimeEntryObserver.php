@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Modules\Task\Models\Task;
-use App\Models\TimeEntry;
+use App\Modules\TimeEntry\Models\TimeEntry;
 
 /**
  * Observer for TimeEntry model to handle bubble-up time aggregation.

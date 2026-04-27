@@ -4,16 +4,12 @@ use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\Admin\AdminDeliverableController;
 use App\Http\Controllers\Api\V1\AdminRoleController;
 use App\Http\Controllers\Api\V1\AdminStatsController;
-use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
-use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuditLogController;
-use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChangeRequestController;
 use App\Http\Controllers\Api\V1\CodeReviewController;
 use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\DashboardController;
-use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\EnumController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\GlobalSearchController;
@@ -30,8 +26,6 @@ use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\SalesAnalyticsController;
 use App\Http\Controllers\Api\V1\SalesDashboardController;
 use App\Http\Controllers\Api\V1\TemplateController;
-use App\Http\Controllers\Api\V1\TimeEntryController;
-use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -52,33 +46,6 @@ Broadcast::routes(['middleware' => ['auth:sanctum']]);
 Route::prefix('v1')->group(function () {
     // Health check endpoint
     Route::get('/health', HealthController::class)->name('api.v1.health');
-
-    // Authentication Routes
-    // Security: Rate limiting applied to prevent brute force attacks
-    // Registration is disabled by default - use admin panel to create users
-    Route::prefix('auth')->group(function () {
-        // Login with rate limiting (5 attempts per minute)
-        Route::post('login', [AuthController::class, 'login'])
-            ->middleware('throttle:5,1')
-            ->name('auth.login');
-
-        // Registration disabled for security - users created via admin panel
-        // To enable registration, uncomment the line below and add throttle middleware
-        // Route::post('register', [AuthController::class, 'register'])
-        //     ->middleware('throttle:3,1')
-        //     ->name('auth.register');
-
-        // Protected auth routes
-        Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
-        Route::get('profile', [AuthController::class, 'profile'])->name('auth.profile');
-        Route::put('profile', [AuthController::class, 'updateProfile'])->name('auth.profile.update');
-        Route::post('profile/avatar', [AuthController::class, 'updateAvatar'])->name('auth.profile.avatar');
-
-        // Password change route (authenticated users only)
-        Route::post('change-password', [AuthController::class, 'changePassword'])
-            ->middleware('auth:sanctum')
-            ->name('auth.change-password');
-    });
 
     // Sales & Pricing Engine Routes
     // All routes have auth:sanctum and locale middleware applied in controllers
@@ -209,35 +176,6 @@ Route::prefix('v1')->group(function () {
         Route::post('clear-cache', [AnalyticsController::class, 'clearCache'])->name('analytics.clear-cache');
     });
 
-    // Time Entry Routes
-    Route::post('time-entries/start', [TimeEntryController::class, 'start'])->name('time-entries.start');
-    Route::post('time-entries/stop', [TimeEntryController::class, 'stop'])->name('time-entries.stop');
-    Route::get('time-entries', [TimeEntryController::class, 'index'])->name('time-entries.index');
-    Route::get('time-entries/active', [TimeEntryController::class, 'active'])->name('time-entries.active');
-    Route::get('time-entries/active-timers', [TimeEntryController::class, 'activeTimers'])->name('time-entries.active-timers');
-    Route::post('time-entries/{id}/stop-admin', [TimeEntryController::class, 'stopTimerAdmin'])->name('time-entries.stop-admin');
-    Route::put('time-entries/{id}', [TimeEntryController::class, 'update'])->name('time-entries.update');
-    Route::get('time-entries/all', [TimeEntryController::class, 'all'])->name('time-entries.all');
-
-    // Attendance Routes
-    // All routes have auth:sanctum and locale middleware applied in controller
-    Route::get('attendance/today', [AttendanceController::class, 'today'])->name('attendance.today');
-    Route::get('attendance/history', [AttendanceController::class, 'history'])->name('attendance.history');
-    Route::get('attendance/summary', [AttendanceController::class, 'summary'])->name('attendance.summary');
-    Route::post('attendance/clock-out', [AttendanceController::class, 'clockOut'])->name('attendance.clock-out');
-    Route::get('attendance/all', [AttendanceController::class, 'all'])->name('attendance.all');
-    Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
-    Route::put('attendance/{id}', [AttendanceController::class, 'update'])->name('attendance.update');
-    Route::post('attendance/{id}/deduction', [AttendanceController::class, 'addDeduction'])->name('attendance.add-deduction');
-    Route::post('attendance/{id}/grace-day', [AttendanceController::class, 'markGraceDay'])->name('attendance.mark-grace-day');
-    Route::delete('attendance/{id}/grace-day', [AttendanceController::class, 'removeGraceDay'])->name('attendance.remove-grace-day');
-
-    // Employee Management Routes
-    Route::apiResource('employees', EmployeeController::class)->except(['destroy']);
-    Route::get('employees/{id}/performance', [EmployeeController::class, 'performance'])->name('employees.performance');
-    Route::post('employees/{id}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
-    Route::post('employees/{id}/activate', [EmployeeController::class, 'activate'])->name('employees.activate');
-
     // Milestone Management Routes
     Route::prefix('milestones')->middleware(['auth:sanctum', 'locale'])->group(function () {
         Route::get('{id}', [MilestoneController::class, 'show'])->name('milestones.show');
@@ -275,16 +213,6 @@ Route::prefix('v1')->group(function () {
         // Admin Role Management Routes
         Route::apiResource('roles', AdminRoleController::class);
         Route::get('permissions', [AdminRoleController::class, 'permissions'])->name('admin.permissions');
-
-        // Admin User Management Routes (Internal Costs)
-        Route::get('users', [AdminUserController::class, 'index'])->name('admin.users.index');
-        Route::put('users/{id}/internal-cost', [AdminUserController::class, 'updateInternalCost'])->name('admin.users.update-internal-cost');
-        Route::put('users/internal-costs', [AdminUserController::class, 'bulkUpdateInternalCosts'])->name('admin.users.bulk-update-internal-costs');
-
-        // User Management Routes (CRUD)
-        Route::apiResource('users/manage', UserController::class)->parameters(['manage' => 'user']);
-        Route::post('users/manage/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
-        Route::put('users/manage/{user}/roles', [UserController::class, 'assignRoles'])->name('admin.users.assign-roles');
 
         // Admin Audit Log Routes
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
@@ -343,21 +271,6 @@ Route::prefix('v1')->group(function () {
         Route::post('/{id}/verify', [InnovationLogController::class, 'verify'])->name('innovation-logs.verify');
         Route::post('/{id}/reject', [InnovationLogController::class, 'reject'])->name('innovation-logs.reject');
         Route::delete('/{id}', [InnovationLogController::class, 'destroy'])->name('innovation-logs.destroy');
-    });
-
-    // User Points Management Routes
-    Route::prefix('user-points')->group(function () {
-        Route::get('/transaction-types', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'getTransactionTypes'])->name('user-points.transaction-types');
-        Route::get('/', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'index'])->name('user-points.index');
-        Route::post('/add', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'addPoints'])->name('user-points.add');
-        Route::post('/deduct', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'deductPoints'])->name('user-points.deduct');
-        Route::post('/set', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'setPoints'])->name('user-points.set');
-        Route::get('/history/{userId}', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'history'])->name('user-points.history');
-        Route::get('/unified-history/{userId}', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'getUnifiedHistory'])->name('user-points.unified-history');
-        Route::delete('/transaction/{transactionId}', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'deleteTransaction'])->name('user-points.delete-transaction');
-        Route::get('/leaderboard', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'leaderboard'])->name('user-points.leaderboard');
-        Route::get('/statistics', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'statistics'])->name('user-points.statistics');
-        Route::get('/report', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'report'])->name('user-points.report');
     });
 
     // Enum Routes

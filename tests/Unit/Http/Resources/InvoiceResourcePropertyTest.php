@@ -5,7 +5,7 @@ namespace Tests\Unit\Http\Resources;
 use App\Modules\Invoice\Resources\Invoices\InvoiceResource;
 use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Carbon\Carbon;
 use Eris\Generator;
 use Eris\TestTrait;

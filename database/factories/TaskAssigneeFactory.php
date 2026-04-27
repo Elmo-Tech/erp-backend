@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskAssignee;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -4,7 +4,7 @@ namespace Tests\Unit\Scopes;
 
 use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Scopes\ClientScope;
 use Eris\Generator;
 use Eris\TestTrait;

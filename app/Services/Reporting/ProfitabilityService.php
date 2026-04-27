@@ -3,8 +3,8 @@
 namespace App\Services\Reporting;
 
 use App\Modules\Project\Models\Project;
-use App\Models\TimeEntry;
-use App\Models\User;
+use App\Modules\TimeEntry\Models\TimeEntry;
+use App\Modules\User\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;

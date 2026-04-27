@@ -12,7 +12,7 @@ use App\Enums\TaskType;
 use App\Models\Lead;
 use App\Models\Proposal;
 use App\Modules\Task\Models\Task;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;

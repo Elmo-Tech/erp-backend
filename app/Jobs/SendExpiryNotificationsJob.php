@@ -6,7 +6,7 @@ use App\Enums\ProposalStatus;
 use App\Enums\QuotationStatus;
 use App\Models\Proposal;
 use App\Models\Quotation;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Notifications\ProposalExpiringNotification;
 use App\Notifications\QuotationExpiring;
 use Illuminate\Bus\Queueable;

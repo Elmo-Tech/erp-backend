@@ -7,7 +7,7 @@ use App\Enums\TaskType;
 use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Services\Sales\TimeTrackingService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;

@@ -3,7 +3,7 @@
 namespace Tests\Feature\TaskModule;
 
 use App\Enums\TaskStatus;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Modules\Task\Actions\UpdateTaskStatusAction;
 use App\Modules\Task\Models\Task;
 use App\Services\Tasks\TaskNotificationService;

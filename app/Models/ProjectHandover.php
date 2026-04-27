@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Modules\User\Models\User;
+
 use App\Enums\HandoverStatus;
 use App\Modules\Project\Models\Project;
 use App\Traits\HasCreatedUpdatedBy;

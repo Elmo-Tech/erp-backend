@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\InnovationLog;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Console\Command;
 
 class CreateTestInnovationLogCommand extends Command

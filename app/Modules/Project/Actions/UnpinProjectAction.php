@@ -2,7 +2,7 @@
 
 namespace App\Modules\Project\Actions;
 
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Modules\Project\Models\Project;
 use RuntimeException;
 

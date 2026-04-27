@@ -5,7 +5,7 @@ namespace App\Services\Performance;
 use App\Enums\BonusTier;
 use App\Models\EvaluationPeriod;
 use App\Models\PerformanceEvaluation;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Support\Collection;
 
 class BonusCalculationService

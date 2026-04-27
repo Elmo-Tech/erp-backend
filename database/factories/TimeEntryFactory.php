@@ -2,12 +2,12 @@
 
 namespace Database\Factories;
 
-use App\Models\TimeEntry;
-use App\Models\User;
+use App\Modules\TimeEntry\Models\TimeEntry;
+use App\Modules\User\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\TimeEntry>
+ * @extends Factory<TimeEntry>
  */
 class TimeEntryFactory extends Factory
 {

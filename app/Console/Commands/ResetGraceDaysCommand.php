@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\HR\AttendanceService;
+use App\Modules\Attendance\Actions\AttendanceService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -47,7 +47,7 @@ class ResetGraceDaysCommand extends Command
 
         if ($isDryRun) {
             // Show what would be reset
-            $employees = \App\Models\User::employees()
+            $employees = \App\Modules\User\Models\User::employees()
                 ->where(function ($query) {
                     $query->where('grace_days_used', '>', 0)
                         ->orWhere('total_deductions', '>', 0);
@@ -66,7 +66,7 @@ class ResetGraceDaysCommand extends Command
                 ])
             );
 
-            $totalEmployees = \App\Models\User::employees()->count();
+            $totalEmployees = \App\Modules\User\Models\User::employees()->count();
             $this->info("📊 Would reset grace days and deductions for {$totalEmployees} employees");
             $this->info("📊 {$employees->count()} employees currently have used grace days or deductions");
 

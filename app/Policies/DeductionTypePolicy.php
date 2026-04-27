@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\DeductionType;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class DeductionTypePolicy

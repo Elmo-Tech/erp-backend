@@ -3,7 +3,7 @@
 namespace Tests\Unit\Policies;
 
 use App\Modules\Project\Models\Project;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Policies\ProjectPolicy;
 use Eris\Generator;
 use Eris\TestTrait;

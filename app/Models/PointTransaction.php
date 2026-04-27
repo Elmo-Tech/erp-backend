@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Modules\User\Models\User;
+
 use App\Enums\PointTransactionType;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

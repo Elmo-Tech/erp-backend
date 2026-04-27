@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Modules\User\Models\User;
+
 use App\Contracts\Trackable;
 use App\Enums\IndustrySector;
 use App\Enums\LeadPriority;
@@ -10,6 +12,7 @@ use App\Enums\LeadStatus;
 use App\Enums\LeadTemperature;
 use App\Enums\ReferenceType;
 use App\Modules\Client\Models\Client;
+use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Traits\HasAuditTrail;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

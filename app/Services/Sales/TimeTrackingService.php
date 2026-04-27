@@ -5,11 +5,13 @@ namespace App\Services\Sales;
 use App\Contracts\Trackable;
 use App\Enums\TaskStatus;
 use App\Events\TimerUpdated;
-use App\Models\Attendance;
+use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Task\Models\Task;
-use App\Models\TimeEntry;
-use App\Models\User;
-use App\Services\HR\AttendanceService;
+use App\Modules\TimeEntry\Actions\StartTimeEntryAction;
+use App\Modules\TimeEntry\Actions\StopTimeEntryAction;
+use App\Modules\TimeEntry\Models\TimeEntry;
+use App\Modules\User\Models\User;
+use App\Modules\Attendance\Actions\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
@@ -18,9 +20,13 @@ use RuntimeException;
 class TimeTrackingService
 {
     public function __construct(
-        private ?AttendanceService $attendanceService = null
+        private ?AttendanceService $attendanceService = null,
+        private ?StartTimeEntryAction $startTimeEntryAction = null,
+        private ?StopTimeEntryAction $stopTimeEntryAction = null,
     ) {
         $this->attendanceService = $attendanceService ?? app(AttendanceService::class);
+        $this->startTimeEntryAction = $startTimeEntryAction ?? app(StartTimeEntryAction::class);
+        $this->stopTimeEntryAction = $stopTimeEntryAction ?? app(StopTimeEntryAction::class);
     }
 
     /**
@@ -33,34 +39,7 @@ class TimeTrackingService
      */
     public function startTimer(User $user, Trackable $trackable): TimeEntry
     {
-        // Check if user already has an active timer
-        $activeTimer = $this->getActiveTimer($user);
-        if ($activeTimer) {
-            throw new RuntimeException('User already has an active timer. Stop it before starting a new one.');
-        }
-
-        // Validate task hierarchy - timer only allowed on leaf tasks (no children)
-        if ($trackable instanceof Task) {
-            $this->validateTaskCanHaveTimer($trackable);
-
-            // Auto-update task status and start_date
-            $this->updateTaskOnTimerStart($trackable);
-        }
-
-        // Smart Attendance: Create attendance if first timer of day
-        $this->ensureAttendanceRecord($user);
-
-        $timeEntry = TimeEntry::create([
-            'user_id' => $user->id,
-            'trackable_id' => $trackable->getKey(),
-            'trackable_type' => get_class($trackable),
-            'start_time' => Carbon::now('Africa/Cairo'),
-        ]);
-
-        // Broadcast timer started event
-        broadcast(new TimerUpdated($user->id, 'started', $timeEntry))->toOthers();
-
-        return $timeEntry;
+        return $this->startTimeEntryAction->execute($user, $trackable);
     }
 
     /**
@@ -114,25 +93,7 @@ class TimeTrackingService
      */
     public function stopTimer(User $user): TimeEntry
     {
-        $activeTimer = $this->getActiveTimer($user);
-
-        if (! $activeTimer) {
-            throw new RuntimeException('No active timer found for this user.');
-        }
-
-        $endTime = Carbon::now('Africa/Cairo');
-        // Calculate duration in minutes, rounded down as per Requirements 5.4, 5.5
-        $durationMinutes = (int) floor($activeTimer->start_time->diffInSeconds($endTime) / 60);
-
-        $activeTimer->update([
-            'end_time' => $endTime,
-            'duration_minutes' => $durationMinutes,
-        ]);
-
-        // Broadcast timer stopped event
-        broadcast(new TimerUpdated($user->id, 'stopped', null))->toOthers();
-
-        return $activeTimer->fresh();
+        return $this->stopTimeEntryAction->execute($user);
     }
 
     /**

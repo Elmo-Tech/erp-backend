@@ -10,8 +10,8 @@ use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskActivity;
 use App\Modules\Task\Models\TaskAssignee;
 use App\Modules\Task\Models\TaskTestScenario;
-use App\Models\TimeEntry;
-use App\Models\User;
+use App\Modules\TimeEntry\Models\TimeEntry;
+use App\Modules\User\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 

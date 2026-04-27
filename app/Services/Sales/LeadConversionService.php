@@ -7,7 +7,7 @@ use App\Enums\LeadStatus;
 use App\Modules\Client\Models\Client;
 use App\Models\Contract;
 use App\Models\Lead;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class LeadConversionService

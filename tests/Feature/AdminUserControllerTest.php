@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;

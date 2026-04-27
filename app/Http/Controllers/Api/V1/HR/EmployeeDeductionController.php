@@ -61,7 +61,7 @@ class EmployeeDeductionController extends Controller
                 $rule = $deductionType->rules()->active()->first();
 
                 if ($rule) {
-                    $user = \App\Models\User::find($validated['user_id']);
+                    $user = \App\Modules\User\Models\User::find($validated['user_id']);
                     $baseSalary = $user->salary ?? 0;
                     $validated['amount'] = $rule->calculateDeduction(
                         $validated['occurrences'] ?? 1,

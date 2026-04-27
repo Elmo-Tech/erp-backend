@@ -5,7 +5,7 @@ namespace App\Services\Points;
 use App\Enums\PointTransactionType;
 use App\Models\PointPeriod;
 use App\Models\PointTransaction;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 

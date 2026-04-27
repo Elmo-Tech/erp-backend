@@ -12,7 +12,7 @@ use App\Models\LeadActivity;
 use App\Models\LeadMeeting;
 use App\Models\Proposal;
 use App\Models\Quotation;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 

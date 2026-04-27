@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Modules\User\Models\User;
+
 use App\Enums\CodeReviewStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

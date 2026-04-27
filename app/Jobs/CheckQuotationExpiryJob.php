@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Quotation;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Notifications\QuotationExpiring;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

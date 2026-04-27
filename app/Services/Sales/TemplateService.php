@@ -5,7 +5,7 @@ namespace App\Services\Sales;
 use App\Models\ContractTemplate;
 use App\Models\ProposalTemplate;
 use App\Models\Quotation;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 
 class TemplateService

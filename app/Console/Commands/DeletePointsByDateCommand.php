@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\PointTransaction;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;

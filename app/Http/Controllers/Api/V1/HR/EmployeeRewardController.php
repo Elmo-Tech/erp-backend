@@ -58,7 +58,7 @@ class EmployeeRewardController extends Controller
             // Calculate amount if not provided
             if (! isset($validated['amount']) || $validated['amount'] == 0) {
                 $rewardType = RewardType::find($validated['reward_type_id']);
-                $user = \App\Models\User::find($validated['user_id']);
+                $user = \App\Modules\User\Models\User::find($validated['user_id']);
 
                 $params = [
                     'base_salary' => $user->salary ?? 0,
@@ -299,7 +299,7 @@ class EmployeeRewardController extends Controller
             'reason' => 'nullable|string|max:1000',
         ]);
 
-        $user = \App\Models\User::findOrFail($validated['user_id']);
+        $user = \App\Modules\User\Models\User::findOrFail($validated['user_id']);
         $rewardType = RewardType::findOrFail($validated['reward_type_id']);
 
         // Check if user has enough points

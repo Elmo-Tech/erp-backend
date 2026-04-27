@@ -3,7 +3,7 @@
 namespace App\Modules\Task\Actions;
 
 use App\Enums\TaskStatus;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskActivity;
 use App\Services\Tasks\TaskNotificationService;

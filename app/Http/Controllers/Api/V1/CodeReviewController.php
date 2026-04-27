@@ -10,7 +10,7 @@ use App\Http\Resources\V1\Performance\CodeReviewCollection;
 use App\Http\Resources\V1\Performance\CodeReviewResource;
 use App\Models\CodeReview;
 use App\Modules\Task\Models\Task;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Services\Performance\CodeReviewService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

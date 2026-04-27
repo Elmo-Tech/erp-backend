@@ -3,10 +3,10 @@
 namespace App\Services\Reporting;
 
 use App\Enums\TaskStatus;
-use App\Models\Attendance;
+use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Task\Models\Task;
-use App\Models\TimeEntry;
-use App\Models\User;
+use App\Modules\TimeEntry\Models\TimeEntry;
+use App\Modules\User\Models\User;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Modules\User\Models\User;
+
 use App\Enums\ActivityStatus;
 use App\Enums\ActivityType;
 use App\Traits\HasCreatedUpdatedBy;

@@ -9,7 +9,7 @@ use App\Models\Contract;
 use App\Modules\Invoice\Models\Invoice;
 use App\Models\Lead;
 use App\Models\Quotation;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 

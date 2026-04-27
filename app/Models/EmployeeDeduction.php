@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Modules\Attendance\Models\Attendance;
+use App\Modules\User\Models\User;
+
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

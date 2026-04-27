@@ -6,8 +6,8 @@ use App\Models\Lead;
 use App\Modules\Project\Models\Project;
 use App\Models\Quotation;
 use App\Modules\Task\Models\Task;
-use App\Models\TimeEntry;
-use App\Models\User;
+use App\Modules\TimeEntry\Models\TimeEntry;
+use App\Modules\User\Models\User;
 use Illuminate\Database\Seeder;
 
 class TestDataSeeder extends Seeder

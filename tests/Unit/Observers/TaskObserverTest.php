@@ -5,7 +5,7 @@ namespace Tests\Unit\Observers;
 use App\Enums\TaskStatus;
 use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;

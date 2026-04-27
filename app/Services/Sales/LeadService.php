@@ -7,7 +7,7 @@ use App\Enums\LeadStatus;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\LeadMeeting;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;

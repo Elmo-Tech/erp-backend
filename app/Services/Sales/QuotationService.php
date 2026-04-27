@@ -7,7 +7,7 @@ use App\Enums\QuotationStatus;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Models\QuotationMilestone;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;

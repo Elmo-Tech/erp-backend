@@ -11,7 +11,7 @@ use App\Models\Contract;
 use App\Models\ContractMilestone;
 use App\Modules\Project\Models\Project;
 use App\Models\Quotation;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Modules\Project\Actions\ConvertQuotationToProjectAction;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;

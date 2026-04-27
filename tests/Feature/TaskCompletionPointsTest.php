@@ -8,7 +8,7 @@ use App\Enums\TaskType;
 use App\Models\PointTransaction;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskAssignee;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

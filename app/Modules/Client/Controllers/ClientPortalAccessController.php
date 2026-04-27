@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Client\Models\Client;
 use App\Modules\Client\Requests\CreatePortalAccessRequest;
 use App\Modules\Client\Resources\ClientResource;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Notifications\ClientPortalAccessCreated;
 use App\Services\Sales\LeadConversionService;
 use Illuminate\Http\JsonResponse;

@@ -4,7 +4,7 @@ namespace App\Policies;
 
 use App\Enums\TaskType;
 use App\Modules\Task\Models\Task;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 /**

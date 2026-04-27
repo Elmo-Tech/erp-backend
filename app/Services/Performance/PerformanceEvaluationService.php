@@ -3,13 +3,13 @@
 namespace App\Services\Performance;
 
 use App\Enums\TaskStatus;
-use App\Models\Attendance;
+use App\Modules\Attendance\Models\Attendance;
 use App\Models\CodeReview;
 use App\Models\EvaluationPeriod;
 use App\Models\InnovationLog;
 use App\Models\PerformanceEvaluation;
 use App\Modules\Task\Models\Task;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Support\Carbon;
 
 class PerformanceEvaluationService

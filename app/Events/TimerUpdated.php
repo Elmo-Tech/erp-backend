@@ -2,8 +2,8 @@
 
 namespace App\Events;
 
-use App\Http\Resources\V1\TimeEntries\TimeEntryResource;
-use App\Models\TimeEntry;
+use App\Modules\TimeEntry\Resources\TimeEntryResource;
+use App\Modules\TimeEntry\Models\TimeEntry;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;

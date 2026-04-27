@@ -3,7 +3,7 @@
 namespace App\Services\Tasks;
 
 use App\Modules\Task\Models\Task;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Notifications\TaskAssigned;
 use App\Notifications\TaskCommentAdded;
 use App\Notifications\TaskStatusChanged;

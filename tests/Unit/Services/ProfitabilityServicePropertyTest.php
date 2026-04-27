@@ -4,8 +4,8 @@ namespace Tests\Unit\Services;
 
 use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
-use App\Models\TimeEntry;
-use App\Models\User;
+use App\Modules\TimeEntry\Models\TimeEntry;
+use App\Modules\User\Models\User;
 use App\Services\Reporting\ProfitabilityService;
 use Eris\Generator;
 use Eris\TestTrait;

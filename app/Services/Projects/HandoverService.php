@@ -5,7 +5,7 @@ namespace App\Services\Projects;
 use App\Enums\HandoverStatus;
 use App\Modules\Project\Models\Project;
 use App\Models\ProjectHandover;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;

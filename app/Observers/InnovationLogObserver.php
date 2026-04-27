@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Models\InnovationLog;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Notifications\InnovationLogSubmitted;
 use App\Notifications\InnovationLogVerified;
 use Illuminate\Support\Facades\Notification;

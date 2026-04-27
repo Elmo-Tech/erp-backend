@@ -29,6 +29,9 @@ class ModuleServiceProvider extends ServiceProvider
     private function registerLegacyMorphAliases(): void
     {
         Relation::morphMap([
+            'App\Models\User' => \App\Modules\User\Models\User::class,
+            'App\Models\UserPoint' => \App\Modules\User\Models\UserPoint::class,
+            'App\Models\Attendance' => \App\Modules\Attendance\Models\Attendance::class,
             'App\Models\Invoice' => \App\Modules\Invoice\Models\Invoice::class,
             'App\Models\Project' => \App\Modules\Project\Models\Project::class,
             'App\Models\RecurringTaskConfig' => \App\Modules\Task\Models\RecurringTaskConfig::class,
@@ -43,6 +46,7 @@ class ModuleServiceProvider extends ServiceProvider
             'App\Models\TaskTemplate' => \App\Modules\Task\Models\TaskTemplate::class,
             'App\Models\TaskTestScenario' => \App\Modules\Task\Models\TaskTestScenario::class,
             'App\Models\TaskTimeEstimate' => \App\Modules\Task\Models\TaskTimeEstimate::class,
+            'App\Models\TimeEntry' => \App\Modules\TimeEntry\Models\TimeEntry::class,
         ]);
     }
 

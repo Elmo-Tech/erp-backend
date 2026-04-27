@@ -3,7 +3,7 @@
 namespace Tests\Feature\InvoiceModule;
 
 use App\Enums\InvoiceStatus;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Modules\Invoice\Actions\UpdateInvoiceStatusAction;
 use App\Modules\Invoice\Models\Invoice;
 use Illuminate\Foundation\Testing\RefreshDatabase;

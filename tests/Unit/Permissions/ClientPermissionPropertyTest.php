@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Permissions;
 
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;

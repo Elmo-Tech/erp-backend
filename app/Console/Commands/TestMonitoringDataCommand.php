@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Services\Reporting\EmployeeReviewService;
 use Database\Seeders\TestDataSeeder;
 use Illuminate\Console\Command;

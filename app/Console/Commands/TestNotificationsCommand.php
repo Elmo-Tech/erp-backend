@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\InnovationLog;
 use App\Modules\Task\Models\Task;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Notifications\InnovationLogSubmitted;
 use App\Notifications\InnovationLogVerified;
 use App\Notifications\TaskAssigned;

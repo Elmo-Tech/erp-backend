@@ -10,7 +10,7 @@ use App\Models\PointTransaction;
 use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskDeliverable;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Notifications\DeliverableReviewed;
 use App\Notifications\DeliverableSubmitted;
 use App\Services\Tasks\DeliverableService;

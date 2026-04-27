@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Services\Reporting\EmployeeReviewService;
 use App\Services\Reporting\PdfService;
 use App\Services\Reporting\ProfitabilityService;

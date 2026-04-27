@@ -7,7 +7,7 @@ use App\Models\AuditLog;
 use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectHistory;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Carbon\Carbon;
 use Eris\Generator;
 use Eris\TestTrait;

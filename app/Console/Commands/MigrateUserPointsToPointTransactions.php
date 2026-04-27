@@ -4,8 +4,8 @@ namespace App\Console\Commands;
 
 use App\Enums\PointTransactionType;
 use App\Models\PointTransaction;
-use App\Models\User;
-use App\Models\UserPoint;
+use App\Modules\User\Models\User;
+use App\Modules\User\Models\UserPoint;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 

@@ -12,7 +12,7 @@ use App\Http\Resources\V1\Performance\PerformanceEvaluationCollection;
 use App\Http\Resources\V1\Performance\PerformanceEvaluationResource;
 use App\Models\EvaluationPeriod;
 use App\Models\PerformanceEvaluation;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Services\Performance\BonusCalculationService;
 use App\Services\Performance\PerformanceEvaluationService;
 use Illuminate\Http\JsonResponse;

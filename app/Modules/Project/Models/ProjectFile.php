@@ -2,7 +2,7 @@
 
 namespace App\Modules\Project\Models;
 
-use App\Models\User;
+use App\Modules\User\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

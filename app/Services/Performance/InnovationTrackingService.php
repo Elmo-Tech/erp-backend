@@ -3,7 +3,7 @@
 namespace App\Services\Performance;
 
 use App\Models\InnovationLog;
-use App\Models\User;
+use App\Modules\User\Models\User;
 use Illuminate\Support\Carbon;
 
 class InnovationTrackingService
