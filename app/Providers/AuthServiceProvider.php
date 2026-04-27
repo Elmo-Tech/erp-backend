@@ -5,7 +5,7 @@ namespace App\Providers;
 use App\Models\DeductionType;
 use App\Models\EmployeeDeduction;
 use App\Models\EmployeeReward;
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
 use App\Models\RewardType;
 use App\Models\SalaryAdjustment;

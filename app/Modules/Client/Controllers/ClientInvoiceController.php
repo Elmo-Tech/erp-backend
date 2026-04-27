@@ -8,7 +8,7 @@ use App\Modules\Client\Actions\LogClientAuditAction;
 use App\Modules\Client\Actions\MarkInvoiceAsPaidAction;
 use App\Modules\Client\Resources\ClientInvoiceCollection;
 use App\Modules\Client\Resources\ClientInvoiceResource;
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

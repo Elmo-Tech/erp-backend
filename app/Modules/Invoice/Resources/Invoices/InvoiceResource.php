@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Resources\V1\Invoices;
+namespace App\Modules\Invoice\Resources\Invoices;
 
 use App\Modules\Project\Resources\ProjectResource;
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use OpenApi\Annotations as OA;

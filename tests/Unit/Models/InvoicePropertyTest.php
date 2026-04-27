@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Models;
 
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;

@@ -20,7 +20,6 @@ use App\Http\Controllers\Api\V1\GlobalSearchController;
 use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InnovationLogController;
-use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\LeadHistoryController;
 use App\Http\Controllers\Api\V1\MilestoneController;
@@ -238,14 +237,6 @@ Route::prefix('v1')->group(function () {
     Route::get('employees/{id}/performance', [EmployeeController::class, 'performance'])->name('employees.performance');
     Route::post('employees/{id}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
     Route::post('employees/{id}/activate', [EmployeeController::class, 'activate'])->name('employees.activate');
-
-    // Admin Invoice Management Routes
-    // All routes have auth:sanctum and locale middleware applied at route level
-    Route::apiResource('invoices', InvoiceController::class)->middleware(['auth:sanctum', 'locale']);
-    Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->middleware(['auth:sanctum', 'locale'])->name('invoices.send');
-    Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markAsPaid'])->middleware(['auth:sanctum', 'locale'])->name('invoices.mark-paid');
-    Route::post('projects/{project}/generate-milestone-invoice', [InvoiceController::class, 'generateMilestoneInvoice'])->middleware(['auth:sanctum', 'locale'])->name('projects.generate-milestone-invoice');
-    Route::post('projects/{project}/generate-pending-invoices', [InvoiceController::class, 'generatePendingInvoices'])->middleware(['auth:sanctum', 'locale'])->name('projects.generate-pending-invoices');
 
     // Milestone Management Routes
     Route::prefix('milestones')->middleware(['auth:sanctum', 'locale'])->group(function () {

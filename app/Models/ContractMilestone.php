@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\MilestoneStatus;
 use App\Enums\MilestoneTriggerType;
+use App\Modules\Invoice\Models\Invoice;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\V1\Milestones;
 
-use App\Http\Resources\V1\Invoices\InvoiceResource;
+use App\Modules\Invoice\Resources\Invoices\InvoiceResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

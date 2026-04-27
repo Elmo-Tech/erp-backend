@@ -1,21 +1,25 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1;
+namespace App\Modules\Invoice\Controllers;
 
 use App\Enums\InvoiceStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\V1\Invoices\MarkAsPaidRequest;
-use App\Http\Requests\V1\Invoices\StoreInvoiceRequest;
-use App\Http\Requests\V1\Invoices\UpdateInvoiceRequest;
-use App\Http\Resources\V1\Invoices\InvoiceCollection;
-use App\Http\Resources\V1\Invoices\InvoiceResource;
-use App\Models\Invoice;
+use App\Modules\Invoice\Actions\CreateInvoiceAction;
+use App\Modules\Invoice\Actions\GenerateInvoicePdfAction;
+use App\Modules\Invoice\Actions\UpdateInvoiceStatusAction;
+use App\Modules\Invoice\Requests\Invoices\MarkAsPaidRequest;
+use App\Modules\Invoice\Requests\Invoices\StoreInvoiceRequest;
+use App\Modules\Invoice\Requests\Invoices\UpdateInvoiceRequest;
+use App\Modules\Invoice\Resources\Invoices\InvoiceCollection;
+use App\Modules\Invoice\Resources\Invoices\InvoiceResource;
+use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
 use App\Services\AuditService;
 use App\Services\BillingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -29,7 +33,10 @@ class InvoiceController extends Controller
 {
     public function __construct(
         private BillingService $billingService,
-        private AuditService $auditService
+        private AuditService $auditService,
+        private CreateInvoiceAction $createInvoice,
+        private UpdateInvoiceStatusAction $updateInvoiceStatus,
+        private GenerateInvoicePdfAction $generateInvoicePdf
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -205,34 +212,10 @@ class InvoiceController extends Controller
      */
     public function store(StoreInvoiceRequest $request): JsonResponse
     {
-        $data = $request->validated();
-
-        $invoice = Invoice::create([
-            'project_id' => $data['projectId'],
-            'contract_id' => $data['contractId'] ?? null,
-            'milestone_name' => $data['milestoneName'] ?? null,
-            'invoice_number' => Invoice::generateInvoiceNumber(),
-            'amount' => $data['amount'],
-            'currency' => $data['currency'],
-            'status' => InvoiceStatus::DRAFT,
-            'due_date' => $data['dueDate'],
-            'notes' => $data['notes'] ?? null,
-            'created_by' => auth()->id(),
-        ]);
-
-        // Log the creation
-        $this->auditService->logInvoiceEvent(
-            action: 'created',
-            invoice: $invoice,
-            metadata: [
-                'amount' => $invoice->amount,
-                'currency' => $invoice->currency,
-                'milestone_name' => $invoice->milestone_name,
-            ]
-        );
+        $invoice = $this->createInvoice->execute($request->validated(), $request->user()?->id);
 
         return ApiResponse::success(
-            new InvoiceResource($invoice->load(['project', 'contract', 'createdBy'])),
+            new InvoiceResource($invoice),
             __('messages.invoice_created'),
             201
         );
@@ -398,7 +381,7 @@ class InvoiceController extends Controller
      */
     public function send(Invoice $invoice): JsonResponse
     {
-        $updatedInvoice = $this->billingService->sendInvoice($invoice);
+        $updatedInvoice = $this->updateInvoiceStatus->send($invoice, auth()->id());
 
         return ApiResponse::success(
             new InvoiceResource($updatedInvoice->load(['project', 'contract', 'createdBy', 'updatedBy'])),
@@ -457,12 +440,19 @@ class InvoiceController extends Controller
     {
         $paymentDetails = $request->validated();
 
-        $updatedInvoice = $this->billingService->markAsPaid($invoice, $paymentDetails);
+        $updatedInvoice = $this->updateInvoiceStatus->markAsPaid($invoice, $paymentDetails, $request->user()?->id);
 
         return ApiResponse::success(
             new InvoiceResource($updatedInvoice->load(['project', 'contract', 'createdBy', 'updatedBy'])),
             __('messages.invoice_marked_paid')
         );
+    }
+
+    public function download(Invoice $invoice): Response
+    {
+        $pdf = $this->generateInvoicePdf->execute($invoice);
+
+        return $pdf->download($this->generateInvoicePdf->filename($invoice));
     }
 
     /**

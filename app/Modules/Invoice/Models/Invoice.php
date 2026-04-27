@@ -1,14 +1,18 @@
 <?php
 
-namespace App\Models;
+namespace App\Modules\Invoice\Models;
 
 use App\Enums\InvoiceStatus;
+use App\Models\Contract;
+use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Scopes\ClientScope;
 use App\Traits\HasCreatedUpdatedBy;
+use Database\Factories\InvoiceFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -62,12 +66,29 @@ class Invoice extends Model
         static::addGlobalScope(new ClientScope);
     }
 
+    protected static function newFactory(): InvoiceFactory
+    {
+        return InvoiceFactory::new();
+    }
+
     /**
      * Get the project that owns the invoice.
      */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function client(): HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Client::class,
+            Project::class,
+            'id',
+            'id',
+            'project_id',
+            'client_id'
+        );
     }
 
     /**

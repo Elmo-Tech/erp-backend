@@ -4,7 +4,7 @@ namespace App\Modules\Project\Models;
 
 use App\Contracts\Trackable;
 use App\Modules\Project\Enums\ProjectStatus;
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use App\Models\Quotation;
 use App\Modules\Task\Models\Task;
 use App\Models\TimeEntry;

@@ -3,12 +3,12 @@
 namespace Database\Factories;
 
 use App\Enums\InvoiceStatus;
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Invoice>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Invoice\Models\Invoice>
  */
 class InvoiceFactory extends Factory
 {

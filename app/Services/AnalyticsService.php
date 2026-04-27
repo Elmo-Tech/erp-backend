@@ -6,7 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\LeadStatus;
 use App\Enums\QuotationStatus;
 use App\Models\Contract;
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use App\Models\Lead;
 use App\Models\Quotation;
 use App\Models\User;

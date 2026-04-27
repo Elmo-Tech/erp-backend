@@ -3,7 +3,7 @@
 namespace App\Modules\Client\Actions;
 
 use App\Enums\InvoiceStatus;
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
 
 class CreateProjectInvoiceAction

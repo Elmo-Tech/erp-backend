@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 

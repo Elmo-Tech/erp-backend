@@ -29,6 +29,7 @@ class ModuleServiceProvider extends ServiceProvider
     private function registerLegacyMorphAliases(): void
     {
         Relation::morphMap([
+            'App\Models\Invoice' => \App\Modules\Invoice\Models\Invoice::class,
             'App\Models\Project' => \App\Modules\Project\Models\Project::class,
             'App\Models\RecurringTaskConfig' => \App\Modules\Task\Models\RecurringTaskConfig::class,
             'App\Models\Task' => \App\Modules\Task\Models\Task::class,

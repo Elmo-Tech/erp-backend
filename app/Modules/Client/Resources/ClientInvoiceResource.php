@@ -2,7 +2,7 @@
 
 namespace App\Modules\Client\Resources;
 
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

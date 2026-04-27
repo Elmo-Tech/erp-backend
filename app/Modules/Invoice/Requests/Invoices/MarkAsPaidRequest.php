@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\V1\Invoices;
+namespace App\Modules\Invoice\Requests\Invoices;
 
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;

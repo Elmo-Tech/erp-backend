@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Models\Contract;
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
 use Illuminate\Support\Facades\DB;
 

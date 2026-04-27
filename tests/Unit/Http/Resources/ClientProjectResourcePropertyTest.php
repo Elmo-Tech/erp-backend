@@ -3,7 +3,7 @@
 namespace Tests\Unit\Http\Resources;
 
 use App\Modules\Client\Resources\ClientProjectResource;
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
 use App\Models\User;
 use App\Modules\Client\Actions\CalculateProjectProgressAction;

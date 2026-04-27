@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Http\Requests;
 
-use App\Http\Requests\V1\Invoices\StoreInvoiceRequest;
+use App\Modules\Invoice\Requests\Invoices\StoreInvoiceRequest;
 use App\Modules\Project\Models\Project;
 use App\Models\User;
 use Eris\Generator;

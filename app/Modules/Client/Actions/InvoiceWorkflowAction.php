@@ -5,7 +5,7 @@ namespace App\Modules\Client\Actions;
 use App\Enums\InvoiceStatus;
 use App\Enums\MilestoneStatus;
 use App\Models\ContractMilestone;
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Resources\V1\Invoices;
+namespace App\Modules\Invoice\Resources\Invoices;
 
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;

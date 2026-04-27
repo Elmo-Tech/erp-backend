@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\Invoice;
+use App\Modules\Invoice\Models\Invoice;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
