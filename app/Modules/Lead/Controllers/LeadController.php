@@ -3,6 +3,7 @@
 namespace App\Modules\Lead\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Controllers\Controller;
 use App\Modules\Lead\Actions\AddLeadActivityAction;
 use App\Modules\Lead\Actions\CreateLeadAction;
 use App\Modules\Lead\Actions\ScheduleLeadMeetingAction;
@@ -24,7 +25,7 @@ use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
-class LeadController
+class LeadController extends Controller
 {
     public function __construct(
         private CreateLeadAction $createLeadAction,

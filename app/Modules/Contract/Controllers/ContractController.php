@@ -3,6 +3,7 @@
 namespace App\Modules\Contract\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Controllers\Controller;
 use App\Modules\Contract\Actions\CreateContractAction;
 use App\Modules\Contract\Actions\GetDueMilestonesAction;
 use App\Modules\Contract\Actions\MarkMilestonePaidAction;
@@ -24,7 +25,7 @@ use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
-class ContractController
+class ContractController extends Controller
 {
     public function __construct(
         private CreateContractAction $createContractAction,

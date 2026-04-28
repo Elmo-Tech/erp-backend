@@ -3,6 +3,7 @@
 namespace App\Modules\Lead\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Controllers\Controller;
 use App\Modules\Lead\Actions\AuditTrailAction;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Resources\LeadHistoryCollection;
@@ -12,7 +13,7 @@ use App\Models\Quotation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class LeadHistoryController
+class LeadHistoryController extends Controller
 {
     public function __construct(
         private AuditTrailAction $auditTrailAction

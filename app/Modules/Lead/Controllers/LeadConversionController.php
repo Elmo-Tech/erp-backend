@@ -3,13 +3,14 @@
 namespace App\Modules\Lead\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Controllers\Controller;
 use App\Modules\Client\Resources\ClientResource;
 use App\Modules\Lead\Actions\ConvertLeadToClientAction;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Requests\ConvertLeadRequest;
 use Illuminate\Http\JsonResponse;
 
-class LeadConversionController
+class LeadConversionController extends Controller
 {
     public function __construct(
         private ConvertLeadToClientAction $convertLeadToClientAction
