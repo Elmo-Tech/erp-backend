@@ -2,7 +2,7 @@
 
 namespace App\Modules\Lead\Resources;
 
-use App\Http\Resources\V1\Activity\ActivityResource;
+use App\Modules\Activity\Resources\ActivityResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

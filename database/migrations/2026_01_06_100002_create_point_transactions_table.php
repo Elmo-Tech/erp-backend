@@ -20,7 +20,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->integer('points'); // Can be positive or negative
             $table->string('type'); // task_completed, bug_found, late_delivery, code_review, innovation, attendance_bonus, etc.
-            $table->string('source_type')->nullable(); // App\Models\Task, App\Models\CodeReview, etc.
+            $table->string('source_type')->nullable(); // App\Models\Task, App\Modules\ProjectHandover\Models\CodeReview, etc.
             $table->unsignedBigInteger('source_id')->nullable();
             $table->text('reason')->nullable();
             $table->integer('balance_after'); // Running balance after this transaction

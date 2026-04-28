@@ -18,7 +18,7 @@ use App\Modules\Contract\Requests\UpdateContractRequest;
 use App\Modules\Contract\Resources\ContractCollection;
 use App\Modules\Contract\Resources\ContractMilestoneResource;
 use App\Modules\Contract\Resources\ContractResource;
-use App\Models\Quotation;
+use App\Modules\Quotation\Models\Quotation;
 use App\Modules\User\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

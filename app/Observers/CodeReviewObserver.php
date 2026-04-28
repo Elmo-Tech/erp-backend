@@ -4,8 +4,8 @@ namespace App\Observers;
 
 use App\Enums\CodeReviewStatus;
 use App\Enums\PointTransactionType;
-use App\Models\CodeReview;
-use App\Services\Points\UnifiedPointService;
+use App\Modules\ProjectHandover\Models\CodeReview;
+use App\Modules\Gamification\Services\UnifiedPointService;
 
 /**
  * Observer for CodeReview model to handle point awards and deductions.

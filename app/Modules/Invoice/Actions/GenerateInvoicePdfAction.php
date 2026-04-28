@@ -3,7 +3,7 @@
 namespace App\Modules\Invoice\Actions;
 
 use App\Modules\Invoice\Models\Invoice;
-use App\Services\Reporting\PdfService;
+use App\Modules\Report\Services\PdfService;
 use Barryvdh\DomPDF\PDF;
 
 class GenerateInvoicePdfAction

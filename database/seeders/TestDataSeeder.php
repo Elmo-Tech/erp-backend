@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Lead;
+use App\Modules\Lead\Models\Lead;
 use App\Modules\Project\Models\Project;
-use App\Models\Quotation;
+use App\Modules\Quotation\Models\Quotation;
 use App\Modules\Task\Models\Task;
 use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Modules\User\Models\User;

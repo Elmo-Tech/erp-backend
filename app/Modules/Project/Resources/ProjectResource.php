@@ -2,7 +2,7 @@
 
 namespace App\Modules\Project\Resources;
 
-use App\Http\Resources\V1\Quotations\QuotationResource;
+use App\Modules\Quotation\Resources\QuotationResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

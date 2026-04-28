@@ -4,7 +4,7 @@ namespace App\Modules\Invoice\Actions;
 
 use App\Enums\InvoiceStatus;
 use App\Modules\Invoice\Models\Invoice;
-use App\Services\AuditService;
+use App\Modules\Audit\Services\AuditService;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 

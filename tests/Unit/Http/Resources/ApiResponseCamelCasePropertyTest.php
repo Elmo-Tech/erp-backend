@@ -4,11 +4,11 @@ namespace Tests\Unit\Http\Resources;
 
 use App\Enums\LeadSource;
 use App\Enums\QuotationStatus;
-use App\Http\Resources\V1\Leads\LeadResource;
-use App\Http\Resources\V1\Quotations\QuotationResource;
+use App\Modules\Lead\Resources\LeadResource;
+use App\Modules\Quotation\Resources\QuotationResource;
 use App\Modules\TimeEntry\Resources\TimeEntryResource;
-use App\Models\Lead;
-use App\Models\Quotation;
+use App\Modules\Lead\Models\Lead;
+use App\Modules\Quotation\Models\Quotation;
 use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Modules\User\Models\User;
 use Eris\Generator;

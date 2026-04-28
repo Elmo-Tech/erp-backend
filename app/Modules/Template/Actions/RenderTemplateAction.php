@@ -2,9 +2,9 @@
 
 namespace App\Modules\Template\Actions;
 
-use App\Modules\Template\Models\ProposalTemplate;
+use App\Modules\Proposal\Models\ProposalTemplate;
 use App\Modules\Contract\Models\ContractTemplate;
-use App\Models\Quotation;
+use App\Modules\Quotation\Models\Quotation;
 
 class RenderTemplateAction
 {

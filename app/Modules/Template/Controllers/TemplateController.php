@@ -10,9 +10,9 @@ use App\Modules\Template\Actions\UpdateProposalTemplateAction;
 use App\Modules\Template\Actions\UpdateContractTemplateAction;
 use App\Modules\Template\Actions\RenderTemplateAction;
 use App\Modules\Template\Actions\GetTemplatesAction;
-use App\Modules\Template\Models\ProposalTemplate;
+use App\Modules\Proposal\Models\ProposalTemplate;
 use App\Modules\Contract\Models\ContractTemplate;
-use App\Models\Quotation;
+use App\Modules\Quotation\Models\Quotation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\PointPeriod;
+use App\Modules\Gamification\Models\PointPeriod;
 use App\Modules\User\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;

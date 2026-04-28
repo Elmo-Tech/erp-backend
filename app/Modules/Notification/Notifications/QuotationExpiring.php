@@ -2,7 +2,7 @@
 
 namespace App\Modules\Notification\Notifications;
 
-use App\Models\Quotation;
+use App\Modules\Quotation\Models\Quotation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;

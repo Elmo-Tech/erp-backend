@@ -11,7 +11,7 @@ use App\Modules\Task\Requests\Tasks\UpdateTaskDeliverableRequest;
 use App\Modules\Task\Resources\Tasks\TaskDeliverableResource;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskDeliverable;
-use App\Services\Tasks\DeliverableService;
+use App\Modules\Task\Services\DeliverableService;
 use Illuminate\Http\JsonResponse;
 
 /**

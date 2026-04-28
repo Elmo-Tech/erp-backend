@@ -8,7 +8,7 @@ use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
 use App\Modules\User\Models\User;
-use App\Services\Sales\TimeTrackingService;
+use App\Modules\Sales\Services\TimeTrackingService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

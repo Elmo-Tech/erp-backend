@@ -2,7 +2,7 @@
 
 namespace App\Modules\Template\Actions;
 
-use App\Modules\Template\Models\ProposalTemplate;
+use App\Modules\Proposal\Models\ProposalTemplate;
 use App\Modules\User\Models\User;
 
 class UpdateProposalTemplateAction

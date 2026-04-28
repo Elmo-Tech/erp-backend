@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\ActivityReminder;
+use App\Modules\Activity\Models\ActivityReminder;
 use App\Modules\Notification\Notifications\ActivityReminderNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

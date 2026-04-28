@@ -2,7 +2,7 @@
 
 namespace App\Modules\Notification\Notifications;
 
-use App\Models\ActivityReminder;
+use App\Modules\Activity\Models\ActivityReminder;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;

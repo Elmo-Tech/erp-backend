@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Services;
 
-use App\Services\Sales\PricingService;
+use App\Modules\Sales\Services\PricingService;
 use Eris\Generator;
 use Eris\TestTrait;
 use InvalidArgumentException;

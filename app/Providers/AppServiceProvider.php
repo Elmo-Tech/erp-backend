@@ -4,8 +4,8 @@ namespace App\Providers;
 
 use App\Modules\Notification\Events\NotificationCreated;
 use App\Events\TimerUpdated;
-use App\Models\CodeReview;
-use App\Models\InnovationLog;
+use App\Modules\ProjectHandover\Models\CodeReview;
+use App\Modules\ProjectHandover\Models\InnovationLog;
 use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskDeliverable;

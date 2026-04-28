@@ -7,11 +7,11 @@ use App\Http\Controllers\Controller;
 use App\Modules\Attendance\Resources\AttendanceCollection;
 use App\Modules\Attendance\Resources\AttendanceResource;
 use App\Modules\Attendance\Models\Attendance;
-use App\Models\DeductionType;
-use App\Models\EmployeeDeduction;
+use App\Modules\HR\Models\DeductionType;
+use App\Modules\HR\Models\EmployeeDeduction;
 use App\Modules\User\Models\User;
 use App\Modules\Attendance\Actions\AttendanceService;
-use App\Services\Sales\TimeTrackingService;
+use App\Modules\Sales\Services\TimeTrackingService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -333,7 +333,7 @@ class AttendanceController extends Controller
         }
 
         return ApiResponse::success(
-            new \App\Http\Resources\V1\HR\EmployeeDeductionResource($deduction->load(['user', 'deductionType'])),
+            new \App\Modules\HR\Resources\EmployeeDeductionResource($deduction->load(['user', 'deductionType'])),
             'Deduction added successfully',
             201
         );

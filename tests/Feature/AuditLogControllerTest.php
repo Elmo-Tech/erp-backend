@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditLog;
+use App\Modules\Audit\Models\AuditLog;
 use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;

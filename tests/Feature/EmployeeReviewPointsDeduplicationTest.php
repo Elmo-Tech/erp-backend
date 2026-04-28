@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Enums\PointTransactionType;
-use App\Models\PointTransaction;
+use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\User\Models\User;
-use App\Services\Reporting\EmployeeReviewService;
+use App\Modules\Report\Services\EmployeeReviewService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;

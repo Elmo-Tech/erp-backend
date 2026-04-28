@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Task\Controllers\AdminDeliverableController;
 use App\Modules\Task\Controllers\RecurringTaskController;
 use App\Modules\Task\Controllers\TaskController;
 use App\Modules\Task\Controllers\TaskDeliverableController;
@@ -8,6 +9,15 @@ use App\Modules\Task\Controllers\TaskTemplateController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+    Route::prefix('admin/deliverables')->group(function () {
+        Route::put('{id}', [AdminDeliverableController::class, 'update'])->name('admin.deliverables.update');
+        Route::delete('{id}', [AdminDeliverableController::class, 'destroy'])->name('admin.deliverables.destroy');
+        Route::patch('{id}/status', [AdminDeliverableController::class, 'changeStatus'])->name('admin.deliverables.change-status');
+        Route::patch('{id}/reset', [AdminDeliverableController::class, 'reset'])->name('admin.deliverables.reset');
+        Route::post('{id}/force-approve', [AdminDeliverableController::class, 'forceApprove'])->name('admin.deliverables.force-approve');
+        Route::post('{id}/force-reject', [AdminDeliverableController::class, 'forceReject'])->name('admin.deliverables.force-reject');
+    });
+
     Route::get('tasks/my-assigned', [TaskController::class, 'myAssignedTasks'])
         ->name('tasks.my-assigned');
 

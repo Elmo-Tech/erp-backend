@@ -2,7 +2,7 @@
 
 namespace App\Modules\Client\Actions;
 
-use App\Models\AuditLog;
+use App\Modules\Audit\Models\AuditLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;

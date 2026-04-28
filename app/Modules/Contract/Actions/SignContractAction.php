@@ -10,7 +10,7 @@ use App\Modules\Lead\Actions\ConvertLeadToClientAction;
 use App\Modules\Project\Actions\ConvertQuotationToProjectAction;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\User\Models\User;
-use App\Models\Quotation;
+use App\Modules\Quotation\Models\Quotation;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 

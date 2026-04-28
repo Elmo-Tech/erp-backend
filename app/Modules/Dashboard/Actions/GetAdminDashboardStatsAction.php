@@ -3,7 +3,7 @@
 namespace App\Modules\Dashboard\Actions;
 
 use App\Enums\InvoiceStatus;
-use App\Models\PointTransaction;
+use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Enums\ProjectStatus;
@@ -162,7 +162,7 @@ class GetAdminDashboardStatsAction
                 ]);
             $activities = $activities->merge($recentProjectActivities);
 
-            $recentQuotations = \App\Models\Quotation::with('lead')
+            $recentQuotations = \App\Modules\Quotation\Models\Quotation::with('lead')
                 ->orderBy('created_at', 'desc')
                 ->limit(3)
                 ->get()

@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\User\Controllers\AdminRoleController;
 use App\Modules\User\Controllers\AdminUserController;
 use App\Modules\User\Controllers\UserController;
 use App\Modules\User\Controllers\UserPointsController;
@@ -7,6 +8,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('admin')->group(function () {
+        Route::apiResource('roles', AdminRoleController::class);
+        Route::get('permissions', [AdminRoleController::class, 'permissions'])->name('admin.permissions');
+
         Route::get('users', [AdminUserController::class, 'index'])->name('admin.users.index');
         Route::put('users/{id}/internal-cost', [AdminUserController::class, 'updateInternalCost'])->name('admin.users.update-internal-cost');
         Route::put('users/internal-costs', [AdminUserController::class, 'bulkUpdateInternalCosts'])->name('admin.users.bulk-update-internal-costs');

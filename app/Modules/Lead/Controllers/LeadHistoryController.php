@@ -8,8 +8,8 @@ use App\Modules\Lead\Actions\AuditTrailAction;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Resources\LeadHistoryCollection;
 use App\Modules\Lead\Resources\LeadHistoryResource;
-use App\Models\Proposal;
-use App\Models\Quotation;
+use App\Modules\Proposal\Models\Proposal;
+use App\Modules\Quotation\Models\Quotation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

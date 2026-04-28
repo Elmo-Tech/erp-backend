@@ -70,7 +70,7 @@ class StoreContractRequest extends FormRequest
                 if (! $quotationId) {
                     $validator->errors()->add('quotationId', __('contracts.quotation_required_for_from_quotation'));
                 } else {
-                    $quotation = \App\Models\Quotation::find($quotationId);
+                    $quotation = \App\Modules\Quotation\Models\Quotation::find($quotationId);
                     if ($quotation && $quotation->status !== QuotationStatus::APPROVED) {
                         $validator->errors()->add('quotationId', __('contracts.quotation_must_be_approved'));
                     }

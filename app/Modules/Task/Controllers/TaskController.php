@@ -23,7 +23,7 @@ use App\Modules\Task\Resources\Tasks\TaskResource;
 use App\Modules\Task\Resources\Tasks\TaskTestScenarioResource;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskTestScenario;
-use App\Services\Tasks\TaskService;
+use App\Modules\Task\Services\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

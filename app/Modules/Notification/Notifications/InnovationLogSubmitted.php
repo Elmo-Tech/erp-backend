@@ -2,7 +2,7 @@
 
 namespace App\Modules\Notification\Notifications;
 
-use App\Models\InnovationLog;
+use App\Modules\ProjectHandover\Models\InnovationLog;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;

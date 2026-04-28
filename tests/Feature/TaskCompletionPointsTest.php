@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Enums\PointTransactionType;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Models\PointTransaction;
+use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskAssignee;
 use App\Modules\User\Models\User;

@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Models\EmployeeDeduction;
+use App\Modules\HR\Models\EmployeeDeduction;
 use App\Modules\User\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 

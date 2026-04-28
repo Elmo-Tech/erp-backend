@@ -2,9 +2,9 @@
 
 namespace App\Modules\Report\Actions;
 
-use App\Services\Reporting\ProfitabilityService;
-use App\Services\Reporting\QualityService;
-use App\Services\Reporting\UserPerformanceService;
+use App\Modules\Report\Services\ProfitabilityService;
+use App\Modules\Report\Services\QualityService;
+use App\Modules\Report\Services\UserPerformanceService;
 
 class GenerateAdminOverviewReportAction
 {

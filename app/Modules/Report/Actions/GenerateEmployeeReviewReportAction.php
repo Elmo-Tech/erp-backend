@@ -2,7 +2,7 @@
 
 namespace App\Modules\Report\Actions;
 
-use App\Services\Reporting\EmployeeReviewService;
+use App\Modules\Report\Services\EmployeeReviewService;
 use App\Modules\User\Models\User;
 
 class GenerateEmployeeReviewReportAction

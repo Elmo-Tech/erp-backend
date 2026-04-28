@@ -2,7 +2,7 @@
 
 namespace App\Observers;
 
-use App\Models\InnovationLog;
+use App\Modules\ProjectHandover\Models\InnovationLog;
 use App\Modules\User\Models\User;
 use App\Modules\Notification\Notifications\InnovationLogSubmitted;
 use App\Modules\Notification\Notifications\InnovationLogVerified;

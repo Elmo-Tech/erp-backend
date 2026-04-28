@@ -2,7 +2,7 @@
 
 namespace App\Modules\Report\Actions;
 
-use App\Services\Reporting\UserPerformanceService;
+use App\Modules\Report\Services\UserPerformanceService;
 
 class GenerateUserPerformanceReportAction
 {

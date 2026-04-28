@@ -2,7 +2,7 @@
 
 namespace App\Modules\Report\Actions;
 
-use App\Services\Sales\ExportService;
+use App\Modules\Sales\Services\ExportService;
 use Carbon\Carbon;
 
 class GenerateSalesReportAction

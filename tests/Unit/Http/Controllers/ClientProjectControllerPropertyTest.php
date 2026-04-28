@@ -3,7 +3,7 @@
 namespace Tests\Unit\Http\Controllers;
 
 use App\Modules\Project\Enums\ProjectStatus;
-use App\Models\AuditLog;
+use App\Modules\Audit\Models\AuditLog;
 use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectHistory;

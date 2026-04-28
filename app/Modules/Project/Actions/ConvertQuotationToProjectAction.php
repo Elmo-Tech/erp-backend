@@ -5,7 +5,7 @@ namespace App\Modules\Project\Actions;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Enums\QuotationStatus;
 use App\Modules\Project\Models\Project;
-use App\Models\Quotation;
+use App\Modules\Quotation\Models\Quotation;
 use InvalidArgumentException;
 use RuntimeException;
 

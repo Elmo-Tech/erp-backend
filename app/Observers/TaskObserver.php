@@ -5,7 +5,7 @@ namespace App\Observers;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Modules\Task\Models\Task;
-use App\Services\Points\UnifiedPointService;
+use App\Modules\Gamification\Services\UnifiedPointService;
 
 /**
  * Observer for Task model to handle bug bounce rate tracking and point awards.

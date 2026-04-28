@@ -4,9 +4,9 @@ namespace App\Modules\Client\Models;
 
 use App\Enums\ClientStatus;
 use App\Modules\Invoice\Models\Invoice;
-use App\Models\Lead;
+use App\Modules\Lead\Models\Lead;
 use App\Modules\Project\Models\Project;
-use App\Models\Quotation;
+use App\Modules\Quotation\Models\Quotation;
 use App\Modules\User\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
 use Database\Factories\ClientFactory;

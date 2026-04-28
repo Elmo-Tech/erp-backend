@@ -2,7 +2,7 @@
 
 namespace App\Modules\Dashboard\Actions;
 
-use App\Models\PointTransaction;
+use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;

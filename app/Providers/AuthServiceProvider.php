@@ -2,13 +2,13 @@
 
 namespace App\Providers;
 
-use App\Models\DeductionType;
-use App\Models\EmployeeDeduction;
-use App\Models\EmployeeReward;
+use App\Modules\HR\Models\DeductionType;
+use App\Modules\HR\Models\EmployeeDeduction;
+use App\Modules\HR\Models\EmployeeReward;
 use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
-use App\Models\RewardType;
-use App\Models\SalaryAdjustment;
+use App\Modules\HR\Models\RewardType;
+use App\Modules\HR\Models\SalaryAdjustment;
 use App\Modules\Task\Models\Task;
 use App\Policies\DeductionTypePolicy;
 use App\Policies\EmployeeDeductionPolicy;

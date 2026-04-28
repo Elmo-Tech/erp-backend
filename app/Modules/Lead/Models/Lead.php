@@ -14,6 +14,7 @@ use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Modules\User\Models\User;
 use App\Traits\HasAuditTrail;
 use App\Traits\HasCreatedUpdatedBy;
+use Database\Factories\LeadFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -79,6 +80,16 @@ class Lead extends Model implements Trackable
         ];
     }
 
+    protected static function newFactory(): LeadFactory
+    {
+        return LeadFactory::new();
+    }
+
+    public function getMorphClass(): string
+    {
+        return static::class;
+    }
+
     public function reference(): MorphTo
     {
         return $this->morphTo('reference', 'reference_type', 'reference_id');
@@ -107,12 +118,12 @@ class Lead extends Model implements Trackable
 
     public function quotations(): HasMany
     {
-        return $this->hasMany(\App\Models\Quotation::class);
+        return $this->hasMany(\App\Modules\Quotation\Models\Quotation::class);
     }
 
     public function proposals(): HasMany
     {
-        return $this->hasMany(\App\Models\Proposal::class)->orderBy('created_at', 'desc');
+        return $this->hasMany(\App\Modules\Proposal\Models\Proposal::class)->orderBy('created_at', 'desc');
     }
 
     public function techLead(): BelongsTo
@@ -127,7 +138,7 @@ class Lead extends Model implements Trackable
 
     public function allActivities(): MorphMany
     {
-        return $this->morphMany(\App\Models\Activity::class, 'subject')->orderBy('created_at', 'desc');
+        return $this->morphMany(\App\Modules\Activity\Models\Activity::class, 'subject')->orderBy('created_at', 'desc');
     }
 
     public function meetings(): HasMany

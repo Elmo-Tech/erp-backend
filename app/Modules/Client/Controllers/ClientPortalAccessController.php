@@ -9,7 +9,7 @@ use App\Modules\Client\Requests\CreatePortalAccessRequest;
 use App\Modules\Client\Resources\ClientResource;
 use App\Modules\User\Models\User;
 use App\Modules\Notification\Notifications\ClientPortalAccessCreated;
-use App\Services\Sales\LeadConversionService;
+use App\Modules\Sales\Services\LeadConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;

@@ -3,7 +3,7 @@
 namespace App\Traits;
 
 use App\Enums\AuditActionType;
-use App\Models\LeadHistory;
+use App\Modules\Lead\Models\LeadHistory;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;

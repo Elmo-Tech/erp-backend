@@ -52,14 +52,14 @@ class AuditTrailAction
 
                 if (! empty($proposalIds)) {
                     $query->orWhere(function ($q) use ($proposalIds) {
-                        $q->where('auditable_type', \App\Models\Proposal::class)
+                        $q->where('auditable_type', \App\Modules\Proposal\Models\Proposal::class)
                             ->whereIn('auditable_id', $proposalIds);
                     });
                 }
 
                 if (! empty($quotationIds)) {
                     $query->orWhere(function ($q) use ($quotationIds) {
-                        $q->where('auditable_type', \App\Models\Quotation::class)
+                        $q->where('auditable_type', \App\Modules\Quotation\Models\Quotation::class)
                             ->whereIn('auditable_id', $quotationIds);
                     });
                 }

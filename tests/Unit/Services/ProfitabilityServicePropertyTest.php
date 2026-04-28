@@ -6,7 +6,7 @@ use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
 use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Modules\User\Models\User;
-use App\Services\Reporting\ProfitabilityService;
+use App\Modules\Report\Services\ProfitabilityService;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;

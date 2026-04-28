@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Models\DeductionType;
+use App\Modules\HR\Models\DeductionType;
 use App\Modules\User\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 

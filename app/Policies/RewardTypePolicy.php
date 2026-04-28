@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Models\RewardType;
+use App\Modules\HR\Models\RewardType;
 use App\Modules\User\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 

@@ -1,9 +1,17 @@
 <?php
 
 use App\Modules\Contract\Controllers\ContractController;
+use App\Modules\Contract\Controllers\MilestoneController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+    Route::prefix('milestones')->middleware(['auth:sanctum', 'locale'])->group(function () {
+        Route::get('{id}', [MilestoneController::class, 'show'])->name('milestones.show');
+        Route::post('{id}/create-invoice', [MilestoneController::class, 'createInvoice'])->name('milestones.create-invoice');
+        Route::post('{id}/link-invoice', [MilestoneController::class, 'linkInvoice'])->name('milestones.link-invoice');
+        Route::patch('{id}/mark-paid', [MilestoneController::class, 'markPaid'])->name('milestones.mark-paid');
+    });
+
     Route::get('contracts/milestones/due', [ContractController::class, 'dueMilestones'])->name('contracts.milestones.due');
     Route::patch('contracts/milestones/{milestone}/paid', [ContractController::class, 'markMilestonePaid'])->name('contracts.milestones.paid');
     Route::post('contracts', [ContractController::class, 'store'])->name('contracts.store');

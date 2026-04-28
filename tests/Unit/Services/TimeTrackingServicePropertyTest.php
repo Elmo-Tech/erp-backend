@@ -4,11 +4,11 @@ namespace Tests\Unit\Services;
 
 use App\Contracts\Trackable;
 use App\Enums\LeadSource;
-use App\Models\Lead;
-use App\Models\Quotation;
+use App\Modules\Lead\Models\Lead;
+use App\Modules\Quotation\Models\Quotation;
 use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Modules\User\Models\User;
-use App\Services\Sales\TimeTrackingService;
+use App\Modules\Sales\Services\TimeTrackingService;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;

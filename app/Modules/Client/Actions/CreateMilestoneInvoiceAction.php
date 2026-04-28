@@ -4,7 +4,7 @@ namespace App\Modules\Client\Actions;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\MilestoneStatus;
-use App\Models\ContractMilestone;
+use App\Modules\Contract\Models\ContractMilestone;
 use App\Modules\Invoice\Models\Invoice;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;

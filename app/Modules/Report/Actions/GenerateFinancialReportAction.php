@@ -2,7 +2,7 @@
 
 namespace App\Modules\Report\Actions;
 
-use App\Services\Reporting\ProfitabilityService;
+use App\Modules\Report\Services\ProfitabilityService;
 
 class GenerateFinancialReportAction
 {

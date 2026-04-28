@@ -10,7 +10,7 @@ use App\Modules\Auth\Actions\RegisterUserAction;
 use App\Modules\Auth\Requests\LoginRequest;
 use App\Modules\Auth\Requests\RegisterRequest;
 use App\Modules\Auth\Resources\LoginProfileResource;
-use App\Services\UserRolePermission\UserPermissionService;
+use App\Modules\User\Services\UserPermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;

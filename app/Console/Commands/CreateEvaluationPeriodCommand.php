@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\EvaluationPeriod;
+use App\Modules\Performance\Models\EvaluationPeriod;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 

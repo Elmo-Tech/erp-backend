@@ -59,7 +59,7 @@ class LeadActivity extends Model
 
     public function reminders(): MorphMany
     {
-        return $this->morphMany(\App\Models\ActivityReminder::class, 'remindable');
+        return $this->morphMany(\App\Modules\Activity\Models\ActivityReminder::class, 'remindable');
     }
 
     public function isScheduled(): bool

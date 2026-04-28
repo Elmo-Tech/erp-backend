@@ -3,7 +3,7 @@
 namespace App\Modules\User\Actions;
 
 use App\Enums\PointTransactionType;
-use App\Models\PointTransaction;
+use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\User\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;

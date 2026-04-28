@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\ContractStatus;
-use App\Models\Contract;
+use App\Modules\Contract\Models\Contract;
 use App\Modules\User\Models\User;
 use App\Modules\Notification\Notifications\SubscriptionRenewalReminderNotification;
 use Illuminate\Bus\Queueable;

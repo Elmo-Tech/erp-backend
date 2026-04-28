@@ -2,7 +2,7 @@
 
 namespace App\Modules\Report\Actions;
 
-use App\Services\Reporting\QualityService;
+use App\Modules\Report\Services\QualityService;
 
 class GenerateQualityReportAction
 {

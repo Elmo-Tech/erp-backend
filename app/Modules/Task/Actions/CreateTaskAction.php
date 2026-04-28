@@ -5,12 +5,12 @@ namespace App\Modules\Task\Actions;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Models\Tag;
+use App\Modules\Task\Models\Tag;
 use App\Modules\User\Models\User;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskActivity;
 use App\Modules\Task\Models\TaskAssignee;
-use App\Services\Tasks\TaskNotificationService;
+use App\Modules\Task\Services\TaskNotificationService;
 
 class CreateTaskAction
 {

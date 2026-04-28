@@ -3,12 +3,12 @@
 namespace Database\Factories;
 
 use App\Enums\QuotationStatus;
-use App\Models\Lead;
-use App\Models\Quotation;
+use App\Modules\Lead\Models\Lead;
+use App\Modules\Quotation\Models\Quotation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Quotation>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Quotation\Models\Quotation>
  */
 class QuotationFactory extends Factory
 {

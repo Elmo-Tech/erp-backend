@@ -6,6 +6,7 @@ use App\Enums\ContractStatus;
 use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Traits\HasCreatedUpdatedBy;
+use Database\Factories\ContractFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -84,9 +85,14 @@ class Contract extends Model
         ];
     }
 
+    protected static function newFactory(): ContractFactory
+    {
+        return ContractFactory::new();
+    }
+
     public function quotation(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Quotation::class);
+        return $this->belongsTo(\App\Modules\Quotation\Models\Quotation::class);
     }
 
     public function project(): BelongsTo

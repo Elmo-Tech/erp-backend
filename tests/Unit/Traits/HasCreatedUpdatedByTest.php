@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Traits;
 
-use App\Models\Lead;
+use App\Modules\Lead\Models\Lead;
 use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;

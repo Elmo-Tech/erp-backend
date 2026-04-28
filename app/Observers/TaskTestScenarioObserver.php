@@ -4,7 +4,7 @@ namespace App\Observers;
 
 use App\Enums\TaskType;
 use App\Modules\Task\Models\TaskTestScenario;
-use App\Services\Points\UnifiedPointService;
+use App\Modules\Gamification\Services\UnifiedPointService;
 
 /**
  * Observer for TaskTestScenario model to handle point awards for test scenario verification.

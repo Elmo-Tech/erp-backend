@@ -11,7 +11,7 @@ use App\Modules\Report\Actions\GenerateUserPerformanceReportAction;
 use App\Modules\Report\Actions\GenerateEmployeeReviewReportAction;
 use App\Modules\Report\Actions\GenerateProjectProgressReportAction;
 use App\Modules\Report\Actions\GenerateSalesReportAction;
-use App\Services\Reporting\PdfService;
+use App\Modules\Report\Services\PdfService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

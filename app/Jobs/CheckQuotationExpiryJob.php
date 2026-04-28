@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Quotation;
+use App\Modules\Quotation\Models\Quotation;
 use App\Modules\User\Models\User;
 use App\Modules\Notification\Notifications\QuotationExpiring;
 use Illuminate\Bus\Queueable;

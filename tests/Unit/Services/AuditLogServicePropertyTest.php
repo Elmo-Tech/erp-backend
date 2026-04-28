@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\AuditLog;
+use App\Modules\Audit\Models\AuditLog;
 use App\Modules\Project\Models\Project;
 use App\Modules\User\Models\User;
 use App\Modules\Client\Actions\LogClientAuditAction;

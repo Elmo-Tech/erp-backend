@@ -11,7 +11,7 @@ use App\Modules\Contract\Models\ContractMilestone;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
 use App\Modules\User\Models\User;
-use App\Models\Quotation;
+use App\Modules\Quotation\Models\Quotation;
 use App\Modules\Project\Actions\ConvertQuotationToProjectAction;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;

@@ -6,7 +6,7 @@ use App\Enums\TaskStatus;
 use App\Modules\User\Models\User;
 use App\Modules\Task\Actions\UpdateTaskStatusAction;
 use App\Modules\Task\Models\Task;
-use App\Services\Tasks\TaskNotificationService;
+use App\Modules\Task\Services\TaskNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;

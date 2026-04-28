@@ -8,8 +8,8 @@ use App\Enums\TaskCategory;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Models\CodeReview;
-use App\Models\Tag;
+use App\Modules\ProjectHandover\Models\CodeReview;
+use App\Modules\Task\Models\Tag;
 use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Modules\User\Models\User;
 use App\Modules\Project\Models\Project;
@@ -81,6 +81,11 @@ class Task extends Model implements Trackable
     protected static function newFactory(): TaskFactory
     {
         return TaskFactory::new();
+    }
+
+    public function getMorphClass(): string
+    {
+        return static::class;
     }
 
     public function project(): BelongsTo
