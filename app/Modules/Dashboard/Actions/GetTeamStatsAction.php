@@ -41,8 +41,24 @@ class GetTeamStatsAction
             ->whereNotNull('end_time')
             ->sum('duration_minutes') / 60;
 
+        $members = User::query()
+            ->employees()
+            ->whereIn('id', $employeeIds)
+            ->orderByDesc('total_points')
+            ->limit(8)
+            ->get(['id', 'name', 'avatar', 'specialization', 'total_points'])
+            ->map(fn (User $user): array => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'role' => $user->specialization?->label() ?? 'Team member',
+                'avatar_url' => $user->avatar ?: null,
+                'points' => (int) ($user->total_points ?? 0),
+            ])
+            ->all();
+
         return [
             'members' => $employeeIds->count(),
+            'team_members' => $members,
             'hours_this_month' => round($hoursThisMonth, 1),
             'tasks' => [
                 'total' => (int) $taskStats->total,

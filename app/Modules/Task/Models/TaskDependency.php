@@ -2,6 +2,7 @@
 
 namespace App\Modules\Task\Models;
 
+use App\Modules\User\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,10 +17,17 @@ class TaskDependency extends Model
         'depends_on_task_id',
         'dependency_type',
         'lag_days',
+        'is_escalated',
+        'escalated_by',
+        'escalated_at',
+        'resolved_at',
     ];
 
     protected $casts = [
         'lag_days' => 'integer',
+        'is_escalated' => 'boolean',
+        'escalated_at' => 'datetime',
+        'resolved_at' => 'datetime',
     ];
 
     const TYPE_FINISH_TO_START = 'finish_to_start';
@@ -35,6 +43,11 @@ class TaskDependency extends Model
     public function dependsOnTask(): BelongsTo
     {
         return $this->belongsTo(Task::class, 'depends_on_task_id');
+    }
+
+    public function escalatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'escalated_by');
     }
 
     public function isSatisfied(): bool

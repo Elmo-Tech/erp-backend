@@ -10,7 +10,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     });
 
     Route::prefix('admin/sop')
-        ->middleware('permission:manage_sop_directives')
+        ->middleware('permission:manage_sops')
         ->group(function () {
             Route::apiResource('directives', SOPController::class)
                 ->names('admin.sop.directives');

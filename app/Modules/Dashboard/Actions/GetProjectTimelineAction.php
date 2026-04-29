@@ -15,6 +15,7 @@ class GetProjectTimelineAction
                 'tasks as total_tasks',
                 'tasks as completed_tasks' => fn ($query) => $query->where('status', TaskStatus::COMPLETED->value),
             ])
+            ->withMin('tasks as start_date', 'start_date')
             ->orderByRaw('deadline IS NULL, deadline ASC')
             ->limit(10)
             ->get()
@@ -22,6 +23,8 @@ class GetProjectTimelineAction
                 'project_id' => $project->id,
                 'title' => $project->title,
                 'status' => $this->scalar($project->status),
+                'start_date' => $project->start_date,
+                'end_date' => $project->deadline?->toDateString(),
                 'deadline' => $project->deadline?->toDateString(),
                 'total_tasks' => (int) $project->total_tasks,
                 'completed_tasks' => (int) $project->completed_tasks,

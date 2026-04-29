@@ -4,11 +4,17 @@ namespace App\Modules\Dashboard\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Modules\Dashboard\Actions\EscalateBlockerAction;
+use App\Modules\Dashboard\Actions\GetEscalatedBlockersAction;
 use App\Modules\Dashboard\Actions\GetFinancialStatsAction;
 use App\Modules\Dashboard\Actions\GetPersonalBlockersAction;
 use App\Modules\Dashboard\Actions\GetPersonalTasksAction;
 use App\Modules\Dashboard\Actions\GetProjectTimelineAction;
 use App\Modules\Dashboard\Actions\GetTeamStatsAction;
+use App\Modules\Dashboard\Actions\GetTeamPulseAction;
+use App\Modules\Dashboard\Actions\ResolveEscalatedBlockerAction;
+use App\Modules\Task\Models\Task;
+use App\Modules\Task\Models\TaskDependency;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -38,7 +44,9 @@ class DashboardController extends Controller
         GetProjectTimelineAction $projectTimeline,
         GetTeamStatsAction $teamStats,
         GetPersonalTasksAction $personalTasks,
-        GetPersonalBlockersAction $personalBlockers
+        GetPersonalBlockersAction $personalBlockers,
+        GetEscalatedBlockersAction $escalatedBlockers,
+        GetTeamPulseAction $teamPulse
     ): JsonResponse {
         try {
             $user = $request->user();
@@ -61,6 +69,18 @@ class DashboardController extends Controller
                 $dashboardData['blockers'] = $personalBlockers->execute($user);
             }
 
+            if ($user->can('view_all_blockers')) {
+                $dashboardData['blockers'] = $personalBlockers->executeForAll();
+            }
+
+            if ($user->can('view_escalated_blockers')) {
+                $dashboardData['escalated_blockers'] = $escalatedBlockers->execute();
+            }
+
+            if ($user->can('view_team_pulse')) {
+                $dashboardData['team_pulse'] = $teamPulse->execute();
+            }
+
             return response()->json($dashboardData);
         } catch (\Exception $e) {
             Log::error('Dashboard overview error: '.$e->getMessage(), [
@@ -69,5 +89,35 @@ class DashboardController extends Controller
 
             return ApiResponse::error('Failed to load dashboard data: '.$e->getMessage(), 500);
         }
+    }
+
+    public function escalateBlocker(
+        Request $request,
+        Task $task,
+        EscalateBlockerAction $escalateBlocker,
+        GetEscalatedBlockersAction $escalatedBlockers
+    ): JsonResponse {
+        abort_unless($request->user()?->can('view_all_blockers'), 403);
+
+        $dependency = $escalateBlocker->execute($task, $request->user());
+
+        return response()->json([
+            'data' => $escalatedBlockers->format($dependency),
+        ]);
+    }
+
+    public function resolveEscalatedBlocker(
+        Request $request,
+        TaskDependency $dependency,
+        ResolveEscalatedBlockerAction $resolveEscalatedBlocker,
+        GetEscalatedBlockersAction $escalatedBlockers
+    ): JsonResponse {
+        abort_unless($request->user()?->can('view_escalated_blockers'), 403);
+
+        $resolvedDependency = $resolveEscalatedBlocker->execute($dependency);
+
+        return response()->json([
+            'data' => $escalatedBlockers->format($resolvedDependency),
+        ]);
     }
 }
