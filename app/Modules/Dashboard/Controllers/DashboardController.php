@@ -4,10 +4,11 @@ namespace App\Modules\Dashboard\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\Dashboard\Actions\GetAdminDashboardStatsAction;
-use App\Modules\Dashboard\Actions\GetEmployeeDashboardStatsAction;
-use App\Modules\Dashboard\Actions\GetManagerDashboardStatsAction;
-use App\Modules\Dashboard\Resources\DashboardOverviewResource;
+use App\Modules\Dashboard\Actions\GetFinancialStatsAction;
+use App\Modules\Dashboard\Actions\GetPersonalBlockersAction;
+use App\Modules\Dashboard\Actions\GetPersonalTasksAction;
+use App\Modules\Dashboard\Actions\GetProjectTimelineAction;
+use App\Modules\Dashboard\Actions\GetTeamStatsAction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -31,29 +32,36 @@ class DashboardController extends Controller
             new OA\Response(response: 200, description: 'Dashboard overview retrieved successfully'),
         ]
     )]
-    public function overview(
+    public function index(
         Request $request,
-        GetAdminDashboardStatsAction $adminAction,
-        GetManagerDashboardStatsAction $managerAction,
-        GetEmployeeDashboardStatsAction $employeeAction
+        GetFinancialStatsAction $financialStats,
+        GetProjectTimelineAction $projectTimeline,
+        GetTeamStatsAction $teamStats,
+        GetPersonalTasksAction $personalTasks,
+        GetPersonalBlockersAction $personalBlockers
     ): JsonResponse {
         try {
             $user = $request->user();
-            $isAdmin = $user->hasAnyRole(['super-admin', 'admin']);
-            $isManager = $user->hasRole('manager');
+            $dashboardData = [];
 
-            if ($isAdmin) {
-                $data = $adminAction->execute();
-            } elseif ($isManager) {
-                $data = $managerAction->execute($user);
-            } else {
-                $data = $employeeAction->execute($user);
+            if ($user->can('view_financial_stats')) {
+                $dashboardData['financial'] = $financialStats->execute();
             }
 
-            return ApiResponse::success(
-                DashboardOverviewResource::make($data)->resolve(),
-                'Dashboard overview retrieved successfully'
-            );
+            if ($user->can('view_project_timeline')) {
+                $dashboardData['timeline'] = $projectTimeline->execute();
+            }
+
+            if ($user->can('view_team_performance')) {
+                $dashboardData['team'] = $teamStats->execute();
+            }
+
+            if ($user->can('view_personal_tasks')) {
+                $dashboardData['personal_tasks'] = $personalTasks->execute($user);
+                $dashboardData['blockers'] = $personalBlockers->execute($user);
+            }
+
+            return response()->json($dashboardData);
         } catch (\Exception $e) {
             Log::error('Dashboard overview error: '.$e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
