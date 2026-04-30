@@ -18,7 +18,7 @@ return new class extends Migration
         Schema::create('proposals', function (Blueprint $table) {
             $table->id();
             $table->string('proposal_number')->unique();
-            $table->foreignId('lead_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
             $table->foreignId('template_id')->nullable()
                 ->constrained('proposal_templates')->nullOnDelete();
 

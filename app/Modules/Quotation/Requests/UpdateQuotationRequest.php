@@ -27,7 +27,7 @@ class UpdateQuotationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'leadId' => ['sometimes', 'integer', 'exists:leads,id'],
+            'clientId' => ['sometimes', 'integer', 'exists:clients,id'],
             'estimations' => ['sometimes', 'array'],
             'estimations.*' => ['required_with:estimations', 'numeric', 'min:0'],
             'hourlyRate' => ['sometimes', 'numeric', 'gt:0'],
@@ -45,8 +45,8 @@ class UpdateQuotationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'leadId.integer' => 'The leadId must be an integer.',
-            'leadId.exists' => 'The selected leadId does not exist.',
+            'clientId.integer' => 'The clientId must be an integer.',
+            'clientId.exists' => 'The selected clientId does not exist.',
             'estimations.array' => 'The estimations must be an array.',
             'estimations.*.required_with' => 'Each estimation value is required when estimations are provided.',
             'estimations.*.numeric' => 'Each estimation value must be numeric.',

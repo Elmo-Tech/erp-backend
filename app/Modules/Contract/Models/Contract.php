@@ -3,7 +3,7 @@
 namespace App\Modules\Contract\Models;
 
 use App\Enums\ContractStatus;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Traits\HasCreatedUpdatedBy;
 use Database\Factories\ContractFactory;

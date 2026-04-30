@@ -2,7 +2,7 @@
 
 namespace App\Modules\Client\Resources;
 
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;

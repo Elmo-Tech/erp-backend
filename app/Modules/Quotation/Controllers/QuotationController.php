@@ -33,7 +33,7 @@ class QuotationController extends Controller
      *     operationId="getQuotations",
      *     tags={"Quotations"},
      *     summary="Get all quotations with pagination and filtering",
-     *     description="Retrieve a paginated list of quotations with optional filtering by status and lead ID",
+     *     description="Retrieve a paginated list of quotations with optional filtering by status and client ID",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -54,9 +54,9 @@ class QuotationController extends Controller
      *     ),
      *
      *     @OA\Parameter(
-     *         name="filter[leadId]",
+     *         name="filter[clientId]",
      *         in="query",
-     *         description="Filter quotations by lead ID",
+     *         description="Filter quotations by client ID",
      *
      *         @OA\Schema(type="integer")
      *     ),
@@ -95,7 +95,7 @@ class QuotationController extends Controller
      *                     @OA\Items(
      *
      *                         @OA\Property(property="quotationId", type="integer", example=1),
-     *                         @OA\Property(property="leadId", type="integer", example=1),
+     *                         @OA\Property(property="clientId", type="integer", example=1),
      *                         @OA\Property(
      *                             property="estimations",
      *                             type="object",
@@ -144,20 +144,20 @@ class QuotationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $quotations = QueryBuilder::for(Quotation::class)
-            ->with('lead')
+            ->with('client')
             ->allowedFilters([
                 'status',
-                AllowedFilter::exact('lead_id'),
-                AllowedFilter::callback('leadId', function ($query, $value) {
-                    $query->where('lead_id', $value);
+                AllowedFilter::exact('client_id'),
+                AllowedFilter::callback('clientId', function ($query, $value) {
+                    $query->where('client_id', $value);
                 }),
                 'search' => AllowedFilter::callback('search', function ($query, $value) {
                     $query->where(function ($q) use ($value) {
                         $q->where('quotation_number', 'like', "%{$value}%")
-                            ->orWhereHas('lead', function ($leadQuery) use ($value) {
-                                $leadQuery->where('name', 'like', "%{$value}%")
-                                    ->orWhere('company', 'like', "%{$value}%")
-                                    ->orWhere('email', 'like', "%{$value}%");
+                            ->orWhereHas('client', function ($clientQuery) use ($value) {
+                                $clientQuery->where('display_name', 'like', "%{$value}%")
+                                    ->orWhere('company_name', 'like', "%{$value}%")
+                                    ->orWhere('primary_email', 'like', "%{$value}%");
                             });
                     });
                 }),
@@ -195,9 +195,9 @@ class QuotationController extends Controller
      *         required=true,
      *
      *         @OA\JsonContent(
-     *             required={"leadId", "estimations", "hourlyRate", "discountPercentage", "currency"},
+     *             required={"clientId", "estimations", "hourlyRate", "discountPercentage", "currency"},
      *
-     *             @OA\Property(property="leadId", type="integer", example=1),
+     *             @OA\Property(property="clientId", type="integer", example=1),
      *             @OA\Property(
      *                 property="estimations",
      *                 type="object",
@@ -226,7 +226,7 @@ class QuotationController extends Controller
      *                 property="data",
      *                 type="object",
      *                 @OA\Property(property="quotationId", type="integer", example=1),
-     *                 @OA\Property(property="leadId", type="integer", example=1),
+     *                 @OA\Property(property="clientId", type="integer", example=1),
      *                 @OA\Property(
      *                     property="estimations",
      *                     type="object",
@@ -269,10 +269,10 @@ class QuotationController extends Controller
      *                 property="errors",
      *                 type="object",
      *                 @OA\Property(
-     *                     property="leadId",
+     *                     property="clientId",
      *                     type="array",
      *
-     *                     @OA\Items(type="string", example="The leadId field is required.")
+     *                     @OA\Items(type="string", example="The clientId field is required.")
      *                 )
      *             )
      *         )
@@ -312,7 +312,7 @@ class QuotationController extends Controller
 
             // Prepare quotation data
             $quotationData = [
-                'lead_id' => $data['leadId'],
+                'client_id' => $data['clientId'],
                 'estimations' => $snakeCaseEstimations,
                 'hourly_rate' => $data['hourlyRate'],
                 'discount_percentage' => $data['discountPercentage'],
@@ -327,7 +327,7 @@ class QuotationController extends Controller
             $quotation = Quotation::create($quotationData);
 
             return ApiResponse::success(
-                new QuotationResource($quotation->load('lead')),
+                new QuotationResource($quotation->load('client')),
                 'Quotation created successfully',
                 201
             );
@@ -373,7 +373,7 @@ class QuotationController extends Controller
      *                 property="data",
      *                 type="object",
      *                 @OA\Property(property="quotationId", type="integer", example=1),
-     *                 @OA\Property(property="leadId", type="integer", example=1),
+     *                 @OA\Property(property="clientId", type="integer", example=1),
      *                 @OA\Property(
      *                     property="estimations",
      *                     type="object",
@@ -399,7 +399,7 @@ class QuotationController extends Controller
      *                 @OA\Property(
      *                     property="lead",
      *                     type="object",
-     *                     @OA\Property(property="leadId", type="integer", example=1),
+     *                     @OA\Property(property="clientId", type="integer", example=1),
      *                     @OA\Property(property="name", type="string", example="John Doe"),
      *                     @OA\Property(property="email", type="string", example="john@example.com"),
      *                     @OA\Property(property="company", type="string", example="Acme Corp")
@@ -438,7 +438,7 @@ class QuotationController extends Controller
     public function show(Quotation $quotation): JsonResponse
     {
         return ApiResponse::success(
-            new QuotationResource($quotation->load('lead')),
+            new QuotationResource($quotation->load('client')),
             'Quotation retrieved successfully'
         );
     }
@@ -475,7 +475,7 @@ class QuotationController extends Controller
      *
      *         @OA\JsonContent(
      *
-     *             @OA\Property(property="leadId", type="integer", example=1),
+     *             @OA\Property(property="clientId", type="integer", example=1),
      *             @OA\Property(
      *                 property="estimations",
      *                 type="object",
@@ -504,7 +504,7 @@ class QuotationController extends Controller
      *                 property="data",
      *                 type="object",
      *                 @OA\Property(property="quotationId", type="integer", example=1),
-     *                 @OA\Property(property="leadId", type="integer", example=1),
+     *                 @OA\Property(property="clientId", type="integer", example=1),
      *                 @OA\Property(
      *                     property="estimations",
      *                     type="object",
@@ -587,8 +587,8 @@ class QuotationController extends Controller
             // Prepare update data
             $updateData = [];
 
-            if (isset($data['leadId'])) {
-                $updateData['lead_id'] = $data['leadId'];
+            if (isset($data['clientId'])) {
+                $updateData['client_id'] = $data['clientId'];
             }
 
             if (isset($data['currency'])) {
@@ -653,7 +653,7 @@ class QuotationController extends Controller
             $quotation->update($updateData);
 
             return ApiResponse::success(
-                new QuotationResource($quotation->fresh()->load('lead')),
+                new QuotationResource($quotation->fresh()->load('client')),
                 'Quotation updated successfully'
             );
         });
@@ -874,7 +874,7 @@ class QuotationController extends Controller
         ]);
 
         return ApiResponse::success(
-            new QuotationResource($quotation->fresh()->load('lead')),
+            new QuotationResource($quotation->fresh()->load('client')),
             __('quotations.sent')
         );
     }
@@ -907,7 +907,7 @@ class QuotationController extends Controller
         $quotation->update($updateData);
 
         return ApiResponse::success(
-            new QuotationResource($quotation->fresh()->load('lead')),
+            new QuotationResource($quotation->fresh()->load('client')),
             __('quotations.status_updated')
         );
     }
@@ -1056,7 +1056,7 @@ class QuotationController extends Controller
             ->whereIn('status', ['sent', 'viewed', 'negotiation'])
             ->where('expires_at', '>=', now())
             ->where('expires_at', '<=', now()->addDays($days))
-            ->with('lead')
+            ->with('client')
             ->orderBy('expires_at')
             ->paginate(10);
 
@@ -1082,7 +1082,7 @@ class QuotationController extends Controller
         $quotations = Quotation::whereNotNull('expires_at')
             ->whereIn('status', ['sent', 'viewed', 'negotiation'])
             ->where('expires_at', '<', now())
-            ->with('lead')
+            ->with('client')
             ->orderBy('expires_at', 'desc')
             ->paginate(10);
 

@@ -4,8 +4,9 @@ namespace App\Modules\Lead\Models;
 
 use App\Enums\ActivityStatus;
 use App\Enums\ActivityType;
-use App\Traits\HasCreatedUpdatedBy;
+use App\Modules\CRM\Models\Client;
 use App\Modules\User\Models\User;
+use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +17,7 @@ class LeadActivity extends Model
     use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
-        'lead_id',
+        'client_id',
         'user_id',
         'type',
         'status',
@@ -47,9 +48,9 @@ class LeadActivity extends Model
         ];
     }
 
-    public function lead(): BelongsTo
+    public function client(): BelongsTo
     {
-        return $this->belongsTo(Lead::class);
+        return $this->belongsTo(Client::class);
     }
 
     public function user(): BelongsTo

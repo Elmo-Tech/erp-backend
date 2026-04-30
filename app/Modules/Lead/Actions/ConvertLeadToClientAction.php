@@ -5,7 +5,7 @@ namespace App\Modules\Lead\Actions;
 use App\Enums\ClientStatus;
 use App\Enums\LeadStatus;
 use App\Modules\Client\Actions\CreateClientAction;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\User\Models\User;
 use Illuminate\Support\Facades\DB;

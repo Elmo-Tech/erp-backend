@@ -32,7 +32,7 @@ class StoreProposalRequest extends FormRequest
     public function rules(): array
     {
         $baseRules = [
-            'leadId' => ['required', 'integer', 'exists:leads,id'],
+            'clientId' => ['required', 'integer', 'exists:clients,id'],
             'templateId' => ['nullable', 'integer', 'exists:proposal_templates,id'],
             'title' => ['required', 'string', 'max:255'],
             'content' => ['nullable', 'string'],
@@ -156,8 +156,8 @@ class StoreProposalRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'leadId.required' => __('validation.required', ['attribute' => 'leadId']),
-            'leadId.exists' => __('validation.exists', ['attribute' => 'leadId']),
+            'clientId.required' => __('validation.required', ['attribute' => 'clientId']),
+            'clientId.exists' => __('validation.exists', ['attribute' => 'clientId']),
             'title.required' => __('validation.required', ['attribute' => 'title']),
             'expiryDate.after' => __('validation.after', ['attribute' => 'expiryDate', 'date' => 'today']),
             'expiryDays.integer' => __('validation.integer', ['attribute' => 'expiryDays']),

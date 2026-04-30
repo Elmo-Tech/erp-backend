@@ -29,8 +29,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'submit_morning_sop',
             'manage_users',
             'manage_projects',
+            'create_projects',
             'manage_invoices',
+            'schedule_meetings',
             'log_time',
+            // --- New CRM & Settings Permissions ---
+            'view_clients',
+            'manage_clients',
+            'view_settings',
+            'manage_settings',
         ];
 
         foreach ($permissions as $permission) {
@@ -46,12 +53,21 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_escalated_blockers',
                 'view_team_pulse',
                 'manage_sops',
+                // Founder gets the new modules
+                'view_clients',
+                'manage_clients',
+                'create_projects',
+                'schedule_meetings',
+                'view_settings',
+                'manage_settings',
             ],
             'pmo' => [
                 'view_project_timeline',
                 'view_all_blockers',
                 'view_morning_sop',
                 'submit_morning_sop',
+                'create_projects',
+                'schedule_meetings',
             ],
             'tech_lead' => [
                 'view_team_performance',

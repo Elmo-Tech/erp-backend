@@ -2,12 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Enums\ClientStatus;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Client\Models\Client>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\CRM\Models\Client>
  */
 class ClientFactory extends Factory
 {
@@ -26,19 +25,22 @@ class ClientFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->name(),
-            'email' => $this->faker->unique()->safeEmail(),
-            'phone' => $this->faker->phoneNumber(),
-            'company' => $this->faker->company(),
+            'type' => 'company',
+            'display_name' => $this->faker->company(),
+            'legal_name' => $this->faker->company(),
+            'primary_email' => $this->faker->unique()->safeEmail(),
+            'primary_phone' => $this->faker->phoneNumber(),
+            'company_name' => $this->faker->company(),
             'position' => $this->faker->jobTitle(),
             'address' => $this->faker->address(),
             'city' => $this->faker->city(),
             'country' => $this->faker->country(),
             'website' => $this->faker->optional()->url(),
             'notes' => $this->faker->optional()->paragraph(),
-            'status' => ClientStatus::ACTIVE,
+            'lifecycle_stage' => 'client',
+            'status' => 'active',
             'user_id' => null,
-            'lead_id' => null,
+            'metadata' => [],
         ];
     }
 
@@ -48,7 +50,7 @@ class ClientFactory extends Factory
     public function active(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => ClientStatus::ACTIVE,
+            'status' => 'active',
         ]);
     }
 
@@ -58,7 +60,7 @@ class ClientFactory extends Factory
     public function inactive(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => ClientStatus::INACTIVE,
+            'status' => 'inactive',
         ]);
     }
 }

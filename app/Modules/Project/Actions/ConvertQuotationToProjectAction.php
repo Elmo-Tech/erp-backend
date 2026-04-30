@@ -34,8 +34,8 @@ class ConvertQuotationToProjectAction
      */
     public function execute(int $quotationId, array $additionalData = []): Project
     {
-        // Find the quotation with its lead relationship
-        $quotation = Quotation::with('lead')->findOrFail($quotationId);
+        // Find the quotation with its client relationship
+        $quotation = Quotation::with('client')->findOrFail($quotationId);
 
         // Validate quotation is accepted
         if ($quotation->status !== QuotationStatus::ACCEPTED) {
@@ -53,11 +53,11 @@ class ConvertQuotationToProjectAction
 
         // Generate default title if not provided
         $defaultTitle = $this->generateDefaultTitle($quotation);
-        $clientId = $quotation->lead?->client_id;
+        $clientId = $quotation->client_id;
 
         if (! $clientId) {
             throw new RuntimeException(
-                'Cannot convert a quotation to a project before the lead has been converted to a client.'
+                'Cannot convert a quotation to a project without a client.'
             );
         }
 
@@ -90,19 +90,19 @@ class ConvertQuotationToProjectAction
     }
 
     /**
-     * Generate a default project title based on the quotation's lead.
+     * Generate a default project title based on the quotation's client.
      *
      * @param  Quotation  $quotation  The quotation being converted
      * @return string The generated title
      */
     private function generateDefaultTitle(Quotation $quotation): string
     {
-        $lead = $quotation->lead;
+        $client = $quotation->client;
 
-        if ($lead->company) {
-            return "Project for {$lead->company}";
+        if ($client?->company_name) {
+            return "Project for {$client->company_name}";
         }
 
-        return "Project for {$lead->name}";
+        return 'Project for '.($client?->display_name ?? 'Client');
     }
 }

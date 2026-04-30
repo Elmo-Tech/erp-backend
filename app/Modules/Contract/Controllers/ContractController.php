@@ -41,13 +41,13 @@ class ContractController extends Controller
     public function index(Request $request): JsonResponse
     {
         $contracts = QueryBuilder::for(Contract::class)
-            ->with(['quotation.lead', 'project', 'template', 'milestones.invoice'])
+            ->with(['quotation.client', 'project', 'template', 'milestones.invoice'])
             ->allowedFilters([
                 AllowedFilter::exact('status'),
                 AllowedFilter::callback('projectId', fn ($query, $value) => $query->where('project_id', $value)),
                 AllowedFilter::callback('quotationId', fn ($query, $value) => $query->where('quotation_id', $value)),
-                AllowedFilter::callback('leadId', function ($query, $value) {
-                    $query->whereHas('quotation', fn ($quotationQuery) => $quotationQuery->where('lead_id', $value));
+                AllowedFilter::callback('clientId', function ($query, $value) {
+                    $query->whereHas('quotation', fn ($quotationQuery) => $quotationQuery->where('client_id', $value));
                 }),
                 AllowedFilter::callback('search', function ($query, $value) {
                     $query->where(function ($contractQuery) use ($value) {
@@ -56,9 +56,9 @@ class ContractController extends Controller
                             ->orWhere('file_number', 'like', "%{$value}%")
                             ->orWhereHas('quotation', function ($quotationQuery) use ($value) {
                                 $quotationQuery->where('quotation_number', 'like', "%{$value}%")
-                                    ->orWhereHas('lead', function ($leadQuery) use ($value) {
-                                        $leadQuery->where('name', 'like', "%{$value}%")
-                                            ->orWhere('company', 'like', "%{$value}%");
+                                    ->orWhereHas('client', function ($clientQuery) use ($value) {
+                                        $clientQuery->where('display_name', 'like', "%{$value}%")
+                                            ->orWhere('company_name', 'like', "%{$value}%");
                                     });
                             });
                     });

@@ -4,7 +4,7 @@ namespace App\Modules\Invoice\Models;
 
 use App\Enums\InvoiceStatus;
 use App\Modules\Contract\Models\Contract;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Scopes\ClientScope;
 use App\Traits\HasCreatedUpdatedBy;

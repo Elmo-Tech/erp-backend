@@ -16,7 +16,7 @@ return new class extends Migration
     {
         Schema::create('quotations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('lead_id')->constrained('leads')->cascadeOnDelete();
+            $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
             $table->json('estimations');
             $table->decimal('hourly_rate', 10, 2);
             $table->decimal('discount_percentage', 5, 2)->default(0);
@@ -28,7 +28,7 @@ return new class extends Migration
 
             // Indexes
             $table->index('status');
-            $table->index('lead_id');
+            $table->index('client_id');
         });
     }
 

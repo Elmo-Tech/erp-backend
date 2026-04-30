@@ -4,7 +4,7 @@ namespace App\Modules\Client\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Client\Requests\CreatePortalAccessRequest;
 use App\Modules\Client\Resources\ClientResource;
 use App\Modules\User\Models\User;

@@ -9,7 +9,7 @@ use App\Enums\LeadSource;
 use App\Enums\LeadStatus;
 use App\Enums\LeadTemperature;
 use App\Enums\ReferenceType;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Modules\User\Models\User;
 use App\Traits\HasAuditTrail;

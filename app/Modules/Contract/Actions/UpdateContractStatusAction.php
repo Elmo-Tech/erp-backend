@@ -29,7 +29,7 @@ class UpdateContractStatusAction
             'updated_by' => $user?->id ?? auth()->id(),
         ]);
 
-        return $contract->fresh()->load(['milestones.invoice', 'quotation.lead', 'project', 'template']);
+        return $contract->fresh()->load(['milestones.invoice', 'quotation.client', 'project', 'template']);
     }
 
     public function activate(Contract $contract, ?User $user = null): Contract
@@ -45,13 +45,13 @@ class UpdateContractStatusAction
             'updated_by' => $user?->id ?? auth()->id(),
         ]);
 
-        return $contract->fresh()->load(['milestones.invoice', 'quotation.lead', 'project', 'template']);
+        return $contract->fresh()->load(['milestones.invoice', 'quotation.client', 'project', 'template']);
     }
 
     private function activateProject(Contract $contract, ?User $user = null): void
     {
         $actorId = $user?->id ?? auth()->id();
-        $contract->loadMissing('quotation.lead', 'project');
+        $contract->loadMissing('quotation.client', 'project');
         $quotation = $contract->quotation;
 
         if ($contract->project_id) {
@@ -71,7 +71,7 @@ class UpdateContractStatusAction
         }
 
         $project = $this->projectConversionService->convertQuotation($quotation->id, [
-            'title' => "Project for {$quotation->lead->name}",
+            'title' => "Project for {$quotation->client->name}",
             'description' => 'Project created from contract activation',
         ]);
 

@@ -11,7 +11,7 @@ class LeadMeetingResource extends JsonResource
     {
         return [
             'meetingId' => $this->id,
-            'leadId' => $this->lead_id,
+            'clientId' => $this->client_id,
             'title' => $this->title ?? '',
             'location' => $this->location?->value ?? '',
             'locationLabel' => $this->location?->label() ?? '',
@@ -35,11 +35,11 @@ class LeadMeetingResource extends JsonResource
             'isCompleted' => $this->isCompleted(),
             'needsMinutes' => $this->needsMinutes(),
             'hasPassed' => $this->hasPassed(),
-            'lead' => $this->whenLoaded('lead', function () {
+            'client' => $this->whenLoaded('client', function () {
                 return [
-                    'leadId' => $this->lead->id,
-                    'name' => $this->lead->name ?? '',
-                    'company' => $this->lead->company ?? '',
+                    'clientId' => $this->client->id,
+                    'displayName' => $this->client->display_name ?? '',
+                    'company' => $this->client->company_name ?? '',
                 ];
             }),
             'createdAt' => $this->created_at?->toISOString() ?? '',

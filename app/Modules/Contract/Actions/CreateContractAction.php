@@ -77,7 +77,7 @@ class CreateContractAction
                 $this->createMilestones($contract, $data['milestones']);
             }
 
-            return $contract->fresh()->load(['milestones.invoice', 'quotation.lead', 'project', 'template']);
+            return $contract->fresh()->load(['milestones.invoice', 'quotation.client', 'project', 'template']);
         });
     }
 
@@ -98,7 +98,7 @@ class CreateContractAction
             throw new \InvalidArgumentException('Quotation ID is required for from_quotation data source');
         }
 
-        $quotation = Quotation::with(['lead', 'milestones'])->findOrFail($quotationId);
+        $quotation = Quotation::with(['client', 'milestones'])->findOrFail($quotationId);
 
         if ($quotation->status !== QuotationStatus::APPROVED) {
             throw new \InvalidArgumentException('Quotation must be approved to create a contract');
@@ -117,11 +117,11 @@ class CreateContractAction
 
         if (empty($contractData['party_two'])) {
             $contractData['party_two'] = [
-                'name' => $quotation->lead->name,
-                'representative' => $quotation->lead->name,
-                'email' => $quotation->lead->email,
-                'company' => $quotation->lead->company,
-                'phone' => $quotation->lead->phone ?? '',
+                'name' => $quotation->client->display_name,
+                'representative' => $quotation->client->display_name,
+                'email' => $quotation->client->primary_email,
+                'company' => $quotation->client->company_name,
+                'phone' => $quotation->client->primary_phone ?? '',
                 'title' => '',
                 'address' => '',
             ];

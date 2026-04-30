@@ -22,7 +22,7 @@ class StoreQuotationRequest extends FormRequest
     {
         return [
             // Base fields
-            'leadId' => ['required', 'integer', 'exists:leads,id'],
+            'clientId' => ['required', 'integer', 'exists:clients,id'],
             'proposalId' => ['nullable', 'integer', 'exists:proposals,id'],
             'title' => ['required', 'string', 'max:255'],
             'expiryDays' => ['required', 'integer', 'min:1'],
@@ -101,8 +101,8 @@ class StoreQuotationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'leadId.required' => __('validation.required', ['attribute' => 'leadId']),
-            'leadId.exists' => __('validation.exists', ['attribute' => 'leadId']),
+            'clientId.required' => __('validation.required', ['attribute' => 'clientId']),
+            'clientId.exists' => __('validation.exists', ['attribute' => 'clientId']),
             'title.required' => __('validation.required', ['attribute' => 'title']),
             'expiryDays.required' => __('validation.required', ['attribute' => 'expiryDays']),
             'expiryDays.min' => __('validation.min.numeric', ['attribute' => 'expiryDays', 'min' => 1]),

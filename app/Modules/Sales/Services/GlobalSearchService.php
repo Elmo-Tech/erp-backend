@@ -2,8 +2,7 @@
 
 namespace App\Modules\Sales\Services;
 
-use App\Modules\Client\Models\Client;
-use App\Modules\Lead\Models\Lead;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Modules\Proposal\Models\Proposal;
 use App\Modules\Quotation\Models\Quotation;
@@ -51,22 +50,22 @@ class GlobalSearchService
      */
     private function searchLeads(string $query, int $limit): Collection
     {
-        return Lead::where(function ($q) use ($query) {
-            $q->where('name', 'like', "%{$query}%")
-                ->orWhere('email', 'like', "%{$query}%")
-                ->orWhere('company', 'like', "%{$query}%")
-                ->orWhere('project_name', 'like', "%{$query}%")
-                ->orWhere('phone', 'like', "%{$query}%");
+        return Client::leads()
+            ->where(function ($q) use ($query) {
+                $q->where('display_name', 'like', "%{$query}%")
+                    ->orWhere('primary_email', 'like', "%{$query}%")
+                    ->orWhere('company_name', 'like', "%{$query}%")
+                    ->orWhere('primary_phone', 'like', "%{$query}%");
         })
-            ->select('id', 'name', 'email', 'company', 'status', 'created_at')
+            ->select('id', 'display_name', 'company_name', 'status', 'created_at')
             ->limit($limit)
             ->get()
             ->map(fn ($lead) => [
                 'id' => $lead->id,
                 'type' => 'lead',
-                'title' => $lead->name ?? '',
-                'subtitle' => $lead->company ?? '',
-                'status' => $lead->status?->value ?? null,
+                'title' => $lead->display_name ?? '',
+                'subtitle' => $lead->company_name ?? '',
+                'status' => $lead->status ?? null,
                 'url' => "/dashboard/sales/leads/{$lead->id}",
                 'createdAt' => $lead->created_at?->toISOString() ?? '',
             ]);
@@ -80,19 +79,19 @@ class GlobalSearchService
         return Proposal::where(function ($q) use ($query) {
             $q->where('title', 'like', "%{$query}%")
                 ->orWhere('proposal_number', 'like', "%{$query}%")
-                ->orWhereHas('lead', fn ($lq) => $lq->where('name', 'like', "%{$query}%"));
+                ->orWhereHas('client', fn ($cq) => $cq->where('display_name', 'like', "%{$query}%"));
         })
-            ->with('lead:id,name')
-            ->select('id', 'title', 'proposal_number', 'lead_id', 'status', 'created_at')
+            ->with('client:id,display_name')
+            ->select('id', 'title', 'proposal_number', 'client_id', 'status', 'created_at')
             ->limit($limit)
             ->get()
             ->map(fn ($proposal) => [
                 'id' => $proposal->id,
                 'type' => 'proposal',
                 'title' => $proposal->title ?? '',
-                'subtitle' => $proposal->lead?->name ?? '',
+                'subtitle' => $proposal->client?->name ?? '',
                 'status' => $proposal->status?->value ?? null,
-                'url' => "/dashboard/sales/leads/{$proposal->lead_id}?tab=proposals",
+                'url' => "/dashboard/sales/leads/{$proposal->client_id}?tab=proposals",
                 'createdAt' => $proposal->created_at?->toISOString() ?? '',
             ]);
     }
@@ -104,20 +103,20 @@ class GlobalSearchService
     {
         return Quotation::where(function ($q) use ($query) {
             $q->where('quotation_number', 'like', "%{$query}%")
-                ->orWhereHas('lead', fn ($lq) => $lq->where('name', 'like', "%{$query}%")
-                    ->orWhere('company', 'like', "%{$query}%"));
+                ->orWhereHas('client', fn ($cq) => $cq->where('display_name', 'like', "%{$query}%")
+                    ->orWhere('company_name', 'like', "%{$query}%"));
         })
-            ->with('lead:id,name')
-            ->select('id', 'quotation_number', 'lead_id', 'final_price', 'currency', 'status', 'created_at')
+            ->with('client:id,display_name')
+            ->select('id', 'quotation_number', 'client_id', 'final_price', 'currency', 'status', 'created_at')
             ->limit($limit)
             ->get()
             ->map(fn ($quotation) => [
                 'id' => $quotation->id,
                 'type' => 'quotation',
                 'title' => $quotation->quotation_number ?? "Quotation #{$quotation->id}",
-                'subtitle' => ($quotation->lead?->name ?? '').' - '.number_format($quotation->final_price ?? 0, 2).' '.($quotation->currency ?? ''),
+                'subtitle' => ($quotation->client?->name ?? '').' - '.number_format($quotation->final_price ?? 0, 2).' '.($quotation->currency ?? ''),
                 'status' => $quotation->status?->value ?? null,
-                'url' => "/dashboard/sales/leads/{$quotation->lead_id}?tab=quotations",
+                'url' => "/dashboard/sales/leads/{$quotation->client_id}?tab=quotations",
                 'createdAt' => $quotation->created_at?->toISOString() ?? '',
             ]);
     }
@@ -128,19 +127,19 @@ class GlobalSearchService
     private function searchClients(string $query, int $limit): Collection
     {
         return Client::where(function ($q) use ($query) {
-            $q->where('name', 'like', "%{$query}%")
-                ->orWhere('email', 'like', "%{$query}%")
-                ->orWhere('company', 'like', "%{$query}%")
-                ->orWhere('phone', 'like', "%{$query}%");
+            $q->where('display_name', 'like', "%{$query}%")
+                ->orWhere('primary_email', 'like', "%{$query}%")
+                ->orWhere('company_name', 'like', "%{$query}%")
+                ->orWhere('primary_phone', 'like', "%{$query}%");
         })
-            ->select('id', 'name', 'email', 'company', 'created_at')
+            ->select('id', 'display_name', 'company_name', 'created_at')
             ->limit($limit)
             ->get()
             ->map(fn ($client) => [
                 'id' => $client->id,
                 'type' => 'client',
-                'title' => $client->name ?? '',
-                'subtitle' => $client->company ?? '',
+                'title' => $client->display_name ?? '',
+                'subtitle' => $client->company_name ?? '',
                 'status' => null,
                 'url' => "/dashboard/clients/{$client->id}",
                 'createdAt' => $client->created_at?->toISOString() ?? '',
@@ -155,9 +154,9 @@ class GlobalSearchService
         return Project::where(function ($q) use ($query) {
             $q->where('name', 'like', "%{$query}%")
                 ->orWhere('code', 'like', "%{$query}%")
-                ->orWhereHas('client', fn ($cq) => $cq->where('name', 'like', "%{$query}%"));
+                ->orWhereHas('client', fn ($cq) => $cq->where('display_name', 'like', "%{$query}%"));
         })
-            ->with('client:id,name')
+            ->with('client:id,display_name')
             ->select('id', 'name', 'code', 'client_id', 'status', 'created_at')
             ->limit($limit)
             ->get()

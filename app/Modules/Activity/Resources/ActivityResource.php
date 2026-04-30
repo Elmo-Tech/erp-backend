@@ -3,7 +3,7 @@
 namespace App\Modules\Activity\Resources;
 
 use App\Modules\Activity\Models\Activity;
-use App\Modules\Lead\Models\Lead;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Project\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -19,7 +19,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  *     @OA\Property(property="activityId", type="integer", example=1),
  *     @OA\Property(property="subjectId", type="integer", example=1),
- *     @OA\Property(property="subjectType", type="string", example="App\\Models\\Lead"),
+ *     @OA\Property(property="subjectType", type="string", example="App\\Modules\\CRM\\Models\\Client"),
  *     @OA\Property(property="type", type="string", example="meeting"),
  *     @OA\Property(property="status", type="string", example="scheduled"),
  *     @OA\Property(property="title", type="string", example="Technical Discovery Meeting"),
@@ -56,8 +56,8 @@ class ActivityResource extends JsonResource
             'subjectName' => $this->when($activity->relationLoaded('subject'), function () use ($activity) {
                 $subject = $activity->subject;
 
-                if ($subject instanceof Lead) {
-                    return $subject->name ?? 'Unknown';
+                if ($subject instanceof Client) {
+                    return $subject->display_name ?? 'Unknown';
                 }
 
                 if ($subject instanceof Project) {

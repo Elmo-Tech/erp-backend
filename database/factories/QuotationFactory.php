@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\QuotationStatus;
-use App\Modules\Lead\Models\Lead;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Quotation\Models\Quotation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -41,7 +41,7 @@ class QuotationFactory extends Factory
         $finalPrice = $grossPrice - $discountAmount;
 
         return [
-            'lead_id' => Lead::factory(),
+            'client_id' => Client::factory(),
             'estimations' => [
                 'frontend_hours' => $frontendHours,
                 'backend_hours' => $backendHours,
@@ -98,12 +98,12 @@ class QuotationFactory extends Factory
     }
 
     /**
-     * Create a quotation for a specific lead.
+     * Create a quotation for a specific client.
      */
-    public function forLead(Lead $lead): static
+    public function forClient(Client $client): static
     {
         return $this->state(fn (array $attributes) => [
-            'lead_id' => $lead->id,
+            'client_id' => $client->id,
         ]);
     }
 }

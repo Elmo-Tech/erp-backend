@@ -2,14 +2,13 @@
 
 namespace App\Modules\Sales\Services;
 
-use App\Enums\LeadStatus;
 use App\Enums\ProposalActionType;
 use App\Enums\ProposalStatus;
 use App\Enums\TaskCategory;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Modules\Lead\Models\Lead;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Proposal\Models\Proposal;
 use App\Modules\Task\Models\Task;
 use App\Modules\User\Models\User;
@@ -27,14 +26,14 @@ class ProposalService
     public function getProposals(array $filters = []): LengthAwarePaginator
     {
         return QueryBuilder::for(Proposal::class)
-            ->with(['lead', 'template', 'task'])
+            ->with(['client', 'template', 'task'])
             ->allowedFilters([
                 AllowedFilter::exact('status'),
-                AllowedFilter::exact('lead_id'),
+                AllowedFilter::exact('client_id'),
                 AllowedFilter::exact('is_fast_track'),
                 AllowedFilter::exact('is_skipped'),
-                AllowedFilter::callback('leadId', function ($query, $value) {
-                    $query->where('lead_id', $value);
+                AllowedFilter::callback('clientId', function ($query, $value) {
+                    $query->where('client_id', $value);
                 }),
                 AllowedFilter::callback('isFastTrack', function ($query, $value) {
                     $query->where('is_fast_track', filter_var($value, FILTER_VALIDATE_BOOLEAN));
@@ -46,15 +45,15 @@ class ProposalService
                         $q->where('title', 'like', "%{$value}%")
                             ->orWhere('proposal_number', 'like', "%{$value}%")
                             ->orWhere('file_number', 'like', "%{$value}%")
-                            ->orWhereHas('lead', function ($leadQuery) use ($value) {
-                                $leadQuery->where('name', 'like', "%{$value}%")
-                                    ->orWhere('company', 'like', "%{$value}%");
+                            ->orWhereHas('client', function ($clientQuery) use ($value) {
+                                $clientQuery->where('display_name', 'like', "%{$value}%")
+                                    ->orWhere('company_name', 'like', "%{$value}%");
                             });
                     });
                 }),
             ])
             ->allowedSorts(['created_at', 'expiry_date', 'submission_date'])
-            ->allowedIncludes(['lead', 'template', 'quotations', 'task'])
+            ->allowedIncludes(['client', 'template', 'quotations', 'task'])
             ->defaultSort('-created_at')
             ->paginate($filters['perPage'] ?? 15);
     }
@@ -93,7 +92,7 @@ class ProposalService
         $proposalData = [
             'proposal_number' => $proposalNumber,
             'file_number' => $fileNumber,
-            'lead_id' => $data['leadId'],
+            'client_id' => $data['clientId'],
             'template_id' => $data['templateId'] ?? null,
             'title' => $data['title'],
             'content' => $data['content'] ?? null,
@@ -147,15 +146,12 @@ class ProposalService
             $proposal = $proposal->fresh();
         }
 
-        // Update lead status to proposal (if not skipped)
+        // Keep the unified CRM lifecycle in sync for active proposal work.
         if ($actionType !== ProposalActionType::SKIP->value) {
-            $this->updateLeadStatusToProposal($proposal->lead_id);
-        } else {
-            // If skipped, mark lead as not interested or follow up needed
-            $this->updateLeadStatusForSkippedProposal($proposal->lead_id);
+            $this->updateClientLifecycleForProposal($proposal->client_id);
         }
 
-        return $proposal->load(['lead', 'task']);
+        return $proposal->load(['client', 'task']);
     }
 
     /**
@@ -208,7 +204,7 @@ class ProposalService
             Storage::disk('public')->delete($proposal->file_path);
         }
 
-        $path = $file->store('proposals/'.$proposal->lead_id, 'public');
+        $path = $file->store('proposals/'.$proposal->client_id, 'public');
 
         $proposal->update([
             'file_path' => $path,
@@ -287,7 +283,7 @@ class ProposalService
         $proposal = Proposal::create([
             'proposal_number' => Proposal::generateProposalNumber(),
             'file_number' => Proposal::generateFileNumber(),
-            'lead_id' => $data['leadId'],
+            'client_id' => $data['clientId'],
             'title' => $data['title'] ?? 'Fast Track - '.($data['projectName'] ?? 'Project'),
             'status' => ProposalStatus::APPROVED,
             'is_fast_track' => true,
@@ -307,33 +303,19 @@ class ProposalService
     public function getExpiringProposals(int $days = 3): LengthAwarePaginator
     {
         return Proposal::expiringIn($days)
-            ->with('lead')
+            ->with('client')
             ->orderBy('expiry_date')
             ->paginate(15);
     }
 
     /**
-     * Update lead status to proposal
+     * Update client lifecycle for proposal activity.
      */
-    private function updateLeadStatusToProposal(int $leadId): void
+    private function updateClientLifecycleForProposal(int $clientId): void
     {
-        $lead = Lead::find($leadId);
-        if ($lead && $lead->status === LeadStatus::QUALIFIED) {
-            $lead->update(['status' => LeadStatus::PROPOSAL]);
-        }
-    }
-
-    /**
-     * Update lead status when proposal is skipped
-     * Lead stays at current status since skip could mean various things
-     */
-    private function updateLeadStatusForSkippedProposal(int $leadId): void
-    {
-        $lead = Lead::find($leadId);
-        if ($lead) {
-            // When proposal is skipped, we could optionally update lead status
-            // For now, keep the lead at its current status
-            // The skip_reason is stored in the proposal for reference
+        $client = Client::find($clientId);
+        if ($client && $client->lifecycle_stage === 'qualified') {
+            $client->update(['lifecycle_stage' => 'proposal']);
         }
     }
 }

@@ -61,7 +61,7 @@ class Activity extends Model
     }
 
     /**
-     * Get the subject entity (Lead, Project, etc.)
+     * Get the subject entity (Client, Project, etc.)
      */
     public function subject(): MorphTo
     {

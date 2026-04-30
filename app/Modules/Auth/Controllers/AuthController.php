@@ -121,7 +121,7 @@ class AuthController extends Controller
         try {
             $user = $this->loginUserAction->execute($request->validated());
         } catch (InvalidArgumentException) {
-            return ApiResponse::error('Invalid credentials', [], 401);
+            return ApiResponse::error('Invalid credentials', 401);
         }
 
         return ApiResponse::success([

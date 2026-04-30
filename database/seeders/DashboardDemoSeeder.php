@@ -2,13 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Enums\ClientStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\TaskCategory;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
@@ -96,23 +95,27 @@ class DashboardDemoSeeder extends Seeder
     {
         return [
             Client::updateOrCreate(
-                ['email' => 'ops@northstar-demo.test'],
+                ['primary_email' => 'ops@northstar-demo.test'],
                 [
-                    'name' => 'Northstar Operations',
-                    'company' => 'Northstar Logistics',
-                    'phone' => '+1 415 555 0131',
-                    'status' => ClientStatus::ACTIVE,
+                    'type' => 'company',
+                    'display_name' => 'Northstar Operations',
+                    'company_name' => 'Northstar Logistics',
+                    'primary_phone' => '+1 415 555 0131',
+                    'lifecycle_stage' => 'client',
+                    'status' => 'active',
                     'country' => 'United States',
                     'notes' => 'Demo logistics account for operational dashboard data.',
                 ]
             ),
             Client::updateOrCreate(
-                ['email' => 'product@atlas-demo.test'],
+                ['primary_email' => 'product@atlas-demo.test'],
                 [
-                    'name' => 'Atlas Product Team',
-                    'company' => 'Atlas Retail',
-                    'phone' => '+1 646 555 0198',
-                    'status' => ClientStatus::ACTIVE,
+                    'type' => 'company',
+                    'display_name' => 'Atlas Product Team',
+                    'company_name' => 'Atlas Retail',
+                    'primary_phone' => '+1 646 555 0198',
+                    'lifecycle_stage' => 'client',
+                    'status' => 'active',
                     'country' => 'United States',
                     'notes' => 'Demo retail account for PMO timeline work.',
                 ]

@@ -2,7 +2,7 @@
 
 namespace App\Modules\Notification\Notifications;
 
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;

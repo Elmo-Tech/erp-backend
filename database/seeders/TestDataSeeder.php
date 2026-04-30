@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Modules\Lead\Models\Lead;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Modules\Quotation\Models\Quotation;
 use App\Modules\Task\Models\Task;
@@ -16,18 +16,20 @@ class TestDataSeeder extends Seeder
     {
         $user = User::first();
 
-        // Create test lead
-        $lead = Lead::create([
-            'name' => 'Test Lead',
-            'email' => 'test@example.com',
-            'company' => 'Test Company',
+        // Create test client
+        $client = Client::create([
+            'type' => 'company',
+            'display_name' => 'Test Company',
+            'primary_email' => 'test@example.com',
+            'company_name' => 'Test Company',
             'source' => 'website',
-            'status' => 'new',
+            'lifecycle_stage' => 'client',
+            'status' => 'active',
         ]);
 
         // Create test quotation
         $quotation = Quotation::create([
-            'lead_id' => $lead->id,
+            'client_id' => $client->id,
             'estimations' => ['frontend_hours' => 40, 'backend_hours' => 60],
             'hourly_rate' => 50.00,
             'discount_percentage' => 10.0,

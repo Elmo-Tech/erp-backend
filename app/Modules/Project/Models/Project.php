@@ -9,7 +9,7 @@ use App\Modules\Quotation\Models\Quotation;
 use App\Modules\Task\Models\Task;
 use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Modules\User\Models\User;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use App\Scopes\ClientScope;
 use App\Scopes\TeamMemberScope;
 use App\Traits\HasCreatedUpdatedBy;

@@ -134,7 +134,7 @@ class ActivityController extends Controller
      * @OA\Post(
      *     path="/api/v1/activities",
      *     summary="Create new activity",
-     *     description="Create a new activity for any subject (Lead, Project, etc.)",
+     *     description="Create a new activity for any subject (Client, Project, etc.)",
      *     tags={"Activities"},
      *     security={{"sanctum":{}}},
      *
@@ -152,7 +152,7 @@ class ActivityController extends Controller
      *         @OA\JsonContent(
      *             required={"subjectType", "subjectId", "type", "title"},
      *
-     *             @OA\Property(property="subjectType", type="string", example="App\\Models\\Lead", description="Subject model class"),
+     *             @OA\Property(property="subjectType", type="string", example="App\\Modules\\CRM\\Models\\Client", description="Subject model class"),
      *             @OA\Property(property="subjectId", type="integer", example=1, description="Subject ID"),
      *             @OA\Property(property="type", type="string", enum={"call", "email", "meeting", "note", "technical_discovery"}, example="meeting"),
      *             @OA\Property(property="title", type="string", example="Technical Discovery Meeting"),

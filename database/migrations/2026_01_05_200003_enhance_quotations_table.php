@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('quotation_number', 50)->nullable()->unique()->after('id');
 
             // Template reference (foreign key will be added later)
-            $table->unsignedBigInteger('template_id')->nullable()->after('lead_id');
+            $table->unsignedBigInteger('template_id')->nullable()->after('client_id');
 
             // Lifecycle tracking
             $table->date('expiry_date')->nullable()->after('status');

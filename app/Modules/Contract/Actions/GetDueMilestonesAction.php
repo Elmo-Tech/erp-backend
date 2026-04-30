@@ -9,7 +9,7 @@ class GetDueMilestonesAction
 {
     public function execute()
     {
-        return ContractMilestone::with(['contract.quotation.lead', 'invoice'])
+        return ContractMilestone::with(['contract.quotation.client', 'invoice'])
             ->where('status', MilestoneStatus::PENDING)
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<=', now()->toDateString())

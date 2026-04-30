@@ -2,7 +2,7 @@
 
 namespace App\Modules\Client\Actions;
 
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 
 class UpdateClientAction
 {

@@ -17,7 +17,7 @@ class ProposalResource extends JsonResource
         return [
             'proposalId' => $this->id,
             'proposalNumber' => $this->proposal_number ?? '',
-            'leadId' => $this->lead_id ?? 0,
+            'clientId' => $this->client_id ?? 0,
             'templateId' => $this->template_id ?? 0,
             'title' => $this->title ?? '',
             'content' => $this->content ?? '',
@@ -40,13 +40,12 @@ class ProposalResource extends JsonResource
             'canBeEdited' => $this->canBeEdited(),
 
             // Relations
-            'lead' => $this->whenLoaded('lead', function () {
+            'client' => $this->whenLoaded('client', function () {
                 return [
-                    'leadId' => $this->lead->id,
-                    'name' => $this->lead->name ?? '',
-                    'email' => $this->lead->email ?? '',
-                    'company' => $this->lead->company ?? '',
-                    'projectName' => $this->lead->project_name ?? '',
+                    'clientId' => $this->client->id,
+                    'displayName' => $this->client->display_name ?? '',
+                    'email' => $this->client->primary_email ?? '',
+                    'company' => $this->client->company_name ?? '',
                 ];
             }),
             'template' => $this->whenLoaded('template', function () {

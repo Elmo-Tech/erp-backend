@@ -3,7 +3,7 @@
 namespace App\Modules\Proposal\Models;
 
 use App\Enums\ProposalStatus;
-use App\Modules\Lead\Models\Lead;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Quotation\Models\Quotation;
 use App\Modules\Task\Models\Task;
 use App\Traits\HasAuditTrail;
@@ -22,7 +22,7 @@ class Proposal extends Model
     protected $fillable = [
         'proposal_number',
         'file_number',
-        'lead_id',
+        'client_id',
         'template_id',
         'title',
         'content',
@@ -59,11 +59,11 @@ class Proposal extends Model
     }
 
     /**
-     * Get the lead that owns the proposal.
+     * Get the client that owns the proposal.
      */
-    public function lead(): BelongsTo
+    public function client(): BelongsTo
     {
-        return $this->belongsTo(Lead::class);
+        return $this->belongsTo(Client::class);
     }
 
     /**

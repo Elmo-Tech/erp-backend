@@ -27,22 +27,22 @@ class QuotationService
         return QueryBuilder::for(Quotation::class)
             ->allowedFilters([
                 AllowedFilter::exact('status'),
-                AllowedFilter::exact('lead_id'),
+                AllowedFilter::exact('client_id'),
                 AllowedFilter::exact('commission_user_id'),
                 AllowedFilter::scope('expiring_in', 'expiringIn'),
                 'search' => AllowedFilter::callback('search', function ($query, $value) {
                     $query->where(function ($q) use ($value) {
                         $q->where('quotation_number', 'like', "%{$value}%")
                             ->orWhere('file_number', 'like', "%{$value}%")
-                            ->orWhereHas('lead', function ($q) use ($value) {
-                                $q->where('name', 'like', "%{$value}%")
-                                    ->orWhere('company', 'like', "%{$value}%");
+                            ->orWhereHas('client', function ($q) use ($value) {
+                                $q->where('display_name', 'like', "%{$value}%")
+                                    ->orWhere('company_name', 'like', "%{$value}%");
                             });
                     });
                 }),
             ])
             ->allowedSorts(['created_at', 'final_price', 'expiry_date', 'sent_at'])
-            ->allowedIncludes(['lead', 'items', 'milestones', 'template', 'commissionUser', 'contract', 'task'])
+            ->allowedIncludes(['client', 'items', 'milestones', 'template', 'commissionUser', 'contract', 'task'])
             ->defaultSort('-created_at')
             ->paginate($filters['perPage'] ?? 15);
     }
@@ -127,7 +127,7 @@ class QuotationService
             $quotation = Quotation::create([
                 'quotation_number' => $quotationNumber,
                 'file_number' => $fileNumber,
-                'lead_id' => $data['leadId'],
+                'client_id' => $data['clientId'],
                 'proposal_id' => $data['proposalId'] ?? null,
                 'template_id' => $data['templateId'] ?? null,
                 'task_id' => $data['taskId'] ?? null,
@@ -189,7 +189,7 @@ class QuotationService
                 }
             }
 
-            return $quotation->load(['items', 'milestones', 'lead']);
+            return $quotation->load(['items', 'milestones', 'client']);
         });
     }
 
@@ -273,7 +273,7 @@ class QuotationService
                 'updated_by' => $user->id,
             ]);
 
-            return $quotation->fresh(['items', 'milestones', 'lead']);
+            return $quotation->fresh(['items', 'milestones', 'client']);
         });
     }
 
@@ -368,7 +368,7 @@ class QuotationService
     public function getExpiringQuotations(int $days = 3): LengthAwarePaginator
     {
         return Quotation::expiringIn($days)
-            ->with('lead', 'milestones')
+            ->with('client', 'milestones')
             ->orderBy('expiry_date')
             ->paginate(10);
     }

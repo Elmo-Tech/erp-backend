@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::table('quotations', function (Blueprint $table) {
             // Link to proposal (optional for fast track)
-            $table->foreignId('proposal_id')->nullable()->after('lead_id')
+            $table->foreignId('proposal_id')->nullable()->after('client_id')
                 ->constrained()->nullOnDelete();
 
             // Scope description for fast track (when no proposal)

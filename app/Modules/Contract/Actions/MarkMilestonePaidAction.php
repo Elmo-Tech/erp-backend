@@ -15,6 +15,6 @@ class MarkMilestonePaidAction
             'paid_at' => now(),
         ]);
 
-        return $milestone->fresh(['contract.quotation.lead', 'invoice']);
+        return $milestone->fresh(['contract.quotation.client', 'invoice']);
     }
 }

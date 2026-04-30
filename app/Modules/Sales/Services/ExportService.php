@@ -79,7 +79,7 @@ class ExportService
      */
     public function exportProposals(array $filters = []): array
     {
-        $query = Proposal::with(['lead:id,name,company', 'techLead:id,name']);
+        $query = Proposal::with(['client:id,display_name,company_name', 'techLead:id,name']);
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -100,7 +100,7 @@ class ExportService
                 'ID',
                 'Proposal Number',
                 'Title',
-                'Lead',
+                'Client',
                 'Company',
                 'Status',
                 'Tech Lead',
@@ -112,8 +112,8 @@ class ExportService
                 $p->id,
                 $p->proposal_number,
                 $p->title,
-                $p->lead?->name,
-                $p->lead?->company,
+                $p->client?->display_name,
+                $p->client?->company_name,
                 $p->status?->value,
                 $p->techLead?->name,
                 $p->sent_at?->format('Y-m-d'),
@@ -130,7 +130,7 @@ class ExportService
      */
     public function exportQuotations(array $filters = []): array
     {
-        $query = Quotation::with(['lead:id,name,company']);
+        $query = Quotation::with(['client:id,display_name,company_name']);
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -150,7 +150,7 @@ class ExportService
             'headers' => [
                 'ID',
                 'Quotation Number',
-                'Lead',
+                'Client',
                 'Company',
                 'Status',
                 'Hourly Rate',
@@ -163,8 +163,8 @@ class ExportService
             'data' => $quotations->map(fn ($q) => [
                 $q->id,
                 $q->quotation_number,
-                $q->lead?->name,
-                $q->lead?->company,
+                $q->client?->display_name,
+                $q->client?->company_name,
                 $q->status?->value,
                 $q->hourly_rate,
                 $q->discount_percentage,

@@ -6,7 +6,6 @@ use App\Enums\ContractStatus;
 use App\Enums\MilestoneStatus;
 use App\Modules\Contract\Models\Contract;
 use App\Modules\Contract\Models\ContractMilestone;
-use App\Modules\Lead\Actions\ConvertLeadToClientAction;
 use App\Modules\Project\Actions\ConvertQuotationToProjectAction;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\User\Models\User;
@@ -17,8 +16,7 @@ use Illuminate\Support\Facades\DB;
 class SignContractAction
 {
     public function __construct(
-        private ConvertQuotationToProjectAction $projectConversionService,
-        private ConvertLeadToClientAction $convertLeadToClientAction
+        private ConvertQuotationToProjectAction $projectConversionService
     ) {}
 
     public function execute(Contract $contract, array $data = [], ?User $user = null): Contract
@@ -43,20 +41,11 @@ class SignContractAction
             }
 
             $contract->update($updateData);
-            $contract->loadMissing('quotation.lead', 'project');
-
-            $lead = null;
-            if ($contract->quotation && $contract->quotation->lead) {
-                $lead = $contract->quotation->lead;
-            }
-
-            if ($lead && ! $lead->client_id && $actor) {
-                $this->convertLeadToClientAction->executeFromContract($lead, $contract, $actor);
-            }
+            $contract->loadMissing('quotation.client', 'project');
 
             $this->activateProject($contract, $user);
 
-            return $contract->fresh()->load(['milestones.invoice', 'quotation.lead', 'project', 'template']);
+            return $contract->fresh()->load(['milestones.invoice', 'quotation.client', 'project', 'template']);
         });
     }
 
@@ -68,7 +57,7 @@ class SignContractAction
     private function activateProject(Contract $contract, ?User $user = null): void
     {
         $actorId = $user?->id ?? auth()->id();
-        $contract->loadMissing('quotation.lead', 'project');
+        $contract->loadMissing('quotation.client', 'project');
         $quotation = $contract->quotation;
 
         if ($contract->project_id) {
@@ -88,7 +77,7 @@ class SignContractAction
         }
 
         $project = $this->projectConversionService->convertQuotation($quotation->id, [
-            'title' => "Project for {$quotation->lead->name}",
+            'title' => 'Project for '.($quotation->client?->display_name ?? 'Client'),
             'description' => 'Project created from signed contract',
         ]);
 

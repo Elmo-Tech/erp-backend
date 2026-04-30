@@ -241,7 +241,7 @@ class SalesDashboardService
         $expiringProposals = Proposal::where('status', ProposalStatus::SENT)
             ->whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [now(), now()->addHours(48)])
-            ->with('lead:id,name,company')
+            ->with('client:id,display_name,company_name')
             ->get()
             ->map(fn ($p) => [
                 'type' => 'proposal_expiring',
@@ -249,7 +249,7 @@ class SalesDashboardService
                 'title' => __('alerts.proposal_expiring'),
                 'message' => __('alerts.proposal_expiring_message', [
                     'title' => $p->title,
-                    'lead' => $p->lead?->name,
+                    'client' => $p->client?->display_name,
                     'date' => $p->expiry_date->format('M d, Y'),
                 ]),
                 'entityType' => 'proposal',
@@ -261,7 +261,7 @@ class SalesDashboardService
         $expiringQuotations = Quotation::where('status', QuotationStatus::SENT)
             ->whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [now(), now()->addHours(48)])
-            ->with('lead:id,name,company')
+            ->with('client:id,display_name,company_name')
             ->get()
             ->map(fn ($q) => [
                 'type' => 'quotation_expiring',
@@ -269,7 +269,7 @@ class SalesDashboardService
                 'title' => __('alerts.quotation_expiring'),
                 'message' => __('alerts.quotation_expiring_message', [
                     'number' => $q->quotation_number,
-                    'lead' => $q->lead?->name,
+                    'client' => $q->client?->display_name,
                     'date' => $q->expiry_date->format('M d, Y'),
                 ]),
                 'entityType' => 'quotation',
@@ -280,7 +280,7 @@ class SalesDashboardService
         // Overdue activities
         $overdueActivities = LeadActivity::where('status', ActivityStatus::SCHEDULED)
             ->where('scheduled_at', '<', now())
-            ->with(['lead:id,name', 'user:id,name'])
+            ->with(['client:id,display_name', 'user:id,name'])
             ->limit(10)
             ->get()
             ->map(fn ($a) => [
@@ -289,7 +289,7 @@ class SalesDashboardService
                 'title' => __('alerts.activity_overdue'),
                 'message' => __('alerts.activity_overdue_message', [
                     'title' => $a->title,
-                    'lead' => $a->lead?->name,
+                    'client' => $a->client?->display_name,
                     'user' => $a->user?->name,
                 ]),
                 'entityType' => 'activity',
@@ -300,7 +300,7 @@ class SalesDashboardService
         // Meetings needing minutes (completed but no minutes)
         $meetingsNeedingMinutes = LeadMeeting::where('status', MeetingStatus::COMPLETED)
             ->whereNull('minutes')
-            ->with('lead:id,name')
+            ->with('client:id,display_name')
             ->limit(10)
             ->get()
             ->map(fn ($m) => [
@@ -309,7 +309,7 @@ class SalesDashboardService
                 'title' => __('alerts.meeting_needs_minutes'),
                 'message' => __('alerts.meeting_needs_minutes_message', [
                     'title' => $m->title,
-                    'lead' => $m->lead?->name,
+                    'client' => $m->client?->display_name,
                 ]),
                 'entityType' => 'meeting',
                 'entityId' => $m->id,

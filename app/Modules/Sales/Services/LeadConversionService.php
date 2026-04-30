@@ -2,9 +2,8 @@
 
 namespace App\Modules\Sales\Services;
 
-use App\Enums\ClientStatus;
 use App\Enums\LeadStatus;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Contract\Models\Contract;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\User\Models\User;
@@ -22,18 +21,21 @@ class LeadConversionService
         return DB::transaction(function () use ($lead, $convertedBy, $additionalData) {
             // Create client from lead data
             $client = Client::create([
-                'name' => $additionalData['name'] ?? $lead->name,
-                'email' => $additionalData['email'] ?? $lead->email,
-                'phone' => $additionalData['phone'] ?? $lead->phone,
-                'company' => $additionalData['company'] ?? $lead->company,
+                'type' => $lead->company ? 'company' : 'individual',
+                'display_name' => $additionalData['name'] ?? $lead->name,
+                'primary_email' => $additionalData['email'] ?? $lead->email,
+                'primary_phone' => $additionalData['phone'] ?? $lead->phone,
+                'company_name' => $additionalData['company'] ?? $lead->company,
                 'country' => $additionalData['country'] ?? $lead->country,
                 'position' => $additionalData['position'] ?? null,
                 'address' => $additionalData['address'] ?? null,
                 'city' => $additionalData['city'] ?? null,
                 'website' => $additionalData['website'] ?? null,
                 'notes' => $additionalData['notes'] ?? $lead->notes,
-                'status' => ClientStatus::ACTIVE,
-                'lead_id' => $lead->id,
+                'lifecycle_stage' => 'client',
+                'status' => 'active',
+                'became_client_at' => now(),
+                'metadata' => ['legacy_lead_id' => $lead->id],
             ]);
 
             // Update lead with conversion info
@@ -66,13 +68,16 @@ class LeadConversionService
 
             // Create client from lead data
             $client = Client::create([
-                'name' => $lead->name,
-                'email' => $lead->email,
-                'phone' => $lead->phone,
-                'company' => $lead->company,
+                'type' => $lead->company ? 'company' : 'individual',
+                'display_name' => $lead->name,
+                'primary_email' => $lead->email,
+                'primary_phone' => $lead->phone,
+                'company_name' => $lead->company,
                 'country' => $lead->country,
-                'status' => ClientStatus::ACTIVE,
-                'lead_id' => $lead->id,
+                'lifecycle_stage' => 'client',
+                'status' => 'active',
+                'became_client_at' => now(),
+                'metadata' => ['legacy_lead_id' => $lead->id],
             ]);
 
             // Update the contract with the new client_id

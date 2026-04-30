@@ -35,7 +35,7 @@ class ProposalController extends Controller
      *
      *     @OA\Parameter(name="Accept-Language", in="header", required=true, @OA\Schema(type="string", enum={"en", "ar"})),
      *     @OA\Parameter(name="filter[status]", in="query", @OA\Schema(type="string", enum={"draft", "sent", "viewed", "approved", "rejected", "expired"})),
-     *     @OA\Parameter(name="filter[leadId]", in="query", @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="filter[clientId]", in="query", @OA\Schema(type="integer")),
      *     @OA\Parameter(name="filter[search]", in="query", @OA\Schema(type="string")),
      *     @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer")),
@@ -68,9 +68,9 @@ class ProposalController extends Controller
      *         required=true,
      *
      *         @OA\JsonContent(
-     *             required={"leadId", "title"},
+     *             required={"clientId", "title"},
      *
-     *             @OA\Property(property="leadId", type="integer", example=1),
+     *             @OA\Property(property="clientId", type="integer", example=1),
      *             @OA\Property(property="templateId", type="integer", example=1),
      *             @OA\Property(property="title", type="string", example="Technical Proposal V1"),
      *             @OA\Property(property="content", type="string"),
@@ -99,7 +99,7 @@ class ProposalController extends Controller
             );
 
             return ApiResponse::success(
-                new ProposalResource($proposal->load(['lead', 'task'])),
+                new ProposalResource($proposal->load(['client', 'task'])),
                 __('proposals.created'),
                 201
             );
@@ -123,7 +123,7 @@ class ProposalController extends Controller
      */
     public function show(Proposal $proposal): JsonResponse
     {
-        $proposal->load(['lead', 'template', 'quotations']);
+        $proposal->load(['client', 'template', 'quotations']);
 
         return ApiResponse::success(
             new ProposalResource($proposal),
@@ -161,7 +161,7 @@ class ProposalController extends Controller
         );
 
         return ApiResponse::success(
-            new ProposalResource($proposal->load('lead')),
+            new ProposalResource($proposal->load('client')),
             __('proposals.updated')
         );
     }
@@ -332,9 +332,9 @@ class ProposalController extends Controller
      *         required=true,
      *
      *         @OA\JsonContent(
-     *             required={"leadId", "fastTrackReason"},
+     *             required={"clientId", "fastTrackReason"},
      *
-     *             @OA\Property(property="leadId", type="integer"),
+     *             @OA\Property(property="clientId", type="integer"),
      *             @OA\Property(property="title", type="string"),
      *             @OA\Property(property="projectName", type="string"),
      *             @OA\Property(property="fastTrackReason", type="string", example="SaaS Standard Package")
@@ -353,7 +353,7 @@ class ProposalController extends Controller
             );
 
             return ApiResponse::success(
-                new ProposalResource($proposal->load('lead')),
+                new ProposalResource($proposal->load('client')),
                 __('proposals.fast_track_created'),
                 201
             );

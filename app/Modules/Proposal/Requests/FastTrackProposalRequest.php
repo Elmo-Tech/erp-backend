@@ -17,7 +17,7 @@ class FastTrackProposalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'leadId' => ['required', 'integer', 'exists:leads,id'],
+            'clientId' => ['required', 'integer', 'exists:clients,id'],
             'title' => ['nullable', 'string', 'max:255'],
             'projectName' => ['nullable', 'string', 'max:255'],
             'fastTrackReason' => ['required', 'string', 'max:500'],
@@ -27,7 +27,7 @@ class FastTrackProposalRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'leadId.required' => __('validation.required', ['attribute' => 'leadId']),
+            'clientId.required' => __('validation.required', ['attribute' => 'clientId']),
             'fastTrackReason.required' => __('validation.required', ['attribute' => 'fastTrackReason']),
         ];
     }

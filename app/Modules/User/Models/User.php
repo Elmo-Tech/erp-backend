@@ -11,7 +11,7 @@ use App\Modules\Lead\Models\Lead;
 use App\Modules\Performance\Models\PerformanceEvaluation;
 use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
 use Database\Factories\UserFactory;

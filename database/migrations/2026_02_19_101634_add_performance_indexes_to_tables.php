@@ -112,8 +112,8 @@ return new class extends Migration
 
         // Quotations table indexes
         Schema::table('quotations', function (Blueprint $table) {
-            // Index for lead relationship
-            $table->index('lead_id', 'idx_quotations_lead');
+            // Index for client relationship
+            $table->index('client_id', 'idx_quotations_client');
 
             // Index for status filtering
             $table->index('status', 'idx_quotations_status');

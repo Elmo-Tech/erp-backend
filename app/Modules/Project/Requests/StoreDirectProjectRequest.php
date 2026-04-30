@@ -11,7 +11,7 @@ class StoreDirectProjectRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return (bool) $this->user()?->canAny(['create_projects', 'manage_projects']);
     }
 
     public function rules(): array

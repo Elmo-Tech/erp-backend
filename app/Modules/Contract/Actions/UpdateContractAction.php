@@ -52,7 +52,7 @@ class UpdateContractAction
                 }
             }
 
-            return $contract->fresh()->load(['milestones.invoice', 'quotation.lead', 'project', 'template']);
+            return $contract->fresh()->load(['milestones.invoice', 'quotation.client', 'project', 'template']);
         });
     }
 

@@ -16,7 +16,7 @@ return new class extends Migration
     {
         Schema::create('lead_meetings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('lead_id')->constrained('leads')->cascadeOnDelete();
+            $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
             $table->string('title');
             $table->string('location'); // online, office, client_site
             $table->string('meeting_link', 500)->nullable();

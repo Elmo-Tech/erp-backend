@@ -158,9 +158,8 @@ return new class extends Migration
                 if (! $this->indexExists('quotations', 'quotations_status_index')) {
                     $table->index('status', 'quotations_status_index');
                 }
-                // Note: quotations table has lead_id, not client_id
-                if (! $this->indexExists('quotations', 'quotations_lead_id_index')) {
-                    $table->index('lead_id', 'quotations_lead_id_index');
+                if (! $this->indexExists('quotations', 'quotations_client_id_index')) {
+                    $table->index('client_id', 'quotations_client_id_index');
                 }
                 // Note: valid_until column doesn't exist in base quotations table
             });
@@ -200,8 +199,8 @@ return new class extends Migration
                 if (! $this->indexExists('proposals', 'proposals_status_index')) {
                     $table->index('status', 'proposals_status_index');
                 }
-                if (! $this->indexExists('proposals', 'proposals_lead_id_index')) {
-                    $table->index('lead_id', 'proposals_lead_id_index');
+                if (! $this->indexExists('proposals', 'proposals_client_id_index')) {
+                    $table->index('client_id', 'proposals_client_id_index');
                 }
             });
         }
@@ -404,8 +403,8 @@ return new class extends Migration
                 if ($this->indexExists('quotations', 'quotations_status_index')) {
                     $table->dropIndex('quotations_status_index');
                 }
-                if ($this->indexExists('quotations', 'quotations_lead_id_index')) {
-                    $table->dropIndex('quotations_lead_id_index');
+                if ($this->indexExists('quotations', 'quotations_client_id_index')) {
+                    $table->dropIndex('quotations_client_id_index');
                 }
             });
         }
@@ -443,8 +442,8 @@ return new class extends Migration
                 if ($this->indexExists('proposals', 'proposals_status_index')) {
                     $table->dropIndex('proposals_status_index');
                 }
-                if ($this->indexExists('proposals', 'proposals_lead_id_index')) {
-                    $table->dropIndex('proposals_lead_id_index');
+                if ($this->indexExists('proposals', 'proposals_client_id_index')) {
+                    $table->dropIndex('proposals_client_id_index');
                 }
             });
         }

@@ -4,6 +4,7 @@ namespace App\Modules\Lead\Models;
 
 use App\Enums\MeetingLocation;
 use App\Enums\MeetingStatus;
+use App\Modules\CRM\Models\Client;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,7 @@ class LeadMeeting extends Model
     use HasCreatedUpdatedBy, HasFactory;
 
     protected $fillable = [
-        'lead_id',
+        'client_id',
         'title',
         'location',
         'status',
@@ -50,9 +51,9 @@ class LeadMeeting extends Model
         ];
     }
 
-    public function lead(): BelongsTo
+    public function client(): BelongsTo
     {
-        return $this->belongsTo(Lead::class);
+        return $this->belongsTo(Client::class);
     }
 
     public function reminders(): MorphMany

@@ -11,7 +11,7 @@ class LeadActivityResource extends JsonResource
     {
         return [
             'activityId' => $this->id,
-            'leadId' => $this->lead_id,
+            'clientId' => $this->client_id,
             'userId' => $this->user_id,
             'userName' => $this->whenLoaded('user', fn () => $this->user->name ?? ''),
             'type' => $this->type?->value ?? '',

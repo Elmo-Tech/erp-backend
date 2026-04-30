@@ -22,8 +22,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 class ContractService
 {
     public function __construct(
-        private ConvertQuotationToProjectAction $projectConversionService,
-        private LeadConversionService $leadConversionService
+        private ConvertQuotationToProjectAction $projectConversionService
     ) {}
 
     /**
@@ -32,13 +31,13 @@ class ContractService
     public function getContracts(array $filters = []): LengthAwarePaginator
     {
         return QueryBuilder::for(Contract::class)
-            ->with(['quotation.lead', 'project', 'template', 'milestones.invoice'])
+            ->with(['quotation.client', 'project', 'template', 'milestones.invoice'])
             ->allowedFilters([
                 AllowedFilter::exact('status'),
                 AllowedFilter::callback('projectId', fn ($query, $value) => $query->where('project_id', $value)),
                 AllowedFilter::callback('quotationId', fn ($query, $value) => $query->where('quotation_id', $value)),
-                AllowedFilter::callback('leadId', function ($query, $value) {
-                    $query->whereHas('quotation', fn ($quotationQuery) => $quotationQuery->where('lead_id', $value));
+                AllowedFilter::callback('clientId', function ($query, $value) {
+                    $query->whereHas('quotation', fn ($quotationQuery) => $quotationQuery->where('client_id', $value));
                 }),
                 AllowedFilter::callback('search', function ($query, $value) {
                     $query->where(function ($contractQuery) use ($value) {
@@ -47,9 +46,9 @@ class ContractService
                             ->orWhere('file_number', 'like', "%{$value}%")
                             ->orWhereHas('quotation', function ($quotationQuery) use ($value) {
                                 $quotationQuery->where('quotation_number', 'like', "%{$value}%")
-                                    ->orWhereHas('lead', function ($leadQuery) use ($value) {
-                                        $leadQuery->where('name', 'like', "%{$value}%")
-                                            ->orWhere('company', 'like', "%{$value}%");
+                                    ->orWhereHas('client', function ($clientQuery) use ($value) {
+                                        $clientQuery->where('display_name', 'like', "%{$value}%")
+                                            ->orWhere('company_name', 'like', "%{$value}%");
                                     });
                             });
                     });
@@ -158,7 +157,7 @@ class ContractService
         }
 
         // Load quotation with relationships
-        $quotation = Quotation::with(['lead', 'milestones'])->findOrFail($quotationId);
+        $quotation = Quotation::with(['client', 'milestones'])->findOrFail($quotationId);
 
         // Validate quotation is approved
         if ($quotation->status !== QuotationStatus::APPROVED) {
@@ -179,14 +178,14 @@ class ContractService
         $contractData['total_amount'] = $quotation->final_price;
         $contractData['currency'] = $quotation->currency;
 
-        // If no party data provided, use lead data
+        // If no party data provided, use client data
         if (empty($contractData['party_two'])) {
             $contractData['party_two'] = [
-                'name' => $quotation->lead->name,
-                'representative' => $quotation->lead->name,
-                'email' => $quotation->lead->email,
-                'company' => $quotation->lead->company,
-                'phone' => $quotation->lead->phone ?? '',
+                'name' => $quotation->client->display_name,
+                'representative' => $quotation->client->display_name,
+                'email' => $quotation->client->primary_email,
+                'company' => $quotation->client->company_name,
+                'phone' => $quotation->client->primary_phone ?? '',
                 'title' => '',
                 'address' => '',
             ];
@@ -357,8 +356,8 @@ class ContractService
     public function generateDraft(Quotation $quotation): Contract
     {
         return DB::transaction(function () use ($quotation) {
-            // Load quotation with lead relationship
-            $quotation->load('lead');
+            // Load quotation with client relationship
+            $quotation->load('client');
 
             // Generate contract content from template
             $content = $this->generateContractContent($quotation);
@@ -372,17 +371,17 @@ class ContractService
             ];
 
             $partyTwo = [
-                'name' => $quotation->lead->name,
-                'email' => $quotation->lead->email,
-                'company' => $quotation->lead->company,
-                'phone' => $quotation->lead->phone ?? '',
+                'name' => $quotation->client->display_name,
+                'email' => $quotation->client->primary_email,
+                'company' => $quotation->client->company_name,
+                'phone' => $quotation->client->primary_phone ?? '',
             ];
 
             // Create contract
             $contract = Contract::create([
                 'contract_number' => Contract::generateContractNumber(),
                 'quotation_id' => $quotation->id,
-                'title' => "Service Agreement - {$quotation->lead->name}",
+                'title' => "Service Agreement - {$quotation->client->display_name}",
                 'content' => $content,
                 'party_one' => $partyOne,
                 'party_two' => $partyTwo,
@@ -408,7 +407,7 @@ class ContractService
 
     /**
      * Mark contract as signed and activate project
-     * Also triggers lead to client conversion if lead exists
+     * Also activates or creates the related project.
      *
      * @param  array  $data  Data including optional signedPdf
      */
@@ -416,8 +415,6 @@ class ContractService
     {
         return DB::transaction(function () use ($contract, $data, $user) {
             $actorId = $this->resolveActorId($user);
-            $actor = $this->resolveActor($user);
-
             // Validate contract can be signed
             if (! $contract->canBeSigned()) {
                 throw new \InvalidArgumentException('Contract cannot be signed in current status');
@@ -439,22 +436,7 @@ class ContractService
 
             // Update contract
             $contract->update($updateData);
-            $contract->loadMissing('quotation.lead', 'project');
-
-            // Get the lead from quotation if exists
-            $lead = null;
-            if ($contract->quotation && $contract->quotation->lead) {
-                $lead = $contract->quotation->lead;
-            }
-
-            // If lead exists and not already converted, convert to client
-            if ($lead && ! $lead->client_id && $actor) {
-                $this->leadConversionService->convertLeadToClient(
-                    $lead,
-                    $contract,
-                    $actor
-                );
-            }
+            $contract->loadMissing('quotation.client', 'project');
 
             // Activate or create project
             $this->activateProject($contract, $user);
@@ -519,7 +501,7 @@ class ContractService
      */
     public function getDueMilestones()
     {
-        return ContractMilestone::with(['contract.quotation.lead', 'invoice'])
+        return ContractMilestone::with(['contract.quotation.client', 'invoice'])
             ->where('status', MilestoneStatus::PENDING)
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<=', now()->toDateString())
@@ -538,7 +520,7 @@ class ContractService
             'paid_at' => now(),
         ]);
 
-        return $milestone->fresh(['contract.quotation.lead', 'invoice']);
+        return $milestone->fresh(['contract.quotation.client', 'invoice']);
     }
 
     /**
@@ -556,9 +538,9 @@ class ContractService
 
         // Replace placeholders
         $replacements = [
-            '{{client_name}}' => $quotation->lead->name ?? 'Client',
-            '{{client_email}}' => $quotation->lead->email ?? '',
-            '{{client_company}}' => $quotation->lead->company ?? '',
+            '{{client_name}}' => $quotation->client->name ?? 'Client',
+            '{{client_email}}' => $quotation->client->email ?? '',
+            '{{client_company}}' => $quotation->client->company ?? '',
             '{{total_amount}}' => number_format($quotation->final_price, 2),
             '{{currency}}' => $quotation->currency,
             '{{payment_plan}}' => $paymentPlanTable,
@@ -732,7 +714,7 @@ class ContractService
     private function activateProject(Contract $contract, ?User $user = null): void
     {
         $actorId = $this->resolveActorId($user);
-        $contract->loadMissing('quotation.lead', 'project');
+        $contract->loadMissing('quotation.client', 'project');
         $quotation = $contract->quotation;
 
         // Check if project already exists
@@ -754,7 +736,7 @@ class ContractService
         } else {
             // Create new project from quotation using conversion service
             $project = $this->projectConversionService->convertQuotation($quotation->id, [
-                'title' => "Project for {$quotation->lead->name}",
+                'title' => 'Project for '.($quotation->client?->display_name ?? 'Client'),
                 'description' => 'Project created from signed contract',
             ]);
 
@@ -783,6 +765,6 @@ class ContractService
 
     private function loadContractRelations(Contract $contract): Contract
     {
-        return $contract->fresh()->load(['milestones.invoice', 'quotation.lead', 'project', 'template']);
+        return $contract->fresh()->load(['milestones.invoice', 'quotation.client', 'project', 'template']);
     }
 }

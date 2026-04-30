@@ -2,7 +2,6 @@
 
 namespace App\Modules\Quotation\Resources;
 
-use App\Modules\Lead\Resources\LeadResource;
 use App\Modules\Sales\Services\PricingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -44,7 +43,7 @@ class QuotationResource extends JsonResource
 
         return [
             'quotationId' => $this->id,
-            'leadId' => $this->lead_id ?? 0,
+            'clientId' => $this->client_id ?? 0,
             'estimations' => $camelCaseEstimations,
             'hourlyRate' => (float) ($this->hourly_rate ?? 0.0),
             'discountPercentage' => (float) ($this->discount_percentage ?? 0.0),
@@ -65,8 +64,13 @@ class QuotationResource extends JsonResource
                     return null;
                 }
             }),
-            'lead' => $this->whenLoaded('lead', function () {
-                return new LeadResource($this->lead);
+            'client' => $this->whenLoaded('client', function () {
+                return [
+                    'clientId' => $this->client->id,
+                    'displayName' => $this->client->display_name ?? '',
+                    'email' => $this->client->primary_email ?? '',
+                    'company' => $this->client->company_name ?? '',
+                ];
             }),
             'createdAt' => $this->created_at?->toISOString() ?? '',
             'updatedAt' => $this->updated_at?->toISOString() ?? '',

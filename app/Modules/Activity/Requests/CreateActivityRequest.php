@@ -16,6 +16,10 @@ class CreateActivityRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        if ($this->input('type') === ActivityType::MEETING->value) {
+            return (bool) $this->user()?->can('schedule_meetings');
+        }
+
         return true;
     }
 
@@ -25,7 +29,7 @@ class CreateActivityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subjectType' => ['required', 'string', 'in:App\\Models\\Lead,App\\Models\\Project'],
+            'subjectType' => ['required', 'string', 'in:App\\Modules\\CRM\\Models\\Client,App\\Modules\\Project\\Models\\Project'],
             'subjectId' => ['required', 'integer', 'min:1'],
             'type' => ['required', 'string', Rule::enum(ActivityType::class)],
             'title' => ['required', 'string', 'max:255'],
@@ -67,8 +71,8 @@ class CreateActivityRequest extends FormRequest
         throw new HttpResponseException(
             ApiResponse::error(
                 __('validation.failed'),
-                $validator->errors()->toArray(),
-                422
+                422,
+                $validator->errors()->toArray()
             )
         );
     }

@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Client\Actions\CreateClientAction;
 use App\Modules\Client\Actions\DeleteClientAction;
 use App\Modules\Client\Actions\UpdateClientAction;
-use App\Modules\Client\Models\Client;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Client\Requests\StoreClientRequest;
 use App\Modules\Client\Requests\UpdateClientRequest;
 use App\Modules\Client\Resources\ClientCollection;
@@ -57,15 +57,14 @@ class ClientController extends Controller
 
         $clients = QueryBuilder::for(Client::class)
             ->allowedFilters([
-                AllowedFilter::partial('search', 'name'),
+                AllowedFilter::partial('search', 'display_name'),
                 AllowedFilter::exact('status'),
-                AllowedFilter::partial('company'),
-                AllowedFilter::partial('email'),
+                AllowedFilter::partial('company', 'company_name'),
+                AllowedFilter::partial('email', 'primary_email'),
             ])
-            ->allowedSorts(['name', 'company', 'created_at'])
+            ->allowedSorts(['display_name', 'company_name', 'created_at'])
             ->defaultSort('-created_at')
-            ->with(['user'])
-            ->withCount('projects')
+            ->with(['accountManager', 'contacts', 'user'])
             ->paginate($perPage);
 
         return ApiResponse::success(
@@ -113,7 +112,7 @@ class ClientController extends Controller
      */
     public function show(Client $client): JsonResponse
     {
-        $client->load(['user', 'projects']);
+        $client->load(['accountManager', 'contacts', 'user']);
 
         return ApiResponse::success(
             new ClientResource($client),

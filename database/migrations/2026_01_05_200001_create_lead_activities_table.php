@@ -16,7 +16,7 @@ return new class extends Migration
     {
         Schema::create('lead_activities', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('lead_id')->constrained('leads')->cascadeOnDelete();
+            $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('type'); // call, email, meeting, note, status_change
             $table->string('title');
@@ -30,7 +30,7 @@ return new class extends Migration
             // Indexes
             $table->index('type');
             $table->index('scheduled_at');
-            $table->index(['lead_id', 'type']);
+            $table->index(['client_id', 'type']);
         });
     }
 

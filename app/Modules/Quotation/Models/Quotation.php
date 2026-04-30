@@ -8,8 +8,8 @@ use App\Contracts\Trackable;
 use App\Enums\CommissionType;
 use App\Enums\QuotationStatus;
 use App\Enums\RejectionReason;
+use App\Modules\CRM\Models\Client;
 use App\Modules\Contract\Models\Contract;
-use App\Modules\Lead\Models\Lead;
 use App\Modules\Proposal\Models\Proposal;
 use App\Modules\Proposal\Models\ProposalTemplate;
 use App\Modules\Task\Models\Task;
@@ -28,12 +28,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * @property int $id
  * @property string|null $quotation_number
- * @property int $lead_id
+ * @property int $client_id
  * @property float|int|string|null $final_price
  * @property string|null $currency
  * @property QuotationStatus $status
  * @property \Illuminate\Support\Carbon|null $expiry_date
- * @property-read Lead $lead
+ * @property-read Client $client
  */
 class Quotation extends Model implements Trackable
 {
@@ -42,7 +42,7 @@ class Quotation extends Model implements Trackable
     protected $fillable = [
         'quotation_number',
         'file_number',
-        'lead_id',
+        'client_id',
         'proposal_id',
         'template_id',
         'scope_description',
@@ -108,9 +108,9 @@ class Quotation extends Model implements Trackable
         return static::class;
     }
 
-    public function lead(): BelongsTo
+    public function client(): BelongsTo
     {
-        return $this->belongsTo(Lead::class);
+        return $this->belongsTo(Client::class);
     }
 
     public function proposal(): BelongsTo
@@ -155,7 +155,7 @@ class Quotation extends Model implements Trackable
 
     public function getTrackableDisplayName(): string
     {
-        return ($this->quotation_number ?? 'Quotation #'.$this->id).' - '.$this->lead->name;
+        return ($this->quotation_number ?? 'Quotation #'.$this->id).' - '.$this->client->display_name;
     }
 
     /**
