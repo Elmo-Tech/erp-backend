@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Modules\Project\Models\Project;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ProjectPolicy

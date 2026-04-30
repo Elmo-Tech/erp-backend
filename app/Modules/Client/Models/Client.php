@@ -7,7 +7,7 @@ use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Project\Models\Project;
 use App\Modules\Quotation\Models\Quotation;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
 use Database\Factories\ClientFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -48,25 +48,42 @@ class Client extends Model
     protected $table = 'clients';
 
     protected $fillable = [
-        'name',
-        'email',
-        'phone',
-        'company',
+        'type',
+        'display_name',
+        'legal_name',
+        'company_name',
+        'primary_email',
+        'primary_phone',
+        'secondary_phone',
         'position',
+        'industry',
+        'website',
+        'tax_number',
         'address',
         'city',
+        'state',
         'country',
-        'website',
+        'postal_code',
+        'source',
+        'lifecycle_stage',
+        'lead_temperature',
+        'expected_budget',
+        'expected_close_date',
+        'became_client_at',
+        'account_manager_id',
         'notes',
+        'metadata',
         'status',
         'user_id',
-        'lead_id',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => ClientStatus::class,
+            'metadata' => 'array',
+            'expected_close_date' => 'date',
+            'became_client_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -91,6 +108,22 @@ class Client extends Model
     public function originalLead(): BelongsTo
     {
         return $this->belongsTo(Lead::class, 'lead_id');
+    }
+
+    /**
+     * Get the account manager assigned to this client
+     */
+    public function accountManager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'account_manager_id');
+    }
+
+    /**
+     * Get all contacts for this client
+     */
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(Contact::class);
     }
 
     /**

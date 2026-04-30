@@ -2,8 +2,7 @@
 
 namespace App\Modules\Client\Actions;
 
-use App\Modules\CRM\Models\Contact;
-use App\Modules\CRM\Models\Client;
+use App\Modules\Client\Models\Client;
 use Illuminate\Support\Facades\DB;
 
 class CreateClientAction
@@ -14,11 +13,11 @@ class CreateClientAction
     public function execute(array $data): Client
     {
         return DB::transaction(function () use ($data) {
-            $contactPerson = $data['contactPerson'] ?? $data['contact_person'] ?? null;
             $client = Client::create($this->normalizeClientData($data));
-
-            if (is_array($contactPerson) && $this->stringValue($contactPerson, ['displayName', 'display_name', 'firstName', 'first_name'])) {
-                Contact::create($this->normalizeContactData($client->id, $contactPerson));
+            
+            $contactData = $data['contact_person'] ?? $data['contactPerson'] ?? null;
+            if (is_array($contactData) && !empty($contactData)) {
+                $client->contacts()->create($this->normalizeContactData($client->id, $contactData));
             }
 
             return $client;

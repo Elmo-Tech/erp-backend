@@ -4,7 +4,7 @@ namespace Tests\Feature\Dashboard;
 
 use App\Enums\TaskStatus;
 use App\Modules\Task\Models\Task;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;

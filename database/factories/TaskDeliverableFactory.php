@@ -5,7 +5,7 @@ namespace Database\Factories;
 use App\Enums\DeliverableStatus;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskDeliverable;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

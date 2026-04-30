@@ -2,7 +2,7 @@
 
 namespace App\Modules\Client\Resources;
 
-use App\Modules\CRM\Models\Client;
+use App\Modules\Client\Models\Client;
 use BackedEnum;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

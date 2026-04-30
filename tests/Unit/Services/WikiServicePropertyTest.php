@@ -4,7 +4,7 @@ namespace Tests\Unit\Services;
 
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectWiki;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use App\Modules\Project\Actions\ProjectWikiAction;
 use Eris\Generator;
 use Eris\TestTrait;

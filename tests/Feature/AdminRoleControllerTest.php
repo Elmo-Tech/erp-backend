@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;

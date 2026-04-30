@@ -3,7 +3,7 @@
 namespace Tests;
 
 use App\Modules\Client\Models\Client;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase

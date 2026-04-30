@@ -17,7 +17,7 @@ return new class extends Migration
         Schema::create('projects', function (Blueprint $table) {
             $table->id();
             $table->foreignId('client_id')->constrained('users')->restrictOnDelete();
-            $table->foreignId('quotation_id')->nullable()->constrained('quotations')->nullOnDelete();
+            $table->unsignedBigInteger('quotation_id')->nullable();
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('status')->default('draft');
@@ -28,6 +28,7 @@ return new class extends Migration
             $table->string('auto_approval_job_id')->nullable();
             $this->addAuditColumns($table);
             $table->timestamps();
+            $table->softDeletes();
 
             // Indexes
             $table->index('status');

@@ -4,7 +4,7 @@ namespace Tests\Unit\Http\Requests;
 
 use App\Modules\Invoice\Requests\Invoices\StoreInvoiceRequest;
 use App\Modules\Project\Models\Project;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;

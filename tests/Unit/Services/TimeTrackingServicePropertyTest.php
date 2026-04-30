@@ -7,7 +7,7 @@ use App\Enums\LeadSource;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Quotation\Models\Quotation;
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use App\Modules\Sales\Services\TimeTrackingService;
 use Eris\Generator;
 use Eris\TestTrait;

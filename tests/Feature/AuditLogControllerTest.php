@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Modules\Audit\Models\AuditLog;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;

@@ -2,7 +2,7 @@
 
 namespace App\Modules\Auth\Actions;
 
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 

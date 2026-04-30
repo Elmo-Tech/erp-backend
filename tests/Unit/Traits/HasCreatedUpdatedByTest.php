@@ -3,7 +3,7 @@
 namespace Tests\Unit\Traits;
 
 use App\Modules\Lead\Models\Lead;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;

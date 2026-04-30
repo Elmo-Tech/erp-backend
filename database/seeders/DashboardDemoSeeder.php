@@ -18,7 +18,7 @@ use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskAssignee;
 use App\Modules\Task\Models\TaskDependency;
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;

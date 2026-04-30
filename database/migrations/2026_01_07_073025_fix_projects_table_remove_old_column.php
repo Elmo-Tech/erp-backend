@@ -18,7 +18,7 @@ return new class extends Migration
             Schema::create('projects_new', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('client_id')->nullable()->constrained('clients')->nullOnDelete();
-                $table->foreignId('quotation_id')->nullable()->constrained('quotations')->nullOnDelete();
+                $table->unsignedBigInteger('quotation_id')->nullable();
                 $table->string('title');
                 $table->text('description')->nullable();
                 $table->string('status')->default('draft');

@@ -2,7 +2,7 @@
 
 namespace App\Traits;
 
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 

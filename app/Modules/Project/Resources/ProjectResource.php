@@ -2,7 +2,6 @@
 
 namespace App\Modules\Project\Resources;
 
-use App\Modules\Quotation\Resources\QuotationResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -45,12 +44,6 @@ class ProjectResource extends JsonResource
                     'company' => $this->client->company ?? '',
                     'phone' => $this->client->phone ?? '',
                 ];
-            }),
-            // Quotation contains pricing info, hide from non-budget viewers
-            'quotation' => $this->when($canViewBudget, function () {
-                return $this->whenLoaded('quotation', function () {
-                    return new QuotationResource($this->quotation);
-                });
             }),
             'members' => $this->whenLoaded('members', function () {
                 return $this->members->map(function ($member) {

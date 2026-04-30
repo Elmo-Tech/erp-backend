@@ -10,7 +10,7 @@ use App\Modules\TimeEntry\Resources\TimeEntryResource;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Quotation\Models\Quotation;
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;

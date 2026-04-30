@@ -2,50 +2,45 @@
 
 namespace App\Modules\Notification\Controllers;
 
-use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\Notification\Actions\GetUserNotificationsAction;
-use App\Modules\Notification\Actions\MarkNotificationAsReadAction;
-use App\Modules\Notification\Actions\MarkAllNotificationsAsReadAction;
+use App\Helpers\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
-    public function __construct()
+    public function index(Request $request): JsonResponse
     {
-        $this->middleware(['auth:sanctum', 'locale']);
+        $user = $request->user();
+        
+        $notifications = $user->notifications()->paginate($request->get('perPage', 15));
+        
+        return ApiResponse::success([
+            'notifications' => $notifications->items(),
+            'pagination' => [
+                'total' => $notifications->total(),
+                'perPage' => $notifications->perPage(),
+                'currentPage' => $notifications->currentPage(),
+                'totalPages' => $notifications->lastPage()
+            ]
+        ], 'Notifications retrieved successfully');
     }
 
-    public function index(Request $request, GetUserNotificationsAction $action): JsonResponse
+    public function markAsRead(Request $request, string $id): JsonResponse
     {
-        $result = $action->execute($request->user(), $request->input('perPage', 20));
-
-        return ApiResponse::success($result);
-    }
-
-    public function unreadCount(Request $request, GetUserNotificationsAction $action): JsonResponse
-    {
-        $count = $action->getUnreadCount($request->user());
-
-        return ApiResponse::success(['unreadCount' => $count]);
-    }
-
-    public function markAsRead(Request $request, string $id, MarkNotificationAsReadAction $action): JsonResponse
-    {
-        $marked = $action->execute($request->user(), $id);
-
-        if (! $marked) {
-            return ApiResponse::error('Notification not found', 404);
+        $notification = $request->user()->notifications()->find($id);
+        
+        if ($notification) {
+            $notification->markAsRead();
         }
-
+        
         return ApiResponse::success(null, 'Notification marked as read');
     }
 
-    public function markAllAsRead(Request $request, MarkAllNotificationsAsReadAction $action): JsonResponse
+    public function markAllAsRead(Request $request): JsonResponse
     {
-        $action->execute($request->user());
-
+        $request->user()->unreadNotifications->markAsRead();
+        
         return ApiResponse::success(null, 'All notifications marked as read');
     }
 }

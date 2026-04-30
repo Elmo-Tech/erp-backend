@@ -3,7 +3,7 @@
 namespace Tests\Feature\SOP;
 
 use App\Modules\SOP\Models\Directive;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;

@@ -20,6 +20,7 @@ use App\Modules\Project\Requests\UpdateProjectStatusRequest;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Resources\ProjectCollection;
 use App\Modules\Project\Resources\ProjectResource;
+use App\Modules\Client\Services\ClientActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,7 +39,8 @@ class ProjectController extends Controller
         private UpdateProjectStatusAction $updateProjectStatusAction,
         private ApproveProjectUiAction $approveProjectUiAction,
         private PinProjectAction $pinProjectAction,
-        private UnpinProjectAction $unpinProjectAction
+        private UnpinProjectAction $unpinProjectAction,
+        private ClientActivityLogger $clientActivityLogger
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -149,7 +151,7 @@ class ProjectController extends Controller
         $user = $request->user();
 
         $projects = QueryBuilder::for(Project::class)
-            ->with(['client', 'quotation'])
+            ->with(['client'])
             ->leftJoin('pinned_projects', function ($join) use ($user) {
                 $join->on('projects.id', '=', 'pinned_projects.project_id')
                     ->where('pinned_projects.user_id', '=', $user?->id);
@@ -269,7 +271,7 @@ class ProjectController extends Controller
                 );
 
                 return ApiResponse::success(
-                    new ProjectResource($project->load(['client', 'quotation'])),
+                    new ProjectResource($project->load(['client'])),
                     'Project created successfully',
                     201
                 );
@@ -346,7 +348,7 @@ class ProjectController extends Controller
     public function show(Project $project): JsonResponse
     {
         return ApiResponse::success(
-            new ProjectResource($project->load(['client', 'quotation', 'members.user', 'files'])),
+            new ProjectResource($project->load(['client', 'members.user', 'files'])),
             'Project retrieved successfully'
         );
     }
@@ -445,7 +447,7 @@ class ProjectController extends Controller
             $project = $this->updateProjectAction->execute($project, $request->validated());
 
             return ApiResponse::success(
-                new ProjectResource($project->load(['client', 'quotation'])),
+                new ProjectResource($project->load(['client'])),
                 'Project updated successfully'
             );
         });
@@ -596,6 +598,7 @@ class ProjectController extends Controller
     {
         return DB::transaction(function () use ($request) {
             $project = $this->createProjectAction->execute($request->validated());
+            $this->clientActivityLogger->projectCreated($project->load('client'), $request->user());
 
             return ApiResponse::success(
                 new ProjectResource($project->load(['client'])),
@@ -699,7 +702,7 @@ class ProjectController extends Controller
                 );
 
                 return ApiResponse::success(
-                    new ProjectResource($project->load(['client', 'quotation'])),
+                    new ProjectResource($project->load(['client'])),
                     'Quotation converted to project successfully',
                     201
                 );
@@ -794,7 +797,7 @@ class ProjectController extends Controller
             }
 
             return ApiResponse::success(
-                new ProjectResource($project->load(['client', 'quotation'])),
+                new ProjectResource($project->load(['client'])),
                 'UI/UX approved successfully'
             );
         });
@@ -888,7 +891,7 @@ class ProjectController extends Controller
     public function updateStatus(UpdateProjectStatusRequest $request, int $project): JsonResponse
     {
         $projectModel = Project::withoutGlobalScopes()
-            ->with(['client', 'quotation'])
+            ->with(['client'])
             ->find($project);
 
         if (! $projectModel) {
@@ -918,7 +921,7 @@ class ProjectController extends Controller
             );
 
             return ApiResponse::success(
-                new ProjectResource($projectModel->load(['client', 'quotation'])),
+                new ProjectResource($projectModel->load(['client'])),
                 __('messages.project_status_updated')
             );
         });
@@ -979,7 +982,7 @@ class ProjectController extends Controller
     {
         $user = $request->user();
         $pinnedProjects = $user->pinnedProjects()
-            ->with(['client', 'quotation'])
+            ->with(['client'])
             ->orderByPivot('created_at', 'desc')
             ->get();
 
@@ -1071,7 +1074,7 @@ class ProjectController extends Controller
         }
 
         return ApiResponse::success(
-            new ProjectResource($project->load(['client', 'quotation'])),
+            new ProjectResource($project->load(['client'])),
             'Project pinned successfully'
         );
     }

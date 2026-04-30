@@ -10,7 +10,7 @@ use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskDeliverable;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use App\Modules\Notification\Notifications\DeliverableReviewed;
 use App\Modules\Notification\Notifications\DeliverableSubmitted;
 use App\Modules\Task\Services\DeliverableService;

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\ModuleArchitecture;
 
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Tests\TestCase;
 
 class UserEmployeeAuthModuleTest extends TestCase
@@ -16,7 +16,7 @@ class UserEmployeeAuthModuleTest extends TestCase
             \App\Modules\Auth\Actions\GenerateTokenAction::class,
             \App\Modules\User\Controllers\UserController::class,
             \App\Modules\User\Controllers\AdminUserController::class,
-            \App\Modules\User\Models\User::class,
+            \App\Modules\Settings\Models\User::class,
             \App\Modules\User\Actions\CreateUserAction::class,
             \App\Modules\User\Resources\UserResource::class,
             \App\Modules\Employee\Controllers\EmployeeController::class,

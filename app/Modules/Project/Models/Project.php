@@ -2,23 +2,16 @@
 
 namespace App\Modules\Project\Models;
 
-use App\Contracts\Trackable;
 use App\Modules\Project\Enums\ProjectStatus;
-use App\Modules\Invoice\Models\Invoice;
-use App\Modules\Quotation\Models\Quotation;
-use App\Modules\Task\Models\Task;
-use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\User\Models\User;
-use App\Modules\CRM\Models\Client;
+use App\Modules\Client\Models\Client;
+use App\Modules\Settings\Models\User;
 use App\Scopes\ClientScope;
-use App\Scopes\TeamMemberScope;
 use App\Traits\HasCreatedUpdatedBy;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 
@@ -35,7 +28,7 @@ use Illuminate\Support\Facades\Cache;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Invoice> $invoices
  * @property-read \Illuminate\Database\Eloquent\Collection<int, ProjectMember> $members
  */
-class Project extends Model implements Trackable
+class Project extends Model
 {
     use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
@@ -86,9 +79,6 @@ class Project extends Model implements Trackable
     {
         // Apply ClientScope when authenticated user is a client
         static::addGlobalScope(new ClientScope);
-
-        // Apply TeamMemberScope for employees to only see their projects
-        static::addGlobalScope(new TeamMemberScope);
     }
 
     /**
@@ -96,7 +86,7 @@ class Project extends Model implements Trackable
      */
     public function client(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(Client::class, 'client_id');
     }
 
     /**
@@ -115,141 +105,27 @@ class Project extends Model implements Trackable
         return $this->hasMany(ProjectHistory::class)->orderBy('created_at', 'desc');
     }
 
-    /**
-     * Get all wiki entries for this project.
-     */
     public function wikis(): HasMany
     {
         return $this->hasMany(ProjectWiki::class);
     }
 
-    /**
-     * Get all invoices for this project.
-     */
-    public function invoices(): HasMany
-    {
-        return $this->hasMany(Invoice::class);
-    }
-
-    /**
-     * Get all tasks for this project.
-     */
-    public function tasks(): HasMany
-    {
-        return $this->hasMany(Task::class);
-    }
-
-    /**
-     * Get all files for this project.
-     */
     public function files(): HasMany
     {
         return $this->hasMany(ProjectFile::class);
     }
 
-    /**
-     * Get all members for this project.
-     */
     public function members(): HasMany
     {
         return $this->hasMany(ProjectMember::class);
     }
 
-    /**
-     * Get all time entries for this trackable entity.
-     */
-    public function timeEntries(): MorphMany
-    {
-        return $this->morphMany(TimeEntry::class, 'trackable');
-    }
-
-    /**
-     * Calculate project progress based on completed tasks
-     * Cached for 5 minutes to improve performance
-     */
-    public function getProgressAttribute(): float
-    {
-        return Cache::remember(
-            "project_{$this->id}_progress",
-            now()->addMinutes(5),
-            function () {
-                $totalTasks = $this->tasks()->count();
-                if ($totalTasks === 0) {
-                    return 0.0;
-                }
-
-                $completedTasks = $this->tasks()->where('status', 'completed')->count();
-
-                return round(($completedTasks / $totalTasks) * 100, 1);
-            }
-        );
-    }
-
-    /**
-     * Clear the cached progress value
-     * Call this when tasks are added, removed, or status changes
-     */
-    public function clearProgressCache(): void
-    {
-        Cache::forget("project_{$this->id}_progress");
-    }
-
-    /**
-     * Get cached total time spent or calculate and cache it
-     */
-    public function getCachedTotalTimeSpent(): int
-    {
-        return Cache::remember(
-            "project_{$this->id}_total_time",
-            now()->addMinutes(5),
-            fn () => $this->getTotalTimeSpentAttribute()
-        );
-    }
-
-    /**
-     * Clear all project-related caches
-     */
-    public function clearAllCaches(): void
-    {
-        Cache::forget("project_{$this->id}_progress");
-        Cache::forget("project_{$this->id}_total_time");
-    }
-
-    /**
-     * Get total time spent on project in minutes
-     * Only counts leaf tasks (subtasks) to avoid duplication
-     * since parent tasks inherit time from children
-     */
-    public function getTotalTimeSpentAttribute(): int
-    {
-        // Get time from leaf tasks only (tasks without children)
-        // This avoids counting the same time multiple times
-        // since parent tasks aggregate time from their children
-        return $this->tasks()
-            ->whereDoesntHave('children')
-            ->sum('total_time_spent');
-    }
-
-    /**
-     * Get the display name for this trackable entity.
-     */
-    public function getTrackableDisplayName(): string
-    {
-        return $this->title;
-    }
-
-    /**
-     * Get the users who have pinned this project
-     */
     public function pinnedByUsers()
     {
         return $this->belongsToMany(User::class, 'pinned_projects')
             ->withTimestamps();
     }
 
-    /**
-     * Check if this project is pinned by a specific user
-     */
     public function isPinnedBy(?int $userId): bool
     {
         if (! $userId) {

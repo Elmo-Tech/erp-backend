@@ -2,7 +2,7 @@
 
 namespace App\Modules\Auth\Actions;
 
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 
 class GenerateTokenAction
 {

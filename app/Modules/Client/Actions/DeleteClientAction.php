@@ -2,7 +2,7 @@
 
 namespace App\Modules\Client\Actions;
 
-use App\Modules\CRM\Models\Client;
+use App\Modules\Client\Models\Client;
 use RuntimeException;
 
 class DeleteClientAction

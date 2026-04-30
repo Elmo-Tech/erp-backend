@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Client\Controllers\ClientActivityController;
 use App\Modules\Client\Controllers\ClientController;
 use App\Modules\Client\Controllers\ClientInvoiceController;
 use App\Modules\Client\Controllers\ClientPortalAccessController;
@@ -11,6 +12,12 @@ Route::prefix('v1')->group(function () {
         ->middleware(['auth:sanctum', 'locale']);
 
     Route::middleware(['auth:sanctum', 'locale'])->group(function () {
+        Route::get('clients/{client}/activities', [ClientActivityController::class, 'index'])
+            ->name('clients.activities.index');
+        Route::get('clients/{client}/projects', [ClientController::class, 'projects'])
+            ->name('clients.projects.index');
+        Route::get('clients/{client}/meetings', [ClientController::class, 'meetings'])
+            ->name('clients.meetings.index');
         Route::post('clients/{client}/portal-access', [ClientPortalAccessController::class, 'create'])
             ->name('clients.portal-access.create');
         Route::delete('clients/{client}/portal-access', [ClientPortalAccessController::class, 'revoke'])

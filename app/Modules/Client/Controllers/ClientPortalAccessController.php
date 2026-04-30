@@ -4,14 +4,14 @@ namespace App\Modules\Client\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\CRM\Models\Client;
+use App\Modules\Client\Models\Client;
 use App\Modules\Client\Requests\CreatePortalAccessRequest;
 use App\Modules\Client\Resources\ClientResource;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use App\Modules\Notification\Notifications\ClientPortalAccessCreated;
-use App\Modules\Sales\Services\LeadConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
@@ -22,9 +22,7 @@ use Illuminate\Support\Str;
  */
 class ClientPortalAccessController extends Controller
 {
-    public function __construct(
-        private LeadConversionService $conversionService
-    ) {
+    public function __construct() {
         $this->middleware(['auth:sanctum', 'locale']);
         $this->middleware('permission:create_client_portal_access')->only(['create']);
         $this->middleware('permission:revoke_client_portal_access')->only(['revoke']);
@@ -75,7 +73,17 @@ class ClientPortalAccessController extends Controller
         $password = $request->input('password') ?? Str::random(12);
         $sendEmail = $request->input('sendWelcomeEmail', true);
 
-        $user = $this->conversionService->createPortalAccess($client, $password);
+        $user = DB::transaction(function () use ($client, $password) {
+            $user = User::create([
+                'name' => $client->display_name,
+                'email' => $client->email,
+                'password' => Hash::make($password),
+                'is_active' => true,
+            ]);
+            $user->assignRole('client');
+            $client->update(['user_id' => $user->id]);
+            return $user;
+        });
 
         // Send welcome email with password setup link (NOT the actual password)
         if ($sendEmail) {

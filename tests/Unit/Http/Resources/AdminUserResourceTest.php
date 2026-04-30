@@ -3,7 +3,7 @@
 namespace Tests\Unit\Http\Resources;
 
 use App\Modules\User\Resources\AdminUserResource;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;

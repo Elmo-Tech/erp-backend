@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\UserSpecialization;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 

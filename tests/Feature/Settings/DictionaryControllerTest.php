@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Settings;
 
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Database\Seeders\SettingsDictionarySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

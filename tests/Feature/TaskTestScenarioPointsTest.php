@@ -6,7 +6,7 @@ use App\Enums\PointTransactionType;
 use App\Enums\TaskType;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskTestScenario;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

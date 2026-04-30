@@ -3,7 +3,7 @@
 namespace Tests\Feature\ModuleArchitecture;
 
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\User\Models\User;
+use App\Modules\Settings\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;

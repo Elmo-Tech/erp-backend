@@ -45,6 +45,7 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete(); // linked user account
             $this->addAuditColumns($table);
             $table->timestamps();
+            $table->softDeletes();
 
             // Indexes
             $table->index('type');

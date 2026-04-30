@@ -7,11 +7,16 @@ use App\Http\Controllers\Controller;
 use App\Modules\Client\Actions\CreateClientAction;
 use App\Modules\Client\Actions\DeleteClientAction;
 use App\Modules\Client\Actions\UpdateClientAction;
-use App\Modules\CRM\Models\Client;
+use App\Modules\Client\Models\Client;
 use App\Modules\Client\Requests\StoreClientRequest;
 use App\Modules\Client\Requests\UpdateClientRequest;
 use App\Modules\Client\Resources\ClientCollection;
 use App\Modules\Client\Resources\ClientResource;
+use App\Modules\Client\Services\ClientActivityLogger;
+use App\Modules\Meetings\Models\Meeting;
+use App\Modules\Meetings\Resources\MeetingResource;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Resources\ProjectResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
@@ -30,7 +35,8 @@ class ClientController extends Controller
     public function __construct(
         private CreateClientAction $createClientAction,
         private UpdateClientAction $updateClientAction,
-        private DeleteClientAction $deleteClientAction
+        private DeleteClientAction $deleteClientAction,
+        private ClientActivityLogger $clientActivityLogger
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -89,6 +95,7 @@ class ClientController extends Controller
     public function store(StoreClientRequest $request): JsonResponse
     {
         $client = $this->createClientAction->execute($request->validated());
+        $this->clientActivityLogger->clientCreated($client, $request->user());
 
         return ApiResponse::success(
             new ClientResource($client),
@@ -170,5 +177,50 @@ class ClientController extends Controller
         }
 
         return ApiResponse::success(null, 'Client deleted successfully');
+    }
+
+    public function projects(Request $request, Client $client): JsonResponse
+    {
+        $projects = Project::withoutGlobalScopes()
+            ->where('client_id', $client->id)
+            ->with(['client'])
+            ->orderBy('created_at', 'desc')
+            ->limit((int) $request->integer('limit', 100))
+            ->get();
+
+        return ApiResponse::success([
+            'projects' => ProjectResource::collection($projects),
+        ], 'Client projects retrieved successfully');
+    }
+
+    public function meetings(Request $request, Client $client): JsonResponse
+    {
+        $projectIds = Project::withoutGlobalScopes()
+            ->where('client_id', $client->id)
+            ->pluck('id');
+
+        $meetings = Meeting::query()
+            ->with(['subject', 'assignedTo'])
+            ->where(function ($query) use ($client, $projectIds) {
+                $query->where(function ($clientQuery) use ($client) {
+                    $clientQuery->where('subject_type', Client::class)
+                        ->where('subject_id', $client->id);
+                });
+
+                if ($projectIds->isNotEmpty()) {
+                    $query->orWhere(function ($projectQuery) use ($projectIds) {
+                        $projectQuery->where('subject_type', Project::class)
+                            ->whereIn('subject_id', $projectIds);
+                    });
+                }
+            })
+            ->orderBy('scheduled_at', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->limit((int) $request->integer('limit', 50))
+            ->get();
+
+        return ApiResponse::success([
+            'meetings' => MeetingResource::collection($meetings),
+        ], 'Client meetings retrieved successfully');
     }
 }
