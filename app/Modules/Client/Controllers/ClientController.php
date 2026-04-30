@@ -61,16 +61,43 @@ class ClientController extends Controller
     {
         $perPage = $request->get('perPage', 15);
 
-        $clients = QueryBuilder::for(Client::class)
+        $clients = QueryBuilder::for(
+            Client::query()
+                ->select([
+                    'id',
+                    'type',
+                    'display_name',
+                    'legal_name',
+                    'company_name',
+                    'primary_email',
+                    'primary_phone',
+                    'position',
+                    'status',
+                    'country',
+                    'created_at',
+                ])
+                ->withCount('projects')
+                ->withCount([
+                    'projects as active_projects_count' => fn ($query) => $query->whereNotIn('status', ['completed', 'cancelled']),
+                ])
+                ->withSum('projects as total_revenue', 'budget')
+        )
             ->allowedFilters([
-                AllowedFilter::partial('search', 'display_name'),
+                AllowedFilter::callback('search', function ($query, $value) {
+                    $query->where(function ($searchQuery) use ($value) {
+                        $searchQuery
+                            ->where('display_name', 'like', "%{$value}%")
+                            ->orWhere('company_name', 'like', "%{$value}%")
+                            ->orWhere('legal_name', 'like', "%{$value}%")
+                            ->orWhere('primary_email', 'like', "%{$value}%");
+                    });
+                }),
                 AllowedFilter::exact('status'),
                 AllowedFilter::partial('company', 'company_name'),
                 AllowedFilter::partial('email', 'primary_email'),
             ])
             ->allowedSorts(['display_name', 'company_name', 'created_at'])
             ->defaultSort('-created_at')
-            ->with(['accountManager', 'contacts', 'user'])
             ->paginate($perPage);
 
         return ApiResponse::success(

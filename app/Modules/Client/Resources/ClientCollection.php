@@ -9,6 +9,8 @@ use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class ClientCollection extends ResourceCollection
 {
+    public $collects = ClientIndexResource::class;
+
     public function toArray(Request $request): array
     {
         /** @var LengthAwarePaginator<int, Client>|iterable<int, Client> $resource */
@@ -33,7 +35,7 @@ class ClientCollection extends ResourceCollection
         }
 
         return [
-            'clients' => ClientResource::collection($this->collection),
+            'clients' => ClientIndexResource::collection($this->collection),
             'pagination' => $pagination,
         ];
     }

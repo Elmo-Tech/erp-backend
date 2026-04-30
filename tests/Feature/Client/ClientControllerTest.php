@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Client;
 
+use App\Modules\Client\Models\Client;
+use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ClientControllerTest extends TestCase
@@ -71,5 +74,47 @@ class ClientControllerTest extends TestCase
             ])
             ->assertStatus(422)
             ->assertJsonPath('errors.displayName.0', 'Display name is required.');
+    }
+
+    public function test_it_returns_lightweight_client_directory_rows(): void
+    {
+        $user = User::factory()->create();
+
+        $client = Client::factory()->create([
+            'type' => 'company',
+            'display_name' => 'Legacy Display Name',
+            'company_name' => 'Acme Operations',
+            'primary_email' => 'ops@acme.test',
+            'primary_phone' => '+20 100 000 0000',
+            'position' => 'Procurement',
+            'status' => 'active',
+            'country' => 'Egypt',
+            'notes' => 'This note must not be returned in the directory payload.',
+        ]);
+
+        Project::factory()->count(2)->create([
+            'client_id' => $client->id,
+        ]);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/clients');
+
+        $response->assertOk()
+            ->assertJsonPath('data.clients.0.display_name', 'Acme Operations')
+            ->assertJsonPath('data.clients.0.email', 'ops@acme.test')
+            ->assertJsonPath('data.clients.0.projects_count', 2)
+            ->assertJsonMissingPath('data.clients.0.contacts')
+            ->assertJsonMissingPath('data.clients.0.accountManager')
+            ->assertJsonMissingPath('data.clients.0.user')
+            ->assertJsonMissingPath('data.clients.0.projects')
+            ->assertJsonMissingPath('data.clients.0.notes');
+
+        $executedSql = collect(DB::getQueryLog())->pluck('query')->implode("\n");
+
+        $this->assertStringNotContainsString('"contacts"', $executedSql);
+        $this->assertStringNotContainsString('"users"', $executedSql);
     }
 }
