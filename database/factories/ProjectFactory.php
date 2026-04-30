@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Modules\Project\Enums\ProjectStatus;
-use App\Modules\CRM\Models\Client;
+use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
