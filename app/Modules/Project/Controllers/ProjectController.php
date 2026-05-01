@@ -2,17 +2,19 @@
 
 namespace App\Modules\Project\Controllers;
 
-use App\Modules\Project\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Project\Actions\ApproveProjectUiAction;
+use App\Modules\Project\Actions\ChangeProjectStatusAction;
 use App\Modules\Project\Requests\ConvertQuotationRequest;
-use App\Modules\Project\Actions\CreateProjectAction;
+use App\Modules\Project\Actions\CreateDirectProjectAction;
+use App\Modules\Project\Actions\CreateProjectFromQuotationAction;
+use App\Modules\Project\Actions\DeleteProjectAction;
+use App\Modules\Project\Actions\ListPinnedProjectsAction;
+use App\Modules\Project\Actions\ListProjectsAction;
 use App\Modules\Project\Actions\PinProjectAction;
 use App\Modules\Project\Actions\UnpinProjectAction;
 use App\Modules\Project\Actions\UpdateProjectAction;
-use App\Modules\Project\Actions\UpdateProjectStatusAction;
-use App\Modules\Project\Actions\ConvertQuotationToProjectAction;
 use App\Modules\Project\Requests\StoreDirectProjectRequest;
 use App\Modules\Project\Requests\StoreProjectRequest;
 use App\Modules\Project\Requests\UpdateProjectRequest;
@@ -20,27 +22,19 @@ use App\Modules\Project\Requests\UpdateProjectStatusRequest;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Resources\ProjectCollection;
 use App\Modules\Project\Resources\ProjectResource;
-use App\Modules\Client\Services\ClientActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use OpenApi\Annotations as OA;
 use RuntimeException;
-use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class ProjectController extends Controller
 {
     public function __construct(
-        private ConvertQuotationToProjectAction $convertQuotationToProjectAction,
-        private CreateProjectAction $createProjectAction,
         private UpdateProjectAction $updateProjectAction,
-        private UpdateProjectStatusAction $updateProjectStatusAction,
         private ApproveProjectUiAction $approveProjectUiAction,
         private PinProjectAction $pinProjectAction,
-        private UnpinProjectAction $unpinProjectAction,
-        private ClientActivityLogger $clientActivityLogger
+        private UnpinProjectAction $unpinProjectAction
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -146,33 +140,10 @@ class ProjectController extends Controller
      *     )
      * )
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ListProjectsAction $action): JsonResponse
     {
-        $user = $request->user();
-
-        $projects = QueryBuilder::for(Project::class)
-            ->with(['client'])
-            ->leftJoin('pinned_projects', function ($join) use ($user) {
-                $join->on('projects.id', '=', 'pinned_projects.project_id')
-                    ->where('pinned_projects.user_id', '=', $user?->id);
-            })
-            ->select('projects.*', 'pinned_projects.id as is_pinned')
-            ->allowedFilters([
-                'status',
-                AllowedFilter::exact('client_id', 'client_id')->ignore(null),
-                AllowedFilter::callback('clientId', function ($query, $value) {
-                    $query->where('client_id', $value);
-                }),
-                AllowedFilter::callback('search', function ($query, $value) {
-                    $query->where('title', 'like', "%{$value}%");
-                }),
-            ])
-            ->orderByRaw('CASE WHEN pinned_projects.id IS NOT NULL THEN 0 ELSE 1 END')
-            ->orderBy('projects.created_at', 'desc')
-            ->paginate($request->get('perPage', 15));
-
         return ApiResponse::success(
-            new ProjectCollection($projects),
+            new ProjectCollection($action->execute($request->user(), (int) $request->get('perPage', 15))),
             'Projects retrieved successfully'
         );
     }
@@ -255,32 +226,21 @@ class ProjectController extends Controller
      *     )
      * )
      */
-    public function store(StoreProjectRequest $request): JsonResponse
+    public function store(StoreProjectRequest $request, CreateProjectFromQuotationAction $action): JsonResponse
     {
-        return DB::transaction(function () use ($request) {
-            $data = $request->validated();
+        try {
+            $project = $action->execute($request->validated());
+        } catch (InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        } catch (RuntimeException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
 
-            try {
-                $project = $this->convertQuotationToProjectAction->execute(
-                    $data['quotationId'],
-                    [
-                        'title' => $data['title'] ?? null,
-                        'description' => $data['description'] ?? null,
-                        'deadline' => $data['deadline'] ?? null,
-                    ]
-                );
-
-                return ApiResponse::success(
-                    new ProjectResource($project->load(['client'])),
-                    'Project created successfully',
-                    201
-                );
-            } catch (InvalidArgumentException $e) {
-                return ApiResponse::error($e->getMessage(), 400);
-            } catch (RuntimeException $e) {
-                return ApiResponse::error($e->getMessage(), 400);
-            }
-        });
+        return ApiResponse::success(
+            new ProjectResource($project->load(['client'])),
+            'Project created successfully',
+            201
+        );
     }
 
     /**
@@ -443,14 +403,12 @@ class ProjectController extends Controller
      */
     public function update(UpdateProjectRequest $request, Project $project): JsonResponse
     {
-        return DB::transaction(function () use ($request, $project) {
-            $project = $this->updateProjectAction->execute($project, $request->validated());
+        $project = $this->updateProjectAction->execute($project, $request->validated());
 
-            return ApiResponse::success(
-                new ProjectResource($project->load(['client'])),
-                'Project updated successfully'
-            );
-        });
+        return ApiResponse::success(
+            new ProjectResource($project->load(['client'])),
+            'Project updated successfully'
+        );
     }
 
     /**
@@ -515,9 +473,9 @@ class ProjectController extends Controller
      *     )
      * )
      */
-    public function destroy(Project $project): JsonResponse
+    public function destroy(Project $project, DeleteProjectAction $action): JsonResponse
     {
-        $project->delete();
+        $action->execute($project);
 
         return ApiResponse::success(
             null,
@@ -594,18 +552,15 @@ class ProjectController extends Controller
      *     )
      * )
      */
-    public function storeDirect(StoreDirectProjectRequest $request): JsonResponse
+    public function storeDirect(StoreDirectProjectRequest $request, CreateDirectProjectAction $action): JsonResponse
     {
-        return DB::transaction(function () use ($request) {
-            $project = $this->createProjectAction->execute($request->validated());
-            $this->clientActivityLogger->projectCreated($project->load('client'), $request->user());
+        $project = $action->execute($request->validated(), $request->user());
 
-            return ApiResponse::success(
-                new ProjectResource($project->load(['client'])),
-                'Project created successfully',
-                201
-            );
-        });
+        return ApiResponse::success(
+            new ProjectResource($project->load(['client'])),
+            'Project created successfully',
+            201
+        );
     }
 
     /**
@@ -686,32 +641,21 @@ class ProjectController extends Controller
      *     )
      * )
      */
-    public function convert(ConvertQuotationRequest $request): JsonResponse
+    public function convert(ConvertQuotationRequest $request, CreateProjectFromQuotationAction $action): JsonResponse
     {
-        return DB::transaction(function () use ($request) {
-            $data = $request->validated();
+        try {
+            $project = $action->execute($request->validated());
+        } catch (InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        } catch (RuntimeException $e) {
+            return ApiResponse::error($e->getMessage(), 400);
+        }
 
-            try {
-                $project = $this->convertQuotationToProjectAction->execute(
-                    $data['quotationId'],
-                    [
-                        'title' => $data['title'] ?? null,
-                        'description' => $data['description'] ?? null,
-                        'deadline' => $data['deadline'] ?? null,
-                    ]
-                );
-
-                return ApiResponse::success(
-                    new ProjectResource($project->load(['client'])),
-                    'Quotation converted to project successfully',
-                    201
-                );
-            } catch (InvalidArgumentException $e) {
-                return ApiResponse::error($e->getMessage(), 400);
-            } catch (RuntimeException $e) {
-                return ApiResponse::error($e->getMessage(), 400);
-            }
-        });
+        return ApiResponse::success(
+            new ProjectResource($project->load(['client'])),
+            'Quotation converted to project successfully',
+            201
+        );
     }
 
     /**
@@ -789,18 +733,16 @@ class ProjectController extends Controller
      */
     public function approveUI(Project $project): JsonResponse
     {
-        return DB::transaction(function () use ($project) {
-            try {
-                $project = $this->approveProjectUiAction->execute($project);
-            } catch (InvalidArgumentException $exception) {
-                return ApiResponse::error($exception->getMessage(), 400);
-            }
+        try {
+            $project = $this->approveProjectUiAction->execute($project);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), 400);
+        }
 
-            return ApiResponse::success(
-                new ProjectResource($project->load(['client'])),
-                'UI/UX approved successfully'
-            );
-        });
+        return ApiResponse::success(
+            new ProjectResource($project->load(['client'])),
+            'UI/UX approved successfully'
+        );
     }
 
     /**
@@ -888,43 +830,21 @@ class ProjectController extends Controller
      *     )
      * )
      */
-    public function updateStatus(UpdateProjectStatusRequest $request, int $project): JsonResponse
+    public function updateStatus(UpdateProjectStatusRequest $request, int $project, ChangeProjectStatusAction $action): JsonResponse
     {
-        $projectModel = Project::withoutGlobalScopes()
-            ->with(['client'])
-            ->find($project);
+        $result = $action->execute($project, $request->validated(), $request->user());
 
-        if (! $projectModel) {
-            return ApiResponse::notFound('Project not found');
-        }
-
-        if (! $request->user()?->can('update', $projectModel)) {
-            return ApiResponse::forbidden('You do not have permission to update this project');
-        }
-
-        return DB::transaction(function () use ($request, $projectModel) {
-            $data = $request->validated();
-            $oldStatus = $projectModel->status;
-            $newStatus = ProjectStatus::from($data['status']);
-
-            if ($oldStatus === $newStatus) {
-                return ApiResponse::success(
-                    new ProjectResource($projectModel),
-                    'Project status is already '.$newStatus->label()
-                );
-            }
-
-            $projectModel = $this->updateProjectStatusAction->execute(
-                $projectModel,
-                $newStatus,
-                $data['reason'] ?? null
-            );
-
+        if ($result['already_current']) {
             return ApiResponse::success(
-                new ProjectResource($projectModel->load(['client'])),
-                __('messages.project_status_updated')
+                new ProjectResource($result['project']),
+                'Project status is already '.$result['status']->label()
             );
-        });
+        }
+
+        return ApiResponse::success(
+            new ProjectResource($result['project']->load(['client'])),
+            __('messages.project_status_updated')
+        );
     }
 
     /**
@@ -978,16 +898,10 @@ class ProjectController extends Controller
      *     )
      * )
      */
-    public function pinned(Request $request): JsonResponse
+    public function pinned(Request $request, ListPinnedProjectsAction $action): JsonResponse
     {
-        $user = $request->user();
-        $pinnedProjects = $user->pinnedProjects()
-            ->with(['client'])
-            ->orderByPivot('created_at', 'desc')
-            ->get();
-
         return ApiResponse::success(
-            ['projects' => ProjectResource::collection($pinnedProjects)],
+            ['projects' => ProjectResource::collection($action->execute($request->user()))],
             'Pinned projects retrieved successfully'
         );
     }

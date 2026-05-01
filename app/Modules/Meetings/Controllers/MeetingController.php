@@ -4,7 +4,10 @@ namespace App\Modules\Meetings\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\Client\Services\ClientActivityLogger;
+use App\Modules\Meetings\Actions\DeleteMeetingAction;
+use App\Modules\Meetings\Actions\ListMeetingsAction;
+use App\Modules\Meetings\Actions\ScheduleMeetingAction;
+use App\Modules\Meetings\Actions\UpdateMeetingAction;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Meetings\Requests\CancelMeetingRequest;
 use App\Modules\Meetings\Requests\CompleteMeetingRequest;
@@ -13,65 +16,34 @@ use App\Modules\Meetings\Requests\UpdateMeetingRequest;
 use App\Modules\Meetings\Resources\MeetingCollection;
 use App\Modules\Meetings\Resources\MeetingResource;
 use App\Modules\Meetings\Services\MeetingService;
-use App\Modules\Client\Models\Client;
-use App\Modules\Project\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class MeetingController extends Controller
 {
     public function __construct(
-        private MeetingService $meetingService,
-        private ClientActivityLogger $clientActivityLogger
+        private MeetingService $meetingService
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ListMeetingsAction $action): JsonResponse
     {
-        $meetings = Meeting::with(['subject', 'assignedTo'])
-            ->when($request->get('filter.status'), fn ($q, $status) => $q->where('status', $status))
-            ->when($request->get('filter.assigned_to'), fn ($q, $userId) => $q->where('assigned_to', $userId))
-            ->orderBy('scheduled_at', 'desc')
-            ->paginate($request->get('perPage', 15));
-
         return ApiResponse::success(
-            new MeetingCollection($meetings),
+            new MeetingCollection($action->execute((array) $request->get('filter', []), (int) $request->get('perPage', 15))),
             __('messages.meetings_retrieved')
         );
     }
 
-    public function store(CreateMeetingRequest $request): JsonResponse
+    public function store(CreateMeetingRequest $request, ScheduleMeetingAction $action): JsonResponse
     {
-        $data = $request->validated();
-        $subjectClass = $data['subjectType'];
-        $subject = $subjectClass::findOrFail($data['subjectId']);
-
-        $meeting = $this->meetingService->scheduleMeeting($subject, $data, $request->user());
-        $this->logClientMeetingActivity($meeting, $subject, $request);
+        $meeting = $action->execute($request->validated(), $request->user());
 
         return ApiResponse::success(
             new MeetingResource($meeting->load(['subject', 'assignedTo'])),
             __('messages.meeting_created'),
             201
         );
-    }
-
-    private function logClientMeetingActivity(Meeting $meeting, mixed $subject, Request $request): void
-    {
-        $client = null;
-
-        if ($subject instanceof Client) {
-            $client = $subject;
-        }
-
-        if ($subject instanceof Project) {
-            $client = $subject->relationLoaded('client') ? $subject->client : $subject->client()->first();
-        }
-
-        if ($client) {
-            $this->clientActivityLogger->meetingScheduled($meeting, $client, $request->user());
-        }
     }
 
     public function show(Meeting $meeting): JsonResponse
@@ -82,21 +54,10 @@ class MeetingController extends Controller
         );
     }
 
-    public function update(UpdateMeetingRequest $request, Meeting $meeting): JsonResponse
+    public function update(UpdateMeetingRequest $request, Meeting $meeting, UpdateMeetingAction $action): JsonResponse
     {
-        $data = $request->validated();
-
-        $meeting->update([
-            'title' => $data['title'] ?? $meeting->title,
-            'description' => $data['description'] ?? $meeting->description,
-            'assigned_to' => $data['assignedTo'] ?? $meeting->assigned_to,
-            'scheduled_at' => $data['scheduledAt'] ?? $meeting->scheduled_at,
-            'outcome_summary' => $data['outcomeSummary'] ?? $meeting->outcome_summary,
-            'updated_by' => $request->user()->id,
-        ]);
-
         return ApiResponse::success(
-            new MeetingResource($meeting->fresh(['subject', 'assignedTo'])),
+            new MeetingResource($action->execute($meeting, $request->validated(), $request->user())),
             __('messages.meeting_updated')
         );
     }
@@ -150,9 +111,9 @@ class MeetingController extends Controller
         );
     }
 
-    public function destroy(Meeting $meeting): JsonResponse
+    public function destroy(Meeting $meeting, DeleteMeetingAction $action): JsonResponse
     {
-        $meeting->delete();
+        $action->execute($meeting);
 
         return ApiResponse::success(
             null,

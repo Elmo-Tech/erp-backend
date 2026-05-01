@@ -4,20 +4,21 @@ namespace App\Modules\SOP\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\SOP\Actions\CreateDirectiveAction;
+use App\Modules\SOP\Actions\DeleteDirectiveAction;
 use App\Modules\SOP\Actions\GetTodayDirectiveForUserAction;
+use App\Modules\SOP\Actions\ListDirectivesAction;
 use App\Modules\SOP\Actions\SubmitDailyCheckinAction;
+use App\Modules\SOP\Actions\UpdateDirectiveAction;
 use App\Modules\SOP\Models\Directive;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SOPController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request, ListDirectivesAction $action): JsonResponse
     {
         return response()->json([
-            'data' => Directive::query()
-                ->latest()
-                ->paginate(request()->integer('per_page', 15)),
+            'data' => $action->execute($request->integer('per_page', 15)),
         ]);
     }
 
@@ -42,7 +43,7 @@ class SOPController extends Controller
         return response()->json(['data' => $directive]);
     }
 
-    public function update(Request $request, Directive $directive): JsonResponse
+    public function update(Request $request, Directive $directive, UpdateDirectiveAction $action): JsonResponse
     {
         $data = $request->validate([
             'title' => ['sometimes', 'required', 'string', 'max:255'],
@@ -53,14 +54,12 @@ class SOPController extends Controller
             'is_recurring' => ['sometimes', 'boolean'],
         ]);
 
-        $directive->update($data);
-
-        return response()->json(['data' => $directive->refresh()]);
+        return response()->json(['data' => $action->execute($directive, $data)]);
     }
 
-    public function destroy(Directive $directive): JsonResponse
+    public function destroy(Directive $directive, DeleteDirectiveAction $action): JsonResponse
     {
-        $directive->delete();
+        $action->execute($directive);
 
         return response()->json(status: 204);
     }
@@ -80,14 +79,8 @@ class SOPController extends Controller
             'focus_items.*' => ['required', 'string', 'max:500'],
         ]);
 
-        $directive = Directive::findOrFail($data['directive_id']);
-
-        foreach ($directive->target_permissions ?? [] as $permission) {
-            abort_unless($request->user()->can($permission), 403);
-        }
-
         return response()->json([
-            'data' => $action->execute($request->user(), $directive, $data['focus_items']),
+            'data' => $action->executeForDirectiveId($request->user(), $data['directive_id'], $data['focus_items']),
         ], 201);
     }
 }
