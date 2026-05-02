@@ -33,11 +33,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage_invoices',
             'schedule_meetings',
             'log_time',
-            // --- New CRM & Settings Permissions ---
+            // --- CRM & Settings Permissions ---
             'view_clients',
             'manage_clients',
             'view_settings',
             'manage_settings',
+            // --- Lead / Sales Pipeline Permissions ---
+            'view_leads',
+            'manage_leads',
         ];
 
         foreach ($permissions as $permission) {
@@ -53,13 +56,15 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_escalated_blockers',
                 'view_team_pulse',
                 'manage_sops',
-                // Founder gets the new modules
                 'view_clients',
                 'manage_clients',
                 'create_projects',
                 'schedule_meetings',
                 'view_settings',
                 'manage_settings',
+                // Lead / Sales Pipeline
+                'view_leads',
+                'manage_leads',
             ],
             'pmo' => [
                 'view_project_timeline',
@@ -68,6 +73,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'submit_morning_sop',
                 'create_projects',
                 'schedule_meetings',
+                // PMO can view the pipeline but not mutate stages
+                'view_leads',
             ],
             'tech_lead' => [
                 'view_team_performance',

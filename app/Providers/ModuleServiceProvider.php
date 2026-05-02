@@ -38,6 +38,11 @@ class ModuleServiceProvider extends ServiceProvider
             'App\Models\ClientActivity' => \App\Modules\Client\Models\ClientActivity::class,
             'App\Models\Meeting' => \App\Modules\Meetings\Models\Meeting::class,
             'App\Models\User' => \App\Modules\Settings\Models\User::class,
+            // Lead pipeline
+            'App\Models\Lead' => \App\Modules\Lead\Models\Lead::class,
+            'App\Models\Proposal' => \App\Modules\Lead\Models\Proposal::class,
+            'App\Models\Quotation' => \App\Modules\Lead\Models\Quotation::class,
+            'App\Models\Contract' => \App\Modules\Lead\Models\Contract::class,
         ]);
     }
 

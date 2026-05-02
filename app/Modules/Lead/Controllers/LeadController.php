@@ -1,0 +1,102 @@
+<?php
+
+namespace App\Modules\Lead\Controllers;
+
+use App\Enums\LeadStage;
+use App\Enums\LeadStatus;
+use App\Helpers\ApiResponse;
+use App\Http\Controllers\Controller;
+use App\Modules\Lead\Models\Lead;
+use App\Modules\Lead\Requests\StoreLeadRequest;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class LeadController extends Controller
+{
+    /**
+     * List all active leads for the pipeline board.
+     *
+     * GET /api/v1/leads
+     *
+     * Returns every non-deleted lead ordered by creation date (newest first).
+     * The frontend Kanban board uses this to seed the Zustand store on mount.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $leads = Lead::query()
+            ->orderByDesc('created_at')
+            ->get();
+
+        $data = $leads->map(fn (Lead $lead) => [
+            'id'              => $lead->id,
+            'title'           => $lead->title,
+            'stage'           => $lead->stage->value,
+            'status'          => $lead->status->value,
+            'company'         => $lead->metadata['company_name'] ?? null,
+            'email'           => $lead->metadata['primary_email'] ?? null,
+            'phone'           => $lead->metadata['primary_phone'] ?? null,
+            'expected_budget' => $lead->expected_budget,
+            'source'          => $lead->source,
+            'assignedTo'      => $lead->assigned_to,
+            'createdAt'       => $lead->created_at?->toISOString(),
+            'updatedAt'       => $lead->updated_at?->toISOString(),
+        ]);
+
+        return ApiResponse::success($data, 'Leads retrieved successfully.');
+    }
+
+    /**
+     * Create a new lead and place it in the first pipeline stage.
+     *
+     * POST /api/v1/leads
+     *
+     * The lead is always created at stage `new_lead` regardless of what
+     * the client sends — stage progression is handled exclusively by the
+     * drag-and-drop pipeline engine.
+     *
+     * The `company_name`, `contact_name`, `primary_email`, and
+     * `primary_phone` fields are stored in the lead's `metadata` JSON
+     * column because the Lead model does not have dedicated columns for
+     * them (those live on the Client model after conversion).
+     */
+    public function store(StoreLeadRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+
+        $lead = Lead::create([
+            'title'           => $validated['title'],
+            'stage'           => LeadStage::NEW_LEAD,
+            'status'          => LeadStatus::ACTIVE,
+            'source'          => $validated['source'] ?? null,
+            'expected_budget' => $validated['expected_budget'] ?? null,
+            'notes'           => $validated['notes'] ?? null,
+            'assigned_to'     => $request->user()?->id,
+            // Store contact details in metadata until the lead is converted
+            'metadata'        => array_filter([
+                'company_name'  => $validated['company_name'] ?? null,
+                'contact_name'  => $validated['contact_name'] ?? null,
+                'primary_email' => $validated['primary_email'] ?? null,
+                'primary_phone' => $validated['primary_phone'] ?? null,
+            ], fn ($v) => $v !== null),
+        ]);
+
+        return ApiResponse::success(
+            [
+                'id'              => $lead->id,
+                'title'           => $lead->title,
+                'stage'           => $lead->stage->value,
+                'status'          => $lead->status->value,
+                'company'         => $lead->metadata['company_name'] ?? null,
+                'email'           => $lead->metadata['primary_email'] ?? null,
+                'phone'           => $lead->metadata['primary_phone'] ?? null,
+                'expected_budget' => $lead->expected_budget,
+                'source'          => $lead->source,
+                'assignedTo'      => $lead->assigned_to,
+                'createdAt'       => $lead->created_at?->toISOString(),
+                'updatedAt'       => $lead->updated_at?->toISOString(),
+            ],
+            'Lead created successfully.',
+            201
+        );
+    }
+}
