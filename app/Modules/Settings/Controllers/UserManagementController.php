@@ -199,20 +199,16 @@ class UserManagementController extends Controller
     public function store(StoreUserRequest $request): JsonResponse
     {
         try {
-            DB::beginTransaction();
+            return DB::transaction(function () use ($request) {
+                $user = $this->userService->createUser($request->validated());
 
-            $user = $this->userService->createUser($request->validated());
-
-            DB::commit();
-
-            return ApiResponse::success(
-                ['user' => new UserResource($user)],
-                __('messages.user_created'),
-                201
-            );
+                return ApiResponse::success(
+                    ['user' => new UserResource($user)],
+                    __('messages.user_created'),
+                    201
+                );
+            });
         } catch (\Exception $e) {
-            DB::rollBack();
-
             return ApiResponse::error($e->getMessage(), 500);
         }
     }
@@ -348,19 +344,15 @@ class UserManagementController extends Controller
         }
 
         try {
-            DB::beginTransaction();
+            return DB::transaction(function () use ($request, $user) {
+                $user = $this->userService->updateUser($user, $request->validated());
 
-            $user = $this->userService->updateUser($user, $request->validated());
-
-            DB::commit();
-
-            return ApiResponse::success(
-                ['user' => new UserResource($user)],
-                __('messages.user_updated')
-            );
+                return ApiResponse::success(
+                    ['user' => new UserResource($user)],
+                    __('messages.user_updated')
+                );
+            });
         } catch (\Exception $e) {
-            DB::rollBack();
-
             return ApiResponse::error($e->getMessage(), 500);
         }
     }
@@ -424,16 +416,12 @@ class UserManagementController extends Controller
         }
 
         try {
-            DB::beginTransaction();
+            return DB::transaction(function () use ($user) {
+                $this->userService->deleteUser($user);
 
-            $this->userService->deleteUser($user);
-
-            DB::commit();
-
-            return ApiResponse::success(null, __('messages.user_deleted'));
+                return ApiResponse::success(null, __('messages.user_deleted'));
+            });
         } catch (\Exception $e) {
-            DB::rollBack();
-
             return ApiResponse::error($e->getMessage(), 500);
         }
     }
@@ -495,23 +483,19 @@ class UserManagementController extends Controller
         }
 
         try {
-            DB::beginTransaction();
+            return DB::transaction(function () use ($user) {
+                $user = $this->userService->toggleUserStatus($user);
 
-            $user = $this->userService->toggleUserStatus($user);
+                $message = $user->is_active
+                    ? __('messages.user_activated')
+                    : __('messages.user_deactivated');
 
-            DB::commit();
-
-            $message = $user->is_active
-                ? __('messages.user_activated')
-                : __('messages.user_deactivated');
-
-            return ApiResponse::success(
-                ['user' => new UserResource($user)],
-                $message
-            );
+                return ApiResponse::success(
+                    ['user' => new UserResource($user)],
+                    $message
+                );
+            });
         } catch (\Exception $e) {
-            DB::rollBack();
-
             return ApiResponse::error($e->getMessage(), 500);
         }
     }
@@ -589,19 +573,15 @@ class UserManagementController extends Controller
         }
 
         try {
-            DB::beginTransaction();
+            return DB::transaction(function () use ($request, $user) {
+                $user = $this->userService->assignRoles($user, $request->input('roles'));
 
-            $user = $this->userService->assignRoles($user, $request->input('roles'));
-
-            DB::commit();
-
-            return ApiResponse::success(
-                ['user' => new UserResource($user)],
-                __('messages.roles_assigned')
-            );
+                return ApiResponse::success(
+                    ['user' => new UserResource($user)],
+                    __('messages.roles_assigned')
+                );
+            });
         } catch (\Exception $e) {
-            DB::rollBack();
-
             return ApiResponse::error($e->getMessage(), 500);
         }
     }

@@ -3,7 +3,7 @@
 namespace Tests\Feature\Client;
 
 use App\Modules\Client\Models\ClientActivity;
-use App\Modules\CRM\Models\Client;
+use App\Modules\Client\Models\Client;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;

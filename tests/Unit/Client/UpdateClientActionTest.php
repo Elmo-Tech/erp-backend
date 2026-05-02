@@ -38,7 +38,7 @@ class UpdateClientActionTest extends TestCase
         $this->assertSame('+20 100 000 0002', $updatedClient->primary_phone);
         $this->assertSame('Acme Studio', $updatedClient->company_name);
         $this->assertSame('referral', $updatedClient->source);
-        $this->assertSame('inactive', $updatedClient->status);
+        $this->assertSame('inactive', $updatedClient->status->value);
         $this->assertSame(['interests' => ['branding']], $updatedClient->metadata);
     }
 }

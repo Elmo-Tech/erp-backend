@@ -255,48 +255,42 @@ class AdminUserController extends Controller
         }
 
         try {
-            DB::beginTransaction();
+            return DB::transaction(function () use ($request, $id) {
+                // Find the user
+                $user = User::find($id);
+                if (! $user) {
+                    return ApiResponse::notFound('User not found');
+                }
 
-            // Find the user
-            $user = User::find($id);
-            if (! $user) {
-                DB::rollBack();
+                $oldCost = $user->internal_hourly_cost;
+                $newCost = $request->input('internalHourlyCost');
 
-                return ApiResponse::notFound('User not found');
-            }
+                // Update the internal cost
+                $user->internal_hourly_cost = $newCost;
+                $user->save();
 
-            $oldCost = $user->internal_hourly_cost;
-            $newCost = $request->input('internalHourlyCost');
+                // Log the change to audit_logs
+                $this->auditLogService->log(
+                    'update_internal_cost',
+                    $user,
+                    [
+                        'old_cost' => $oldCost ? (string) $oldCost : null,
+                        'new_cost' => (string) $newCost,
+                        'updated_by' => auth()->user()->name,
+                        'updated_by_id' => auth()->id(),
+                    ]
+                );
 
-            // Update the internal cost
-            $user->internal_hourly_cost = $newCost;
-            $user->save();
-
-            // Log the change to audit_logs
-            $this->auditLogService->log(
-                'update_internal_cost',
-                $user,
-                [
-                    'old_cost' => $oldCost ? (string) $oldCost : null,
-                    'new_cost' => (string) $newCost,
-                    'updated_by' => auth()->user()->name,
-                    'updated_by_id' => auth()->id(),
-                ]
-            );
-
-            DB::commit();
-
-            // Return success without exposing the actual cost value
-            return ApiResponse::success([
-                'userId' => $user->id,
-                'userName' => $user->name,
-                'updated' => true,
-                'updatedAt' => $user->updated_at->toISOString(),
-            ], 'Internal hourly cost updated successfully');
+                // Return success without exposing the actual cost value
+                return ApiResponse::success([
+                    'userId' => $user->id,
+                    'userName' => $user->name,
+                    'updated' => true,
+                    'updatedAt' => $user->updated_at->toISOString(),
+                ], 'Internal hourly cost updated successfully');
+            });
 
         } catch (\Exception $e) {
-            DB::rollBack();
-
             return ApiResponse::error(
                 'Failed to update internal cost: '.$e->getMessage(),
                 500
@@ -454,62 +448,58 @@ class AdminUserController extends Controller
         }
 
         try {
-            DB::beginTransaction();
+            return DB::transaction(function () use ($request) {
+                $usersData = $request->input('users');
+                $updatedUsers = [];
+                $totalUpdated = 0;
 
-            $usersData = $request->input('users');
-            $updatedUsers = [];
-            $totalUpdated = 0;
+                foreach ($usersData as $userData) {
+                    $userId = $userData['userId'];
+                    $newCost = $userData['internalHourlyCost'];
 
-            foreach ($usersData as $userData) {
-                $userId = $userData['userId'];
-                $newCost = $userData['internalHourlyCost'];
+                    // Find the user
+                    $user = User::find($userId);
+                    if (! $user) {
+                        continue; // Skip if user not found (should not happen due to validation)
+                    }
 
-                // Find the user
-                $user = User::find($userId);
-                if (! $user) {
-                    continue; // Skip if user not found (should not happen due to validation)
+                    $oldCost = $user->internal_hourly_cost;
+
+                    // Update the internal cost
+                    $user->internal_hourly_cost = $newCost;
+                    $user->save();
+
+                    // Log the change to audit_logs
+                    $this->auditLogService->log(
+                        'bulk_update_internal_cost',
+                        $user,
+                        [
+                            'old_cost' => $oldCost ? (string) $oldCost : null,
+                            'new_cost' => (string) $newCost,
+                            'updated_by' => auth()->user()->name,
+                            'updated_by_id' => auth()->id(),
+                            'bulk_operation' => true,
+                        ]
+                    );
+
+                    $updatedUsers[] = [
+                        'userId' => $user->id,
+                        'userName' => $user->name,
+                        'updated' => true,
+                    ];
+
+                    $totalUpdated++;
                 }
 
-                $oldCost = $user->internal_hourly_cost;
-
-                // Update the internal cost
-                $user->internal_hourly_cost = $newCost;
-                $user->save();
-
-                // Log the change to audit_logs
-                $this->auditLogService->log(
-                    'bulk_update_internal_cost',
-                    $user,
-                    [
-                        'old_cost' => $oldCost ? (string) $oldCost : null,
-                        'new_cost' => (string) $newCost,
-                        'updated_by' => auth()->user()->name,
-                        'updated_by_id' => auth()->id(),
-                        'bulk_operation' => true,
-                    ]
-                );
-
-                $updatedUsers[] = [
-                    'userId' => $user->id,
-                    'userName' => $user->name,
-                    'updated' => true,
-                ];
-
-                $totalUpdated++;
-            }
-
-            DB::commit();
-
-            // Return success without exposing actual cost values
-            return ApiResponse::success([
-                'totalUpdated' => $totalUpdated,
-                'updatedAt' => now()->toISOString(),
-                'updatedUsers' => $updatedUsers,
-            ], 'Bulk internal costs updated successfully');
+                // Return success without exposing actual cost values
+                return ApiResponse::success([
+                    'totalUpdated' => $totalUpdated,
+                    'updatedAt' => now()->toISOString(),
+                    'updatedUsers' => $updatedUsers,
+                ], 'Bulk internal costs updated successfully');
+            });
 
         } catch (\Exception $e) {
-            DB::rollBack();
-
             return ApiResponse::error(
                 'Failed to update internal costs: '.$e->getMessage(),
                 500

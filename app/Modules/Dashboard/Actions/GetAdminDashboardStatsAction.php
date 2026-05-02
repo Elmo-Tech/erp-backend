@@ -161,20 +161,6 @@ class GetAdminDashboardStatsAction
                     'timestamp' => $project->updated_at,
                 ]);
             $activities = $activities->merge($recentProjectActivities);
-
-            $recentQuotations = \App\Modules\Quotation\Models\Quotation::with('lead')
-                ->orderBy('created_at', 'desc')
-                ->limit(3)
-                ->get()
-                ->map(fn ($quotation) => [
-                    'activityId' => $quotation->id + 2000,
-                    'action' => 'Quotation created for '.($quotation->lead?->name ?? 'Unknown'),
-                    'user' => 'System',
-                    'time' => $quotation->created_at->diffForHumans(),
-                    'type' => 'quotation',
-                    'timestamp' => $quotation->created_at,
-                ]);
-            $activities = $activities->merge($recentQuotations);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::warning('Error fetching recent activities: '.$e->getMessage());
         }

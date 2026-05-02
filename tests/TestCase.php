@@ -18,8 +18,8 @@ abstract class TestCase extends BaseTestCase
 
         $client = Client::factory()->create(array_merge([
             'user_id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
+            'display_name' => $user->name,
+            'primary_email' => $user->email,
         ], $attributes));
 
         $user->setRelation('client', $client);

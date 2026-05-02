@@ -5,6 +5,7 @@ namespace App\Modules\Project\Models;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Client\Models\Client;
 use App\Modules\Settings\Models\User;
+use App\Modules\Task\Models\Task;
 use App\Scopes\ClientScope;
 use App\Traits\HasCreatedUpdatedBy;
 use Database\Factories\ProjectFactory;
@@ -118,6 +119,11 @@ class Project extends Model
     public function members(): HasMany
     {
         return $this->hasMany(ProjectMember::class);
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
     }
 
     public function pinnedByUsers()

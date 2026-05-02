@@ -4,6 +4,7 @@ namespace App\Modules\Settings\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserSpecialization;
+use App\Modules\Client\Models\Client;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
