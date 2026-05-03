@@ -46,6 +46,48 @@ class LeadController extends Controller
     }
 
     /**
+     * Retrieve a single lead by its ID.
+     *
+     * GET /api/v1/leads/{lead}
+     *
+     * Uses Laravel's implicit route model binding — the {lead} segment is
+     * automatically resolved to a Lead instance (soft-deleted records return 404).
+     * The assignee relationship is eager-loaded so the details page can display
+     * the assigned user's name and avatar without a second request.
+     */
+    public function show(Lead $lead): JsonResponse
+    {
+        $lead->load('assignee:id,name,email,avatar');
+
+        return ApiResponse::success(
+            [
+                'id'              => $lead->id,
+                'title'           => $lead->title,
+                'stage'           => $lead->stage->value,
+                'status'          => $lead->status->value,
+                'company'         => $lead->metadata['company_name'] ?? null,
+                'email'           => $lead->metadata['primary_email'] ?? null,
+                'phone'           => $lead->metadata['primary_phone'] ?? null,
+                'contact_name'    => $lead->metadata['contact_name'] ?? null,
+                'expected_budget' => $lead->expected_budget,
+                'source'          => $lead->source,
+                'notes'           => $lead->notes,
+                'expected_close_date' => $lead->expected_close_date?->toDateString(),
+                'assignedTo'      => $lead->assigned_to,
+                'assignee'        => $lead->assignee ? [
+                    'id'     => $lead->assignee->id,
+                    'name'   => $lead->assignee->name,
+                    'email'  => $lead->assignee->email,
+                    'avatar' => $lead->assignee->avatar,
+                ] : null,
+                'createdAt'       => $lead->created_at?->toISOString(),
+                'updatedAt'       => $lead->updated_at?->toISOString(),
+            ],
+            'Lead retrieved successfully.'
+        );
+    }
+
+    /**
      * Create a new lead and place it in the first pipeline stage.
      *
      * POST /api/v1/leads

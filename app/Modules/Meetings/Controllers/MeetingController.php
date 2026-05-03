@@ -30,7 +30,12 @@ class MeetingController extends Controller
     public function index(Request $request, ListMeetingsAction $action): JsonResponse
     {
         return ApiResponse::success(
-            new MeetingCollection($action->execute((array) $request->get('filter', []), (int) $request->get('perPage', 15))),
+            new MeetingCollection($action->execute(
+                (array) $request->get('filter', []),
+                (int) $request->get('perPage', 15),
+                $request->get('model_type'),
+                $request->get('model_id') ? (int) $request->get('model_id') : null,
+            )),
             __('messages.meetings_retrieved')
         );
     }
