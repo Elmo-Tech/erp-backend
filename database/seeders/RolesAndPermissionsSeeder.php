@@ -41,6 +41,18 @@ class RolesAndPermissionsSeeder extends Seeder
             // --- Lead / Sales Pipeline Permissions ---
             'view_leads',
             'manage_leads',
+            // --- Project Execution Layer Permissions ---
+            'view_projects',          // canonical "can see the Projects page"
+            'view_all_projects',      // see every project regardless of membership
+            'view_assigned_projects', // see only projects the user is a member of
+            'manage_project_settings',
+            'manage_tasks',
+            'work_on_tasks',
+            'edit_time_entries',
+            'manage_change_requests',
+            // --- Roles & Permissions ---
+            'manage_roles',
+            'view_roles',
         ];
 
         foreach ($permissions as $permission) {
@@ -58,10 +70,17 @@ class RolesAndPermissionsSeeder extends Seeder
                 'manage_sops',
                 'view_clients',
                 'manage_clients',
+                'view_projects',
+                'view_all_projects',
+                'manage_projects',
                 'create_projects',
+                'manage_tasks',
+                'manage_change_requests',
                 'schedule_meetings',
                 'view_settings',
                 'manage_settings',
+                'manage_roles',
+                'view_roles',
                 // Lead / Sales Pipeline
                 'view_leads',
                 'manage_leads',
@@ -71,6 +90,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_all_blockers',
                 'view_morning_sop',
                 'submit_morning_sop',
+                'view_projects',
+                'view_all_projects',
                 'create_projects',
                 'schedule_meetings',
                 // PMO can view the pipeline but not mutate stages
@@ -79,9 +100,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'tech_lead' => [
                 'view_team_performance',
                 'view_project_timeline',
+                'view_projects',
+                'view_assigned_projects',
+                'manage_tasks',
+                'work_on_tasks',
             ],
             'developer' => [
                 'view_personal_tasks',
+                'view_projects',
+                'view_assigned_projects',
+                'work_on_tasks',
                 'log_time',
             ],
         ];

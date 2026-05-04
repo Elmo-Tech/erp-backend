@@ -2,6 +2,7 @@
 
 namespace App\Modules\Project\Models;
 
+use App\Enums\ProjectRole;
 use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +19,13 @@ class ProjectMember extends Model
         'user_id',
         'role',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'role' => ProjectRole::class,
+        ];
+    }
 
     /**
      * Get the project

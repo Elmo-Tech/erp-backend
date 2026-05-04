@@ -12,7 +12,7 @@ class ListProjectsAction
 {
     public function execute(User $user, int $perPage = 15): LengthAwarePaginator
     {
-        return QueryBuilder::for(Project::class)
+        $query = QueryBuilder::for(Project::class)
             ->with(['client'])
             ->leftJoin('pinned_projects', function ($join) use ($user) {
                 $join->on('projects.id', '=', 'pinned_projects.project_id')
@@ -28,7 +28,20 @@ class ListProjectsAction
                 AllowedFilter::callback('search', function ($query, $value) {
                     $query->where('title', 'like', "%{$value}%");
                 }),
-            ])
+            ]);
+
+        // ── SECURITY: Project-level scoping ───────────────────────────────────
+        // Users with view_all_projects (Founder, PMO, Admin) see every project.
+        // All other authenticated users (Developer, Tech Lead, QA, etc.) only
+        // receive projects they are explicitly assigned to as members.
+        if (! $user->can('view_all_projects') && ! $user->hasAnyRole(['admin', 'super-admin'])) {
+            $userId = $user->id;
+            $query->whereHas('members', function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            });
+        }
+
+        return $query
             ->orderByRaw('CASE WHEN pinned_projects.id IS NOT NULL THEN 0 ELSE 1 END')
             ->orderBy('projects.created_at', 'desc')
             ->paginate($perPage);

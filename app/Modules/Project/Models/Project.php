@@ -2,6 +2,7 @@
 
 namespace App\Modules\Project\Models;
 
+use App\Enums\ProjectRole;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Client\Models\Client;
 use App\Modules\Settings\Models\User;
@@ -12,6 +13,7 @@ use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
@@ -139,5 +141,48 @@ class Project extends Model
         }
 
         return $this->pinnedByUsers()->where('user_id', $userId)->exists();
+    }
+
+    // =========================================================================
+    // Project Execution Layer — appended relationships
+    // The relationships below are part of the execution layer scaffold.
+    // They do NOT replace or modify any existing relationship above.
+    // =========================================================================
+
+    /**
+     * Milestones for this project.
+     */
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(Milestone::class);
+    }
+
+    /**
+     * Execution-layer tasks (project_tasks table).
+     * Distinct from tasks() which points to App\Modules\Task\Models\Task.
+     */
+    public function executionTasks(): HasMany
+    {
+        return $this->hasMany(ProjectTask::class);
+    }
+
+    /**
+     * Change requests raised against this project.
+     */
+    public function changeRequests(): HasMany
+    {
+        return $this->hasMany(ChangeRequest::class);
+    }
+
+    /**
+     * Team members assigned to this project via the project_members pivot.
+     * Uses ProjectRole enum for the 'role' pivot column.
+     */
+    public function teamMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'project_members', 'project_id', 'user_id')
+            ->withPivot('role')
+            ->withTimestamps()
+            ->using(ProjectMemberPivot::class);
     }
 }

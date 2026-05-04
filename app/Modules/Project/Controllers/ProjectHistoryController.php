@@ -129,9 +129,15 @@ class ProjectHistoryController extends Controller
      */
     public function index(Request $request, Project $project): JsonResponse
     {
-        // Check permission to view project history
+        // Check permission to view project history.
+        // Allowed if the user has the dedicated permission OR any general
+        // project-viewing permission (view_projects / view_all_projects).
         $user = $request->user();
-        if (! $user->can('view_project_history')) {
+        $canView = $user->can('view_project_history')
+            || $user->can('view_projects')
+            || $user->can('view_all_projects');
+
+        if (! $canView) {
             return ApiResponse::error(
                 __('messages.no_permission_view_history'),
                 403

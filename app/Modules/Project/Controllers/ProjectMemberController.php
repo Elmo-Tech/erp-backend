@@ -2,6 +2,7 @@
 
 namespace App\Modules\Project\Controllers;
 
+use App\Enums\ProjectRole;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Project\Actions\AddProjectMemberAction;
@@ -39,14 +40,14 @@ class ProjectMemberController extends Controller
     {
         $request->validate([
             'userId' => 'required|exists:users,id',
-            'role' => 'nullable|in:lead,member,reviewer',
+            'role'   => ['nullable', new \Illuminate\Validation\Rules\Enum(ProjectRole::class)],
         ]);
 
         try {
             $member = $this->addProjectMemberAction->execute(
                 $project,
                 (int) $request->userId,
-                $request->role ?? 'member'
+                $request->role ?? ProjectRole::DEVELOPER->value
             );
         } catch (RuntimeException $exception) {
             return ApiResponse::error($exception->getMessage(), 400);
@@ -64,7 +65,7 @@ class ProjectMemberController extends Controller
     public function update(Request $request, Project $project, ProjectMember $member): JsonResponse
     {
         $request->validate([
-            'role' => 'required|in:lead,member,reviewer',
+            'role' => ['required', new \Illuminate\Validation\Rules\Enum(ProjectRole::class)],
         ]);
 
         try {
