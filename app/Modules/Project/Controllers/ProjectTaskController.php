@@ -5,7 +5,7 @@ namespace App\Modules\Project\Controllers;
 use App\Enums\ProjectRole;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Modules\Settings\Models\User;
 use App\Modules\Project\Actions\CompleteProjectTaskAction;
 use App\Modules\Project\Actions\ProjectHistoryAction;
 use App\Modules\Project\Models\Project;

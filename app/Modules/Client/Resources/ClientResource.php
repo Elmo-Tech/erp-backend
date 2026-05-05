@@ -21,10 +21,10 @@ class ClientResource extends JsonResource
 
         return [
             'clientId' => $client->id,
-            'name' => $client->name ?? '',
-            'email' => $client->email ?? '',
-            'phone' => $client->phone ?? '',
-            'company' => $client->company ?? '',
+            'name' => $client->display_name ?? $client->legal_name ?? '',
+            'email' => $client->primary_email ?? '',
+            'phone' => $client->primary_phone ?? '',
+            'company' => $client->company_name ?? '',
             'type' => $client->type ?? '',
             'displayName' => $client->display_name ?? '',
             'legalName' => $client->legal_name ?? '',
