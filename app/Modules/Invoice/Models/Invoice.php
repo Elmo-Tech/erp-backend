@@ -12,12 +12,13 @@ use Database\Factories\InvoiceFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property int $id
- * @property int $project_id
+ * @property int $model_id
+ * @property string $model_type
  * @property int|null $contract_id
  * @property string $invoice_number
  * @property float|int|string $amount
@@ -34,6 +35,8 @@ class Invoice extends Model
     use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'model_id',
+        'model_type',
         'project_id',
         'contract_id',
         'milestone_name',
@@ -71,24 +74,36 @@ class Invoice extends Model
         return InvoiceFactory::new();
     }
 
+    public function setProjectIdAttribute($value): void
+    {
+        $this->attributes['model_type'] = Project::class;
+        $this->attributes['model_id'] = $value;
+    }
+
+    public function getProjectIdAttribute(): ?int
+    {
+        return $this->model_type === Project::class ? (int) $this->model_id : null;
+    }
+
     /**
-     * Get the project that owns the invoice.
+     * Get the model that owns the invoice.
+     */
+    public function model(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    /**
+     * Get the project that owns the invoice when this invoice is project-scoped.
      */
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Project::class, 'model_id');
     }
 
-    public function client(): HasOneThrough
+    public function client(): BelongsTo
     {
-        return $this->hasOneThrough(
-            Client::class,
-            Project::class,
-            'id',
-            'id',
-            'project_id',
-            'client_id'
-        );
+        return $this->belongsTo(Client::class, 'model_id');
     }
 
     /**

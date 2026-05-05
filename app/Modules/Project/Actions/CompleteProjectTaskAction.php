@@ -23,6 +23,7 @@ class CompleteProjectTaskAction
 {
     public function __construct(
         private readonly UpdateMilestoneProgressAction $updateMilestoneProgress,
+        private readonly ProjectHistoryAction $historyAction,
     ) {}
 
     /**
@@ -43,10 +44,25 @@ class CompleteProjectTaskAction
 
         // ── Atomic update + side-effect ───────────────────────────────────────
         DB::transaction(function () use ($task) {
+            $oldStatus = $task->status;
             $task->update(['status' => ExecutionTaskStatus::DONE]);
 
             // Refresh so the cast returns the enum value, not the raw string.
             $task->refresh();
+
+            // Load project if not already loaded
+            if (!$task->relationLoaded('project')) {
+                $task->load('project');
+            }
+
+            // Record activity in project history
+            $this->historyAction->recordChange(
+                $task->project,
+                'task_completed',
+                $oldStatus,
+                ExecutionTaskStatus::DONE,
+                "Task '{$task->title}' marked as done"
+            );
 
             // Propagate progress to the parent milestone if one exists.
             if ($task->milestone_id !== null) {

@@ -85,7 +85,7 @@ class GetEmployeeDashboardStatsAction
         $pointsCycle = $this->getCurrentPointsCycleSummary($user);
 
         return [
-            'role' => 'developer',
+            'role' => 'dev',
             'stats' => [
                 'myTotalTasks' => $myTotalTasks,
                 'myCompletedTasks' => $myCompletedTasks,

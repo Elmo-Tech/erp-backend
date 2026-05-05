@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('meetings', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('subject_id');
-            $table->string('subject_type');
+            $table->unsignedBigInteger('model_id');
+            $table->string('model_type');
             $table->string('status')->default('scheduled');
             $table->string('title');
             $table->text('description')->nullable();
@@ -28,7 +28,7 @@ return new class extends Migration
             $this->addAuditColumns($table);
             $table->timestamps();
 
-            $table->index(['subject_type', 'subject_id']);
+            $table->index(['model_type', 'model_id']);
             $table->index('status');
             $table->index('is_completed');
             $table->index('assigned_to');

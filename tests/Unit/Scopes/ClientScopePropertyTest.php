@@ -5,11 +5,11 @@ namespace Tests\Unit\Scopes;
 use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
 use App\Scopes\ClientScope;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -26,9 +26,7 @@ class ClientScopePropertyTest extends TestCase
     {
         parent::setUp();
 
-        Role::firstOrCreate(['name' => 'client']);
-        Role::firstOrCreate(['name' => 'admin']);
-        Role::firstOrCreate(['name' => 'employee']);
+        $this->seed(RolesAndPermissionsSeeder::class);
     }
 
     /**
@@ -125,7 +123,7 @@ class ClientScopePropertyTest extends TestCase
                 }
 
                 $admin = User::factory()->create();
-                $admin->assignRole('admin');
+                $admin->givePermissionTo('view_all_projects');
 
                 Auth::login($admin);
                 $adminVisibleProjects = Project::all();

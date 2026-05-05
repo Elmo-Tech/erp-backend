@@ -31,10 +31,10 @@ class ListProjectsAction
             ]);
 
         // ── SECURITY: Project-level scoping ───────────────────────────────────
-        // Users with view_all_projects (Founder, PMO, Admin) see every project.
-        // All other authenticated users (Developer, Tech Lead, QA, etc.) only
-        // receive projects they are explicitly assigned to as members.
-        if (! $user->can('view_all_projects') && ! $user->hasAnyRole(['admin', 'super-admin'])) {
+        // Users with view_all_projects see every project.
+        // All other authenticated users only receive projects they are
+        // explicitly assigned to as members.
+        if (! $user->can('view_all_projects')) {
             $userId = $user->id;
             $query->whereHas('members', function ($q) use ($userId) {
                 $q->where('user_id', $userId);

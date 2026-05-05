@@ -6,9 +6,12 @@ use App\Enums\MilestoneStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Milestone extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'milestones';
 
     protected $fillable = [
@@ -23,7 +26,7 @@ class Milestone extends Model
     protected function casts(): array
     {
         return [
-            'status'              => MilestoneStatus::class,
+            'status' => MilestoneStatus::class,
             'progress_percentage' => 'integer',
         ];
     }

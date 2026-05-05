@@ -240,7 +240,7 @@ class DashboardDemoSeeder extends Seeder
             foreach ($users as $user) {
                 ProjectMember::updateOrCreate(
                     ['project_id' => $project->id, 'user_id' => $user->id],
-                    ['role' => $user->hasRole('tech_lead') ? 'lead' : 'member']
+                    ['role' => $user->hasRole('techdev') ? 'lead' : 'member']
                 );
             }
         }

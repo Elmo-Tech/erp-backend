@@ -126,7 +126,7 @@ class UpdateRoleRequest extends FormRequest
                 $role = Role::findOrFail($roleId);
 
                 // Prevent updating protected roles
-                if (in_array($role->name, ['admin', 'client', 'super-admin'])) {
+                if (in_array($role->name, ['founder', 'pmo', 'techdev', 'dev', 'client'])) {
                     $validator->errors()->add(
                         'role',
                         'This role is protected and cannot be modified.'
@@ -151,7 +151,7 @@ class UpdateRoleRequest extends FormRequest
                 // Prevent renaming to protected role names (unless it's already that name)
                 // Only check if name is provided
                 if ($this->has('name') && $this->name) {
-                    $protectedNames = ['admin', 'client', 'super-admin'];
+                    $protectedNames = ['founder', 'pmo', 'techdev', 'dev', 'client'];
                     if (in_array($this->name, $protectedNames) && $role->name !== $this->name) {
                         $validator->errors()->add(
                             'name',

@@ -26,7 +26,7 @@ class GetManagerDashboardStatsAction
             ProjectStatus::TESTING->value,
         ];
 
-        $teamMemberIds = User::role('developer')->pluck('id')->toArray();
+        $teamMemberIds = User::role(['techdev', 'dev'])->pluck('id')->toArray();
 
         $activeProjects = Project::withoutGlobalScopes()
             ->whereIn('status', $activeStatuses)
@@ -69,7 +69,7 @@ class GetManagerDashboardStatsAction
         $pointsCycle = $this->getCurrentPointsCycleSummary($user);
 
         return [
-            'role' => 'manager',
+            'role' => 'pmo',
             'stats' => [
                 'activeProjects' => $activeProjects,
                 'totalTasks' => $totalTasks,

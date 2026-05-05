@@ -5,6 +5,7 @@ namespace Tests\Feature\Project;
 use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,7 +15,11 @@ class ProjectIndexControllerTest extends TestCase
 
     public function test_it_lists_projects_without_requiring_quotation_module(): void
     {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
         $user = User::factory()->create();
+        $user->givePermissionTo(['view_projects', 'view_all_projects']);
+
         $client = Client::create([
             'type' => 'company',
             'display_name' => 'Acme',
@@ -40,7 +45,11 @@ class ProjectIndexControllerTest extends TestCase
 
     public function test_it_shows_a_project_without_requiring_quotation_module(): void
     {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
         $user = User::factory()->create();
+        $user->givePermissionTo(['view_projects', 'view_all_projects']);
+
         $client = Client::create([
             'type' => 'company',
             'display_name' => 'Acme',

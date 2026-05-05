@@ -5,6 +5,7 @@ namespace App\Modules\Project\Models;
 use App\Enums\ProjectRole;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Client\Models\Client;
+use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Settings\Models\User;
 use App\Modules\Task\Models\Task;
 use App\Scopes\ClientScope;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 
@@ -126,6 +128,11 @@ class Project extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
+    }
+
+    public function invoices(): MorphMany
+    {
+        return $this->morphMany(Invoice::class, 'model');
     }
 
     public function pinnedByUsers()

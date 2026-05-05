@@ -5,6 +5,7 @@ namespace Tests\Unit\Policies;
 use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
 use App\Policies\ProjectPolicy;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,11 +26,8 @@ class ProjectPolicyPropertyTest extends TestCase
     {
         parent::setUp();
 
-        // Create roles if they don't exist
-        Role::firstOrCreate(['name' => 'client']);
-        Role::firstOrCreate(['name' => 'admin']);
-        Role::firstOrCreate(['name' => 'super-admin']);
-        Role::firstOrCreate(['name' => 'employee']);
+        $this->seed(RolesAndPermissionsSeeder::class);
+        Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'web']);
     }
 
     /**
@@ -104,7 +102,7 @@ class ProjectPolicyPropertyTest extends TestCase
 
                 // Create admin user
                 $user = User::factory()->create();
-                $user->assignRole($role);
+                $user->givePermissionTo('view_all_projects');
 
                 // Create multiple projects with different clients
                 $clients = User::factory()->count($numProjects)->create();
@@ -195,7 +193,7 @@ class ProjectPolicyPropertyTest extends TestCase
 
                 // Create admin user
                 $user = User::factory()->create();
-                $user->assignRole($role);
+                $user->givePermissionTo(['create_projects', 'manage_all_projects', 'delete_projects']);
 
                 // Create a client and project for testing
                 $client = User::factory()->create();
@@ -248,11 +246,11 @@ class ProjectPolicyPropertyTest extends TestCase
 
                 // Create admin user
                 $admin = User::factory()->create();
-                $admin->assignRole('admin');
+                $admin->givePermissionTo('approve_project_ui');
 
                 // Create super-admin user
                 $superAdmin = User::factory()->create();
-                $superAdmin->assignRole('super-admin');
+                $superAdmin->givePermissionTo('approve_project_ui');
 
                 // Create employee user
                 $employee = User::factory()->create();

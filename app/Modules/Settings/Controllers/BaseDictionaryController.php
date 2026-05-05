@@ -80,6 +80,8 @@ class BaseDictionaryController extends Controller
 
     public function destroy(string $entity, int|string $id): JsonResponse
     {
+        abort_if(! request()->user()?->can('delete_settings'), 403, 'Unauthorized');
+
         $model = $this->resolveModel($entity);
 
         if ($model === null) {

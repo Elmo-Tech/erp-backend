@@ -12,6 +12,7 @@ use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
 /**
@@ -23,7 +24,7 @@ use RuntimeException;
  * no negotiation history is lost.
  *
  * Edge cases handled:
- *  - No contract on the lead → project is created with a blank budget
+     *  - No contract on the lead → project is created with a zero budget
  *    and no deadline (graceful degradation, not a hard failure).
  *  - Lead already has a client_id → the existing client is reused and
  *    only the project is created (idempotent re-run safety).
@@ -60,7 +61,11 @@ class ConvertLeadToClientProjectAction
 
             $this->migrateDocuments($lead, $client, $project);
 
-            // ── 5. Archive the Lead and link it to the new client ─────────────
+            // ── 5. Reparent polymorphic activity from Lead to Client ─────────
+
+            $this->reparentPolymorphicRecords($lead, $client);
+
+            // ── 6. Archive the Lead and link it to the new client ─────────────
 
             $lead->status    = LeadStatus::ARCHIVED;
             $lead->client_id = $client->id;
@@ -213,7 +218,7 @@ class ConvertLeadToClientProjectAction
             'title'       => $lead->title,
             'description' => $lead->description ?? null,
             'status'      => ProjectStatus::ACTIVE->value,
-            'budget'      => $budget,
+            'budget'      => $budget ?? 0,
             'deadline'    => $deadline,
         ], fn ($v) => $v !== null));
     }
@@ -233,5 +238,36 @@ class ConvertLeadToClientProjectAction
         $lead->proposals()->update($update);
         $lead->quotations()->update($update);
         $lead->contracts()->update($update);
+    }
+
+    /**
+     * Move polymorphic records that were attached to the lead onto the newly
+     * created client, preserving activity history after conversion.
+     */
+    private function reparentPolymorphicRecords(Lead $lead, Client $client): void
+    {
+        foreach (['meetings', 'notes', 'files', 'tasks', 'invoices'] as $table) {
+            $this->reparentPolymorphicTable($table, $lead, $client);
+        }
+    }
+
+    private function reparentPolymorphicTable(string $table, Lead $lead, Client $client): void
+    {
+        if (
+            ! Schema::hasTable($table)
+            || ! Schema::hasColumn($table, 'model_type')
+            || ! Schema::hasColumn($table, 'model_id')
+        ) {
+            return;
+        }
+
+        DB::table($table)
+            ->where('model_type', Lead::class)
+            ->where('model_id', $lead->id)
+            ->update([
+                'model_type' => Client::class,
+                'model_id' => $client->id,
+                'updated_at' => now(),
+            ]);
     }
 }

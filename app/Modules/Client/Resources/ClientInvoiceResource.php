@@ -3,6 +3,7 @@
 namespace App\Modules\Client\Resources;
 
 use App\Modules\Invoice\Models\Invoice;
+use App\Modules\Project\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,7 +27,9 @@ class ClientInvoiceResource extends JsonResource
         return [
             'invoiceId' => $invoice->id,
             'invoiceNumber' => $invoice->invoice_number,
-            'projectId' => $invoice->project_id,
+            'projectId' => $invoice->model_type === Project::class ? $invoice->model_id : null,
+            'modelId' => $invoice->model_id,
+            'modelType' => $invoice->model_type,
             'amount' => (float) $invoice->amount,
             'currency' => $invoice->currency,
             'status' => $invoice->status->value,

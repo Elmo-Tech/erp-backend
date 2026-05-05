@@ -27,7 +27,8 @@ class InvoiceFactory extends Factory
     public function definition(): array
     {
         return [
-            'project_id' => Project::factory(),
+            'model_type' => Project::class,
+            'model_id' => Project::factory(),
             'invoice_number' => Invoice::generateInvoiceNumber(),
             'amount' => $this->faker->randomFloat(2, 100, 50000),
             'currency' => 'USD',

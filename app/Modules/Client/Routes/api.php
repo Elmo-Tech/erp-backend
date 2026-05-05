@@ -27,7 +27,7 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::prefix('client')
-        ->middleware(['auth:sanctum', 'locale', 'role:client'])
+        ->middleware(['auth:sanctum', 'locale', 'permission:access_client_portal'])
         ->group(function () {
             Route::get('projects', [ClientProjectController::class, 'index'])
                 ->name('client.projects.index');

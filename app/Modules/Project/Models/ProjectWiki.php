@@ -6,11 +6,12 @@ use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Crypt;
 
 class ProjectWiki extends Model
 {
-    use HasCreatedUpdatedBy, HasFactory;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $table = 'project_wikis';
 

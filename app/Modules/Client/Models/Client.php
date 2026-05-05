@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -151,11 +151,11 @@ class Client extends Model
     }
 
     /**
-     * Get all invoices through projects
+     * Get invoices attached directly to this client.
      */
-    public function invoices(): HasManyThrough
+    public function invoices(): MorphMany
     {
-        return $this->hasManyThrough(Invoice::class, Project::class);
+        return $this->morphMany(Invoice::class, 'model');
     }
 
     /**

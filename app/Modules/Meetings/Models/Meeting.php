@@ -4,19 +4,21 @@ namespace App\Modules\Meetings\Models;
 
 use App\Enums\MeetingLocation;
 use App\Enums\MeetingStatus;
+use App\Modules\Settings\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Meeting extends Model
 {
-    use HasCreatedUpdatedBy, HasFactory;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'subject_id',
-        'subject_type',
+        'model_id',
+        'model_type',
         'status',
         'title',
         'description',
@@ -42,14 +44,19 @@ class Meeting extends Model
         ];
     }
 
-    public function subject(): MorphTo
+    public function model(): MorphTo
     {
         return $this->morphTo();
     }
 
+    public function subject(): MorphTo
+    {
+        return $this->morphTo('model', 'model_type', 'model_id');
+    }
+
     public function assignedTo(): BelongsTo
     {
-        return $this->belongsTo(\App\Modules\Settings\Models\User::class, 'assigned_to');
+        return $this->belongsTo(User::class, 'assigned_to');
     }
 
     public function isScheduled(): bool

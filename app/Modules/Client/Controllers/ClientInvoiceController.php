@@ -9,6 +9,7 @@ use App\Modules\Client\Actions\MarkInvoiceAsPaidAction;
 use App\Modules\Client\Resources\ClientInvoiceCollection;
 use App\Modules\Client\Resources\ClientInvoiceResource;
 use App\Modules\Invoice\Models\Invoice;
+use App\Modules\Project\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -145,12 +146,16 @@ class ClientInvoiceController extends Controller
 
         // ClientScope automatically filters to only this client's invoices
         $invoices = QueryBuilder::for(Invoice::class)
-            ->with(['project']) // Load project for additional context if needed
+            ->with(['model']) // Load owning model for additional context if needed
             ->allowedFilters([
                 'status',
-                AllowedFilter::exact('project_id', 'project_id')->ignore(null),
+                AllowedFilter::callback('project_id', function ($query, $value) {
+                    $query->where('model_type', Project::class)
+                        ->where('model_id', $value);
+                })->ignore(null),
                 AllowedFilter::callback('projectId', function ($query, $value) {
-                    $query->where('project_id', $value);
+                    $query->where('model_type', Project::class)
+                        ->where('model_id', $value);
                 }),
                 AllowedFilter::callback('search', function ($query, $value) {
                     $query->where('invoice_number', 'like', "%{$value}%");

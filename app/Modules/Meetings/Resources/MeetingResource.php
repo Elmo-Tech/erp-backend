@@ -16,10 +16,12 @@ class MeetingResource extends JsonResource
 
         return [
             'meetingId' => $meeting->id,
-            'subjectId' => $meeting->subject_id,
-            'subjectType' => $meeting->subject_type,
-            'subjectName' => $this->when($meeting->relationLoaded('subject'), function () use ($meeting) {
-                $subject = $meeting->subject;
+            'modelId' => $meeting->model_id,
+            'modelType' => $meeting->model_type,
+            'subjectId' => $meeting->model_id,
+            'subjectType' => $meeting->model_type,
+            'subjectName' => $this->when($meeting->relationLoaded('model'), function () use ($meeting) {
+                $subject = $meeting->model;
 
                 if ($subject instanceof Client) {
                     return $subject->display_name ?? 'Unknown';

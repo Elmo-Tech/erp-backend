@@ -67,7 +67,7 @@ class GetAdminDashboardStatsAction
         $recentActivities = $this->getRecentActivities();
 
         return [
-            'role' => 'admin',
+            'role' => 'founder',
             'stats' => [
                 'totalProjects' => $totalProjects,
                 'projectsChange' => $projectsChange,

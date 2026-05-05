@@ -42,10 +42,10 @@ class ChangeRequestController extends Controller
         $data = $request->validated();
 
         $changeRequest = $project->changeRequests()->create([
-            'title'       => $data['title'],
+            'title' => $data['title'],
             'description' => $data['description'],
-            'price'       => $data['price'],
-            'status'      => 'draft',
+            'price' => $data['price'],
+            'status' => 'draft',
         ]);
 
         return ApiResponse::success(
@@ -89,6 +89,8 @@ class ChangeRequestController extends Controller
      */
     public function destroy(Project $project, ChangeRequest $changeRequest): JsonResponse
     {
+        abort_if(! request()->user()?->can('delete_change_requests'), 403, 'Unauthorized');
+
         $this->assertBelongsToProject($changeRequest, $project);
 
         if (! $changeRequest->isDraft()) {

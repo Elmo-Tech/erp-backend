@@ -18,7 +18,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'avatar', type: 'string', nullable: true, example: 'https://example.com/avatar.jpg'),
         new OA\Property(property: 'skills', type: 'array', items: new OA\Items(type: 'string'), example: ['PHP', 'Laravel', 'JavaScript']),
         new OA\Property(property: 'internalHourlyCost', type: 'number', format: 'float', nullable: true, example: 75.50, description: 'Only visible to users with view_internal_costs permission'),
-        new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['developer', 'admin']),
+        new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['dev', 'founder']),
         new OA\Property(property: 'createdAt', type: 'string', format: 'date-time', example: '2024-01-01T00:00:00Z'),
         new OA\Property(property: 'updatedAt', type: 'string', format: 'date-time', example: '2024-01-15T10:30:00Z'),
     ]

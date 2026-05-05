@@ -68,7 +68,7 @@ class AuthController extends Controller
                                     type: 'object'
                                 ),
                                 new OA\Property(property: 'profile', ref: '#/components/schemas/LoginProfileResource'),
-                                new OA\Property(property: 'role', type: 'string', example: 'admin'),
+                                new OA\Property(property: 'role', type: 'string', example: 'founder'),
                                 new OA\Property(
                                     property: 'permissions',
                                     type: 'array',
@@ -275,7 +275,7 @@ class AuthController extends Controller
                             property: 'data',
                             properties: [
                                 new OA\Property(property: 'profile', ref: '#/components/schemas/LoginProfileResource'),
-                                new OA\Property(property: 'role', type: 'string', example: 'admin'),
+                                new OA\Property(property: 'role', type: 'string', example: 'founder'),
                                 new OA\Property(
                                     property: 'permissions',
                                     type: 'array',

@@ -194,6 +194,8 @@ class ClientController extends Controller
      */
     public function destroy(Client $client): JsonResponse
     {
+        abort_if(! request()->user()?->can('delete_clients'), 403, 'Unauthorized');
+
         try {
             $this->deleteClientAction->execute($client);
         } catch (RuntimeException $exception) {
@@ -227,17 +229,17 @@ class ClientController extends Controller
             ->pluck('id');
 
         $meetings = Meeting::query()
-            ->with(['subject', 'assignedTo'])
+            ->with(['model', 'assignedTo'])
             ->where(function ($query) use ($client, $projectIds) {
                 $query->where(function ($clientQuery) use ($client) {
-                    $clientQuery->where('subject_type', Client::class)
-                        ->where('subject_id', $client->id);
+                    $clientQuery->where('model_type', Client::class)
+                        ->where('model_id', $client->id);
                 });
 
                 if ($projectIds->isNotEmpty()) {
                     $query->orWhere(function ($projectQuery) use ($projectIds) {
-                        $projectQuery->where('subject_type', Project::class)
-                            ->whereIn('subject_id', $projectIds);
+                        $projectQuery->where('model_type', Project::class)
+                            ->whereIn('model_id', $projectIds);
                     });
                 }
             })

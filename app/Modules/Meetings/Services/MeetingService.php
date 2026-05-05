@@ -12,8 +12,8 @@ class MeetingService
     public function scheduleMeeting(Model $subject, array $data, User $user): Meeting
     {
         return Meeting::create([
-            'subject_id' => $subject->id,
-            'subject_type' => get_class($subject),
+            'model_id' => $subject->id,
+            'model_type' => get_class($subject),
             'status' => MeetingStatus::SCHEDULED,
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
@@ -55,7 +55,7 @@ class MeetingService
     {
         return Meeting::where('assigned_to', $user->id)
             ->whereDate('scheduled_at', now()->toDateString())
-            ->with(['subject', 'assignedTo'])
+            ->with(['model', 'assignedTo'])
             ->orderBy('scheduled_at')
             ->get();
     }
@@ -64,15 +64,15 @@ class MeetingService
     {
         return Meeting::where('assigned_to', $user->id)
             ->upcoming($hours)
-            ->with(['subject'])
+            ->with(['model'])
             ->orderBy('scheduled_at')
             ->get();
     }
 
     public function getMeetingsForSubject(Model $subject, array $filters = [])
     {
-        $query = Meeting::where('subject_id', $subject->id)
-            ->where('subject_type', get_class($subject))
+        $query = Meeting::where('model_id', $subject->id)
+            ->where('model_type', get_class($subject))
             ->with(['assignedTo'])
             ->orderBy('scheduled_at', 'desc');
 

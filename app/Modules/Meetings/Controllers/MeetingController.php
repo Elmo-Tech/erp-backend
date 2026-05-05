@@ -45,7 +45,7 @@ class MeetingController extends Controller
         $meeting = $action->execute($request->validated(), $request->user());
 
         return ApiResponse::success(
-            new MeetingResource($meeting->load(['subject', 'assignedTo'])),
+            new MeetingResource($meeting->load(['model', 'assignedTo'])),
             __('messages.meeting_created'),
             201
         );
@@ -54,7 +54,7 @@ class MeetingController extends Controller
     public function show(Meeting $meeting): JsonResponse
     {
         return ApiResponse::success(
-            new MeetingResource($meeting->load(['subject', 'assignedTo'])),
+            new MeetingResource($meeting->load(['model', 'assignedTo'])),
             __('messages.meeting_retrieved')
         );
     }
@@ -76,7 +76,7 @@ class MeetingController extends Controller
         );
 
         return ApiResponse::success(
-            new MeetingResource($meeting->load(['subject', 'assignedTo'])),
+            new MeetingResource($meeting->load(['model', 'assignedTo'])),
             __('messages.meeting_completed')
         );
     }
@@ -90,7 +90,7 @@ class MeetingController extends Controller
         );
 
         return ApiResponse::success(
-            new MeetingResource($meeting->load(['subject', 'assignedTo'])),
+            new MeetingResource($meeting->load(['model', 'assignedTo'])),
             __('messages.meeting_cancelled')
         );
     }
@@ -118,6 +118,8 @@ class MeetingController extends Controller
 
     public function destroy(Meeting $meeting, DeleteMeetingAction $action): JsonResponse
     {
+        abort_if(! request()->user()?->can('delete_meetings'), 403, 'Unauthorized');
+
         $action->execute($meeting);
 
         return ApiResponse::success(

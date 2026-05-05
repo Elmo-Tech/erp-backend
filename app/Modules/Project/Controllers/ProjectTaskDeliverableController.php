@@ -5,6 +5,7 @@ namespace App\Modules\Project\Controllers;
 use App\Enums\ProjectRole;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Modules\Project\Actions\ProjectHistoryAction;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTaskDeliverable;
@@ -14,27 +15,29 @@ use Illuminate\Http\JsonResponse;
 
 class ProjectTaskDeliverableController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private readonly ProjectHistoryAction $historyAction
+    ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
 
     /**
      * POST /projects/{project}/tasks/{task}/deliverables
      *
-     * SECURITY: Only manager, tech_lead, or global admin/founder roles may add
+     * SECURITY: Only manager, tech_lead, or unrestricted project managers may add
      * deliverables. Developers and QA are restricted to execution-only actions.
      */
     public function store(StoreTaskDeliverableRequest $request, Project $project, ProjectTask $task): JsonResponse
     {
         $this->assertTaskBelongsToProject($task, $project);
 
-        // ── RBAC: Deliverable creation guard ──────────────────────────────────
+        // ── PBAC: Deliverable creation guard ─────────────────────────────────
+        // manage_all_projects → unrestricted.
+        // Otherwise, only project members with manager or tech_lead project-role
+        // may add deliverables. Developer and QA are execution-only.
         $user = $request->user();
-        $isGlobalAdmin = $user->hasAnyRole(['admin', 'super-admin'])
-            || $user->can('manage_all_projects');
 
-        if (! $isGlobalAdmin) {
+        if (! $user->can('manage_all_projects')) {
             $member = $project->members()->where('user_id', $user->id)->first();
             $restrictedRoles = [ProjectRole::DEVELOPER->value, ProjectRole::QA->value];
 
@@ -47,9 +50,18 @@ class ProjectTaskDeliverableController extends Controller
         }
 
         $deliverable = $task->deliverables()->create([
-            'title'        => $request->validated()['title'],
+            'title' => $request->validated()['title'],
             'is_completed' => false,
         ]);
+
+        // Record activity for deliverable creation
+        $this->historyAction->recordChange(
+            $project,
+            'deliverable_added',
+            '',
+            $deliverable->title,
+            "Deliverable added to task '{$task->title}'"
+        );
 
         return ApiResponse::success(
             new ProjectTaskDeliverableResource($deliverable),
@@ -67,10 +79,21 @@ class ProjectTaskDeliverableController extends Controller
         $this->assertTaskBelongsToProject($task, $project);
         $this->assertDeliverableBelongsToTask($deliverable, $task);
 
+        $oldStatus = $deliverable->is_completed;
         $deliverable->update(['is_completed' => ! $deliverable->is_completed]);
+        $deliverable->refresh();
+
+        // Record activity for deliverable toggle
+        $this->historyAction->recordChange(
+            $project,
+            'deliverable_toggled',
+            $oldStatus ? 'completed' : 'incomplete',
+            $deliverable->is_completed ? 'completed' : 'incomplete',
+            "Deliverable '{$deliverable->title}' in task '{$task->title}' marked as ".($deliverable->is_completed ? 'complete' : 'incomplete')
+        );
 
         return ApiResponse::success(
-            new ProjectTaskDeliverableResource($deliverable->refresh()),
+            new ProjectTaskDeliverableResource($deliverable),
             $deliverable->is_completed ? 'Deliverable marked complete' : 'Deliverable marked incomplete'
         );
     }
@@ -80,6 +103,8 @@ class ProjectTaskDeliverableController extends Controller
      */
     public function destroy(Project $project, ProjectTask $task, ProjectTaskDeliverable $deliverable): JsonResponse
     {
+        abort_if(! request()->user()?->can('manage_tasks'), 403, 'Unauthorized');
+
         $this->assertTaskBelongsToProject($task, $project);
         $this->assertDeliverableBelongsToTask($deliverable, $task);
 

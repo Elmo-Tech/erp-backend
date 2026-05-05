@@ -5,7 +5,9 @@ namespace App\Modules\Project\Controllers;
 use App\Enums\ProjectRole;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Project\Actions\CompleteProjectTaskAction;
+use App\Modules\Project\Actions\ProjectHistoryAction;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Requests\StoreProjectTaskRequest;
@@ -18,6 +20,7 @@ class ProjectTaskController extends Controller
 {
     public function __construct(
         private readonly CompleteProjectTaskAction $completeTask,
+        private readonly ProjectHistoryAction $historyAction,
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -57,14 +60,26 @@ class ProjectTaskController extends Controller
         $data = $request->validated();
 
         $task = $project->executionTasks()->create([
-            'milestone_id'    => $data['milestoneId'] ?? null,
-            'parent_id'       => $data['parentId'] ?? null,
-            'title'           => $data['title'],
-            'description'     => $data['description'] ?? null,
-            'status'          => $data['status'] ?? 'to_do',
+            'milestone_id' => $data['milestoneId'] ?? null,
+            'parent_id' => $data['parentId'] ?? null,
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'status' => $data['status'] ?? 'to_do',
             'estimated_hours' => $data['estimatedHours'] ?? null,
-            'assignee_id'     => $data['assigneeId'] ?? null,
+            'assignee_id' => $data['assigneeId'] ?? null,
         ]);
+
+        // Record activity for task creation
+        $taskType = isset($data['parentId']) ? 'Subtask' : 'Task';
+        $assigneeName = isset($data['assigneeId']) ? User::find($data['assigneeId'])?->name ?? "User #{$data['assigneeId']}" : 'Unassigned';
+
+        $this->historyAction->recordChange(
+            $project,
+            'task_created',
+            '',
+            $task->title,
+            "{$taskType} created and assigned to {$assigneeName}"
+        );
 
         $task->load(['assignee', 'deliverables', 'milestone']);
 
@@ -105,21 +120,23 @@ class ProjectTaskController extends Controller
 
         $data = $request->validated();
 
-        // ── RBAC: Status transition guard ─────────────────────────────────────
+        // ── PBAC: Status transition guard ────────────────────────────────────
+        // manage_all_projects → unrestricted status transitions.
+        // Otherwise, enforce project-membership-role workflow rules:
+        //   developer  → may only set in_progress or in_review
+        //   qa         → may set in_progress (reject), qa, or done
+        //   manager / tech_lead / unmapped → unrestricted
         if (isset($data['status'])) {
             $user = $request->user();
-            $isGlobalAdmin = $user->hasAnyRole(['admin', 'super-admin'])
-                || $user->can('manage_all_projects');
 
-            if (! $isGlobalAdmin) {
+            if (! $user->can('manage_all_projects')) {
                 $member = $project->members()->where('user_id', $user->id)->first();
                 $projectRole = $member?->role;
 
                 $allowedByRole = match ($projectRole) {
                     ProjectRole::DEVELOPER->value => ['in_progress', 'in_review'],
-                    ProjectRole::QA->value        => ['in_progress', 'qa', 'done'],
-                    // manager, tech_lead, and unmapped roles get full access
-                    default                       => null,
+                    ProjectRole::QA->value => ['in_progress', 'qa', 'done'],
+                    default => null, // manager, tech_lead → unrestricted
                 };
 
                 if ($allowedByRole !== null && ! in_array($data['status'], $allowedByRole, true)) {
@@ -131,20 +148,51 @@ class ProjectTaskController extends Controller
             }
         }
 
+        $oldStatus = $task->status;
+        $oldAssignee = $task->assignee_id;
+
         $task->update(array_filter([
-            'milestone_id'    => array_key_exists('milestoneId', $data) ? $data['milestoneId'] : $task->milestone_id,
-            'parent_id'       => array_key_exists('parentId', $data) ? $data['parentId'] : $task->parent_id,
-            'title'           => $data['title'] ?? null,
-            'description'     => array_key_exists('description', $data) ? $data['description'] : $task->description,
-            'status'          => $data['status'] ?? null,
+            'milestone_id' => array_key_exists('milestoneId', $data) ? $data['milestoneId'] : $task->milestone_id,
+            'parent_id' => array_key_exists('parentId', $data) ? $data['parentId'] : $task->parent_id,
+            'title' => $data['title'] ?? null,
+            'description' => array_key_exists('description', $data) ? $data['description'] : $task->description,
+            'status' => $data['status'] ?? null,
             'estimated_hours' => array_key_exists('estimatedHours', $data) ? $data['estimatedHours'] : $task->estimated_hours,
-            'assignee_id'     => array_key_exists('assigneeId', $data) ? $data['assigneeId'] : $task->assignee_id,
+            'assignee_id' => array_key_exists('assigneeId', $data) ? $data['assigneeId'] : $task->assignee_id,
         ], fn ($v) => $v !== null));
+
+        $task->refresh();
+
+        // Record activity for status changes
+        if (isset($data['status']) && $oldStatus !== $data['status']) {
+            $reason = isset($data['reason']) ? $data['reason'] : null;
+            $this->historyAction->recordChange(
+                $project,
+                'task_status_changed',
+                $oldStatus,
+                $data['status'],
+                $reason ?? "Task '{$task->title}' status changed"
+            );
+        }
+
+        // Record activity for assignee changes
+        if (isset($data['assigneeId']) && $oldAssignee !== $data['assigneeId']) {
+            $oldAssigneeName = $oldAssignee ? User::find($oldAssignee)?->name ?? "User #{$oldAssignee}" : 'Unassigned';
+            $newAssigneeName = $data['assigneeId'] ? User::find($data['assigneeId'])?->name ?? "User #{$data['assigneeId']}" : 'Unassigned';
+
+            $this->historyAction->recordChange(
+                $project,
+                'task_assignee_changed',
+                $oldAssigneeName,
+                $newAssigneeName,
+                "Task '{$task->title}' reassigned"
+            );
+        }
 
         $task->load(['assignee', 'deliverables', 'milestone']);
 
         return ApiResponse::success(
-            new ProjectTaskResource($task->refresh()),
+            new ProjectTaskResource($task),
             'Task updated successfully'
         );
     }
@@ -154,6 +202,8 @@ class ProjectTaskController extends Controller
      */
     public function destroy(Project $project, ProjectTask $task): JsonResponse
     {
+        abort_if(! request()->user()?->can('delete_tasks'), 403, 'Unauthorized');
+
         $this->assertBelongsToProject($task, $project);
 
         $task->delete();
@@ -173,16 +223,16 @@ class ProjectTaskController extends Controller
     {
         $this->assertBelongsToProject($task, $project);
 
-        // ── RBAC: Completion guard ────────────────────────────────────────────
+        // ── PBAC: Completion guard ────────────────────────────────────────────
+        // manage_all_projects → may complete any task.
+        // Otherwise, project-membership-role rules apply:
+        //   developer → ceiling is in_review; they may never directly complete.
         $user = request()->user();
-        $isGlobalAdmin = $user->hasAnyRole(['admin', 'super-admin'])
-            || $user->can('manage_all_projects');
 
-        if (! $isGlobalAdmin) {
+        if (! $user->can('manage_all_projects')) {
             $member = $project->members()->where('user_id', $user->id)->first();
             $projectRole = $member?->role;
 
-            // Developers may never directly complete a task — they submit for review
             if ($projectRole === ProjectRole::DEVELOPER->value) {
                 return ApiResponse::error(
                     'Developers cannot mark tasks as done. Submit for review instead.',

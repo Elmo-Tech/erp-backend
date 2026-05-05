@@ -7,6 +7,7 @@ use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Execution-layer task for the Project module.
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class ProjectTask extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'project_tasks';
 
     protected $fillable = [
@@ -33,7 +36,7 @@ class ProjectTask extends Model
     protected function casts(): array
     {
         return [
-            'status'          => ExecutionTaskStatus::class,
+            'status' => ExecutionTaskStatus::class,
             'estimated_hours' => 'decimal:2',
         ];
     }

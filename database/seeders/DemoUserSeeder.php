@@ -32,14 +32,14 @@ class DemoUserSeeder extends Seeder
             [
                 'name' => 'Nadine Hassan',
                 'email' => 'techlead@elmo.tech',
-                'role' => 'tech_lead',
+                'role' => 'techdev',
                 'specialization' => UserSpecialization::BACKEND,
                 'total_points' => 1960,
             ],
             [
                 'name' => 'Youssef Ali',
                 'email' => 'dev@elmo.tech',
-                'role' => 'developer',
+                'role' => 'dev',
                 'specialization' => UserSpecialization::FRONTEND,
                 'total_points' => 1250,
             ],

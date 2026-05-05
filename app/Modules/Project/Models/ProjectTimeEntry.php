@@ -5,6 +5,7 @@ namespace App\Modules\Project\Models;
 use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Time entry scoped to the Project Execution layer.
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ProjectTimeEntry extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'project_time_entries';
 
     protected $fillable = [
@@ -29,10 +32,10 @@ class ProjectTimeEntry extends Model
     protected function casts(): array
     {
         return [
-            'start_time'       => 'datetime',
-            'end_time'         => 'datetime',
+            'start_time' => 'datetime',
+            'end_time' => 'datetime',
             'duration_minutes' => 'integer',
-            'is_manual'        => 'boolean',
+            'is_manual' => 'boolean',
         ];
     }
 
@@ -76,7 +79,7 @@ class ProjectTimeEntry extends Model
         if ($this->isRunning()) {
             $end = now();
             $this->update([
-                'end_time'         => $end,
+                'end_time' => $end,
                 'duration_minutes' => (int) $this->start_time->diffInMinutes($end),
             ]);
         }

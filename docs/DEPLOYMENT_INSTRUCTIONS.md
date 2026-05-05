@@ -52,9 +52,8 @@ php artisan key:generate
 # Run migrations
 php artisan migrate --force
 
-# Seed permissions and roles
-php artisan db:seed --class=AdminUserSeeder
-php artisan db:seed --class=PerformancePermissionsSeeder
+# Seed roles, permissions, dictionaries, and default users
+php artisan db:seed
 ```
 
 ### 4. **CRITICAL: PDF Directory Setup**

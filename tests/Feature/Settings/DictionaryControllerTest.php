@@ -5,6 +5,7 @@ namespace Tests\Feature\Settings;
 use App\Modules\Settings\Models\User;
 use Database\Seeders\SettingsDictionarySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class DictionaryControllerTest extends TestCase
@@ -50,6 +51,9 @@ class DictionaryControllerTest extends TestCase
             ->assertJsonPath('data.name', 'Partner Referral')
             ->assertJsonPath('data.slug', 'partner-referral')
             ->assertJsonPath('data.isActive', false);
+
+        Permission::findOrCreate('delete_settings', 'web');
+        $this->user->givePermissionTo('delete_settings');
 
         $this->actingAs($this->user, 'sanctum')
             ->deleteJson("/api/v1/settings/lead-sources/{$id}")

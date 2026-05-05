@@ -45,9 +45,9 @@ class MilestoneController extends Controller
         $data = $request->validated();
 
         $milestone = $project->milestones()->create([
-            'title'           => $data['title'],
+            'title' => $data['title'],
             'payment_stage_id' => $data['paymentStageId'] ?? null,
-            'invoice_id'      => $data['invoiceId'] ?? null,
+            'invoice_id' => $data['invoiceId'] ?? null,
         ]);
 
         return ApiResponse::success(
@@ -82,10 +82,10 @@ class MilestoneController extends Controller
         $data = $request->validated();
 
         $milestone->update(array_filter([
-            'title'            => $data['title'] ?? null,
-            'status'           => $data['status'] ?? null,
+            'title' => $data['title'] ?? null,
+            'status' => $data['status'] ?? null,
             'payment_stage_id' => array_key_exists('paymentStageId', $data) ? $data['paymentStageId'] : $milestone->payment_stage_id,
-            'invoice_id'       => array_key_exists('invoiceId', $data) ? $data['invoiceId'] : $milestone->invoice_id,
+            'invoice_id' => array_key_exists('invoiceId', $data) ? $data['invoiceId'] : $milestone->invoice_id,
         ], fn ($v) => $v !== null));
 
         return ApiResponse::success(
@@ -99,6 +99,8 @@ class MilestoneController extends Controller
      */
     public function destroy(Project $project, Milestone $milestone): JsonResponse
     {
+        abort_if(! request()->user()?->can('delete_milestones'), 403, 'Unauthorized');
+
         $this->assertBelongsToProject($milestone, $project);
 
         $milestone->delete();

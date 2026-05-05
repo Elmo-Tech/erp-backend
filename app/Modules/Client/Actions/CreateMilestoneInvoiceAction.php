@@ -6,6 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\MilestoneStatus;
 use App\Modules\Contract\Models\ContractMilestone;
 use App\Modules\Invoice\Models\Invoice;
+use App\Modules\Project\Models\Project;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -35,7 +36,8 @@ class CreateMilestoneInvoiceAction
 
         return DB::transaction(function () use ($milestone, $contract, $data) {
             $invoice = Invoice::create([
-                'project_id' => $contract->project_id,
+                'model_type' => Project::class,
+                'model_id' => $contract->project_id,
                 'invoice_number' => Invoice::generateInvoiceNumber(),
                 'amount' => $milestone->amount,
                 'currency' => $contract->currency,

@@ -12,9 +12,9 @@ Broadcast::channel('user.{id}', function ($user, $id) {
 
 Broadcast::channel('project.{projectId}', function ($user, $projectId) {
     return $user->projects()->where('projects.id', $projectId)->exists() ||
-           $user->hasRole(['admin', 'super-admin']);
+           $user->can('manage_projects');
 });
 
 Broadcast::channel('admin', function ($user) {
-    return $user->hasRole(['admin', 'super-admin']);
+    return $user->can('view_admin_stats') || $user->can('manage_users');
 });

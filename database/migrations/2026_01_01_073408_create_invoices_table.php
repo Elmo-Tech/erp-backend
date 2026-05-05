@@ -16,7 +16,8 @@ return new class extends Migration
     {
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('project_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('model_id');
+            $table->string('model_type');
             $table->string('invoice_number', 20)->unique();
             $table->decimal('amount', 15, 2);
             $table->string('currency', 3)->default('USD');
@@ -28,7 +29,7 @@ return new class extends Migration
             $table->timestamps();
 
             // Indexes for performance
-            $table->index('project_id');
+            $table->index(['model_type', 'model_id']);
             $table->index('status');
             $table->index('due_date');
         });

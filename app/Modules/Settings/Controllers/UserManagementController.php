@@ -173,7 +173,7 @@ class UserManagementController extends Controller
      *             @OA\Property(property="password", type="string", format="password", example="password123"),
      *             @OA\Property(property="password_confirmation", type="string", format="password", example="password123"),
      *             @OA\Property(property="skills", type="array", @OA\Items(type="string"), example={"PHP", "Laravel"}),
-     *             @OA\Property(property="roles", type="array", @OA\Items(type="string"), example={"developer"}),
+     *             @OA\Property(property="roles", type="array", @OA\Items(type="string"), example={"dev"}),
      *             @OA\Property(property="isActive", type="boolean", example=true)
      *         )
      *     ),
@@ -532,7 +532,7 @@ class UserManagementController extends Controller
      *         @OA\JsonContent(
      *             required={"roles"},
      *
-     *             @OA\Property(property="roles", type="array", @OA\Items(type="string"), example={"developer", "admin"})
+     *             @OA\Property(property="roles", type="array", @OA\Items(type="string"), example={"dev", "techdev"})
      *         )
      *     ),
      *

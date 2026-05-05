@@ -7,6 +7,7 @@ use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -21,7 +22,7 @@ use Illuminate\Support\Facades\Storage;
  */
 class ProjectFile extends Model
 {
-    use HasCreatedUpdatedBy, HasFactory;
+    use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     protected $table = 'project_files';
 
@@ -77,35 +78,32 @@ class ProjectFile extends Model
     }
 
     /**
-     * Check if user can view this file
+     * Check if user can view this file.
+     *
+     * Authorization order (no role checks):
+     *   1. manage_project_files  → unrestricted access without role-name checks.
+     *   2. Project membership    → any member may view project files.
+     *   3. access_client_portal  → client-portal users see client-visible files
+     *                              for their own client's project only.
      */
     public function canUserView(User $user): bool
     {
         /** @var Project $project */
         $project = $this->project;
 
-        // Admin can see everything
-        if ($user->hasRole('super-admin') || $user->hasRole('admin')) {
+        // Full file management permission — unrestricted visibility.
+        if ($user->can('manage_project_files')) {
             return true;
         }
 
-        // Check if user is a project member
-        $isMember = $project->members()->where('user_id', $user->id)->exists();
-        if ($isMember) {
+        // Project members can always view files.
+        if ($project->members()->where('user_id', $user->id)->exists()) {
             return true;
         }
 
-        // Check client visibility
-        if ($user->hasRole('client') && $this->is_client_visible) {
+        // Client-portal users see only client-visible files for their project.
+        if ($user->can('access_client_portal') && $this->is_client_visible) {
             return $project->client_id === $user->client?->id;
-        }
-
-        // Check role-based visibility
-        if (is_array($this->visible_to_roles)) {
-            return $user->roles
-                ->pluck('name')
-                ->intersect($this->visible_to_roles)
-                ->isNotEmpty();
         }
 
         return false;

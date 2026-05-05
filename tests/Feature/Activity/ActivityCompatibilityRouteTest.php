@@ -42,8 +42,8 @@ class ActivityCompatibilityRouteTest extends TestCase
             ->assertJsonPath('data.title', 'Discovery Meeting');
 
         $this->assertDatabaseHas('meetings', [
-            'subject_type' => Client::class,
-            'subject_id' => $client->id,
+            'model_type' => Client::class,
+            'model_id' => $client->id,
             'title' => 'Discovery Meeting',
         ]);
 

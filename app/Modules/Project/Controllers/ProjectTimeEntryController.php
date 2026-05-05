@@ -10,6 +10,7 @@ use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Project\Requests\StoreManualTimeEntryRequest;
 use App\Modules\Project\Resources\ProjectTimeEntryResource;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 
 class ProjectTimeEntryController extends Controller
@@ -69,17 +70,17 @@ class ProjectTimeEntryController extends Controller
 
         $data = $request->validated();
 
-        $start    = \Carbon\Carbon::parse($data['startTime']);
-        $end      = \Carbon\Carbon::parse($data['endTime']);
+        $start = Carbon::parse($data['startTime']);
+        $end = Carbon::parse($data['endTime']);
         $duration = (int) $start->diffInMinutes($end);
 
         $entry = $task->timeEntries()->create([
-            'user_id'          => request()->user()->id,
-            'start_time'       => $start,
-            'end_time'         => $end,
+            'user_id' => request()->user()->id,
+            'start_time' => $start,
+            'end_time' => $end,
             'duration_minutes' => $duration,
-            'is_manual'        => true,
-            'note'             => $data['note'] ?? null,
+            'is_manual' => true,
+            'note' => $data['note'] ?? null,
         ]);
 
         $entry->load('user:id,name,avatar');
@@ -97,6 +98,8 @@ class ProjectTimeEntryController extends Controller
      */
     public function destroy(Project $project, ProjectTask $task, ProjectTimeEntry $entry): JsonResponse
     {
+        abort_if(! request()->user()?->can('delete_time_entries'), 403, 'Unauthorized');
+
         $this->assertTaskBelongsToProject($task, $project);
         $this->assertEntryBelongsToTask($entry, $task);
 

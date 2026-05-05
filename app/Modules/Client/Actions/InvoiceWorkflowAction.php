@@ -25,7 +25,8 @@ class InvoiceWorkflowAction
     public function createInvoice(Project $project, array $data): Invoice
     {
         $invoice = Invoice::create([
-            'project_id' => $project->id,
+            'model_type' => Project::class,
+            'model_id' => $project->id,
             'invoice_number' => Invoice::generateInvoiceNumber(),
             'amount' => $data['amount'],
             'currency' => $data['currency'] ?? 'USD',
@@ -63,7 +64,8 @@ class InvoiceWorkflowAction
         return DB::transaction(function () use ($milestone, $contract, $data) {
             // Create the invoice
             $invoice = Invoice::create([
-                'project_id' => $contract->project_id,
+                'model_type' => Project::class,
+                'model_id' => $contract->project_id,
                 'invoice_number' => Invoice::generateInvoiceNumber(),
                 'amount' => $milestone->amount,
                 'currency' => $contract->currency,

@@ -18,7 +18,8 @@ class CreateProjectInvoiceAction
     public function execute(Project $project, array $data): Invoice
     {
         $invoice = Invoice::create([
-            'project_id' => $project->id,
+            'model_type' => Project::class,
+            'model_id' => $project->id,
             'invoice_number' => Invoice::generateInvoiceNumber(),
             'amount' => $data['amount'],
             'currency' => $data['currency'] ?? 'USD',

@@ -130,7 +130,7 @@ class StoreRoleRequest extends FormRequest
             }
 
             // Prevent creation of protected role names
-            $protectedNames = ['admin', 'client', 'super-admin'];
+            $protectedNames = ['founder', 'pmo', 'techdev', 'dev', 'client'];
             if (in_array($this->name, $protectedNames)) {
                 $validator->errors()->add(
                     'name',

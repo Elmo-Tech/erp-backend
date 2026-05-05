@@ -5,9 +5,12 @@ namespace App\Modules\Project\Models;
 use App\Enums\ChangeRequestStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ChangeRequest extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'change_requests';
 
     protected $fillable = [
@@ -22,7 +25,7 @@ class ChangeRequest extends Model
     {
         return [
             'status' => ChangeRequestStatus::class,
-            'price'  => 'decimal:2',
+            'price' => 'decimal:2',
         ];
     }
 
