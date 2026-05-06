@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminUserSeeder::class,
             SettingsDictionarySeeder::class,
+            SystemSettingsSeeder::class,
             DemoUserSeeder::class,
             // TagSeeder::class,          // TODO: Requires App\Modules\Task\Models\Tag
             // DashboardDemoSeeder::class, // TODO: Requires Task, Invoice, SOP, TimeEntry modules

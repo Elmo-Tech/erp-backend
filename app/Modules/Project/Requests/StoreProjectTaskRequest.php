@@ -25,6 +25,7 @@ class StoreProjectTaskRequest extends FormRequest
             'description'      => ['nullable', 'string'],
             'status'           => ['nullable', new Enum(ExecutionTaskStatus::class)],
             'estimatedHours'   => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'dueDate'          => ['nullable', 'date'],
             'assigneeId'       => ['nullable', 'integer', 'exists:users,id'],
         ];
     }

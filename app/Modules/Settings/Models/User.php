@@ -5,6 +5,8 @@ namespace App\Modules\Settings\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserSpecialization;
 use App\Modules\Client\Models\Client;
+use App\Modules\Gamification\Models\PointTransaction;
+use App\Modules\HR\Models\EmployeeProfile;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -262,6 +264,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the employee HR profile for this user.
+     */
+    public function employeeProfile(): HasOne
+    {
+        return $this->hasOne(EmployeeProfile::class);
+    }
+
+    /**
      * Get the client profile associated with this user (if user is a client)
      */
     public function client(): HasOne
@@ -338,7 +348,7 @@ class User extends Authenticatable
     /**
      * Get the point transactions for this user
      */
-    public function pointTransactions()
+    public function pointTransactions(): HasMany
     {
         return $this->hasMany(PointTransaction::class);
     }

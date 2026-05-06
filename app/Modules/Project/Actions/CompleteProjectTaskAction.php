@@ -2,6 +2,7 @@
 
 namespace App\Modules\Project\Actions;
 
+use App\Modules\HR\Actions\EvaluateTaskDeadlinePointsAction;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\ProjectTask;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ class CompleteProjectTaskAction
     public function __construct(
         private readonly UpdateMilestoneProgressAction $updateMilestoneProgress,
         private readonly ProjectHistoryAction $historyAction,
+        private readonly EvaluateTaskDeadlinePointsAction $evaluateDeadlinePoints,
     ) {}
 
     /**
@@ -74,6 +76,12 @@ class CompleteProjectTaskAction
                     $this->updateMilestoneProgress->execute($milestone);
                 }
             }
+
+            // ── GAMIFICATION: Evaluate deadline points ────────────────────────
+            // This must run INSIDE the transaction so the point transaction is
+            // atomic with the task status update. If the transaction rolls back,
+            // the point transaction is also rolled back.
+            $this->evaluateDeadlinePoints->execute($task);
         });
 
         return $task->refresh();

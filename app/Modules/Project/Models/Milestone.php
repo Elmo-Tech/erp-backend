@@ -17,6 +17,7 @@ class Milestone extends Model
     protected $fillable = [
         'project_id',
         'title',
+        'due_date',
         'status',
         'progress_percentage',
         'payment_stage_id',
@@ -26,8 +27,9 @@ class Milestone extends Model
     protected function casts(): array
     {
         return [
-            'status' => MilestoneStatus::class,
+            'status'              => MilestoneStatus::class,
             'progress_percentage' => 'integer',
+            'due_date'            => 'date',
         ];
     }
 

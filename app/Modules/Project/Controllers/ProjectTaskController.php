@@ -5,9 +5,11 @@ namespace App\Modules\Project\Controllers;
 use App\Enums\ProjectRole;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\Settings\Models\User;
+use App\Modules\HR\Actions\EvaluateQABugPointsAction;
 use App\Modules\Project\Actions\CompleteProjectTaskAction;
 use App\Modules\Project\Actions\ProjectHistoryAction;
+use App\Modules\Project\Enums\ExecutionTaskStatus;
+use App\Modules\Settings\Models\User;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Requests\StoreProjectTaskRequest;
@@ -21,6 +23,7 @@ class ProjectTaskController extends Controller
     public function __construct(
         private readonly CompleteProjectTaskAction $completeTask,
         private readonly ProjectHistoryAction $historyAction,
+        private readonly EvaluateQABugPointsAction $evaluateQABugPoints,
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -60,13 +63,14 @@ class ProjectTaskController extends Controller
         $data = $request->validated();
 
         $task = $project->executionTasks()->create([
-            'milestone_id' => $data['milestoneId'] ?? null,
-            'parent_id' => $data['parentId'] ?? null,
-            'title' => $data['title'],
-            'description' => $data['description'] ?? null,
-            'status' => $data['status'] ?? 'to_do',
+            'milestone_id'    => $data['milestoneId'] ?? null,
+            'parent_id'       => $data['parentId'] ?? null,
+            'title'           => $data['title'],
+            'description'     => $data['description'] ?? null,
+            'status'          => $data['status'] ?? 'to_do',
             'estimated_hours' => $data['estimatedHours'] ?? null,
-            'assignee_id' => $data['assigneeId'] ?? null,
+            'due_date'        => $data['dueDate'] ?? null,
+            'assignee_id'     => $data['assigneeId'] ?? null,
         ]);
 
         // Record activity for task creation
@@ -152,13 +156,14 @@ class ProjectTaskController extends Controller
         $oldAssignee = $task->assignee_id;
 
         $task->update(array_filter([
-            'milestone_id' => array_key_exists('milestoneId', $data) ? $data['milestoneId'] : $task->milestone_id,
-            'parent_id' => array_key_exists('parentId', $data) ? $data['parentId'] : $task->parent_id,
-            'title' => $data['title'] ?? null,
-            'description' => array_key_exists('description', $data) ? $data['description'] : $task->description,
-            'status' => $data['status'] ?? null,
+            'milestone_id'    => array_key_exists('milestoneId', $data) ? $data['milestoneId'] : $task->milestone_id,
+            'parent_id'       => array_key_exists('parentId', $data) ? $data['parentId'] : $task->parent_id,
+            'title'           => $data['title'] ?? null,
+            'description'     => array_key_exists('description', $data) ? $data['description'] : $task->description,
+            'status'          => $data['status'] ?? null,
             'estimated_hours' => array_key_exists('estimatedHours', $data) ? $data['estimatedHours'] : $task->estimated_hours,
-            'assignee_id' => array_key_exists('assigneeId', $data) ? $data['assigneeId'] : $task->assignee_id,
+            'due_date'        => array_key_exists('dueDate', $data) ? $data['dueDate'] : $task->due_date,
+            'assignee_id'     => array_key_exists('assigneeId', $data) ? $data['assigneeId'] : $task->assignee_id,
         ], fn ($v) => $v !== null));
 
         $task->refresh();
@@ -173,6 +178,26 @@ class ProjectTaskController extends Controller
                 $data['status'],
                 $reason ?? "Task '{$task->title}' status changed"
             );
+
+            // ── GAMIFICATION: QA rejection detection ─────────────────────────
+            // A QA rejection is defined as moving BACKWARD from a review/QA
+            // stage to a development stage:
+            //   in_review → in_progress  (code review rejection)
+            //   qa        → in_progress  (QA tester rejection)
+            $fromStatus = $oldStatus instanceof ExecutionTaskStatus
+                ? $oldStatus->value
+                : (string) $oldStatus;
+
+            $toStatus = $data['status'];
+
+            $isQaRejection = in_array($fromStatus, [
+                ExecutionTaskStatus::IN_REVIEW->value,
+                ExecutionTaskStatus::QA->value,
+            ], true) && $toStatus === ExecutionTaskStatus::IN_PROGRESS->value;
+
+            if ($isQaRejection) {
+                $this->evaluateQABugPoints->execute($task);
+            }
         }
 
         // Record activity for assignee changes

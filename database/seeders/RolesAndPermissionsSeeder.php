@@ -216,6 +216,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_all_attendance',
             'clock_out',
 
+            // ── Shifts ──────────────────────────────────────────────────────
+            'manage_shifts',    // HR admins: full CRUD on work shifts
+
             // ── Employee Management ──────────────────────────────────────────
             'manage_employees',
             'view_employees',
@@ -256,6 +259,10 @@ class RolesAndPermissionsSeeder extends Seeder
             // ── Financial Data ───────────────────────────────────────────────
             'view_internal_costs',
             'manage_internal_costs',
+
+            // ── Payroll ──────────────────────────────────────────────────────
+            'manage_payroll',   // HR admins: generate, approve, mark-paid, delete drafts
+            'view_payroll',     // Employees: read-only access to own payslips
 
             // ── Settings ─────────────────────────────────────────────────────
             'view_settings',
@@ -330,6 +337,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_wiki', 'create_wiki', 'edit_wiki',
                 'view_time_entries', 'start_timer', 'stop_timer',
                 'view_attendance', 'clock_out',
+                'view_payroll',
                 'view_tags',
             ],
 
@@ -346,6 +354,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_wiki', 'create_wiki', 'edit_wiki',
                 'view_time_entries', 'start_timer', 'stop_timer',
                 'view_attendance', 'clock_out',
+                'view_payroll',
                 'view_tags',
             ],
 

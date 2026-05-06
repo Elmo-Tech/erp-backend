@@ -2,12 +2,15 @@
 
 namespace App\Modules\Project\Models;
 
+use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * Execution-layer task for the Project module.
@@ -30,14 +33,16 @@ class ProjectTask extends Model
         'description',
         'status',
         'estimated_hours',
+        'due_date',
         'assignee_id',
     ];
 
     protected function casts(): array
     {
         return [
-            'status' => ExecutionTaskStatus::class,
+            'status'          => ExecutionTaskStatus::class,
             'estimated_hours' => 'decimal:2',
+            'due_date'        => 'date',
         ];
     }
 
@@ -102,6 +107,14 @@ class ProjectTask extends Model
         return $this->hasMany(ProjectTimeEntry::class, 'task_id');
     }
 
+    /**
+     * Point transactions linked to this task (polymorphic source).
+     */
+    public function pointTransactions(): MorphMany
+    {
+        return $this->morphMany(PointTransaction::class, 'source');
+    }
+
     // -------------------------------------------------------------------------
     // Scopes
     // -------------------------------------------------------------------------
@@ -142,5 +155,36 @@ class ProjectTask extends Model
     public function totalLoggedMinutes(): int
     {
         return (int) $this->timeEntries()->whereNotNull('end_time')->sum('duration_minutes');
+    }
+
+    // -------------------------------------------------------------------------
+    // Deadline helpers (used by Gamification Engine)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Resolve the effective deadline for this task.
+     *
+     * Priority:
+     *   1. task.due_date  (explicit task-level deadline)
+     *   2. milestone.due_date (inherited from parent milestone)
+     *   3. null (no deadline — gamification engine skips evaluation)
+     */
+    public function effectiveDueDate(): ?Carbon
+    {
+        if ($this->due_date !== null) {
+            return Carbon::parse($this->due_date)->endOfDay();
+        }
+
+        if ($this->milestone_id !== null) {
+            $milestone = $this->relationLoaded('milestone')
+                ? $this->milestone
+                : $this->milestone()->first();
+
+            if ($milestone && $milestone->due_date !== null) {
+                return Carbon::parse($milestone->due_date)->endOfDay();
+            }
+        }
+
+        return null;
     }
 }
