@@ -275,6 +275,15 @@ class RolesAndPermissionsSeeder extends Seeder
             // ── Tags ─────────────────────────────────────────────────────────
             'manage_tags',
             'view_tags',
+
+            // ── Finance — Invoices (Phase 4) ──────────────────────────────────
+            'manage_invoices',       // already present above; kept here for clarity
+
+            // ── Finance — SaaS Subscriptions (Phase 4) ───────────────────────
+            'manage_subscriptions',  // full CRUD on internal SaaS subscriptions
+
+            // ── Calendar (Phase 4) ────────────────────────────────────────────
+            'view_calendar',         // access the master calendar aggregator
         ];
 
         foreach ($permissions as $permission) {
@@ -321,6 +330,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_client_portal_access',
                 'revoke_client_portal_access',
                 'reset_client_portal_password',
+                'view_calendar',
             ],
 
             // ── TechDev ──────────────────────────────────────────────────────
@@ -339,6 +349,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_attendance', 'clock_out',
                 'view_payroll',
                 'view_tags',
+                'view_calendar',
             ],
 
             // ── Dev ──────────────────────────────────────────────────────────
@@ -356,6 +367,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_attendance', 'clock_out',
                 'view_payroll',
                 'view_tags',
+                'view_calendar',
             ],
 
             // ── Client ───────────────────────────────────────────────────────

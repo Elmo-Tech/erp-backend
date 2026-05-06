@@ -1,0 +1,191 @@
+<?php
+
+namespace App\Modules\Finance\Controllers;
+
+use App\Helpers\ApiResponse;
+use App\Http\Controllers\Controller;
+use App\Modules\Finance\Actions\CalculateInvoiceTotalsAction;
+use App\Modules\Finance\Models\FinanceInvoice;
+use App\Modules\Finance\Models\FinanceInvoiceItem;
+use App\Modules\Finance\Requests\StoreFinanceInvoiceRequest;
+use App\Modules\Finance\Requests\UpdateFinanceInvoiceRequest;
+use App\Modules\Finance\Resources\FinanceInvoiceResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class FinanceInvoiceController extends Controller
+{
+    public function __construct(
+        private readonly CalculateInvoiceTotalsAction $calculateTotals,
+    ) {}
+
+    /**
+     * GET /finance/invoices
+     */
+    public function index(Request $request): JsonResponse
+    {
+        abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
+
+        $invoices = FinanceInvoice::with(['client', 'project'])
+            ->latest()
+            ->paginate(20);
+
+        return ApiResponse::success(
+            FinanceInvoiceResource::collection($invoices)->response()->getData(true),
+            'Invoices retrieved successfully'
+        );
+    }
+
+    /**
+     * POST /finance/invoices
+     */
+    public function store(StoreFinanceInvoiceRequest $request): JsonResponse
+    {
+        abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
+
+        $data  = $request->validated();
+        $items = $data['items'];
+
+        $totals = $this->calculateTotals->execute(
+            items: array_map(fn ($i) => [
+                'quantity'   => $i['quantity'],
+                'unit_price' => $i['unitPrice'],
+            ], $items),
+            taxRate:        $data['taxRate'] ?? 0,
+            discountAmount: $data['discountAmount'] ?? 0,
+        );
+
+        $invoice = DB::transaction(function () use ($data, $items, $totals): FinanceInvoice {
+            $invoice = FinanceInvoice::create([
+                'client_id'       => $data['clientId'],
+                'project_id'      => $data['projectId'] ?? null,
+                'invoice_number'  => FinanceInvoice::generateInvoiceNumber(),
+                'issue_date'      => $data['issueDate'],
+                'due_date'        => $data['dueDate'],
+                'tax_rate'        => $data['taxRate'] ?? 0,
+                'discount_amount' => $data['discountAmount'] ?? 0,
+                'status'          => $data['status'] ?? 'draft',
+                'notes'           => $data['notes'] ?? null,
+                'subtotal'        => $totals['subtotal'],
+                'tax_amount'      => $totals['tax_amount'],
+                'total_amount'    => $totals['total_amount'],
+            ]);
+
+            foreach ($items as $item) {
+                $invoice->items()->create([
+                    'description' => $item['description'],
+                    'quantity'    => $item['quantity'],
+                    'unit_price'  => $item['unitPrice'],
+                    'total'       => round((int) $item['quantity'] * (float) $item['unitPrice'], 2),
+                ]);
+            }
+
+            return $invoice;
+        });
+
+        return ApiResponse::success(
+            new FinanceInvoiceResource($invoice->load(['client', 'project', 'items'])),
+            'Invoice created successfully',
+            201
+        );
+    }
+
+    /**
+     * GET /finance/invoices/{invoice}
+     */
+    public function show(Request $request, FinanceInvoice $invoice): JsonResponse
+    {
+        abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
+
+        $invoice->load(['client', 'project', 'items']);
+
+        return ApiResponse::success(
+            new FinanceInvoiceResource($invoice),
+            'Invoice retrieved successfully'
+        );
+    }
+
+    /**
+     * PUT /finance/invoices/{invoice}
+     */
+    public function update(UpdateFinanceInvoiceRequest $request, FinanceInvoice $invoice): JsonResponse
+    {
+        abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
+
+        $data = $request->validated();
+
+        // Re-calculate totals if items or financial fields are being updated
+        $items = $data['items'] ?? null;
+
+        if ($items !== null) {
+            $totals = $this->calculateTotals->execute(
+                items: array_map(fn ($i) => [
+                    'quantity'   => $i['quantity'],
+                    'unit_price' => $i['unitPrice'],
+                ], $items),
+                taxRate:        $data['taxRate'] ?? $invoice->tax_rate,
+                discountAmount: $data['discountAmount'] ?? $invoice->discount_amount,
+            );
+        } elseif (isset($data['taxRate']) || isset($data['discountAmount'])) {
+            // Items unchanged but tax/discount changed — recalculate from existing items
+            $existingItems = $invoice->items->map(fn ($i) => [
+                'quantity'   => $i->quantity,
+                'unit_price' => $i->unit_price,
+            ])->toArray();
+
+            $totals = $this->calculateTotals->execute(
+                items:          $existingItems,
+                taxRate:        $data['taxRate'] ?? $invoice->tax_rate,
+                discountAmount: $data['discountAmount'] ?? $invoice->discount_amount,
+            );
+        }
+
+        DB::transaction(function () use ($invoice, $data, $items, &$totals): void {
+            $invoice->update(array_filter([
+                'client_id'       => $data['clientId'] ?? null,
+                'project_id'      => array_key_exists('projectId', $data) ? $data['projectId'] : $invoice->project_id,
+                'issue_date'      => $data['issueDate'] ?? null,
+                'due_date'        => $data['dueDate'] ?? null,
+                'tax_rate'        => $data['taxRate'] ?? null,
+                'discount_amount' => $data['discountAmount'] ?? null,
+                'status'          => $data['status'] ?? null,
+                'notes'           => array_key_exists('notes', $data) ? $data['notes'] : $invoice->notes,
+                'subtotal'        => $totals['subtotal'] ?? null,
+                'tax_amount'      => $totals['tax_amount'] ?? null,
+                'total_amount'    => $totals['total_amount'] ?? null,
+            ], fn ($v) => $v !== null));
+
+            // Replace items if provided
+            if ($items !== null) {
+                $invoice->items()->delete();
+
+                foreach ($items as $item) {
+                    $invoice->items()->create([
+                        'description' => $item['description'],
+                        'quantity'    => $item['quantity'],
+                        'unit_price'  => $item['unitPrice'],
+                        'total'       => round((int) $item['quantity'] * (float) $item['unitPrice'], 2),
+                    ]);
+                }
+            }
+        });
+
+        return ApiResponse::success(
+            new FinanceInvoiceResource($invoice->fresh(['client', 'project', 'items'])),
+            'Invoice updated successfully'
+        );
+    }
+
+    /**
+     * DELETE /finance/invoices/{invoice}
+     */
+    public function destroy(Request $request, FinanceInvoice $invoice): JsonResponse
+    {
+        abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
+
+        $invoice->delete();
+
+        return ApiResponse::success(null, 'Invoice deleted successfully');
+    }
+}
