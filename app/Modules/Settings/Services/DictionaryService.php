@@ -29,6 +29,7 @@ class DictionaryService
         'countries' => 'countries',
         'client-statuses' => 'client_statuses',
         'contact-roles' => 'contact_roles',
+        'invoice-statuses' => 'invoice_statuses',
     ];
 
     public function modelFor(string $entity): ?BaseDictionaryModel

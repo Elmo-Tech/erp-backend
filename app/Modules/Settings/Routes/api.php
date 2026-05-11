@@ -4,12 +4,26 @@ use App\Modules\Settings\Controllers\AdminRoleController;
 use App\Modules\Settings\Controllers\AdminUserController;
 use App\Modules\Settings\Controllers\DictionaryController;
 use App\Modules\Settings\Controllers\SystemSettingsController;
+use App\Modules\Settings\Controllers\UserController;
 use App\Modules\Settings\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')
     ->middleware(['auth:sanctum', 'locale'])
     ->group(function (): void {
+        // ── System Settings (admin / manage_payroll) ──────────────────────────
+        // IMPORTANT: Declared BEFORE the generic settings/{entity} wildcard so
+        // that GET /settings/system/{key} is never swallowed by the dictionary
+        // route and returns 404.
+        Route::prefix('settings/system')
+            ->controller(SystemSettingsController::class)
+            ->name('settings.system.')
+            ->group(function (): void {
+                Route::get('{key}', 'show')->name('show');
+                Route::put('{key}', 'update')->name('update');
+            });
+
+        // ── Settings Dictionary (generic CRUD) ────────────────────────────────
         Route::controller(DictionaryController::class)
             ->prefix('settings/{entity}')
             ->name('settings.dictionary.')
@@ -37,12 +51,7 @@ Route::prefix('v1')
             Route::put('users/manage/{user}/roles', [UserManagementController::class, 'assignRoles'])->name('admin.users.assign-roles');
         });
 
-        // ── System Settings (admin / manage_payroll) ──────────────────────────
-        Route::prefix('settings/system')
-            ->controller(SystemSettingsController::class)
-            ->name('settings.system.')
-            ->group(function (): void {
-                Route::get('{key}', 'show')->name('show');
-                Route::put('{key}', 'update')->name('update');
-            });
+        // ── Users — canonical CRUD (manage_users) ────────────────────────────
+        Route::apiResource('users', UserController::class)
+            ->names('users');
     });

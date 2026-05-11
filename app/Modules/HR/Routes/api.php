@@ -2,6 +2,9 @@
 
 use App\Modules\HR\Controllers\AttendanceController;
 use App\Modules\HR\Controllers\EmployeeProfileController;
+use App\Modules\HR\Controllers\EmployeeReportController;
+use App\Modules\HR\Controllers\LeaveRequestController;
+use App\Modules\HR\Controllers\PayrollTransactionController;
 use App\Modules\HR\Controllers\PayslipController;
 use App\Modules\HR\Controllers\PointTransactionController;
 use App\Modules\HR\Controllers\ShiftController;
@@ -60,4 +63,16 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     // ── Gamification — Employee point history ─────────────────────────────────
     Route::get('hr/my-points', [PointTransactionController::class, 'myPoints'])
         ->name('hr.my-points.index');
+
+    // ── Leave Requests (HR admin — guarded via manage_hr) ─────────────────────
+    Route::apiResource('hr/leave-requests', LeaveRequestController::class)
+        ->names('hr.leave-requests');
+
+    // ── Manual Payroll Transactions (HR admin — guarded via manage_payroll) ───
+    Route::apiResource('hr/payroll-transactions', PayrollTransactionController::class)
+        ->names('hr.payroll-transactions');
+
+    // ── Employee 360 Report (HR admin — guarded via manage_employees) ─────────
+    Route::get('hr/employee-report/{id}', [EmployeeReportController::class, 'show'])
+        ->name('hr.employee-report.show');
 });

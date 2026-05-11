@@ -264,6 +264,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage_payroll',   // HR admins: generate, approve, mark-paid, delete drafts
             'view_payroll',     // Employees: read-only access to own payslips
 
+            // ── HR Operations (Leaves & Manual Transactions) ──────────────────
+            'manage_hr',        // HR admins: leave requests, manual payroll transactions
+
             // ── Settings ─────────────────────────────────────────────────────
             'view_settings',
             'manage_settings',

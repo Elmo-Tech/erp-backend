@@ -29,14 +29,16 @@ class EmployeeProfile extends Model
         'base_salary',
         'hourly_rate',
         'join_date',
+        'grace_days_balance',
     ];
 
     protected function casts(): array
     {
         return [
-            'base_salary' => 'decimal:2',
-            'hourly_rate' => 'decimal:2',
-            'join_date'   => 'date',
+            'base_salary'        => 'decimal:2',
+            'hourly_rate'        => 'decimal:2',
+            'join_date'          => 'date',
+            'grace_days_balance' => 'integer',
         ];
     }
 

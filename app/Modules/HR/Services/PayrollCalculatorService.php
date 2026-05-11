@@ -5,7 +5,9 @@ namespace App\Modules\HR\Services;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\HR\Models\EmployeeProfile;
+use App\Modules\HR\Models\LeaveRequest;
 use App\Modules\HR\Models\Payslip;
+use App\Modules\HR\Models\PayrollTransaction;
 use App\Modules\Settings\Models\Setting;
 use App\Modules\Settings\Models\User;
 use Illuminate\Support\Carbon;
@@ -18,7 +20,12 @@ use Illuminate\Support\Carbon;
  * its inputs and returns a plain array or Eloquent model.
  *
  * Formula:
- *   net_salary = base_salary + points_bonus_amount - lateness_deduction_amount
+ *   net_salary = base_salary
+ *              + points_bonus_amount
+ *              + manual_bonus_total
+ *              - lateness_deduction_amount
+ *              - manual_deduction_total
+ *              - unpaid_leave_deduction
  */
 class PayrollCalculatorService
 {
@@ -41,6 +48,10 @@ class PayrollCalculatorService
      *   points_bonus_amount: float,
      *   lateness_minutes: int,
      *   lateness_deduction_amount: float,
+     *   manual_bonus_total: float,
+     *   manual_deduction_total: float,
+     *   unpaid_leave_days: int,
+     *   unpaid_leave_deduction: float,
      *   net_salary: float,
      * }
      *
@@ -66,29 +77,28 @@ class PayrollCalculatorService
             ? (float) $profile->hourly_rate / 60
             : 0.0;
 
+        // Daily rate derived from base_salary / working days in month.
+        // Used for unpaid leave deductions.
+        $workingDaysPerMonth = $profile->working_days_per_week
+            ? round(($profile->working_days_per_week / 7) * Carbon::create($year, $month, 1)->daysInMonth)
+            : 22;
+        $dailyRate = $workingDaysPerMonth > 0 ? $baseSalary / $workingDaysPerMonth : 0.0;
+
         // ── Step 2: Dynamic point value from DB ───────────────────────────────
-        // The CTO requirement: point value MUST come from the database, not
-        // a hardcoded config. Setting::getValue() caches the result for 1 hour
-        // so batch runs don't hammer the DB.
         $pointValue = (float) Setting::getValue('gamification_point_value', 50);
 
-        // ── Step 3: Gamification bonus ────────────────────────────────────────
+        // ── Step 3: Period boundaries ─────────────────────────────────────────
         $periodStart = Carbon::create($year, $month, 1)->startOfDay();
         $periodEnd   = $periodStart->copy()->endOfMonth();
 
+        // ── Step 4: Gamification bonus ────────────────────────────────────────
         $pointsEarned = (int) PointTransaction::where('user_id', $user->id)
             ->whereBetween('created_at', [$periodStart, $periodEnd])
             ->sum('points');
 
-        // Points can be negative (deductions); bonus floor is 0 — we don't
-        // penalise the base salary via the points channel (separate deduction
-        // fields exist for that if the business requires it later).
         $pointsBonusAmount = max(0.0, round($pointsEarned * $pointValue, 2));
 
-        // ── Step 4: Attendance lateness deduction ─────────────────────────────
-        // Sum the deduction_minutes column for all late records in the period.
-        // deduction_minutes is already threshold-adjusted by the attendance
-        // engine (grace days, threshold rounding) — we trust that value here.
+        // ── Step 5: Attendance lateness deduction ─────────────────────────────
         $latenessMinutes = (int) Attendance::where('user_id', $user->id)
             ->where('status', 'late')
             ->whereBetween('date', [
@@ -99,9 +109,38 @@ class PayrollCalculatorService
 
         $latenessDeductionAmount = round($latenessMinutes * $minuteRate, 2);
 
-        // ── Step 5: Net salary ────────────────────────────────────────────────
+        // ── Step 6: Manual payroll transactions ───────────────────────────────
+        $transactions = PayrollTransaction::where('user_id', $user->id)
+            ->whereBetween('transaction_date', [
+                $periodStart->toDateString(),
+                $periodEnd->toDateString(),
+            ])
+            ->get();
+
+        $manualBonusTotal     = round((float) $transactions->where('type', 'manual_bonus')->sum('amount'), 2);
+        $manualDeductionTotal = round((float) $transactions->where('type', 'manual_deduction')->sum('amount'), 2);
+
+        // ── Step 7: Unpaid leave deduction ────────────────────────────────────
+        $unpaidLeaves = LeaveRequest::where('user_id', $user->id)
+            ->where('type', 'unpaid')
+            ->where('status', 'approved')
+            ->where(function ($q) use ($periodStart, $periodEnd) {
+                $q->whereBetween('start_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+                  ->orWhereBetween('end_date', [$periodStart->toDateString(), $periodEnd->toDateString()]);
+            })
+            ->get();
+
+        $unpaidLeaveDays      = (int) $unpaidLeaves->sum(fn ($l) => $l->durationInDays());
+        $unpaidLeaveDeduction = round($unpaidLeaveDays * $dailyRate, 2);
+
+        // ── Step 8: Net salary ────────────────────────────────────────────────
         $netSalary = round(
-            $baseSalary + $pointsBonusAmount - $latenessDeductionAmount,
+            $baseSalary
+            + $pointsBonusAmount
+            + $manualBonusTotal
+            - $latenessDeductionAmount
+            - $manualDeductionTotal
+            - $unpaidLeaveDeduction,
             2
         );
 
@@ -114,6 +153,10 @@ class PayrollCalculatorService
             'points_bonus_amount'        => $pointsBonusAmount,
             'lateness_minutes'           => $latenessMinutes,
             'lateness_deduction_amount'  => $latenessDeductionAmount,
+            'manual_bonus_total'         => $manualBonusTotal,
+            'manual_deduction_total'     => $manualDeductionTotal,
+            'unpaid_leave_days'          => $unpaidLeaveDays,
+            'unpaid_leave_deduction'     => $unpaidLeaveDeduction,
             'net_salary'                 => $netSalary,
         ];
     }
@@ -144,13 +187,28 @@ class PayrollCalculatorService
 
         $data = $this->calculateForUser($user, $month, $year);
 
+        // Only persist columns that exist in the payslips table.
+        // The extended breakdown fields (manual_bonus_total, etc.) are
+        // returned in the API response but stored in their source tables.
+        $persistable = array_intersect_key($data, array_flip([
+            'user_id',
+            'month',
+            'year',
+            'base_salary',
+            'points_earned',
+            'points_bonus_amount',
+            'lateness_minutes',
+            'lateness_deduction_amount',
+            'net_salary',
+        ]));
+
         return Payslip::updateOrCreate(
             [
                 'user_id' => $user->id,
                 'month'   => $month,
                 'year'    => $year,
             ],
-            array_merge($data, ['status' => 'draft'])
+            array_merge($persistable, ['status' => 'draft'])
         );
     }
 }
