@@ -30,11 +30,12 @@ class GetFinancialStatsAction
             ->first();
 
         $projectBudget = Project::withoutGlobalScopes()
-            ->selectRaw('COALESCE(SUM(budget), 0) as total_budget')
+            ->selectRaw('COUNT(*) as total_projects, COALESCE(SUM(budget), 0) as total_budget')
             ->first();
 
         return [
             'total_invoices' => (int) $invoiceStats->total_invoices,
+            'total_projects' => (int) $projectBudget->total_projects,
             'invoiced_total' => round((float) $invoiceStats->invoiced_total, 2),
             'paid_total' => round((float) $invoiceStats->paid_total, 2),
             'overdue_total' => round((float) $invoiceStats->overdue_total, 2),

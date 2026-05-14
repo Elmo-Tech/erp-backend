@@ -27,9 +27,14 @@ class FinanceInvoiceController extends Controller
     {
         abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
 
-        $invoices = FinanceInvoice::with(['client', 'project'])
-            ->latest()
-            ->paginate(20);
+        $query = FinanceInvoice::with(['client', 'project'])->latest();
+
+        // Filter by client when the caller passes ?client_id=X (e.g. Client Ledger tab)
+        if ($request->filled('client_id')) {
+            $query->where('client_id', (int) $request->client_id);
+        }
+
+        $invoices = $query->paginate(20);
 
         return ApiResponse::success(
             FinanceInvoiceResource::collection($invoices)->response()->getData(true),

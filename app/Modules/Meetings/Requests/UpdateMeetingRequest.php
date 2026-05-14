@@ -2,10 +2,12 @@
 
 namespace App\Modules\Meetings\Requests;
 
+use App\Enums\MeetingStatus;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rules\Enum;
 
 class UpdateMeetingRequest extends FormRequest
 {
@@ -22,6 +24,7 @@ class UpdateMeetingRequest extends FormRequest
             'assignedTo' => ['sometimes', 'integer', 'exists:users,id'],
             'scheduledAt' => ['nullable', 'date'],
             'outcomeSummary' => ['nullable', 'string', 'max:1000'],
+            'status' => ['sometimes', new Enum(MeetingStatus::class)],
         ];
     }
 

@@ -8,6 +8,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Requests\StoreLeadRequest;
+use App\Modules\Meetings\Models\Meeting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -38,6 +39,8 @@ class LeadController extends Controller
             'expected_budget' => $lead->expected_budget,
             'source'          => $lead->source,
             'assignedTo'      => $lead->assigned_to,
+            'hasCompletedMeeting' => $this->hasCompletedMeeting($lead),
+            'hasAcceptedProposalOrQuotation' => $this->hasAcceptedProposalOrQuotation($lead),
             'createdAt'       => $lead->created_at?->toISOString(),
             'updatedAt'       => $lead->updated_at?->toISOString(),
         ]);
@@ -74,6 +77,8 @@ class LeadController extends Controller
                 'notes'           => $lead->notes,
                 'expected_close_date' => $lead->expected_close_date?->toDateString(),
                 'assignedTo'      => $lead->assigned_to,
+                'hasCompletedMeeting' => $this->hasCompletedMeeting($lead),
+                'hasAcceptedProposalOrQuotation' => $this->hasAcceptedProposalOrQuotation($lead),
                 'assignee'        => $lead->assignee ? [
                     'id'     => $lead->assignee->id,
                     'name'   => $lead->assignee->name,
@@ -140,5 +145,20 @@ class LeadController extends Controller
             'Lead created successfully.',
             201
         );
+    }
+
+    private function hasCompletedMeeting(Lead $lead): bool
+    {
+        return Meeting::query()
+            ->where('model_type', Lead::class)
+            ->where('model_id', $lead->id)
+            ->where('status', 'completed')
+            ->exists();
+    }
+
+    private function hasAcceptedProposalOrQuotation(Lead $lead): bool
+    {
+        return $lead->proposals()->where('status', 'accepted')->exists()
+            || $lead->quotations()->where('status', 'accepted')->exists();
     }
 }

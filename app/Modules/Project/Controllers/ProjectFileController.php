@@ -26,6 +26,8 @@ class ProjectFileController extends Controller
 
     public function index(Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $files = $project->files()
             ->orderBy('created_at', 'desc')
             ->get();
@@ -37,6 +39,8 @@ class ProjectFileController extends Controller
 
     public function store(Request $request, Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:file,link',
@@ -60,6 +64,8 @@ class ProjectFileController extends Controller
 
     public function show(Project $project, ProjectFile $file): JsonResponse
     {
+        $this->authorize('view', $project);
+
         if ($file->project_id !== $project->id) {
             return ApiResponse::error('File not found', 404);
         }
@@ -72,6 +78,8 @@ class ProjectFileController extends Controller
 
     public function update(Request $request, Project $project, ProjectFile $file): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
@@ -95,6 +103,8 @@ class ProjectFileController extends Controller
 
     public function destroy(Project $project, ProjectFile $file): JsonResponse
     {
+        $this->authorize('view', $project);
+
         try {
             $this->deleteProjectFileAction->execute($project, $file);
         } catch (RuntimeException $exception) {

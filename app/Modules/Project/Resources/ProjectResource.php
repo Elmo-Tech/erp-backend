@@ -39,10 +39,10 @@ class ProjectResource extends JsonResource
             'client' => $this->whenLoaded('client', function () {
                 return [
                     'clientId' => $this->client->id,
-                    'name' => $this->client->name ?? '',
-                    'email' => $this->client->email ?? '',
-                    'company' => $this->client->company ?? '',
-                    'phone' => $this->client->phone ?? '',
+                    'name' => $this->client->display_name ?? '',
+                    'email' => $this->client->primary_email ?? '',
+                    'company' => $this->client->company_name ?? '',
+                    'phone' => $this->client->primary_phone ?? '',
                 ];
             }),
             'members' => $this->whenLoaded('members', function () {

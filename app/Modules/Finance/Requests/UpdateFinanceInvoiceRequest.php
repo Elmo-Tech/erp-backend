@@ -3,6 +3,7 @@
 namespace App\Modules\Finance\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateFinanceInvoiceRequest extends FormRequest
 {
@@ -13,9 +14,16 @@ class UpdateFinanceInvoiceRequest extends FormRequest
 
     public function rules(): array
     {
+        $clientId = $this->input('clientId', $this->route('invoice')?->client_id);
+
         return [
             'clientId'       => ['sometimes', 'integer', 'exists:clients,id'],
-            'projectId'      => ['sometimes', 'nullable', 'integer', 'exists:projects,id'],
+            'projectId'      => [
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('projects', 'id')->where(fn ($query) => $query->where('client_id', $clientId)),
+            ],
             'issueDate'      => ['sometimes', 'date'],
             'dueDate'        => ['sometimes', 'date'],
             'taxRate'        => ['sometimes', 'numeric', 'min:0', 'max:100'],

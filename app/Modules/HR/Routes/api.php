@@ -8,6 +8,7 @@ use App\Modules\HR\Controllers\PayrollTransactionController;
 use App\Modules\HR\Controllers\PayslipController;
 use App\Modules\HR\Controllers\PointTransactionController;
 use App\Modules\HR\Controllers\ShiftController;
+use App\Modules\HR\Controllers\TeamPulseController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
@@ -26,6 +27,13 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
 
     Route::get('hr/attendance/today', [AttendanceController::class, 'today'])
         ->name('hr.attendance.today');
+
+    Route::get('hr/team-pulse', TeamPulseController::class)
+        ->name('hr.team-pulse');
+
+    // Self check-in — any authenticated employee
+    Route::post('hr/attendance/check-in', [AttendanceController::class, 'checkIn'])
+        ->name('hr.attendance.check-in');
 
     // Self check-out — any authenticated employee
     Route::post('hr/attendance/check-out', [AttendanceController::class, 'checkOut'])

@@ -121,6 +121,8 @@ class ClientController extends Controller
      */
     public function store(StoreClientRequest $request): JsonResponse
     {
+        abort_if(! $request->user()?->can('create_clients') && ! $request->user()?->can('manage_clients'), 403, 'Unauthorized');
+
         $client = $this->createClientAction->execute($request->validated());
         $this->clientActivityLogger->clientCreated($client, $request->user());
 
@@ -171,6 +173,8 @@ class ClientController extends Controller
      */
     public function update(UpdateClientRequest $request, Client $client): JsonResponse
     {
+        abort_if(! $request->user()?->can('edit_clients') && ! $request->user()?->can('manage_clients'), 403, 'Unauthorized');
+
         $client = $this->updateClientAction->execute($client, $request->validated());
 
         return ApiResponse::success(

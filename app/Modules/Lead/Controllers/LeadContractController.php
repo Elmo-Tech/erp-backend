@@ -11,6 +11,8 @@ use App\Modules\Lead\Models\Contract;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Requests\StoreLeadContractRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Manages contracts attached directly to a lead from the Details Page.
@@ -89,6 +91,28 @@ class LeadContractController extends Controller
         );
     }
 
+    /**
+     * Update editable contract fields from the lead details table.
+     */
+    public function update(Request $request, Lead $lead, Contract $contract): JsonResponse
+    {
+        $this->assertBelongsToLead($contract, $lead);
+
+        $data = $request->validate([
+            'status' => ['sometimes', 'string', Rule::in(ContractStatus::values())],
+            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'file_path' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $contract->update($data);
+        $contract->load('assignee:id,name,email,avatar');
+
+        return ApiResponse::success(
+            $this->formatContract($contract),
+            'Contract updated successfully.'
+        );
+    }
+
     // ─── Private ─────────────────────────────────────────────────────────────
 
     private function formatContract(Contract $c): array
@@ -131,5 +155,12 @@ class LeadContractController extends Controller
             'created_at'            => $c->created_at?->toISOString(),
             'updated_at'            => $c->updated_at?->toISOString(),
         ];
+    }
+
+    private function assertBelongsToLead(Contract $contract, Lead $lead): void
+    {
+        if ((int) $contract->lead_id !== (int) $lead->id) {
+            abort(404, 'Contract not found for this lead.');
+        }
     }
 }

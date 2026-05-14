@@ -12,9 +12,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            AdminUserSeeder::class,
             SettingsDictionarySeeder::class,
             SystemSettingsSeeder::class,
+            RolesAndPermissionsSeeder::class,
             DemoUserSeeder::class,
             // TagSeeder::class,          // TODO: Requires App\Modules\Task\Models\Tag
             // DashboardDemoSeeder::class, // TODO: Requires Task, Invoice, SOP, TimeEntry modules

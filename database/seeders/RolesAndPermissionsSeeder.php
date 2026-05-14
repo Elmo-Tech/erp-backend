@@ -11,6 +11,9 @@ use Spatie\Permission\PermissionRegistrar;
  * Exhaustive PBAC seeder — every permission maps 1-to-1 with a UI action
  * or data-access gate. Re-running is fully idempotent (firstOrCreate).
  *
+ * PERMISSION CATALOGUE is the single source of truth for both backend
+ * enforcement and frontend SYSTEM_PERMISSIONS constant.
+ *
  * Run with:
  *   php artisan db:seed --class=RolesAndPermissionsSeeder
  */
@@ -27,7 +30,6 @@ class RolesAndPermissionsSeeder extends Seeder
         // it is safer than deleting every permission not in the catalogue.
         // ─────────────────────────────────────────────────────────────────────
         $legacyPermissions = [
-            'manage_deliverables',
             'view_lead_conversion_status',
             'manage_client_portal_access',
             'view_points',
@@ -82,14 +84,50 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         $removedLegacyCount = Permission::whereIn('name', $legacyPermissions)->delete();
-        Role::whereIn('name', ['super-admin', 'admin', 'manager', 'tech_lead', 'developer'])->delete();
+        // Remove legacy system roles; keep founder/admin/pmo/techdev/dev/client/manager/qa
+        Role::whereIn('name', ['super-admin', 'tech_lead', 'developer'])->delete();
 
         // ─────────────────────────────────────────────────────────────────────
         // PERMISSION CATALOGUE
+        // This list is the single source of truth. It is mirrored exactly in
+        // erp-frontend/src/shared/config/permissions.ts → SYSTEM_PERMISSIONS.
         // ─────────────────────────────────────────────────────────────────────
         $permissions = [
 
+            // ── System & Users ───────────────────────────────────────────────
+            'manage_settings',
+            'manage_users',
+            'manage_roles',
+            'manage_dictionaries',
+
+            // ── HR & Finance ─────────────────────────────────────────────────
+            'manage_hr',
+            'manage_payroll',
+            'view_reports',
+            'manage_invoices',
+            'manage_subscriptions',
+
+            // ── Sales & Clients ──────────────────────────────────────────────
+            'manage_clients',
+            'manage_leads',
+            'manage_contracts',
+            'schedule_meetings',
+
+            // ── Projects (Global vs Local) ───────────────────────────────────
+            // manage_all_projects: Global Admin/PMO bypass — edit/delete any
+            //   project regardless of team membership.
+            // create_projects: Allowed to create new projects.
+            'manage_all_projects',
+            'create_projects',
+
+            // ── Tasks & Deliverables ─────────────────────────────────────────
+            // manage_deliverables: STRICTLY for users allowed to define what
+            //   deliverables are required on a task. Developers/QA are excluded.
+            'manage_deliverables',
+
             // ── Dashboard ────────────────────────────────────────────────────
+            'view_my_workspace',
+            'view_global_stats',
             'view_dashboard',
             'view_dashboard_overview',
             'view_financial_stats',
@@ -100,34 +138,29 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_escalated_blockers',
             'view_team_pulse',
 
-            // ── User Management ──────────────────────────────────────────────
-            'manage_users',
+            // ── User Management (granular) ───────────────────────────────────
             'view_users',
             'create_users',
             'edit_users',
             'delete_users',
 
-            // ── Role & Permission Management ─────────────────────────────────
-            'manage_roles',
+            // ── Role & Permission Management (granular) ──────────────────────
             'view_roles',
             'create_roles',
             'edit_roles',
             'delete_roles',
 
-            // ── Client Management ────────────────────────────────────────────
-            'manage_clients',
+            // ── Client Management (granular) ─────────────────────────────────
             'view_clients',
             'create_clients',
             'edit_clients',
             'delete_clients',
 
-            // ── Project Management ───────────────────────────────────────────
+            // ── Project Management (granular) ────────────────────────────────
             'manage_projects',
             'view_projects',
-            'view_all_projects',       // see every project regardless of membership
-            'view_assigned_projects',  // see only projects the user is a member of
-            'manage_all_projects',     // edit/delete any project regardless of membership
-            'create_projects',
+            'view_all_projects',
+            'view_assigned_projects',
             'edit_projects',
             'delete_projects',
             'approve_project_ui',
@@ -150,7 +183,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete_project_files',
             'view_project_history',
 
-            // ── Task Management ──────────────────────────────────────────────
+            // ── Task Management (granular) ───────────────────────────────────
             'manage_tasks',
             'view_tasks',
             'create_tasks',
@@ -160,8 +193,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_internal_notes',
             'work_on_tasks',
 
-            // ── Sales — Leads ────────────────────────────────────────────────
-            'manage_leads',
+            // ── Sales — Leads (granular) ─────────────────────────────────────
             'view_leads',
             'create_leads',
             'edit_leads',
@@ -175,30 +207,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete_quotations',
             'calculate_quotations',
 
-            // ── Sales — Contracts ────────────────────────────────────────────
-            'manage_contracts',
+            // ── Sales — Contracts (granular) ─────────────────────────────────
             'view_contracts',
             'create_contracts',
             'edit_contracts',
             'delete_contracts',
             'sign_contracts',
 
-            // ── Invoice Management ───────────────────────────────────────────
-            'manage_invoices',
+            // ── Invoice Management (granular) ────────────────────────────────
             'view_invoices',
             'create_invoices',
             'edit_invoices',
             'delete_invoices',
             'send_invoices',
             'cancel_invoices',
-
-            // ── Wiki Management ──────────────────────────────────────────────
-            'manage_wiki',
-            'view_wiki',
-            'create_wiki',
-            'edit_wiki',
-            'delete_wiki',
-            'view_encrypted_content',
 
             // ── Time Tracking ────────────────────────────────────────────────
             'manage_time_entries',
@@ -217,7 +239,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'clock_out',
 
             // ── Shifts ──────────────────────────────────────────────────────
-            'manage_shifts',    // HR admins: full CRUD on work shifts
+            'manage_shifts',
 
             // ── Employee Management ──────────────────────────────────────────
             'manage_employees',
@@ -232,23 +254,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_morning_sop',
             'submit_morning_sop',
 
-            // ── Meetings ─────────────────────────────────────────────────────
-            'schedule_meetings',
+            // ── Meetings (granular) ──────────────────────────────────────────
             'view_meetings',
             'delete_meetings',
 
             // ── Client Portal ────────────────────────────────────────────────
-            // access_client_portal  → assigned to the 'client' role; gates the
-            //                         /client/* routes and ClientScope.
-            // The three management permissions are for internal staff who
-            // administer portal accounts on behalf of clients.
             'access_client_portal',
             'create_client_portal_access',
             'revoke_client_portal_access',
             'reset_client_portal_password',
 
             // ── Reports & Analytics ──────────────────────────────────────────
-            'view_reports',
             'view_profitability',
             'view_cost',
             'view_quality_metrics',
@@ -260,16 +276,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_internal_costs',
             'manage_internal_costs',
 
-            // ── Payroll ──────────────────────────────────────────────────────
-            'manage_payroll',   // HR admins: generate, approve, mark-paid, delete drafts
-            'view_payroll',     // Employees: read-only access to own payslips
+            // ── Payroll (granular) ───────────────────────────────────────────
+            'view_payroll',
 
-            // ── HR Operations (Leaves & Manual Transactions) ──────────────────
-            'manage_hr',        // HR admins: leave requests, manual payroll transactions
-
-            // ── Settings ─────────────────────────────────────────────────────
+            // ── Settings (granular) ──────────────────────────────────────────
             'view_settings',
-            'manage_settings',
             'delete_settings',
 
             // ── Security & Audit ─────────────────────────────────────────────
@@ -279,28 +290,32 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage_tags',
             'view_tags',
 
-            // ── Finance — Invoices (Phase 4) ──────────────────────────────────
-            'manage_invoices',       // already present above; kept here for clarity
-
-            // ── Finance — SaaS Subscriptions (Phase 4) ───────────────────────
-            'manage_subscriptions',  // full CRUD on internal SaaS subscriptions
-
-            // ── Calendar (Phase 4) ────────────────────────────────────────────
-            'view_calendar',         // access the master calendar aggregator
+            // ── Calendar ─────────────────────────────────────────────────────
+            'view_calendar',
         ];
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate([
-                'name' => $permission,
+                'name'       => $permission,
                 'guard_name' => 'web',
             ]);
         }
 
         // ─────────────────────────────────────────────────────────────────────
         // ROLE DEFINITIONS
-        // Internal roles are founder, pmo, techdev, and dev. The client role is
-        // a portal-only technical role used by ClientPortalAccessController.
+        //
+        // System roles:
+        //   founder  — Business owner: ALL internal permissions, zero restrictions.
+        //              CRITICAL: No "protected role" lock. Founder can edit everything.
+        //   pmo      — Project oversight & planning. manage_all_projects bypass.
+        //   manager  — Project-level manager. manage_deliverables + task management.
+        //   techdev  — Technical lead/developer hybrid. manage_deliverables included.
+        //   qa       — QA engineer. Work-on-tasks only, NO manage_deliverables.
+        //   dev      — Developer. Execution-only, NO manage_deliverables.
+        //   client   — External portal access only.
         // ─────────────────────────────────────────────────────────────────────
+
+        // Founder gets every internal permission — no exceptions, no locks.
         $founderPermissions = array_values(array_diff($permissions, [
             'access_client_portal',
         ]));
@@ -308,21 +323,49 @@ class RolesAndPermissionsSeeder extends Seeder
         $roles = [
 
             // ── Founder ──────────────────────────────────────────────────────
-            // Business owner: all internal capabilities, not client-portal mode.
+            // ALL internal capabilities. The Founder must be able to edit
+            // every role and every permission — zero "protected role" blocks.
             'founder' => $founderPermissions,
 
+            // ── Admin ────────────────────────────────────────────────────────
+            // Company-wide operational analytics. Does not include founder-only
+            // role/system ownership capabilities.
+            'admin' => [
+                'view_my_workspace',
+                'view_global_stats',
+                'view_dashboard', 'view_dashboard_overview',
+                'view_financial_stats', 'view_project_timeline',
+                'view_team_performance', 'view_all_blockers',
+                'view_escalated_blockers', 'view_team_pulse',
+                'view_reports', 'view_admin_stats',
+                'view_profitability', 'view_quality_metrics',
+                'view_user_performance', 'view_attendance_analytics',
+                'view_projects', 'view_all_projects',
+                'view_project_members', 'view_project_files', 'view_project_history',
+                'view_tasks', 'view_time_entries', 'view_all_time_entries',
+                'view_attendance', 'view_all_attendance',
+                'view_employees', 'view_employee_performance',
+                'view_meetings',
+                'view_tags',
+                'view_calendar',
+            ],
+
             // ── PMO ──────────────────────────────────────────────────────────
-            // Project oversight and planning — no financial data.
+            // Project oversight and planning. Has manage_all_projects (global
+            // bypass) and manage_deliverables. No financial data.
             'pmo' => [
+                'view_my_workspace',
                 'view_dashboard', 'view_dashboard_overview',
                 'view_project_timeline', 'view_all_blockers',
                 'view_morning_sop', 'submit_morning_sop',
-                'view_projects', 'view_all_projects', 'create_projects',
+                'view_projects', 'view_all_projects', 'manage_all_projects',
+                'create_projects',
                 'view_project_members', 'add_project_members', 'remove_project_members',
                 'view_project_files', 'upload_project_files',
                 'view_project_history',
-                'manage_tasks', 'view_tasks', 'create_tasks', 'edit_tasks', 'assign_tasks',
-                'view_internal_notes',
+                'manage_tasks', 'view_tasks', 'create_tasks', 'edit_tasks',
+                'delete_tasks', 'assign_tasks', 'view_internal_notes',
+                'manage_deliverables',
                 'manage_change_requests',
                 'schedule_meetings', 'view_meetings',
                 'view_leads',
@@ -336,9 +379,35 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_calendar',
             ],
 
+            // ── Manager ──────────────────────────────────────────────────────
+            // Project-level manager. Can manage deliverables and tasks within
+            // their assigned projects. Does NOT have manage_all_projects.
+            'manager' => [
+                'view_my_workspace',
+                'view_dashboard', 'view_dashboard_overview',
+                'view_team_performance', 'view_project_timeline',
+                'view_projects', 'view_assigned_projects', 'create_projects',
+                'edit_projects',
+                'view_project_members', 'add_project_members', 'remove_project_members',
+                'view_project_files', 'upload_project_files',
+                'view_project_history',
+                'manage_tasks', 'view_tasks', 'create_tasks', 'edit_tasks',
+                'delete_tasks', 'assign_tasks', 'view_internal_notes', 'work_on_tasks',
+                'manage_deliverables',
+                'manage_change_requests',
+                'schedule_meetings', 'view_meetings',
+                'view_time_entries', 'view_all_time_entries', 'start_timer', 'stop_timer',
+                'view_attendance', 'clock_out',
+                'view_payroll',
+                'view_tags',
+                'view_calendar',
+            ],
+
             // ── TechDev ──────────────────────────────────────────────────────
-            // Technical lead/developer hybrid: execution and team delivery.
+            // Technical lead/developer hybrid. Has manage_deliverables because
+            // tech leads define what deliverables are required.
             'techdev' => [
+                'view_my_workspace',
                 'view_dashboard', 'view_dashboard_overview',
                 'view_team_performance', 'view_project_timeline',
                 'view_projects', 'view_assigned_projects',
@@ -347,7 +416,26 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_project_history',
                 'manage_tasks', 'view_tasks', 'create_tasks', 'edit_tasks', 'delete_tasks',
                 'assign_tasks', 'view_internal_notes', 'work_on_tasks',
-                'view_wiki', 'create_wiki', 'edit_wiki',
+                'manage_deliverables',
+                'view_time_entries', 'start_timer', 'stop_timer',
+                'view_attendance', 'clock_out',
+                'view_payroll',
+                'view_tags',
+                'view_calendar',
+            ],
+
+            // ── QA ───────────────────────────────────────────────────────────
+            // QA engineer. Execution-only. NO manage_deliverables — QA does
+            // not define deliverables, they verify them.
+            'qa' => [
+                'view_my_workspace',
+                'view_dashboard', 'view_dashboard_overview',
+                'view_personal_tasks',
+                'view_projects', 'view_assigned_projects',
+                'view_project_members',
+                'view_project_files',
+                'view_project_history',
+                'view_tasks', 'work_on_tasks', 'log_time',
                 'view_time_entries', 'start_timer', 'stop_timer',
                 'view_attendance', 'clock_out',
                 'view_payroll',
@@ -356,8 +444,10 @@ class RolesAndPermissionsSeeder extends Seeder
             ],
 
             // ── Dev ──────────────────────────────────────────────────────────
-            // Task execution, time tracking, limited project visibility.
+            // Developer. Task execution, time tracking, limited project
+            // visibility. NO manage_deliverables.
             'dev' => [
+                'view_my_workspace',
                 'view_dashboard', 'view_dashboard_overview',
                 'view_personal_tasks',
                 'view_projects', 'view_assigned_projects',
@@ -365,7 +455,6 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_project_files',
                 'view_project_history',
                 'view_tasks', 'work_on_tasks', 'log_time',
-                'view_wiki', 'create_wiki', 'edit_wiki',
                 'view_time_entries', 'start_timer', 'stop_timer',
                 'view_attendance', 'clock_out',
                 'view_payroll',
@@ -376,6 +465,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // ── Client ───────────────────────────────────────────────────────
             // External client portal access only.
             'client' => [
+                'view_my_workspace',
                 'access_client_portal',
                 'view_projects',
                 'view_invoices',
@@ -386,7 +476,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         foreach ($roles as $roleName => $rolePermissions) {
             Role::firstOrCreate([
-                'name' => $roleName,
+                'name'       => $roleName,
                 'guard_name' => 'web',
             ])->syncPermissions($rolePermissions);
         }
@@ -397,6 +487,7 @@ class RolesAndPermissionsSeeder extends Seeder
         if ($removedLegacyCount > 0) {
             $this->command->info("   Removed {$removedLegacyCount} legacy permission(s).");
         }
-        $this->command->info('   Source of truth: RolesAndPermissionsSeeder.');
+        $this->command->info('   Roles: founder, admin, pmo, manager, techdev, qa, dev, client');
+        $this->command->info('   Source of truth: RolesAndPermissionsSeeder + SYSTEM_PERMISSIONS (frontend).');
     }
 }

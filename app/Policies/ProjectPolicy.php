@@ -36,7 +36,7 @@ class ProjectPolicy
     //
     // Rules (in priority order):
     //   1. Client-portal users may only see their own client's project.
-    //   2. Users with view_all_projects see every project.
+    //   2. Users with manage_all_projects see every project (global bypass).
     //   3. Everyone else must be a project member.
     // ─────────────────────────────────────────────────────────────────────────
     public function view(User $user, Project $project): bool
@@ -46,8 +46,8 @@ class ProjectPolicy
             return $project->client_id === $user->client?->id;
         }
 
-        // Unrestricted project visibility.
-        if ($user->can('view_all_projects')) {
+        // Unrestricted project visibility (global admin/PMO bypass).
+        if ($user->can('manage_all_projects')) {
             return true;
         }
 

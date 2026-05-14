@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Security;
 
+use App\Enums\ProjectRole;
 use App\Modules\Client\Models\Client;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Project\Models\ChangeRequest;
 use App\Modules\Project\Models\Milestone;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectFile;
+use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTaskDeliverable;
 use App\Modules\Project\Models\ProjectTimeEntry;
@@ -118,10 +120,30 @@ class StrictDeletePermissionsTest extends TestCase
         $this->assertSoftDeleted('project_task_deliverables', ['id' => $deliverable->id]);
     }
 
-    public function test_time_entry_destroy_requires_delete_time_entries_permission(): void
+    public function test_time_entry_destroy_requires_creator_or_project_manager(): void
     {
         [$project, $task] = $this->projectWithTask();
+        $creator = $this->userWithPermissions(['log_time']);
         $entry = ProjectTimeEntry::create([
+            'task_id' => $task->id,
+            'user_id' => $creator->id,
+            'start_time' => now()->subHour(),
+            'end_time' => now(),
+            'duration_minutes' => 60,
+            'is_manual' => true,
+        ]);
+
+        $this->actingAs($this->userWithPermissions(['delete_time_entries']), 'sanctum')
+            ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}")
+            ->assertForbidden();
+
+        $this->actingAs($creator, 'sanctum')
+            ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}")
+            ->assertOk();
+
+        $this->assertSoftDeleted('project_time_entries', ['id' => $entry->id]);
+
+        $managedEntry = ProjectTimeEntry::create([
             'task_id' => $task->id,
             'user_id' => User::factory()->create()->id,
             'start_time' => now()->subHour(),
@@ -129,18 +151,18 @@ class StrictDeletePermissionsTest extends TestCase
             'duration_minutes' => 60,
             'is_manual' => true,
         ]);
+        $manager = $this->userWithPermissions(['edit_tasks']);
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $manager->id,
+            'role' => ProjectRole::MANAGER->value,
+        ]);
 
-        $this->actingAs($this->userWithPermissions(['manage_time_entries']), 'sanctum')
-            ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}")
-            ->assertForbidden();
-
-        $allowedUser = $this->userWithPermissions(['manage_time_entries', 'delete_time_entries']);
-
-        $this->actingAs($allowedUser, 'sanctum')
-            ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}")
+        $this->actingAs($manager, 'sanctum')
+            ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$managedEntry->id}")
             ->assertOk();
 
-        $this->assertSoftDeleted('project_time_entries', ['id' => $entry->id]);
+        $this->assertSoftDeleted('project_time_entries', ['id' => $managedEntry->id]);
     }
 
     public function test_change_request_destroy_requires_delete_change_requests_permission(): void

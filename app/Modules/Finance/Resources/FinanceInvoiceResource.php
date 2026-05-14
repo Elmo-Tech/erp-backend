@@ -9,6 +9,8 @@ class FinanceInvoiceResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $this->resource->loadMissing(['client', 'project']);
+
         return [
             'id'             => $this->id,
             'invoiceNumber'  => $this->invoice_number,
@@ -24,15 +26,22 @@ class FinanceInvoiceResource extends JsonResource
             'status'         => $this->status,
             'notes'          => $this->notes,
 
-            // Lazy-loaded relations
-            'client' => $this->whenLoaded('client', fn () => [
-                'id'   => $this->client->id,
-                'name' => $this->client->name,
-            ]),
-            'project' => $this->whenLoaded('project', fn () => [
-                'id'    => $this->project->id,
-                'title' => $this->project->title,
-            ]),
+            'client' => $this->client ? [
+                'id'           => $this->client->id,
+                'name'         => $this->client->display_name ?? $this->client->company_name ?? '',
+                'displayName'  => $this->client->display_name ?? $this->client->company_name ?? '',
+                'companyName'  => $this->client->company_name,
+                'primaryEmail' => $this->client->primary_email,
+                'primaryPhone' => $this->client->primary_phone,
+                'status'       => $this->client->status?->value ?? $this->client->status,
+            ] : null,
+            'project' => $this->project ? [
+                'id'       => $this->project->id,
+                'title'    => $this->project->title,
+                'status'   => $this->project->status?->value ?? $this->project->status,
+                'budget'   => $this->project->budget !== null ? (float) $this->project->budget : null,
+                'deadline' => $this->project->deadline?->toDateString(),
+            ] : null,
             'items' => $this->whenLoaded(
                 'items',
                 fn () => FinanceInvoiceItemResource::collection($this->items)

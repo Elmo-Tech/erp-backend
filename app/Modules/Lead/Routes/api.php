@@ -53,5 +53,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         Route::post('leads/{lead}/proposals',  [LeadProposalController::class,  'store'])->name('leads.proposals.store');
         Route::post('leads/{lead}/quotations', [LeadQuotationController::class, 'store'])->name('leads.quotations.store');
         Route::post('leads/{lead}/contracts',  [LeadContractController::class,  'store'])->name('leads.contracts.store');
+
+        Route::patch('leads/{lead}/proposals/{proposal}', [LeadProposalController::class, 'update'])->name('leads.proposals.patch');
+        Route::patch('leads/{lead}/quotations/{quotation}', [LeadQuotationController::class, 'update'])->name('leads.quotations.patch');
+        Route::patch('leads/{lead}/contracts/{contract}', [LeadContractController::class, 'update'])->name('leads.contracts.patch');
     });
 });

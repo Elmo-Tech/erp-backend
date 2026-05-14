@@ -61,4 +61,30 @@ class PermissionDrivenDashboardTest extends TestCase
         $response->assertOk()
             ->assertExactJson([]);
     }
+
+    public function test_global_dashboard_sections_require_global_stats_permission(): void
+    {
+        Permission::firstOrCreate(['name' => 'view_financial_stats', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view_global_stats', 'guard_name' => 'web']);
+
+        $user = User::factory()->create();
+        $user->givePermissionTo('view_financial_stats');
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/dashboard/overview');
+
+        $response->assertOk()
+            ->assertJsonMissingPath('financial');
+
+        $user->givePermissionTo('view_global_stats');
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/dashboard/overview')
+            ->assertOk()
+            ->assertJsonStructure([
+                'financial' => [
+                    'total_projects',
+                ],
+            ]);
+    }
 }

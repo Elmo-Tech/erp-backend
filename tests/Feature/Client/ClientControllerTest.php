@@ -5,6 +5,7 @@ namespace Tests\Feature\Client;
 use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -15,7 +16,10 @@ class ClientControllerTest extends TestCase
 
     public function test_it_creates_client_from_add_client_payload(): void
     {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
         $user = User::factory()->create();
+        $user->givePermissionTo('create_clients');
 
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/v1/clients', [
@@ -64,7 +68,10 @@ class ClientControllerTest extends TestCase
 
     public function test_it_rejects_payload_without_any_display_name(): void
     {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
         $user = User::factory()->create();
+        $user->givePermissionTo('create_clients');
 
         $this->actingAs($user, 'sanctum')
             ->postJson('/api/v1/clients', [
@@ -74,6 +81,20 @@ class ClientControllerTest extends TestCase
             ])
             ->assertStatus(422)
             ->assertJsonPath('errors.displayName.0', 'Display name is required.');
+    }
+
+    public function test_it_rejects_client_creation_without_create_or_manage_permission(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/clients', [
+                'type' => 'company',
+                'displayName' => 'Acme Inc.',
+                'primaryEmail' => 'hello@acme.test',
+                'country' => 'Egypt',
+            ])
+            ->assertForbidden();
     }
 
     public function test_it_returns_lightweight_client_directory_rows(): void

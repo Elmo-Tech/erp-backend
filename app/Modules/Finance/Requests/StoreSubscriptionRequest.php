@@ -14,14 +14,16 @@ class StoreSubscriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'            => ['required', 'string', 'max:255'],
-            'provider'        => ['nullable', 'string', 'max:255'],
-            'billingCycle'    => ['required', 'string', 'in:monthly,yearly'],
-            'cost'            => ['required', 'numeric', 'min:0'],
-            'currency'        => ['sometimes', 'string', 'size:3'],
+            'clientId' => ['sometimes', 'nullable', 'integer', 'exists:clients,id'],
+            'projectId' => ['sometimes', 'nullable', 'integer', 'exists:projects,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'provider' => ['nullable', 'string', 'max:255'],
+            'billingCycle' => ['required', 'string', 'in:monthly,quarterly,semi_annual,annual,yearly'],
+            'cost' => ['required', 'numeric', 'min:0'],
+            'currency' => ['sometimes', 'string', 'size:3'],
             'nextBillingDate' => ['required', 'date'],
-            'status'          => ['sometimes', 'string', 'in:active,cancelled'],
-            'notes'           => ['nullable', 'string'],
+            'status' => ['sometimes', 'string', 'in:active,cancelled'],
+            'notes' => ['nullable', 'string'],
         ];
     }
 }

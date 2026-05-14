@@ -18,7 +18,7 @@ class ProjectIndexControllerTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $user = User::factory()->create();
-        $user->givePermissionTo(['view_projects', 'view_all_projects']);
+        $user->givePermissionTo(['view_projects', 'manage_all_projects']);
 
         $client = Client::create([
             'type' => 'company',
@@ -48,7 +48,7 @@ class ProjectIndexControllerTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $user = User::factory()->create();
-        $user->givePermissionTo(['view_projects', 'view_all_projects']);
+        $user->givePermissionTo(['view_projects', 'manage_all_projects']);
 
         $client = Client::create([
             'type' => 'company',
@@ -71,5 +71,19 @@ class ProjectIndexControllerTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.title', 'Mobile App');
+    }
+
+    public function test_it_forbids_showing_a_project_outside_the_authorized_scope(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->create();
+        $user->givePermissionTo('view_projects');
+
+        $project = Project::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/projects/{$project->id}")
+            ->assertForbidden();
     }
 }

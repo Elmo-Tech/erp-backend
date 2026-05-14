@@ -19,16 +19,17 @@ class GetDashboardOverviewAction
     public function execute(User $user): array
     {
         $dashboardData = [];
+        $canViewGlobalStats = $user->can('view_global_stats');
 
-        if ($user->can('view_financial_stats')) {
+        if ($canViewGlobalStats && $user->can('view_financial_stats')) {
             $dashboardData['financial'] = $this->financialStats->execute();
         }
 
-        if ($user->can('view_project_timeline')) {
+        if ($canViewGlobalStats && $user->can('view_project_timeline')) {
             $dashboardData['timeline'] = $this->projectTimeline->execute();
         }
 
-        if ($user->can('view_team_performance')) {
+        if ($canViewGlobalStats && $user->can('view_team_performance')) {
             $dashboardData['team'] = $this->teamStats->execute();
         }
 
@@ -37,15 +38,15 @@ class GetDashboardOverviewAction
             $dashboardData['blockers'] = $this->personalBlockers->execute($user);
         }
 
-        if ($user->can('view_all_blockers')) {
+        if ($canViewGlobalStats && $user->can('view_all_blockers')) {
             $dashboardData['blockers'] = $this->personalBlockers->executeForAll();
         }
 
-        if ($user->can('view_escalated_blockers')) {
+        if ($canViewGlobalStats && $user->can('view_escalated_blockers')) {
             $dashboardData['escalated_blockers'] = $this->escalatedBlockers->execute();
         }
 
-        if ($user->can('view_team_pulse')) {
+        if ($canViewGlobalStats && $user->can('view_team_pulse')) {
             $dashboardData['team_pulse'] = $this->teamPulse->execute();
         }
 

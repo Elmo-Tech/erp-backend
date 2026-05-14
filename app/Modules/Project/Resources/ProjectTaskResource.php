@@ -19,6 +19,7 @@ class ProjectTaskResource extends JsonResource
             'status'          => $this->status?->value,
             'statusLabel'     => $this->status?->label(),
             'estimatedHours'  => $this->estimated_hours !== null ? (float) $this->estimated_hours : null,
+            'dueDate'         => $this->due_date?->toDateString(),
             'assigneeId'      => $this->assignee_id,
             'isInBacklog'     => $this->isInBacklog(),
             'totalLoggedMinutes' => $this->totalLoggedMinutes(),
@@ -33,6 +34,10 @@ class ProjectTaskResource extends JsonResource
                 'milestoneId' => $this->milestone->id,
                 'title'       => $this->milestone->title,
                 'status'      => $this->milestone->status?->value,
+            ]),
+            'project'         => $this->whenLoaded('project', fn () => [
+                'projectId' => $this->project->id,
+                'title'     => $this->project->title,
             ]),
             'subtasks'        => ProjectTaskResource::collection($this->whenLoaded('subtasks')),
             'deliverables'    => ProjectTaskDeliverableResource::collection($this->whenLoaded('deliverables')),

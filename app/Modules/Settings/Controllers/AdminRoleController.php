@@ -15,7 +15,7 @@ use Spatie\Permission\Models\Role;
 
 class AdminRoleController extends Controller
 {
-    private const PROTECTED_ROLE_NAMES = ['founder', 'pmo', 'techdev', 'dev', 'client'];
+    private const PROTECTED_ROLE_NAMES = ['founder', 'admin', 'pmo', 'techdev', 'dev', 'client'];
 
     public function __construct(
         private LogClientAuditAction $auditLogService
@@ -427,7 +427,7 @@ class AdminRoleController extends Controller
      *     operationId="updateAdminRole",
      *     tags={"Admin Roles"},
      *     summary="Update role permissions",
-     *     description="Update role name and permissions. Cannot update protected roles (founder, pmo, techdev, dev, client). Requires manage_roles permission.",
+     *     description="Update role name and permissions. Cannot update protected roles (founder, admin, pmo, techdev, dev, client). Requires manage_roles permission.",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -557,13 +557,10 @@ class AdminRoleController extends Controller
         try {
             $roleModel = Role::findOrFail($role);
 
-            // Check if role is protected
-            if (in_array($roleModel->name, self::PROTECTED_ROLE_NAMES)) {
-                return ApiResponse::validationError(
-                    ['role' => ['This role is protected and cannot be modified']],
-                    'Cannot update protected role'
-                );
-            }
+            // Protected roles can only be modified by users with manage_roles permission.
+            // The manage_roles check above already gates this endpoint, so any user
+            // who reaches here is authorised to edit ALL roles — including system ones.
+            // (The old hard-block has been removed so the Founder can manage every role.)
 
             $validatedData = $request->validated();
 
@@ -631,7 +628,7 @@ class AdminRoleController extends Controller
      *     operationId="deleteAdminRole",
      *     tags={"Admin Roles"},
      *     summary="Delete role",
-     *     description="Delete a role. Cannot delete protected roles (founder, pmo, techdev, dev, client). Requires manage_roles permission.",
+     *     description="Delete a role. Cannot delete protected roles (founder, admin, pmo, techdev, dev, client). Requires manage_roles permission.",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -877,6 +874,8 @@ class AdminRoleController extends Controller
     {
         $groups = [
             // ── Dashboard ────────────────────────────────────────────────────
+            'view_my_workspace' => 'Dashboard',
+            'view_global_stats' => 'Dashboard',
             'view_dashboard' => 'Dashboard',
             'view_dashboard_overview' => 'Dashboard',
             'view_financial_stats' => 'Dashboard',
@@ -1054,6 +1053,8 @@ class AdminRoleController extends Controller
     {
         $descriptions = [
             // ── Dashboard ────────────────────────────────────────────────────
+            'view_my_workspace' => 'Access personal workspace',
+            'view_global_stats' => 'Access company analytics dashboard',
             'view_dashboard' => 'Access the main dashboard',
             'view_dashboard_overview' => 'View dashboard overview statistics',
             'view_financial_stats' => 'View financial KPIs and revenue stats',

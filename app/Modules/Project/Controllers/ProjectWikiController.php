@@ -123,6 +123,8 @@ class ProjectWikiController extends Controller
      */
     public function index(Request $request, Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $wikis = $project->wikis()
             ->orderBy('created_at', 'desc')
             ->paginate($request->get('perPage', 15));
@@ -221,6 +223,8 @@ class ProjectWikiController extends Controller
      */
     public function store(StoreProjectWikiRequest $request, Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         return DB::transaction(function () use ($request, $project) {
             $data = $request->validated();
 
@@ -307,6 +311,8 @@ class ProjectWikiController extends Controller
      */
     public function show(Project $project, ProjectWiki $wiki): JsonResponse
     {
+        $this->authorize('view', $project);
+
         // Ensure wiki belongs to the project
         if ($wiki->project_id !== $project->id) {
             return ApiResponse::notFound('Wiki not found');
@@ -414,6 +420,8 @@ class ProjectWikiController extends Controller
      */
     public function update(UpdateProjectWikiRequest $request, Project $project, ProjectWiki $wiki): JsonResponse
     {
+        $this->authorize('view', $project);
+
         // Ensure wiki belongs to the project
         if ($wiki->project_id !== $project->id) {
             return ApiResponse::notFound('Wiki not found');
@@ -504,6 +512,8 @@ class ProjectWikiController extends Controller
      */
     public function destroy(Project $project, ProjectWiki $wiki): JsonResponse
     {
+        $this->authorize('view', $project);
+
         // Ensure wiki belongs to the project
         if ($wiki->project_id !== $project->id) {
             return ApiResponse::notFound('Wiki not found');

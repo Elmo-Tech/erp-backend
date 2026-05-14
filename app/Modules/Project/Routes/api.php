@@ -24,6 +24,12 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         Route::get('projects', [ProjectController::class, 'index'])
             ->name('projects.index');
 
+        Route::get('projects/tasks/my-active', [ProjectTaskController::class, 'myActive'])
+            ->name('projects.tasks.my-active');
+
+        Route::get('projects/time-entries/active', [ProjectTimeEntryController::class, 'active'])
+            ->name('projects.time-entries.active');
+
         Route::get('projects/{project}', [ProjectController::class, 'show'])
             ->name('projects.show');
 
@@ -179,12 +185,12 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     });
 
     // ── Tasks (write) ─────────────────────────────────────────────────────────
-    Route::middleware('permission:create_tasks|manage_tasks')->group(function () {
+    Route::middleware('permission:create_tasks|manage_tasks|manage_all_projects')->group(function () {
         Route::post('projects/{project}/tasks', [ProjectTaskController::class, 'store'])
             ->name('projects.tasks.store');
     });
 
-    Route::middleware('permission:edit_tasks|manage_tasks|work_on_tasks')->group(function () {
+    Route::middleware('permission:edit_tasks|manage_tasks|work_on_tasks|manage_all_projects')->group(function () {
         Route::put('projects/{project}/tasks/{task}', [ProjectTaskController::class, 'update'])
             ->name('projects.tasks.update');
 
@@ -192,32 +198,42 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
             ->name('projects.tasks.patch');
     });
 
-    Route::middleware('permission:delete_tasks|manage_tasks')->group(function () {
+    Route::middleware('permission:delete_tasks|manage_tasks|manage_all_projects')->group(function () {
         Route::delete('projects/{project}/tasks/{task}', [ProjectTaskController::class, 'destroy'])
             ->name('projects.tasks.destroy');
     });
 
-    Route::middleware('permission:edit_tasks|manage_tasks')->group(function () {
+    Route::middleware('permission:edit_tasks|manage_tasks|manage_all_projects')->group(function () {
         Route::post('projects/{project}/tasks/{task}/complete', [ProjectTaskController::class, 'complete'])
             ->name('projects.tasks.complete');
     });
 
     // ── Task Deliverables ─────────────────────────────────────────────────────
-    Route::middleware('permission:edit_tasks|manage_tasks')->group(function () {
+    Route::middleware('permission:edit_tasks|manage_tasks|manage_deliverables|delete_project_task_deliverables|manage_all_projects')->group(function () {
         Route::post(
             'projects/{project}/tasks/{task}/deliverables',
             [ProjectTaskDeliverableController::class, 'store']
         )->name('projects.tasks.deliverables.store');
     });
 
-    Route::middleware('permission:work_on_tasks|manage_tasks')->group(function () {
+    Route::middleware('permission:work_on_tasks|edit_tasks|manage_tasks|manage_all_projects')->group(function () {
         Route::patch(
             'projects/{project}/tasks/{task}/deliverables/{deliverable}/toggle',
             [ProjectTaskDeliverableController::class, 'toggle']
         )->name('projects.tasks.deliverables.toggle');
     });
 
-    Route::middleware('permission:manage_tasks')->group(function () {
+    Route::middleware('permission:edit_tasks|manage_tasks|manage_deliverables|manage_all_projects')->group(function () {
+        Route::put(
+            'projects/{project}/tasks/{task}/deliverables/{deliverable}',
+            [ProjectTaskDeliverableController::class, 'update']
+        )->name('projects.tasks.deliverables.update');
+
+        Route::patch(
+            'projects/{project}/tasks/{task}/deliverables/{deliverable}',
+            [ProjectTaskDeliverableController::class, 'update']
+        )->name('projects.tasks.deliverables.patch');
+
         Route::delete(
             'projects/{project}/tasks/{task}/deliverables/{deliverable}',
             [ProjectTaskDeliverableController::class, 'destroy']
@@ -237,7 +253,17 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         )->name('projects.tasks.time-entries.store');
     });
 
-    Route::middleware('permission:manage_time_entries|edit_time_entries')->group(function () {
+    Route::middleware('permission:log_time|edit_tasks|manage_tasks|manage_time_entries|delete_time_entries|manage_all_projects')->group(function () {
+        Route::put(
+            'projects/{project}/tasks/{task}/time-entries/{entry}',
+            [ProjectTimeEntryController::class, 'update']
+        )->name('projects.tasks.time-entries.update');
+
+        Route::patch(
+            'projects/{project}/tasks/{task}/time-entries/{entry}',
+            [ProjectTimeEntryController::class, 'update']
+        )->name('projects.tasks.time-entries.patch');
+
         Route::delete(
             'projects/{project}/tasks/{task}/time-entries/{entry}',
             [ProjectTimeEntryController::class, 'destroy']

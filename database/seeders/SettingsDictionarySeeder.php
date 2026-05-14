@@ -17,7 +17,6 @@ class SettingsDictionarySeeder extends Seeder
         'lead_sources' => ['Website', 'Referral', 'LinkedIn', 'Trade Show'],
         'lead_interests' => ['Web Development', 'Mobile App', 'Branding', 'Support Retainer'],
         'meeting_types' => ['Discovery Call', 'Technical Review', 'Proposal Review', 'Kickoff'],
-        'meeting_statuses' => ['Scheduled', 'Completed', 'Cancelled', 'No Show'],
         'proposal_statuses' => ['Draft', 'Sent', 'Approved', 'Rejected'],
         'quotation_types' => ['Fixed Price', 'Time and Materials', 'Retainer', 'Milestone Based'],
         'rejection_reasons' => ['Budget Mismatch', 'Timeline Conflict', 'Missing Requirements', 'Chose Competitor'],
@@ -52,6 +51,13 @@ class SettingsDictionarySeeder extends Seeder
             ['Saudi Riyal',    'SAR'],
             ['UAE Dirham',     'AED'],
             ['British Pound',  'GBP'],
+        ],
+        'meeting_statuses' => [
+            ['Scheduled',   'scheduled'],
+            ['In Progress', 'in_progress'],
+            ['Completed',   'completed'],
+            ['Cancelled',   'cancelled'],
+            ['No Show',     'no_show'],
         ],
     ];
 

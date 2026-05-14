@@ -30,14 +30,44 @@ class ProjectTaskController extends Controller
 
     /**
      * GET /projects/{project}/tasks
-     * Returns root-level tasks (no parent). Subtasks are nested under each task.
+     * Returns all tasks (flat structure - subtasks removed).
      * Pass ?milestone_id=X to filter by milestone, or ?backlog=1 for backlog tasks.
+     *
+     * SECURITY: Scoped by project membership.
+     *   - manage_all_projects → sees all tasks.
+     *   - manager/tech_lead   → sees all tasks in their project.
+     *   - developer/qa/designer → sees ONLY tasks assigned to them.
      */
     public function index(Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+        $this->authorize('viewAny', [ProjectTask::class, $project]);
+
+        $user = request()->user();
+
         $query = $project->executionTasks()
-            ->root()
-            ->with(['assignee', 'deliverables', 'subtasks.assignee', 'milestone', 'timeEntries']);
+            ->with(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
+            // REMOVED: subtasks.assignee - subtasks are no longer supported
+
+        // ── ABAC: Task isolation ──────────────────────────────────────────────
+        // Global admins and project managers see all tasks.
+        // Developers, QA, and designers only see tasks assigned to them.
+        if (! $user->can('manage_all_projects') && ! $user->can('manage_tasks')) {
+            $member      = $project->members()->where('user_id', $user->id)->first();
+            $projectRole = $member?->role instanceof \App\Enums\ProjectRole
+                ? $member->role->value
+                : (string) ($member?->role ?? '');
+
+            $isManagerLevel = in_array($projectRole, [
+                \App\Enums\ProjectRole::MANAGER->value,
+                \App\Enums\ProjectRole::TECH_LEAD->value,
+            ], true);
+
+            if (! $isManagerLevel) {
+                // Worker-level: only see own assigned tasks
+                $query->where('assignee_id', $user->id);
+            }
+        }
 
         if (request()->filled('milestoneId')) {
             $query->where('milestone_id', request()->integer('milestoneId'));
@@ -56,15 +86,40 @@ class ProjectTaskController extends Controller
     }
 
     /**
+     * GET /projects/tasks/my-active
+     * Returns non-completed execution tasks assigned to the authenticated user
+     * across all projects.
+     */
+    public function myActive(): JsonResponse
+    {
+        $tasks = ProjectTask::query()
+            ->with(['assignee', 'deliverables', 'milestone', 'timeEntries.user', 'project'])
+            ->where('assignee_id', request()->user()->id)
+            ->where('status', '!=', ExecutionTaskStatus::DONE->value)
+            ->orderByRaw('due_date IS NULL, due_date ASC')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return ApiResponse::success(
+            ['tasks' => ProjectTaskResource::collection($tasks)],
+            'My active tasks retrieved successfully'
+        );
+    }
+
+    /**
      * POST /projects/{project}/tasks
+     *
+     * SECURITY: Only project managers/tech leads or global admins may create tasks.
      */
     public function store(StoreProjectTaskRequest $request, Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+        $this->authorize('create', [ProjectTask::class, $project]);
         $data = $request->validated();
 
         $task = $project->executionTasks()->create([
             'milestone_id'    => $data['milestoneId'] ?? null,
-            'parent_id'       => $data['parentId'] ?? null,
+            // REMOVED: parent_id - subtasks are no longer supported
             'title'           => $data['title'],
             'description'     => $data['description'] ?? null,
             'status'          => $data['status'] ?? 'to_do',
@@ -74,7 +129,6 @@ class ProjectTaskController extends Controller
         ]);
 
         // Record activity for task creation
-        $taskType = isset($data['parentId']) ? 'Subtask' : 'Task';
         $assigneeName = isset($data['assigneeId']) ? User::find($data['assigneeId'])?->name ?? "User #{$data['assigneeId']}" : 'Unassigned';
 
         $this->historyAction->recordChange(
@@ -82,10 +136,10 @@ class ProjectTaskController extends Controller
             'task_created',
             '',
             $task->title,
-            "{$taskType} created and assigned to {$assigneeName}"
+            "Task created and assigned to {$assigneeName}"
         );
 
-        $task->load(['assignee', 'deliverables', 'milestone']);
+        $task->load(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
 
         return ApiResponse::success(
             new ProjectTaskResource($task),
@@ -99,9 +153,12 @@ class ProjectTaskController extends Controller
      */
     public function show(Project $project, ProjectTask $task): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertBelongsToProject($task, $project);
+        $this->authorize('view', $task);
 
-        $task->load(['assignee', 'deliverables', 'subtasks.assignee', 'timeEntries.user', 'milestone', 'parent']);
+        $task->load(['assignee', 'deliverables', 'timeEntries.user', 'milestone']);
+        // REMOVED: subtasks.assignee, parent - subtasks are no longer supported
 
         return ApiResponse::success(
             new ProjectTaskResource($task),
@@ -112,40 +169,54 @@ class ProjectTaskController extends Controller
     /**
      * PATCH /projects/{project}/tasks/{task}
      *
-     * SECURITY: When a status transition is requested, enforce role-based
-     * workflow rules:
-     *   - developer  → may only set in_progress or in_review
-     *   - qa         → may set in_progress (reject), qa, or done
-     *   - manager / tech_lead / admin → unrestricted
+     * SECURITY: Policy enforces that only the assignee (work_on_tasks) or a
+     * project manager/tech_lead (edit_tasks) or global admin may update a task.
+     *
+     * CRITICAL WORKFLOW ENFORCEMENT:
+     *   - ONLY users with manage_deliverables, manage_all_projects, OR project manager role
+     *     can mark a task as "done" (completed).
+     *   - Regular assignees CANNOT directly set status to "done". Their ceiling is "in_review".
+     *   - If an assignee tries to set status to "done", return 403 with clear message.
      */
     public function update(UpdateProjectTaskRequest $request, Project $project, ProjectTask $task): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertBelongsToProject($task, $project);
+        $this->authorize('update', $task);
 
         $data = $request->validated();
 
-        // ── PBAC: Status transition guard ────────────────────────────────────
-        // manage_all_projects → unrestricted status transitions.
-        // Otherwise, enforce project-membership-role workflow rules:
-        //   developer  → may only set in_progress or in_review
-        //   qa         → may set in_progress (reject), qa, or done
-        //   manager / tech_lead / unmapped → unrestricted
-        if (isset($data['status'])) {
+        // ── CRITICAL: "COMPLETED" STATUS GUARD ────────────────────────────────
+        // If the user is trying to set status to "done", verify they have the authority.
+        // ONLY these users can mark tasks as completed:
+        //   1. manage_all_projects (global admin bypass)
+        //   2. manage_deliverables (deliverable managers)
+        //   3. manage_tasks (task managers)
+        //   4. Project manager or tech_lead role
+        //
+        // Regular assignees (developers, QA without special permissions) CANNOT
+        // mark tasks as "done". They must use "in_review" instead.
+        if (isset($data['status']) && $data['status'] === ExecutionTaskStatus::DONE->value) {
             $user = $request->user();
 
-            if (! $user->can('manage_all_projects')) {
+            // Global bypass permissions
+            if ($user->can('manage_all_projects') || $user->can('manage_deliverables') || $user->can('manage_tasks')) {
+                // Allowed — proceed
+            } else {
+                // Check if user is project manager or tech_lead
                 $member = $project->members()->where('user_id', $user->id)->first();
-                $projectRole = $member?->role;
+                $projectRole = $member?->role instanceof ProjectRole
+                    ? $member->role->value
+                    : (string) ($member?->role ?? '');
 
-                $allowedByRole = match ($projectRole) {
-                    ProjectRole::DEVELOPER->value => ['in_progress', 'in_review'],
-                    ProjectRole::QA->value => ['in_progress', 'qa', 'done'],
-                    default => null, // manager, tech_lead → unrestricted
-                };
+                $isManagerLevel = in_array($projectRole, [
+                    ProjectRole::MANAGER->value,
+                    ProjectRole::TECH_LEAD->value,
+                ], true);
 
-                if ($allowedByRole !== null && ! in_array($data['status'], $allowedByRole, true)) {
+                if (! $isManagerLevel) {
                     return ApiResponse::error(
-                        "Your project role ({$projectRole}) does not permit setting status to '{$data['status']}'.",
+                        'You cannot mark tasks as completed directly. Please use "In Review" status instead.',
                         403
                     );
                 }
@@ -157,7 +228,7 @@ class ProjectTaskController extends Controller
 
         $task->update(array_filter([
             'milestone_id'    => array_key_exists('milestoneId', $data) ? $data['milestoneId'] : $task->milestone_id,
-            'parent_id'       => array_key_exists('parentId', $data) ? $data['parentId'] : $task->parent_id,
+            // REMOVED: parent_id - subtasks are no longer supported
             'title'           => $data['title'] ?? null,
             'description'     => array_key_exists('description', $data) ? $data['description'] : $task->description,
             'status'          => $data['status'] ?? null,
@@ -214,7 +285,7 @@ class ProjectTaskController extends Controller
             );
         }
 
-        $task->load(['assignee', 'deliverables', 'milestone']);
+        $task->load(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
 
         return ApiResponse::success(
             new ProjectTaskResource($task),
@@ -224,12 +295,13 @@ class ProjectTaskController extends Controller
 
     /**
      * DELETE /projects/{project}/tasks/{task}
+     *
+     * SECURITY: Only project managers/tech leads or global admins may delete tasks.
      */
     public function destroy(Project $project, ProjectTask $task): JsonResponse
     {
-        abort_if(! request()->user()?->can('delete_tasks'), 403, 'Unauthorized');
-
         $this->assertBelongsToProject($task, $project);
+        $this->authorize('delete', $task);
 
         $task->delete();
 
@@ -240,31 +312,15 @@ class ProjectTaskController extends Controller
      * POST /projects/{project}/tasks/{task}/complete
      * Marks the task as DONE after verifying all deliverables are checked off.
      *
-     * SECURITY: Developers are forbidden from calling this endpoint directly.
-     * Their workflow ceiling is `in_review`; only QA, managers, tech leads,
-     * and global admins may mark a task as done via this route.
+     * SECURITY: TaskPolicy::complete() enforces that developers cannot call this
+     * endpoint directly. Their workflow ceiling is `in_review`.
+     * Only QA, managers, tech leads, and global admins may mark a task as done.
      */
     public function complete(Project $project, ProjectTask $task): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertBelongsToProject($task, $project);
-
-        // ── PBAC: Completion guard ────────────────────────────────────────────
-        // manage_all_projects → may complete any task.
-        // Otherwise, project-membership-role rules apply:
-        //   developer → ceiling is in_review; they may never directly complete.
-        $user = request()->user();
-
-        if (! $user->can('manage_all_projects')) {
-            $member = $project->members()->where('user_id', $user->id)->first();
-            $projectRole = $member?->role;
-
-            if ($projectRole === ProjectRole::DEVELOPER->value) {
-                return ApiResponse::error(
-                    'Developers cannot mark tasks as done. Submit for review instead.',
-                    403
-                );
-            }
-        }
+        $this->authorize('complete', $task);
 
         try {
             $task = $this->completeTask->execute($task);
@@ -275,7 +331,7 @@ class ProjectTaskController extends Controller
             );
         }
 
-        $task->load(['assignee', 'deliverables', 'milestone']);
+        $task->load(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
 
         return ApiResponse::success(
             new ProjectTaskResource($task),

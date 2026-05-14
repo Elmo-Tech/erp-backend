@@ -3,6 +3,7 @@
 namespace App\Modules\Finance\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreFinanceInvoiceRequest extends FormRequest
 {
@@ -15,7 +16,11 @@ class StoreFinanceInvoiceRequest extends FormRequest
     {
         return [
             'clientId'       => ['required', 'integer', 'exists:clients,id'],
-            'projectId'      => ['nullable', 'integer', 'exists:projects,id'],
+            'projectId'      => [
+                'nullable',
+                'integer',
+                Rule::exists('projects', 'id')->where(fn ($query) => $query->where('client_id', $this->input('clientId'))),
+            ],
             'issueDate'      => ['required', 'date'],
             'dueDate'        => ['required', 'date', 'after_or_equal:issueDate'],
             'taxRate'        => ['sometimes', 'numeric', 'min:0', 'max:100'],

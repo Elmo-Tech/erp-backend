@@ -2,7 +2,10 @@
 
 namespace App\Modules\Finance\Models;
 
+use App\Modules\Client\Models\Client;
+use App\Modules\Project\Models\Project;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Subscription extends Model
@@ -12,6 +15,8 @@ class Subscription extends Model
     protected $table = 'subscriptions';
 
     protected $fillable = [
+        'client_id',
+        'project_id',
         'name',
         'provider',
         'billing_cycle',
@@ -25,9 +30,23 @@ class Subscription extends Model
     protected function casts(): array
     {
         return [
-            'cost'              => 'decimal:2',
+            'cost' => 'decimal:2',
             'next_billing_date' => 'date',
         ];
+    }
+
+    // -------------------------------------------------------------------------
+    // Relationships
+    // -------------------------------------------------------------------------
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
     }
 
     // -------------------------------------------------------------------------

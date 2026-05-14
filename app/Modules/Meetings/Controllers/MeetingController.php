@@ -16,6 +16,8 @@ use App\Modules\Meetings\Requests\UpdateMeetingRequest;
 use App\Modules\Meetings\Resources\MeetingCollection;
 use App\Modules\Meetings\Resources\MeetingResource;
 use App\Modules\Meetings\Services\MeetingService;
+use App\Modules\Notification\Notifications\MeetingScheduledNotification;
+use App\Modules\Settings\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -35,6 +37,7 @@ class MeetingController extends Controller
                 (int) $request->get('perPage', 15),
                 $request->get('model_type'),
                 $request->get('model_id') ? (int) $request->get('model_id') : null,
+                $request->user(),
             )),
             __('messages.meetings_retrieved')
         );
@@ -43,6 +46,7 @@ class MeetingController extends Controller
     public function store(CreateMeetingRequest $request, ScheduleMeetingAction $action): JsonResponse
     {
         $meeting = $action->execute($request->validated(), $request->user());
+        $this->notifyInternalAttendees($meeting);
 
         return ApiResponse::success(
             new MeetingResource($meeting->load(['model', 'assignedTo'])),
@@ -126,5 +130,23 @@ class MeetingController extends Controller
             null,
             __('messages.meeting_deleted')
         );
+    }
+
+    private function notifyInternalAttendees(Meeting $meeting): void
+    {
+        $attendeeIds = collect($meeting->internal_attendees ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($attendeeIds->isEmpty()) {
+            return;
+        }
+
+        User::query()
+            ->whereIn('id', $attendeeIds)
+            ->get()
+            ->each(fn (User $user) => $user->notify(new MeetingScheduledNotification($meeting)));
     }
 }

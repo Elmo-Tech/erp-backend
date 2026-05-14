@@ -20,7 +20,7 @@ class UpdateProjectTaskRequest extends FormRequest
     {
         return [
             'milestoneId'    => ['nullable', 'integer', 'exists:milestones,id'],
-            'parentId'       => ['nullable', 'integer', 'exists:project_tasks,id'],
+            // REMOVED: parentId validation - subtasks are no longer supported
             'title'          => ['sometimes', 'string', 'max:255'],
             'description'    => ['nullable', 'string'],
             'status'         => ['sometimes', new Enum(ExecutionTaskStatus::class)],

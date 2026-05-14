@@ -14,14 +14,16 @@ class UpdateSubscriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'            => ['sometimes', 'string', 'max:255'],
-            'provider'        => ['sometimes', 'nullable', 'string', 'max:255'],
-            'billingCycle'    => ['sometimes', 'string', 'in:monthly,yearly'],
-            'cost'            => ['sometimes', 'numeric', 'min:0'],
-            'currency'        => ['sometimes', 'string', 'size:3'],
+            'clientId' => ['sometimes', 'nullable', 'integer', 'exists:clients,id'],
+            'projectId' => ['sometimes', 'nullable', 'integer', 'exists:projects,id'],
+            'name' => ['sometimes', 'string', 'max:255'],
+            'provider' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'billingCycle' => ['sometimes', 'string', 'in:monthly,quarterly,semi_annual,annual,yearly'],
+            'cost' => ['sometimes', 'numeric', 'min:0'],
+            'currency' => ['sometimes', 'string', 'size:3'],
             'nextBillingDate' => ['sometimes', 'date'],
-            'status'          => ['sometimes', 'string', 'in:active,cancelled'],
-            'notes'           => ['sometimes', 'nullable', 'string'],
+            'status' => ['sometimes', 'string', 'in:active,cancelled'],
+            'notes' => ['sometimes', 'nullable', 'string'],
         ];
     }
 }

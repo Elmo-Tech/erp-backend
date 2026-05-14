@@ -39,9 +39,12 @@ class MilestoneController extends Controller
 
     /**
      * POST /projects/{project}/milestones
+     *
+     * SECURITY: Only project managers/tech leads or global admins may create milestones.
      */
     public function store(StoreMilestoneRequest $request, Project $project): JsonResponse
     {
+        $this->authorize('create', [\App\Modules\Project\Models\ProjectTask::class, $project]);
         $data = $request->validated();
 
         $milestone = $project->milestones()->create([
@@ -74,10 +77,13 @@ class MilestoneController extends Controller
 
     /**
      * PATCH /projects/{project}/milestones/{milestone}
+     *
+     * SECURITY: Only project managers/tech leads or global admins may update milestones.
      */
     public function update(UpdateMilestoneRequest $request, Project $project, Milestone $milestone): JsonResponse
     {
         $this->assertBelongsToProject($milestone, $project);
+        $this->authorize('create', [\App\Modules\Project\Models\ProjectTask::class, $project]);
 
         $data = $request->validated();
 
@@ -96,12 +102,13 @@ class MilestoneController extends Controller
 
     /**
      * DELETE /projects/{project}/milestones/{milestone}
+     *
+     * SECURITY: Only project managers/tech leads or global admins may delete milestones.
      */
     public function destroy(Project $project, Milestone $milestone): JsonResponse
     {
-        abort_if(! request()->user()?->can('delete_milestones'), 403, 'Unauthorized');
-
         $this->assertBelongsToProject($milestone, $project);
+        $this->authorize('delete', [\App\Modules\Project\Models\ProjectTask::class, $milestone->project]);
 
         $milestone->delete();
 

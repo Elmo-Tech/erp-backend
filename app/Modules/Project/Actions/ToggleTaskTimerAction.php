@@ -2,7 +2,7 @@
 
 namespace App\Modules\Project\Actions;
 
-use App\Modules\HR\Actions\RecordAutoAttendanceAction;
+use App\Modules\HR\Services\AttendanceService;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
 class ToggleTaskTimerAction
 {
     public function __construct(
-        private readonly RecordAutoAttendanceAction $recordAttendance,
+        private readonly AttendanceService $attendanceService,
     ) {}
 
     /**
@@ -66,10 +66,9 @@ class ToggleTaskTimerAction
             }
 
             // ── START ─────────────────────────────────────────────────────────
-            // Fire auto check-in BEFORE creating the time entry.
-            // RecordAutoAttendanceAction is idempotent — safe to call on every
-            // timer start; it only creates a record if none exists for today.
-            $this->recordAttendance->execute($user);
+            // Fire auto check-in BEFORE creating the time entry. The service is
+            // idempotent, so existing attendance never blocks timer starts.
+            $this->attendanceService->checkInForToday($user);
 
             return ProjectTimeEntry::create([
                 'task_id'    => $task->id,

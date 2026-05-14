@@ -20,7 +20,7 @@ class StoreProjectTaskRequest extends FormRequest
     {
         return [
             'milestoneId'      => ['nullable', 'integer', 'exists:milestones,id'],
-            'parentId'         => ['nullable', 'integer', 'exists:project_tasks,id'],
+            // REMOVED: parentId validation - subtasks are no longer supported
             'title'            => ['required', 'string', 'max:255'],
             'description'      => ['nullable', 'string'],
             'status'           => ['nullable', new Enum(ExecutionTaskStatus::class)],
@@ -35,7 +35,7 @@ class StoreProjectTaskRequest extends FormRequest
         return [
             'title.required'        => 'The task title is required.',
             'milestoneId.exists'    => 'The selected milestone does not exist.',
-            'parentId.exists'       => 'The selected parent task does not exist.',
+            // REMOVED: parentId validation message - subtasks are no longer supported
             'assigneeId.exists'     => 'The selected assignee does not exist.',
             'estimatedHours.numeric' => 'Estimated hours must be a number.',
         ];

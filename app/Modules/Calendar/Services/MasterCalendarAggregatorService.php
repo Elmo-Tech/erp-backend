@@ -4,6 +4,8 @@ namespace App\Modules\Calendar\Services;
 
 use App\Modules\Calendar\Models\CalendarEvent;
 use App\Modules\Finance\Models\FinanceInvoice;
+use App\Modules\Meetings\Models\Meeting;
+use App\Modules\Project\Models\Milestone;
 use App\Modules\Project\Models\ProjectTask;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -15,7 +17,7 @@ use Illuminate\Support\Collection;
  *
  *   [
  *     'id'         => string  — prefixed unique ID, e.g. "event-12", "task-7", "invoice-3"
- *     'type'       => string  — "event" | "task" | "invoice"
+ *     'type'       => string  — "event" | "task" | "invoice" | "milestone"
  *     'title'      => string
  *     'date'       => string  — ISO-8601 date (YYYY-MM-DD) used for calendar placement
  *     'startTime'  => string|null  — ISO-8601 datetime (events only)
@@ -37,10 +39,43 @@ class MasterCalendarAggregatorService
     {
         return collect()
             ->merge($this->fetchEvents($startDate, $endDate))
+            ->merge($this->fetchMeetings($startDate, $endDate))
             ->merge($this->fetchProjectTasks($startDate, $endDate))
             ->merge($this->fetchInvoices($startDate, $endDate))
+            ->merge($this->fetchMilestones($startDate, $endDate))
             ->sortBy('date')
             ->values();
+    }
+
+    /**
+     * Fetch polymorphic Meeting records whose scheduled_at falls within the range.
+     */
+    private function fetchMeetings(Carbon $startDate, Carbon $endDate): Collection
+    {
+        return Meeting::with(['assignedTo:id,name', 'createdBy:id,name', 'model'])
+            ->whereBetween('scheduled_at', [
+                $startDate->copy()->startOfDay(),
+                $endDate->copy()->endOfDay(),
+            ])
+            ->get()
+            ->map(fn (Meeting $meeting) => [
+                'id'        => 'meeting-'.$meeting->id,
+                'type'      => 'meeting',
+                'title'     => $meeting->title,
+                'date'      => $meeting->scheduled_at->toDateString(),
+                'startTime' => $meeting->scheduled_at->toIso8601String(),
+                'endTime'   => $meeting->scheduled_at->copy()->addHour()->toIso8601String(),
+                'status'    => $meeting->status->value,
+                'meta'      => [
+                    'description' => $meeting->description,
+                    'eventType'   => 'meeting',
+                    'creatorId'   => $meeting->created_by,
+                    'creatorName' => $meeting->createdBy?->name,
+                    'meetingType' => $meeting->meeting_type,
+                    'internalAttendees' => $meeting->internal_attendees ?? [],
+                    'externalAttendees' => $meeting->external_attendees ?? [],
+                ],
+            ]);
     }
 
     // -------------------------------------------------------------------------
@@ -110,7 +145,7 @@ class MasterCalendarAggregatorService
      */
     private function fetchInvoices(Carbon $startDate, Carbon $endDate): Collection
     {
-        return FinanceInvoice::with('client:id,name')
+        return FinanceInvoice::with(['client:id,display_name,company_name', 'project:id,title'])
             ->whereNotNull('due_date')
             ->whereBetween('due_date', [
                 $startDate->toDateString(),
@@ -128,9 +163,42 @@ class MasterCalendarAggregatorService
                 'meta'      => [
                     'invoiceNumber' => $invoice->invoice_number,
                     'clientId'      => $invoice->client_id,
-                    'clientName'    => $invoice->client?->name,
+                    'clientName'    => $invoice->client?->display_name ?? $invoice->client?->company_name,
+                    'projectId'     => $invoice->project_id,
+                    'projectTitle'  => $invoice->project?->title,
                     'totalAmount'   => (float) $invoice->total_amount,
                     'currency'      => 'USD',
+                ],
+            ]);
+    }
+
+    /**
+     * Fetch Milestone records whose due_date falls within the range.
+     */
+    private function fetchMilestones(Carbon $startDate, Carbon $endDate): Collection
+    {
+        return Milestone::with('project:id,title')
+            ->whereNotNull('due_date')
+            ->whereBetween('due_date', [
+                $startDate->toDateString(),
+                $endDate->toDateString(),
+            ])
+            ->get()
+            ->map(fn (Milestone $milestone) => [
+                'id'        => 'milestone-'.$milestone->id,
+                'type'      => 'milestone',
+                'title'     => $milestone->title,
+                'date'      => $milestone->due_date->toDateString(),
+                'startTime' => null,
+                'endTime'   => null,
+                'status'    => $milestone->status?->value,
+                'meta'      => [
+                    'milestoneId'        => $milestone->id,
+                    'projectId'          => $milestone->project_id,
+                    'projectTitle'       => $milestone->project?->title,
+                    'progressPercentage' => $milestone->progress_percentage,
+                    'invoiceId'          => $milestone->invoice_id,
+                    'paymentStageId'     => $milestone->payment_stage_id,
                 ],
             ]);
     }

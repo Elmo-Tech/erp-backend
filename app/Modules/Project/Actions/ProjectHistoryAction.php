@@ -4,8 +4,10 @@ namespace App\Modules\Project\Actions;
 
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectHistory;
+use BackedEnum;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use UnitEnum;
 
 class ProjectHistoryAction
 {
@@ -35,11 +37,28 @@ class ProjectHistoryAction
         return ProjectHistory::create([
             'project_id' => $project->id,
             'field_name' => $fieldName,
-            'old_value' => is_null($oldValue) ? null : (string) $oldValue,
-            'new_value' => is_null($newValue) ? null : (string) $newValue,
+            'old_value' => $this->historyValue($oldValue),
+            'new_value' => $this->historyValue($newValue),
             'reason' => $reason,
             'changed_by' => Auth::id(),
         ]);
+    }
+
+    private function historyValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value instanceof BackedEnum) {
+            return (string) $value->value;
+        }
+
+        if ($value instanceof UnitEnum) {
+            return $value->name;
+        }
+
+        return (string) $value;
     }
 
     /**

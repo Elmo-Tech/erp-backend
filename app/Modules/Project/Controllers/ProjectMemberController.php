@@ -27,6 +27,8 @@ class ProjectMemberController extends Controller
 
     public function index(Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $members = $project->members()
             ->with('user:id,name,email,avatar')
             ->get();
@@ -38,6 +40,8 @@ class ProjectMemberController extends Controller
 
     public function store(Request $request, Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $request->validate([
             'userId' => 'required|exists:users,id',
             'role'   => ['nullable', new \Illuminate\Validation\Rules\Enum(ProjectRole::class)],
@@ -64,6 +68,8 @@ class ProjectMemberController extends Controller
 
     public function update(Request $request, Project $project, ProjectMember $member): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $request->validate([
             'role' => ['required', new \Illuminate\Validation\Rules\Enum(ProjectRole::class)],
         ]);
@@ -84,6 +90,8 @@ class ProjectMemberController extends Controller
 
     public function destroy(Project $project, ProjectMember $member): JsonResponse
     {
+        $this->authorize('view', $project);
+
         try {
             $this->removeProjectMemberAction->execute($project, $member);
         } catch (RuntimeException $exception) {

@@ -10,6 +10,8 @@ use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Models\Quotation;
 use App\Modules\Lead\Requests\StoreLeadQuotationRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Manages quotations attached directly to a lead from the Details Page.
@@ -71,6 +73,28 @@ class LeadQuotationController extends Controller
         );
     }
 
+    /**
+     * Update editable quotation fields from the lead details table.
+     */
+    public function update(Request $request, Lead $lead, Quotation $quotation): JsonResponse
+    {
+        $this->assertBelongsToLead($quotation, $lead);
+
+        $data = $request->validate([
+            'status' => ['sometimes', 'string', Rule::in(QuotationStatus::values())],
+            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'file_path' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $quotation->update($data);
+        $quotation->load('assignee:id,name,email,avatar');
+
+        return ApiResponse::success(
+            $this->formatQuotation($quotation),
+            'Quotation updated successfully.'
+        );
+    }
+
     // ─── Private ─────────────────────────────────────────────────────────────
 
     private function formatQuotation(Quotation $q): array
@@ -96,5 +120,12 @@ class LeadQuotationController extends Controller
             'created_at'      => $q->created_at?->toISOString(),
             'updated_at'      => $q->updated_at?->toISOString(),
         ];
+    }
+
+    private function assertBelongsToLead(Quotation $quotation, Lead $lead): void
+    {
+        if ((int) $quotation->lead_id !== (int) $lead->id) {
+            abort(404, 'Quotation not found for this lead.');
+        }
     }
 }

@@ -121,19 +121,9 @@ class UpdateRoleRequest extends FormRequest
         $validator->after(function ($validator) {
             $roleId = $this->route('role'); // Changed from 'id' to 'role'
 
-            // Check if the role exists and if it's protected
+            // Validate that the role exists
             try {
                 $role = Role::findOrFail($roleId);
-
-                // Prevent updating protected roles
-                if (in_array($role->name, ['founder', 'pmo', 'techdev', 'dev', 'client'])) {
-                    $validator->errors()->add(
-                        'role',
-                        'This role is protected and cannot be modified.'
-                    );
-
-                    return; // Exit early if role is protected
-                }
 
                 // Additional validation: Check if all provided permissions exist
                 if ($this->has('permissions') && is_array($this->permissions)) {
@@ -144,18 +134,6 @@ class UpdateRoleRequest extends FormRequest
                         $validator->errors()->add(
                             'permissions',
                             'The following permissions do not exist: '.implode(', ', $invalidPermissions)
-                        );
-                    }
-                }
-
-                // Prevent renaming to protected role names (unless it's already that name)
-                // Only check if name is provided
-                if ($this->has('name') && $this->name) {
-                    $protectedNames = ['founder', 'pmo', 'techdev', 'dev', 'client'];
-                    if (in_array($this->name, $protectedNames) && $role->name !== $this->name) {
-                        $validator->errors()->add(
-                            'name',
-                            'Cannot rename role to a protected name. Protected names: '.implode(', ', $protectedNames)
                         );
                     }
                 }

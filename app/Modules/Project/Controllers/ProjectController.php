@@ -307,6 +307,8 @@ class ProjectController extends Controller
      */
     public function show(Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         return ApiResponse::success(
             new ProjectResource($project->load(['client', 'members.user', 'files'])),
             'Project retrieved successfully'
@@ -403,6 +405,8 @@ class ProjectController extends Controller
      */
     public function update(UpdateProjectRequest $request, Project $project): JsonResponse
     {
+        $this->authorize('update', $project);
+
         $project = $this->updateProjectAction->execute($project, $request->validated());
 
         return ApiResponse::success(

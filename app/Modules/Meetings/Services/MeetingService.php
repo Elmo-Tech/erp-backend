@@ -6,6 +6,7 @@ use App\Enums\MeetingStatus;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class MeetingService
 {
@@ -16,11 +17,14 @@ class MeetingService
             'model_type' => get_class($subject),
             'status' => MeetingStatus::SCHEDULED,
             'title' => $data['title'],
+            'meeting_type' => $data['meetingType'] ?? null,
             'description' => $data['description'] ?? null,
             'location' => $data['location'] ?? null,
             'location_details' => $data['locationDetails'] ?? null,
             'is_completed' => false,
             'assigned_to' => $data['assignedTo'] ?? $user->id,
+            'internal_attendees' => $data['internalAttendees'] ?? [],
+            'external_attendees' => $data['externalAttendees'] ?? [],
             'scheduled_at' => $data['scheduledAt'] ?? null,
             'created_by' => $user->id,
             'updated_by' => $user->id,
@@ -53,7 +57,7 @@ class MeetingService
 
     public function getTodaySchedule(User $user)
     {
-        return Meeting::where('assigned_to', $user->id)
+        return $this->visibleToUserQuery($user)
             ->whereDate('scheduled_at', now()->toDateString())
             ->with(['model', 'assignedTo'])
             ->orderBy('scheduled_at')
@@ -62,7 +66,7 @@ class MeetingService
 
     public function getUpcomingMeetings(User $user, int $hours = 24)
     {
-        return Meeting::where('assigned_to', $user->id)
+        return $this->visibleToUserQuery($user)
             ->upcoming($hours)
             ->with(['model'])
             ->orderBy('scheduled_at')
@@ -81,5 +85,16 @@ class MeetingService
         }
 
         return $query->get();
+    }
+
+    public function visibleToUserQuery(User $user): Builder
+    {
+        return Meeting::query()
+            ->where(function (Builder $query) use ($user) {
+                $query->where('created_by', $user->id)
+                    ->orWhere('assigned_to', $user->id)
+                    ->orWhereJsonContains('internal_attendees', $user->id)
+                    ->orWhereJsonContains('internal_attendees', (string) $user->id);
+            });
     }
 }

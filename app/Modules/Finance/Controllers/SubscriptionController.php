@@ -38,14 +38,16 @@ class SubscriptionController extends Controller
         $data = $request->validated();
 
         $subscription = Subscription::create([
-            'name'              => $data['name'],
-            'provider'          => $data['provider'] ?? null,
-            'billing_cycle'     => $data['billingCycle'],
-            'cost'              => $data['cost'],
-            'currency'          => $data['currency'] ?? 'USD',
+            'client_id' => $data['clientId'] ?? null,
+            'project_id' => $data['projectId'] ?? null,
+            'name' => $data['name'],
+            'provider' => $data['provider'] ?? null,
+            'billing_cycle' => $data['billingCycle'],
+            'cost' => $data['cost'],
+            'currency' => $data['currency'] ?? 'USD',
             'next_billing_date' => $data['nextBillingDate'],
-            'status'            => $data['status'] ?? 'active',
-            'notes'             => $data['notes'] ?? null,
+            'status' => $data['status'] ?? 'active',
+            'notes' => $data['notes'] ?? null,
         ]);
 
         return ApiResponse::success(
@@ -78,14 +80,16 @@ class SubscriptionController extends Controller
         $data = $request->validated();
 
         $subscription->update(array_filter([
-            'name'              => $data['name'] ?? null,
-            'provider'          => array_key_exists('provider', $data) ? $data['provider'] : $subscription->provider,
-            'billing_cycle'     => $data['billingCycle'] ?? null,
-            'cost'              => $data['cost'] ?? null,
-            'currency'          => $data['currency'] ?? null,
+            'client_id' => $data['clientId'] ?? null,
+            'project_id' => $data['projectId'] ?? null,
+            'name' => $data['name'] ?? null,
+            'provider' => array_key_exists('provider', $data) ? $data['provider'] : $subscription->provider,
+            'billing_cycle' => $data['billingCycle'] ?? null,
+            'cost' => $data['cost'] ?? null,
+            'currency' => $data['currency'] ?? null,
             'next_billing_date' => $data['nextBillingDate'] ?? null,
-            'status'            => $data['status'] ?? null,
-            'notes'             => array_key_exists('notes', $data) ? $data['notes'] : $subscription->notes,
+            'status' => $data['status'] ?? null,
+            'notes' => array_key_exists('notes', $data) ? $data['notes'] : $subscription->notes,
         ], fn ($v) => $v !== null));
 
         return ApiResponse::success(

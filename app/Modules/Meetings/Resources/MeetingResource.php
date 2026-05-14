@@ -36,6 +36,7 @@ class MeetingResource extends JsonResource
             'status' => $meeting->status->value,
             'statusLabel' => $meeting->status->label(),
             'statusColor' => $meeting->status->color(),
+            'meetingType' => $meeting->meeting_type,
             'title' => $meeting->title ?? '',
             'description' => $meeting->description ?? '',
             'location' => $meeting->location?->value,
@@ -61,6 +62,8 @@ class MeetingResource extends JsonResource
                     'avatar' => $assignedTo->avatar ?? '',
                 ];
             }),
+            'internalAttendees' => $meeting->internal_attendees ?? [],
+            'externalAttendees' => $meeting->external_attendees ?? [],
             'scheduledAt' => $meeting->scheduled_at?->toISOString() ?? '',
             'completedAt' => $meeting->completed_at?->toISOString() ?? '',
             'createdAt' => $meeting->created_at?->toISOString() ?? '',

@@ -27,6 +27,7 @@ class ProjectTimeEntryController extends Controller
      */
     public function index(Project $project, ProjectTask $task): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertTaskBelongsToProject($task, $project);
 
         $entries = $task->timeEntries()
@@ -41,12 +42,33 @@ class ProjectTimeEntryController extends Controller
     }
 
     /**
+     * GET /projects/time-entries/active
+     * Return the authenticated user's currently running execution timer.
+     */
+    public function active(): JsonResponse
+    {
+        $entry = ProjectTimeEntry::query()
+            ->with(['user:id,name,avatar', 'task.project'])
+            ->where('user_id', request()->user()->id)
+            ->whereNull('end_time')
+            ->latest('start_time')
+            ->first();
+
+        return ApiResponse::success(
+            $entry ? new ProjectTimeEntryResource($entry) : null,
+            $entry ? 'Active time entry retrieved successfully' : 'No active time entry'
+        );
+    }
+
+    /**
      * POST /projects/{project}/tasks/{task}/time-entries/toggle
      * Start or stop the timer for the authenticated user on this task.
      */
     public function toggle(Project $project, ProjectTask $task): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertTaskBelongsToProject($task, $project);
+        $this->authorize('execute', $task);
 
         $entry = $this->toggleTimer->execute($task, request()->user());
 
@@ -66,7 +88,9 @@ class ProjectTimeEntryController extends Controller
      */
     public function store(StoreManualTimeEntryRequest $request, Project $project, ProjectTask $task): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertTaskBelongsToProject($task, $project);
+        $this->authorize('execute', $task);
 
         $data = $request->validated();
 
@@ -93,15 +117,45 @@ class ProjectTimeEntryController extends Controller
     }
 
     /**
+     * PATCH /projects/{project}/tasks/{task}/time-entries/{entry}
+     * Update a manual time entry.
+     */
+    public function update(StoreManualTimeEntryRequest $request, Project $project, ProjectTask $task, ProjectTimeEntry $entry): JsonResponse
+    {
+        $this->assertTaskBelongsToProject($task, $project);
+        $this->assertEntryBelongsToTask($entry, $task);
+        $this->authorize('update', $entry);
+
+        $data = $request->validated();
+
+        $start = Carbon::parse($data['startTime']);
+        $end = Carbon::parse($data['endTime']);
+
+        $entry->update([
+            'start_time' => $start,
+            'end_time' => $end,
+            'duration_minutes' => (int) $start->diffInMinutes($end),
+            'is_manual' => true,
+            'note' => $data['note'] ?? null,
+        ]);
+
+        $entry->load('user:id,name,avatar');
+
+        return ApiResponse::success(
+            new ProjectTimeEntryResource($entry),
+            'Time entry updated successfully'
+        );
+    }
+
+    /**
      * DELETE /projects/{project}/tasks/{task}/time-entries/{entry}
      * Remove a time entry (requires edit_time_entries permission).
      */
     public function destroy(Project $project, ProjectTask $task, ProjectTimeEntry $entry): JsonResponse
     {
-        abort_if(! request()->user()?->can('delete_time_entries'), 403, 'Unauthorized');
-
         $this->assertTaskBelongsToProject($task, $project);
         $this->assertEntryBelongsToTask($entry, $task);
+        $this->authorize('delete', $entry);
 
         $entry->delete();
 

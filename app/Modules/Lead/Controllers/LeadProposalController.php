@@ -10,6 +10,8 @@ use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Models\Proposal;
 use App\Modules\Lead\Requests\StoreLeadProposalRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Manages proposals attached directly to a lead from the Details Page.
@@ -70,6 +72,28 @@ class LeadProposalController extends Controller
         );
     }
 
+    /**
+     * Update editable proposal fields from the lead details table.
+     */
+    public function update(Request $request, Lead $lead, Proposal $proposal): JsonResponse
+    {
+        $this->assertBelongsToLead($proposal, $lead);
+
+        $data = $request->validate([
+            'status' => ['sometimes', 'string', Rule::in(ProposalStatus::values())],
+            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'file_path' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $proposal->update($data);
+        $proposal->load('assignee:id,name,email,avatar');
+
+        return ApiResponse::success(
+            $this->formatProposal($proposal),
+            'Proposal updated successfully.'
+        );
+    }
+
     // ─── Private ─────────────────────────────────────────────────────────────
 
     private function formatProposal(Proposal $p): array
@@ -90,5 +114,12 @@ class LeadProposalController extends Controller
             'created_at'    => $p->created_at?->toISOString(),
             'updated_at'    => $p->updated_at?->toISOString(),
         ];
+    }
+
+    private function assertBelongsToLead(Proposal $proposal, Lead $lead): void
+    {
+        if ((int) $proposal->lead_id !== (int) $lead->id) {
+            abort(404, 'Proposal not found for this lead.');
+        }
     }
 }

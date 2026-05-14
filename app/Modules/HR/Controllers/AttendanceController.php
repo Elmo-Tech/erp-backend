@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\HR\Resources\AttendanceResource;
+use App\Modules\HR\Services\AttendanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -74,6 +75,22 @@ class AttendanceController extends Controller
         return ApiResponse::success(
             new AttendanceResource($attendance),
             'Today\'s attendance retrieved successfully'
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /hr/attendance/check-in
+    // Manual check-in for the authenticated user. Uses the same idempotent
+    // attendance service that task timers use.
+    // -------------------------------------------------------------------------
+
+    public function checkIn(Request $request, AttendanceService $attendanceService): JsonResponse
+    {
+        $attendance = $attendanceService->checkInForToday($request->user());
+
+        return ApiResponse::success(
+            new AttendanceResource($attendance->fresh('user')),
+            'Checked in successfully'
         );
     }
 
