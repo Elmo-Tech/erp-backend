@@ -11,6 +11,7 @@ use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class MasterCalendarAggregatorServiceTest extends TestCase
@@ -30,8 +31,10 @@ class MasterCalendarAggregatorServiceTest extends TestCase
             'due_date' => '2026-05-20',
         ]);
 
+        $user = $this->userWithPermissions(['view_calendar_milestones']);
+
         $items = app(MasterCalendarAggregatorService::class)
-            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'));
+            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
 
         $this->assertContains('milestone-'.$milestone->id, $items->pluck('id')->all());
 
@@ -65,8 +68,10 @@ class MasterCalendarAggregatorServiceTest extends TestCase
             'scheduled_at' => '2026-05-20 14:30:00',
         ]);
 
+        $user = $this->userWithPermissions(['view_calendar_meetings']);
+
         $items = app(MasterCalendarAggregatorService::class)
-            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'));
+            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
 
         $item = $items->firstWhere('id', 'meeting-'.$meeting->id);
 
@@ -75,5 +80,42 @@ class MasterCalendarAggregatorServiceTest extends TestCase
         $this->assertSame('2026-05-20', $item['date']);
         $this->assertStringStartsWith('2026-05-20T14:30:00', $item['startTime']);
         $this->assertSame('Mona Scheduler', $item['meta']['creatorName']);
+    }
+
+    public function test_it_excludes_item_types_without_matching_calendar_permission(): void
+    {
+        $client = Client::factory()->create();
+        $project = Project::factory()->for($client)->create();
+
+        Milestone::create([
+            'project_id' => $project->id,
+            'title' => 'Hidden milestone',
+            'status' => MilestoneStatus::ACTIVE,
+            'progress_percentage' => 10,
+            'due_date' => '2026-05-20',
+        ]);
+
+        $user = $this->userWithPermissions(['view_calendar_tasks']);
+
+        $items = app(MasterCalendarAggregatorService::class)
+            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
+
+        $this->assertFalse($items->contains(fn (array $item) => $item['type'] === 'milestone'));
+    }
+
+    /**
+     * @param  array<int, string>  $permissions
+     */
+    private function userWithPermissions(array $permissions): User
+    {
+        $user = User::factory()->create();
+
+        foreach ($permissions as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
+
+        $user->givePermissionTo($permissions);
+
+        return $user;
     }
 }

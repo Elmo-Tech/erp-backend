@@ -20,7 +20,7 @@ class SubscriptionController extends Controller
     {
         abort_if(! $request->user()->can('manage_subscriptions'), 403, 'Unauthorized');
 
-        $subscriptions = Subscription::latest()->paginate(20);
+        $subscriptions = Subscription::with(['client', 'project'])->latest()->paginate(20);
 
         return ApiResponse::success(
             SubscriptionResource::collection($subscriptions)->response()->getData(true),

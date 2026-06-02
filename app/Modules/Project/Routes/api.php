@@ -253,6 +253,18 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         )->name('projects.tasks.time-entries.store');
     });
 
+    Route::middleware('permission:manage_team_timers')->group(function () {
+        Route::post(
+            'projects/{project}/tasks/{task}/time-entries/start-for-user',
+            [ProjectTimeEntryController::class, 'startForUser']
+        )->name('projects.tasks.time-entries.start-for-user');
+
+        Route::patch(
+            'projects/time-entries/{entry}/stop',
+            [ProjectTimeEntryController::class, 'stop']
+        )->name('projects.time-entries.stop');
+    });
+
     Route::middleware('permission:log_time|edit_tasks|manage_tasks|manage_time_entries|delete_time_entries|manage_all_projects')->group(function () {
         Route::put(
             'projects/{project}/tasks/{task}/time-entries/{entry}',

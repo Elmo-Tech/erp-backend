@@ -56,6 +56,7 @@ class AttendanceService
         $shift = $profile?->shift;
         $expectedClockIn = null;
         $expectedClockOut = null;
+        $lateMinutes = 0;
 
         if ($shift !== null) {
             $expectedClockIn = $shift->start_time;
@@ -63,6 +64,8 @@ class AttendanceService
 
             if ($clockInAt->gt($shift->latenessDeadlineToday())) {
                 $status = 'late';
+                $expected = Carbon::parse($date.' '.$shift->start_time);
+                $lateMinutes = (int) $expected->diffInMinutes($clockInAt);
             }
         }
 
@@ -73,7 +76,7 @@ class AttendanceService
             'clock_out' => null,
             'status' => $status,
             'total_worked_minutes' => 0,
-            'late_minutes' => 0,
+            'late_minutes' => $lateMinutes,
             'is_late' => $status === 'late',
             'idle_minutes' => 0,
             'deduction_minutes' => 0,

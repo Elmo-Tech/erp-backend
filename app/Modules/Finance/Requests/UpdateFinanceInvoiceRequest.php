@@ -24,6 +24,13 @@ class UpdateFinanceInvoiceRequest extends FormRequest
                 'integer',
                 Rule::exists('projects', 'id')->where(fn ($query) => $query->where('client_id', $clientId)),
             ],
+            'invoiceType'    => ['sometimes', 'string', 'in:one_time,subscription'],
+            'billingCycle'   => [
+                Rule::requiredIf(fn () => $this->input('invoiceType', $this->route('invoice')?->invoice_type) === 'subscription'),
+                'nullable',
+                'string',
+                'in:monthly,quarterly,semi_annual,annual',
+            ],
             'issueDate'      => ['sometimes', 'date'],
             'dueDate'        => ['sometimes', 'date'],
             'taxRate'        => ['sometimes', 'numeric', 'min:0', 'max:100'],

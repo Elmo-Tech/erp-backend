@@ -44,4 +44,36 @@ class ToggleTaskTimerActionTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_starting_timer_for_user_closes_their_other_open_timer(): void
+    {
+        Carbon::setTestNow('2026-05-13 10:00:00');
+
+        $user = User::factory()->create();
+        $project = Project::factory()->create();
+        $firstTask = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'First task',
+            'status' => 'in_progress',
+            'assignee_id' => $user->id,
+        ]);
+        $secondTask = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Second task',
+            'status' => 'in_progress',
+            'assignee_id' => $user->id,
+        ]);
+
+        $action = app(ToggleTaskTimerAction::class);
+        $firstEntry = $action->startForUser($firstTask, $user);
+
+        Carbon::setTestNow('2026-05-13 10:25:00');
+        $secondEntry = $action->startForUser($secondTask, $user);
+
+        $this->assertNotNull($firstEntry->fresh()->end_time);
+        $this->assertSame(25, $firstEntry->fresh()->duration_minutes);
+        $this->assertNull($secondEntry->fresh()->end_time);
+
+        Carbon::setTestNow();
+    }
 }

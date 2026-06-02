@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Finance\Actions\CalculateInvoiceTotalsAction;
 use App\Modules\Finance\Models\FinanceInvoice;
 use App\Modules\Finance\Models\FinanceInvoiceItem;
+use App\Modules\Finance\Models\Subscription;
 use App\Modules\Finance\Requests\StoreFinanceInvoiceRequest;
 use App\Modules\Finance\Requests\UpdateFinanceInvoiceRequest;
 use App\Modules\Finance\Resources\FinanceInvoiceResource;
@@ -66,6 +67,8 @@ class FinanceInvoiceController extends Controller
                 'client_id'       => $data['clientId'],
                 'project_id'      => $data['projectId'] ?? null,
                 'invoice_number'  => FinanceInvoice::generateInvoiceNumber(),
+                'invoice_type'    => $data['invoiceType'] ?? 'one_time',
+                'billing_cycle'   => ($data['invoiceType'] ?? 'one_time') === 'subscription' ? $data['billingCycle'] : null,
                 'issue_date'      => $data['issueDate'],
                 'due_date'        => $data['dueDate'],
                 'tax_rate'        => $data['taxRate'] ?? 0,
@@ -85,6 +88,8 @@ class FinanceInvoiceController extends Controller
                     'total'       => round((int) $item['quantity'] * (float) $item['unitPrice'], 2),
                 ]);
             }
+
+            $this->syncSubscription($invoice);
 
             return $invoice;
         });
@@ -150,6 +155,10 @@ class FinanceInvoiceController extends Controller
             $invoice->update(array_filter([
                 'client_id'       => $data['clientId'] ?? null,
                 'project_id'      => array_key_exists('projectId', $data) ? $data['projectId'] : $invoice->project_id,
+                'invoice_type'    => $data['invoiceType'] ?? null,
+                'billing_cycle'   => ($data['invoiceType'] ?? $invoice->invoice_type) === 'subscription'
+                    ? (array_key_exists('billingCycle', $data) ? $data['billingCycle'] : $invoice->billing_cycle)
+                    : null,
                 'issue_date'      => $data['issueDate'] ?? null,
                 'due_date'        => $data['dueDate'] ?? null,
                 'tax_rate'        => $data['taxRate'] ?? null,
@@ -174,6 +183,9 @@ class FinanceInvoiceController extends Controller
                     ]);
                 }
             }
+
+            $invoice->refresh();
+            $this->syncSubscription($invoice);
         });
 
         return ApiResponse::success(
@@ -192,5 +204,40 @@ class FinanceInvoiceController extends Controller
         $invoice->delete();
 
         return ApiResponse::success(null, 'Invoice deleted successfully');
+    }
+
+    private function syncSubscription(FinanceInvoice $invoice): void
+    {
+        if ($invoice->invoice_type !== 'subscription') {
+            if ($invoice->subscription_id !== null) {
+                $invoice->forceFill(['subscription_id' => null, 'billing_cycle' => null])->save();
+            }
+
+            return;
+        }
+
+        $invoice->loadMissing(['client', 'project']);
+
+        $subscription = $invoice->subscription_id
+            ? Subscription::find($invoice->subscription_id)
+            : new Subscription();
+
+        $subscription->fill([
+            'client_id' => $invoice->client_id,
+            'project_id' => $invoice->project_id,
+            'name' => 'Invoice '.$invoice->invoice_number,
+            'provider' => $invoice->project?->title,
+            'billing_cycle' => $invoice->billing_cycle,
+            'cost' => $invoice->total_amount,
+            'currency' => 'USD',
+            'next_billing_date' => $invoice->due_date,
+            'status' => $invoice->status === 'paid' ? 'active' : 'active',
+            'notes' => $invoice->notes,
+        ]);
+        $subscription->save();
+
+        if ($invoice->subscription_id !== $subscription->id) {
+            $invoice->forceFill(['subscription_id' => $subscription->id])->save();
+        }
     }
 }

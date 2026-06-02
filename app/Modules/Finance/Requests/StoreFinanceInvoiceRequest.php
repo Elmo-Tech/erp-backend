@@ -23,6 +23,13 @@ class StoreFinanceInvoiceRequest extends FormRequest
             ],
             'issueDate'      => ['required', 'date'],
             'dueDate'        => ['required', 'date', 'after_or_equal:issueDate'],
+            'invoiceType'    => ['sometimes', 'string', 'in:one_time,subscription'],
+            'billingCycle'   => [
+                Rule::requiredIf(fn () => $this->input('invoiceType') === 'subscription'),
+                'nullable',
+                'string',
+                'in:monthly,quarterly,semi_annual,annual',
+            ],
             'taxRate'        => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'discountAmount' => ['sometimes', 'numeric', 'min:0'],
             'status'         => ['sometimes', 'string', 'in:draft,sent,paid,overdue'],

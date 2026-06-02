@@ -3,7 +3,7 @@
 namespace App\Modules\Attendance\Models;
 
 use App\Modules\Settings\Models\User;
-use App\Modules\TimeEntry\Models\TimeEntry;
+use App\Modules\Project\Models\ProjectTimeEntry;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -141,7 +141,7 @@ class Attendance extends Model
         }
 
         $totalMinutes  = $this->clock_in->diffInMinutes($this->clock_out);
-        $workedMinutes = TimeEntry::where('user_id', $this->user_id)
+        $workedMinutes = ProjectTimeEntry::where('user_id', $this->user_id)
             ->whereDate('start_time', $this->date)
             ->whereNotNull('end_time')
             ->sum('duration_minutes');
@@ -154,10 +154,26 @@ class Attendance extends Model
      */
     public function getWorkedMinutes(): int
     {
-        return TimeEntry::where('user_id', $this->user_id)
+        return ProjectTimeEntry::where('user_id', $this->user_id)
             ->whereDate('start_time', $this->date)
             ->whereNotNull('end_time')
             ->sum('duration_minutes');
+    }
+
+    public function getExpectedWorkedMinutes(): int
+    {
+        if (! $this->expected_clock_in || ! $this->expected_clock_out) {
+            return 0;
+        }
+
+        $start = Carbon::parse($this->date->format('Y-m-d').' '.$this->expected_clock_in);
+        $end = Carbon::parse($this->date->format('Y-m-d').' '.$this->expected_clock_out);
+
+        if ($end->lte($start)) {
+            $end->addDay();
+        }
+
+        return (int) $start->diffInMinutes($end);
     }
 
     /**

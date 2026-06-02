@@ -28,6 +28,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::get('hr/attendance/today', [AttendanceController::class, 'today'])
         ->name('hr.attendance.today');
 
+    Route::get('hr/attendance/summary', [AttendanceController::class, 'summary'])
+        ->name('hr.attendance.summary');
+
     Route::get('hr/team-pulse', TeamPulseController::class)
         ->name('hr.team-pulse');
 

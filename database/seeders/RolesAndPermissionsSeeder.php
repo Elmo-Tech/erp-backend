@@ -224,6 +224,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // ── Time Tracking ────────────────────────────────────────────────
             'manage_time_entries',
+            'manage_team_timers',
             'view_time_entries',
             'start_timer',
             'stop_timer',
@@ -292,6 +293,13 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // ── Calendar ─────────────────────────────────────────────────────
             'view_calendar',
+            'view_calendar_events',
+            'view_calendar_meetings',
+            'view_calendar_tasks',
+            'view_calendar_milestones',
+            'view_calendar_invoices',
+            'view_calendar_subscriptions',
+            'collect_subscription_payments',
         ];
 
         foreach ($permissions as $permission) {
@@ -340,6 +348,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_reports', 'view_admin_stats',
                 'view_profitability', 'view_quality_metrics',
                 'view_user_performance', 'view_attendance_analytics',
+                'manage_invoices', 'manage_subscriptions', 'collect_subscription_payments',
                 'view_projects', 'view_all_projects',
                 'view_project_members', 'view_project_files', 'view_project_history',
                 'view_tasks', 'view_time_entries', 'view_all_time_entries',
@@ -347,7 +356,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_employees', 'view_employee_performance',
                 'view_meetings',
                 'view_tags',
-                'view_calendar',
+                'view_calendar', 'view_calendar_events', 'view_calendar_meetings',
+                'view_calendar_tasks', 'view_calendar_milestones',
+                'view_calendar_invoices', 'view_calendar_subscriptions',
             ],
 
             // ── PMO ──────────────────────────────────────────────────────────
@@ -366,6 +377,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'manage_tasks', 'view_tasks', 'create_tasks', 'edit_tasks',
                 'delete_tasks', 'assign_tasks', 'view_internal_notes',
                 'manage_deliverables',
+                'manage_team_timers',
                 'manage_change_requests',
                 'schedule_meetings', 'view_meetings',
                 'view_leads',
@@ -376,7 +388,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_client_portal_access',
                 'revoke_client_portal_access',
                 'reset_client_portal_password',
-                'view_calendar',
+                'view_calendar', 'view_calendar_events', 'view_calendar_meetings',
+                'view_calendar_tasks', 'view_calendar_milestones',
             ],
 
             // ── Manager ──────────────────────────────────────────────────────
@@ -397,10 +410,12 @@ class RolesAndPermissionsSeeder extends Seeder
                 'manage_change_requests',
                 'schedule_meetings', 'view_meetings',
                 'view_time_entries', 'view_all_time_entries', 'start_timer', 'stop_timer',
+                'manage_team_timers',
                 'view_attendance', 'clock_out',
                 'view_payroll',
                 'view_tags',
-                'view_calendar',
+                'view_calendar', 'view_calendar_events', 'view_calendar_meetings',
+                'view_calendar_tasks', 'view_calendar_milestones',
             ],
 
             // ── TechDev ──────────────────────────────────────────────────────
@@ -421,7 +436,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_attendance', 'clock_out',
                 'view_payroll',
                 'view_tags',
-                'view_calendar',
+                'view_calendar', 'view_calendar_events', 'view_calendar_meetings',
+                'view_calendar_tasks', 'view_calendar_milestones',
             ],
 
             // ── QA ───────────────────────────────────────────────────────────
@@ -440,7 +456,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_attendance', 'clock_out',
                 'view_payroll',
                 'view_tags',
-                'view_calendar',
+                'view_calendar', 'view_calendar_tasks',
             ],
 
             // ── Dev ──────────────────────────────────────────────────────────
@@ -459,7 +475,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_attendance', 'clock_out',
                 'view_payroll',
                 'view_tags',
-                'view_calendar',
+                'view_calendar', 'view_calendar_tasks',
             ],
 
             // ── Client ───────────────────────────────────────────────────────

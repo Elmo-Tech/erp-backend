@@ -51,6 +51,47 @@ class ProjectTimeEntryActiveControllerTest extends TestCase
             ->assertJsonPath('data', null);
     }
 
+    public function test_team_timer_start_requires_manage_team_timers_permission(): void
+    {
+        $manager = $this->userWithPermissions(['view_projects', 'manage_all_projects']);
+        $target = User::factory()->create();
+        $project = Project::factory()->create();
+        $task = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Assigned work',
+            'status' => 'in_progress',
+            'assignee_id' => $target->id,
+        ]);
+
+        $this->actingAs($manager, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/start-for-user", [
+                'userId' => $target->id,
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_team_timer_start_for_user_creates_active_entry(): void
+    {
+        $manager = $this->userWithPermissions(['view_projects', 'manage_all_projects', 'manage_team_timers']);
+        $target = User::factory()->create();
+        $project = Project::factory()->create();
+        $task = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Assigned work',
+            'status' => 'in_progress',
+            'assignee_id' => $target->id,
+        ]);
+
+        $this->actingAs($manager, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/start-for-user", [
+                'userId' => $target->id,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.userId', $target->id)
+            ->assertJsonPath('data.taskId', $task->id)
+            ->assertJsonPath('data.isRunning', true);
+    }
+
     /**
      * @param  array<int, string>  $permissions
      */

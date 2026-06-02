@@ -988,11 +988,13 @@ class ProjectController extends Controller
         try {
             $project = $this->pinProjectAction->execute($request->user(), $project);
         } catch (RuntimeException $exception) {
-            return ApiResponse::error($exception->getMessage(), 400);
+            if ($exception->getMessage() !== 'Project is already pinned') {
+                return ApiResponse::error($exception->getMessage(), 400);
+            }
         }
 
         return ApiResponse::success(
-            new ProjectResource($project->load(['client'])),
+            new ProjectResource($project->fresh(['client'])),
             'Project pinned successfully'
         );
     }
@@ -1075,7 +1077,9 @@ class ProjectController extends Controller
         try {
             $this->unpinProjectAction->execute($request->user(), $project);
         } catch (RuntimeException $exception) {
-            return ApiResponse::error($exception->getMessage(), 400);
+            if ($exception->getMessage() !== 'Project is not pinned') {
+                return ApiResponse::error($exception->getMessage(), 400);
+            }
         }
 
         return ApiResponse::success(

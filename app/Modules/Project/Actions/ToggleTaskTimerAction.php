@@ -66,6 +66,8 @@ class ToggleTaskTimerAction
             }
 
             // ── START ─────────────────────────────────────────────────────────
+            $this->stopActiveEntriesForUser($user);
+
             // Fire auto check-in BEFORE creating the time entry. The service is
             // idempotent, so existing attendance never blocks timer starts.
             $this->attendanceService->checkInForToday($user);
@@ -78,5 +80,48 @@ class ToggleTaskTimerAction
                 'is_manual'  => false,
             ]);
         });
+    }
+
+    public function startForUser(ProjectTask $task, User $user): ProjectTimeEntry
+    {
+        return DB::transaction(function () use ($task, $user) {
+            $this->stopActiveEntriesForUser($user);
+            $this->attendanceService->checkInForToday($user);
+
+            return ProjectTimeEntry::create([
+                'task_id'    => $task->id,
+                'user_id'    => $user->id,
+                'start_time' => now(),
+                'end_time'   => null,
+                'is_manual'  => false,
+            ]);
+        });
+    }
+
+    public function stop(ProjectTimeEntry $entry): ProjectTimeEntry
+    {
+        return DB::transaction(function () use ($entry) {
+            $entry = ProjectTimeEntry::whereKey($entry->id)->lockForUpdate()->firstOrFail();
+            $entry->stop();
+
+            return $entry->refresh();
+        });
+    }
+
+    private function stopActiveEntriesForUser(User $user): void
+    {
+        $activeEntries = ProjectTimeEntry::where('user_id', $user->id)
+            ->whereNull('end_time')
+            ->lockForUpdate()
+            ->get();
+
+        $now = now();
+
+        foreach ($activeEntries as $entry) {
+            $entry->update([
+                'end_time' => $now,
+                'duration_minutes' => (int) $entry->start_time->diffInMinutes($now),
+            ]);
+        }
     }
 }

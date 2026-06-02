@@ -4,9 +4,11 @@ namespace App\Modules\Calendar\Services;
 
 use App\Modules\Calendar\Models\CalendarEvent;
 use App\Modules\Finance\Models\FinanceInvoice;
+use App\Modules\Finance\Models\Subscription;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Project\Models\Milestone;
 use App\Modules\Project\Models\ProjectTask;
+use App\Modules\Settings\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -35,14 +37,15 @@ class MasterCalendarAggregatorService
      * @param  Carbon  $endDate    Inclusive end of the range
      * @return Collection<int, array<string, mixed>>
      */
-    public function aggregate(Carbon $startDate, Carbon $endDate): Collection
+    public function aggregate(Carbon $startDate, Carbon $endDate, User $user): Collection
     {
         return collect()
-            ->merge($this->fetchEvents($startDate, $endDate))
-            ->merge($this->fetchMeetings($startDate, $endDate))
-            ->merge($this->fetchProjectTasks($startDate, $endDate))
-            ->merge($this->fetchInvoices($startDate, $endDate))
-            ->merge($this->fetchMilestones($startDate, $endDate))
+            ->merge($user->can('view_calendar_events') ? $this->fetchEvents($startDate, $endDate) : collect())
+            ->merge($user->can('view_calendar_meetings') ? $this->fetchMeetings($startDate, $endDate) : collect())
+            ->merge($user->can('view_calendar_tasks') ? $this->fetchProjectTasks($startDate, $endDate) : collect())
+            ->merge($user->can('view_calendar_invoices') ? $this->fetchInvoices($startDate, $endDate) : collect())
+            ->merge($user->can('view_calendar_milestones') ? $this->fetchMilestones($startDate, $endDate) : collect())
+            ->merge($user->can('view_calendar_subscriptions') ? $this->fetchSubscriptions($startDate, $endDate) : collect())
             ->sortBy('date')
             ->values();
     }
@@ -199,6 +202,37 @@ class MasterCalendarAggregatorService
                     'progressPercentage' => $milestone->progress_percentage,
                     'invoiceId'          => $milestone->invoice_id,
                     'paymentStageId'     => $milestone->payment_stage_id,
+                ],
+            ]);
+    }
+
+    private function fetchSubscriptions(Carbon $startDate, Carbon $endDate): Collection
+    {
+        return Subscription::with(['client:id,display_name,company_name', 'project:id,title'])
+            ->where('status', 'active')
+            ->whereNotNull('next_billing_date')
+            ->whereBetween('next_billing_date', [
+                $startDate->toDateString(),
+                $endDate->toDateString(),
+            ])
+            ->get()
+            ->map(fn (Subscription $subscription) => [
+                'id'        => 'subscription-'.$subscription->id,
+                'type'      => 'subscription',
+                'title'     => $subscription->name,
+                'date'      => $subscription->next_billing_date->toDateString(),
+                'startTime' => null,
+                'endTime'   => null,
+                'status'    => $subscription->status,
+                'meta'      => [
+                    'subscriptionId' => $subscription->id,
+                    'billingCycle' => $subscription->billing_cycle,
+                    'clientId' => $subscription->client_id,
+                    'clientName' => $subscription->client?->display_name ?? $subscription->client?->company_name,
+                    'projectId' => $subscription->project_id,
+                    'projectTitle' => $subscription->project?->title,
+                    'totalAmount' => (float) $subscription->cost,
+                    'currency' => $subscription->currency,
                 ],
             ]);
     }

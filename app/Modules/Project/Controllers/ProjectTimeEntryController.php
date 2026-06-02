@@ -10,6 +10,7 @@ use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Project\Requests\StoreManualTimeEntryRequest;
 use App\Modules\Project\Resources\ProjectTimeEntryResource;
+use App\Modules\Settings\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 
@@ -79,6 +80,41 @@ class ProjectTimeEntryController extends Controller
         return ApiResponse::success(
             new ProjectTimeEntryResource($entry),
             $isStopped ? 'Timer stopped' : 'Timer started'
+        );
+    }
+
+    public function startForUser(Project $project, ProjectTask $task): JsonResponse
+    {
+        abort_if(! request()->user()->can('manage_team_timers'), 403, 'Unauthorized');
+
+        $this->authorize('view', $project);
+        $this->assertTaskBelongsToProject($task, $project);
+
+        $data = request()->validate([
+            'userId' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $user = User::findOrFail($data['userId']);
+        $entry = $this->toggleTimer->startForUser($task, $user);
+        $entry->load(['user:id,name,avatar', 'task.project']);
+
+        return ApiResponse::success(
+            new ProjectTimeEntryResource($entry),
+            'Timer started for user',
+            201
+        );
+    }
+
+    public function stop(ProjectTimeEntry $entry): JsonResponse
+    {
+        abort_if(! request()->user()->can('manage_team_timers'), 403, 'Unauthorized');
+
+        $entry = $this->toggleTimer->stop($entry);
+        $entry->load(['user:id,name,avatar', 'task.project']);
+
+        return ApiResponse::success(
+            new ProjectTimeEntryResource($entry),
+            'Timer stopped'
         );
     }
 

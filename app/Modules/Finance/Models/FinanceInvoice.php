@@ -19,6 +19,9 @@ class FinanceInvoice extends Model
         'client_id',
         'project_id',
         'invoice_number',
+        'invoice_type',
+        'billing_cycle',
+        'subscription_id',
         'issue_date',
         'due_date',
         'subtotal',
@@ -55,6 +58,11 @@ class FinanceInvoice extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function subscription(): BelongsTo
+    {
+        return $this->belongsTo(Subscription::class);
     }
 
     public function items(): HasMany

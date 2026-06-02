@@ -41,7 +41,7 @@ class CalendarController extends Controller
         $startDate = Carbon::parse($request->input('startDate'))->startOfDay();
         $endDate   = Carbon::parse($request->input('endDate'))->endOfDay();
 
-        $items = $this->aggregator->aggregate($startDate, $endDate);
+        $items = $this->aggregator->aggregate($startDate, $endDate, $request->user());
 
         return ApiResponse::success(
             ['items' => $items, 'total' => $items->count()],

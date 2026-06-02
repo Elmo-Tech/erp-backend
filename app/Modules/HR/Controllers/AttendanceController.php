@@ -78,6 +78,65 @@ class AttendanceController extends Controller
         );
     }
 
+    public function summary(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'scope' => ['sometimes', 'string', 'in:week,month'],
+            'user_id' => ['sometimes', 'integer', 'exists:users,id'],
+            'from' => ['sometimes', 'date'],
+            'to' => ['sometimes', 'date', 'after_or_equal:from'],
+        ]);
+
+        $targetUserId = $user->can('manage_attendance') && isset($validated['user_id'])
+            ? (int) $validated['user_id']
+            : $user->id;
+
+        $scope = $validated['scope'] ?? 'week';
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'])->startOfDay()
+            : ($scope === 'month' ? Carbon::now()->startOfMonth() : Carbon::now()->startOfWeek());
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'])->endOfDay()
+            : ($scope === 'month' ? Carbon::now()->endOfMonth() : Carbon::now()->endOfWeek());
+
+        $records = Attendance::with('user:id,name,avatar')
+            ->where('user_id', $targetUserId)
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('date')
+            ->get();
+
+        $daily = $records->map(function (Attendance $attendance): array {
+            $actual = $attendance->getWorkedMinutes();
+            $expected = $attendance->getExpectedWorkedMinutes();
+            $span = $attendance->clock_out ? (int) $attendance->clock_in?->diffInMinutes($attendance->clock_out) : 0;
+
+            return [
+                'date' => $attendance->date?->toDateString(),
+                'expectedMinutes' => $expected,
+                'actualWorkedMinutes' => $actual,
+                'stoppedMinutes' => max(0, $span - $actual),
+                'lateMinutes' => (int) $attendance->late_minutes,
+                'deductionMinutes' => (int) $attendance->deduction_minutes,
+                'status' => $attendance->status,
+            ];
+        })->values();
+
+        return ApiResponse::success([
+            'scope' => $scope,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'userId' => $targetUserId,
+            'expectedMinutes' => $daily->sum('expectedMinutes'),
+            'actualWorkedMinutes' => $daily->sum('actualWorkedMinutes'),
+            'stoppedMinutes' => $daily->sum('stoppedMinutes'),
+            'lateMinutes' => $daily->sum('lateMinutes'),
+            'deductionMinutes' => $daily->sum('deductionMinutes'),
+            'daily' => $daily,
+        ], 'Attendance summary retrieved successfully');
+    }
+
     // -------------------------------------------------------------------------
     // POST /hr/attendance/check-in
     // Manual check-in for the authenticated user. Uses the same idempotent
@@ -125,6 +184,11 @@ class AttendanceController extends Controller
             'total_worked_minutes' => $workedMinutes,
         ]);
 
+        $attendance->refresh();
+        $attendance->update([
+            'idle_minutes' => $attendance->calculateIdleMinutes(),
+        ]);
+
         return ApiResponse::success(
             new AttendanceResource($attendance->fresh('user')),
             'Checked out successfully'
@@ -143,7 +207,25 @@ class AttendanceController extends Controller
         $validated = $request->validate([
             'status' => ['sometimes', 'in:present,absent,late,excused'],
             'notes'  => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'lateTreatment' => ['sometimes', 'string', 'in:deduct,grace,excused'],
         ]);
+
+        if (($validated['lateTreatment'] ?? null) === 'grace') {
+            $validated['used_grace_day'] = true;
+            $validated['deduction_minutes'] = 0;
+            unset($validated['lateTreatment']);
+        }
+
+        if (($validated['lateTreatment'] ?? null) === 'excused') {
+            $validated['status'] = 'excused';
+            $validated['used_grace_day'] = false;
+            $validated['deduction_minutes'] = 0;
+            unset($validated['lateTreatment']);
+        }
+
+        if (($validated['lateTreatment'] ?? null) === 'deduct') {
+            unset($validated['lateTreatment']);
+        }
 
         $attendance->update($validated);
 
