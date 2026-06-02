@@ -3,6 +3,7 @@
 namespace App\Modules\Project\Actions;
 
 use App\Modules\HR\Services\AttendanceService;
+use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
@@ -67,6 +68,7 @@ class ToggleTaskTimerAction
 
             // ── START ─────────────────────────────────────────────────────────
             $this->stopActiveEntriesForUser($user);
+            $this->stopActivePersonalEntriesForUser($user);
 
             // Fire auto check-in BEFORE creating the time entry. The service is
             // idempotent, so existing attendance never blocks timer starts.
@@ -86,6 +88,7 @@ class ToggleTaskTimerAction
     {
         return DB::transaction(function () use ($task, $user) {
             $this->stopActiveEntriesForUser($user);
+            $this->stopActivePersonalEntriesForUser($user);
             $this->attendanceService->checkInForToday($user);
 
             return ProjectTimeEntry::create([
@@ -122,6 +125,18 @@ class ToggleTaskTimerAction
                 'end_time' => $now,
                 'duration_minutes' => (int) $entry->start_time->diffInMinutes($now),
             ]);
+        }
+    }
+
+    private function stopActivePersonalEntriesForUser(User $user): void
+    {
+        $activeEntries = PersonalTimeEntry::where('user_id', $user->id)
+            ->whereNull('end_time')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($activeEntries as $entry) {
+            $entry->stop();
         }
     }
 }
