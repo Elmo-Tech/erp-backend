@@ -3,11 +3,13 @@
 namespace App\Modules\Calendar\Services;
 
 use App\Modules\Calendar\Models\CalendarEvent;
+use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Finance\Models\FinanceInvoice;
 use App\Modules\Finance\Models\Subscription;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Project\Models\Milestone;
 use App\Modules\Project\Models\ProjectTask;
+use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -46,6 +48,7 @@ class MasterCalendarAggregatorService
             ->merge($user->can('view_calendar_invoices') ? $this->fetchInvoices($startDate, $endDate) : collect())
             ->merge($user->can('view_calendar_milestones') ? $this->fetchMilestones($startDate, $endDate) : collect())
             ->merge($user->can('view_calendar_subscriptions') ? $this->fetchSubscriptions($startDate, $endDate) : collect())
+            ->merge(($user->can('view_attendance') || $user->can('manage_attendance')) ? $this->fetchAttendance($startDate, $endDate, $user) : collect())
             ->sortBy('date')
             ->values();
     }
@@ -235,5 +238,87 @@ class MasterCalendarAggregatorService
                     'currency' => $subscription->currency,
                 ],
             ]);
+    }
+
+    private function fetchAttendance(Carbon $startDate, Carbon $endDate, User $user): Collection
+    {
+        $timeEntriesByDate = ProjectTimeEntry::with(['task.project:id,title'])
+            ->where('user_id', $user->id)
+            ->whereBetween('start_time', [
+                $startDate->copy()->startOfDay(),
+                $endDate->copy()->endOfDay(),
+            ])
+            ->orderBy('start_time')
+            ->get()
+            ->groupBy(fn (ProjectTimeEntry $entry) => $entry->start_time?->toDateString());
+
+        return Attendance::with('user:id,name,avatar')
+            ->where('user_id', $user->id)
+            ->whereBetween('date', [
+                $startDate->copy()->toDateString(),
+                $endDate->copy()->toDateString(),
+            ])
+            ->orderBy('date')
+            ->get()
+            ->map(function (Attendance $attendance) use ($timeEntriesByDate) {
+                $entries = $timeEntriesByDate->get($attendance->date?->toDateString(), collect());
+                $workedTasks = $entries
+                    ->groupBy('task_id')
+                    ->map(function (Collection $taskEntries) {
+                        /** @var ProjectTimeEntry $first */
+                        $first = $taskEntries->first();
+                        $durationMinutes = $taskEntries->sum(function (ProjectTimeEntry $entry): int {
+                            if ($entry->duration_minutes !== null) {
+                                return (int) $entry->duration_minutes;
+                            }
+
+                            if ($entry->start_time !== null && $entry->end_time !== null) {
+                                return (int) $entry->start_time->diffInMinutes($entry->end_time);
+                            }
+
+                            return 0;
+                        });
+
+                        return [
+                            'taskId' => $first->task_id,
+                            'projectId' => $first->task?->project_id,
+                            'title' => $first->task?->title ?? 'Task #'.$first->task_id,
+                            'status' => $first->task?->status?->value,
+                            'projectTitle' => $first->task?->project?->title,
+                            'durationMinutes' => $durationMinutes,
+                            'entriesCount' => $taskEntries->count(),
+                            'lastStartTime' => $taskEntries->max('start_time')?->toIso8601String(),
+                        ];
+                    })
+                    ->values();
+
+                return [
+                    'id'        => 'attendance-'.$attendance->id,
+                    'type'      => 'attendance',
+                    'title'     => 'Attendance: '.ucfirst((string) $attendance->status),
+                    'date'      => $attendance->date?->toDateString(),
+                    'startTime' => $attendance->clock_in?->toIso8601String(),
+                    'endTime'   => $attendance->clock_out?->toIso8601String(),
+                    'status'    => $attendance->status,
+                    'meta'      => [
+                        'attendanceId' => $attendance->id,
+                        'userId' => $attendance->user_id,
+                        'userName' => $attendance->user?->name,
+                        'clockIn' => $attendance->clock_in?->toIso8601String(),
+                        'clockOut' => $attendance->clock_out?->toIso8601String(),
+                        'isClockedIn' => $attendance->isClockedIn(),
+                        'totalWorkedMinutes' => $attendance->total_worked_minutes,
+                        'actualWorkedMinutes' => $attendance->getWorkedMinutes(),
+                        'expectedWorkedMinutes' => $attendance->getExpectedWorkedMinutes(),
+                        'stoppedMinutes' => $attendance->stopped_minutes,
+                        'lateMinutes' => (int) $attendance->late_minutes,
+                        'deductionMinutes' => (int) $attendance->deduction_minutes,
+                        'idleMinutes' => $attendance->idle_minutes,
+                        'usedGraceDay' => (bool) $attendance->used_grace_day,
+                        'notes' => $attendance->notes,
+                        'workedTasks' => $workedTasks,
+                    ],
+                ];
+            });
     }
 }

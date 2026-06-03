@@ -3,11 +3,14 @@
 namespace Tests\Feature\Calendar;
 
 use App\Enums\MilestoneStatus;
+use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Calendar\Services\MasterCalendarAggregatorService;
 use App\Modules\Client\Models\Client;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Project\Models\Milestone;
 use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectTask;
+use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -101,6 +104,68 @@ class MasterCalendarAggregatorServiceTest extends TestCase
             ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
 
         $this->assertFalse($items->contains(fn (array $item) => $item['type'] === 'milestone'));
+    }
+
+    public function test_it_includes_current_user_attendance_with_worked_tasks(): void
+    {
+        $user = $this->userWithPermissions(['view_attendance']);
+        $otherUser = User::factory()->create();
+        $project = Project::factory()->create(['title' => 'Business OS']);
+        $task = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Fix calendar attendance',
+            'status' => 'in_progress',
+            'assignee_id' => $user->id,
+        ]);
+
+        $attendance = Attendance::create([
+            'user_id' => $user->id,
+            'date' => '2026-05-13',
+            'clock_in' => '2026-05-13 09:00:00',
+            'clock_out' => '2026-05-13 17:15:00',
+            'status' => 'present',
+            'total_worked_minutes' => 495,
+        ]);
+        $otherAttendance = Attendance::create([
+            'user_id' => $otherUser->id,
+            'date' => '2026-05-13',
+            'clock_in' => '2026-05-13 10:00:00',
+            'status' => 'late',
+        ]);
+        ProjectTimeEntry::create([
+            'task_id' => $task->id,
+            'user_id' => $user->id,
+            'start_time' => '2026-05-13 09:30:00',
+            'end_time' => '2026-05-13 11:00:00',
+            'duration_minutes' => 90,
+            'is_manual' => false,
+        ]);
+        ProjectTimeEntry::create([
+            'task_id' => $task->id,
+            'user_id' => $user->id,
+            'start_time' => '2026-05-13 13:00:00',
+            'end_time' => '2026-05-13 14:15:00',
+            'duration_minutes' => 75,
+            'is_manual' => true,
+        ]);
+
+        $items = app(MasterCalendarAggregatorService::class)
+            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
+
+        $item = $items->firstWhere('id', 'attendance-'.$attendance->id);
+
+        $this->assertNotNull($item);
+        $this->assertSame('attendance', $item['type']);
+        $this->assertSame('2026-05-13', $item['date']);
+        $this->assertSame('present', $item['status']);
+        $this->assertSame(495, $item['meta']['totalWorkedMinutes']);
+        $this->assertCount(1, $item['meta']['workedTasks']);
+        $this->assertSame($task->id, $item['meta']['workedTasks'][0]['taskId']);
+        $this->assertSame('Fix calendar attendance', $item['meta']['workedTasks'][0]['title']);
+        $this->assertSame('Business OS', $item['meta']['workedTasks'][0]['projectTitle']);
+        $this->assertSame(165, $item['meta']['workedTasks'][0]['durationMinutes']);
+        $this->assertSame(2, $item['meta']['workedTasks'][0]['entriesCount']);
+        $this->assertFalse($items->contains(fn (array $calendarItem) => $calendarItem['id'] === 'attendance-'.$otherAttendance->id));
     }
 
     /**
