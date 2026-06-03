@@ -95,7 +95,7 @@ class ProjectPolicyPropertyTest extends TestCase
             ->limitTo(3)
             ->forAll(
                 Generator\choose(1, 5), // Number of projects
-                Generator\elements(['admin', 'super-admin'])
+                Generator\elements(['admin', 'founder'])
             )
             ->then(function ($numProjects, $role) {
                 $policy = new ProjectPolicy;

@@ -47,7 +47,7 @@ class ProjectPolicy
         }
 
         // Unrestricted project visibility (global admin/PMO bypass).
-        if ($user->can('manage_all_projects')) {
+        if ($user->can('manage_all_projects') || $user->can('view_all_projects')) {
             return true;
         }
 

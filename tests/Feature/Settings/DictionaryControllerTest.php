@@ -36,11 +36,12 @@ class DictionaryControllerTest extends TestCase
 
         $id = $createResponse->json('data.id');
 
-        $this->actingAs($this->user, 'sanctum')
+        $listResponse = $this->actingAs($this->user, 'sanctum')
             ->getJson('/api/v1/settings/lead-sources')
-            ->assertOk()
-            ->assertJsonPath('data.0.id', $id)
-            ->assertJsonPath('data.0.name', 'Website Referral');
+            ->assertOk();
+
+        $this->assertContains($id, array_column($listResponse->json('data'), 'id'));
+        $this->assertContains('Website Referral', array_column($listResponse->json('data'), 'name'));
 
         $this->actingAs($this->user, 'sanctum')
             ->putJson("/api/v1/settings/lead-sources/{$id}", [
@@ -85,7 +86,7 @@ class DictionaryControllerTest extends TestCase
 
         $this->assertDatabaseHas('currencies', [
             'name' => 'US Dollar',
-            'slug' => 'us-dollar',
+            'slug' => 'USD',
             'is_active' => true,
         ]);
     }

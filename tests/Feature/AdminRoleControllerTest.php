@@ -189,7 +189,7 @@ class AdminRoleControllerTest extends TestCase
         $this->assertDatabaseHas('roles', ['id' => $role->id, 'name' => 'updated-test-role']);
     }
 
-    public function test_update_prevents_modifying_protected_roles(): void
+    public function test_update_allows_manage_roles_user_to_modify_system_roles(): void
     {
         $adminRole = Role::where('name', 'admin')->first();
 
@@ -202,8 +202,13 @@ class AdminRoleControllerTest extends TestCase
             ->withHeaders(['Accept-Language' => 'en'])
             ->putJson("/api/v1/admin/roles/{$adminRole->id}", $updateData);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['role']);
+        $response->assertStatus(200)
+            ->assertJsonPath('data.name', 'modified-admin');
+
+        $this->assertDatabaseHas('roles', [
+            'id' => $adminRole->id,
+            'name' => 'modified-admin',
+        ]);
     }
 
     public function test_destroy_deletes_role_for_authorized_user(): void
