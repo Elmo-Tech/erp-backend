@@ -7,6 +7,8 @@ use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Calendar\Services\MasterCalendarAggregatorService;
 use App\Modules\Client\Models\Client;
 use App\Modules\Meetings\Models\Meeting;
+use App\Modules\PersonalTasks\Models\PersonalTask;
+use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Models\Milestone;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
@@ -117,6 +119,11 @@ class MasterCalendarAggregatorServiceTest extends TestCase
             'status' => 'in_progress',
             'assignee_id' => $user->id,
         ]);
+        $personalTask = PersonalTask::create([
+            'user_id' => $user->id,
+            'title' => 'Daily planning',
+            'status' => 'todo',
+        ]);
 
         $attendance = Attendance::create([
             'user_id' => $user->id,
@@ -148,6 +155,14 @@ class MasterCalendarAggregatorServiceTest extends TestCase
             'duration_minutes' => 75,
             'is_manual' => true,
         ]);
+        PersonalTimeEntry::create([
+            'personal_task_id' => $personalTask->id,
+            'user_id' => $user->id,
+            'start_time' => '2026-05-13 15:00:00',
+            'end_time' => '2026-05-13 15:20:00',
+            'duration_minutes' => 20,
+            'is_manual' => true,
+        ]);
 
         $items = app(MasterCalendarAggregatorService::class)
             ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
@@ -159,12 +174,18 @@ class MasterCalendarAggregatorServiceTest extends TestCase
         $this->assertSame('2026-05-13', $item['date']);
         $this->assertSame('present', $item['status']);
         $this->assertSame(495, $item['meta']['totalWorkedMinutes']);
-        $this->assertCount(1, $item['meta']['workedTasks']);
+        $this->assertCount(2, $item['meta']['workedTasks']);
+        $this->assertSame('project', $item['meta']['workedTasks'][0]['source']);
         $this->assertSame($task->id, $item['meta']['workedTasks'][0]['taskId']);
         $this->assertSame('Fix calendar attendance', $item['meta']['workedTasks'][0]['title']);
         $this->assertSame('Business OS', $item['meta']['workedTasks'][0]['projectTitle']);
         $this->assertSame(165, $item['meta']['workedTasks'][0]['durationMinutes']);
         $this->assertSame(2, $item['meta']['workedTasks'][0]['entriesCount']);
+        $this->assertSame('personal', $item['meta']['workedTasks'][1]['source']);
+        $this->assertSame($personalTask->id, $item['meta']['workedTasks'][1]['taskId']);
+        $this->assertSame('Daily planning', $item['meta']['workedTasks'][1]['title']);
+        $this->assertSame('Personal', $item['meta']['workedTasks'][1]['projectTitle']);
+        $this->assertSame(20, $item['meta']['workedTasks'][1]['durationMinutes']);
         $this->assertFalse($items->contains(fn (array $calendarItem) => $calendarItem['id'] === 'attendance-'.$otherAttendance->id));
     }
 

@@ -7,12 +7,14 @@ use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Finance\Models\FinanceInvoice;
 use App\Modules\Finance\Models\Subscription;
 use App\Modules\Meetings\Models\Meeting;
+use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Models\Milestone;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Aggregates data from multiple modules into a unified calendar feed.
@@ -242,7 +244,7 @@ class MasterCalendarAggregatorService
 
     private function fetchAttendance(Carbon $startDate, Carbon $endDate, User $user): Collection
     {
-        $timeEntriesByDate = ProjectTimeEntry::with(['task.project:id,title'])
+        $projectTimeEntriesByDate = ProjectTimeEntry::with(['task.project:id,title'])
             ->where('user_id', $user->id)
             ->whereBetween('start_time', [
                 $startDate->copy()->startOfDay(),
@@ -252,6 +254,18 @@ class MasterCalendarAggregatorService
             ->get()
             ->groupBy(fn (ProjectTimeEntry $entry) => $entry->start_time?->toDateString());
 
+        $personalTimeEntriesByDate = Schema::hasTable('personal_time_entries') && Schema::hasTable('personal_tasks')
+            ? PersonalTimeEntry::with('personalTask:id,title,status')
+                ->where('user_id', $user->id)
+                ->whereBetween('start_time', [
+                    $startDate->copy()->startOfDay(),
+                    $endDate->copy()->endOfDay(),
+                ])
+                ->orderBy('start_time')
+                ->get()
+                ->groupBy(fn (PersonalTimeEntry $entry) => $entry->start_time?->toDateString())
+            : collect();
+
         return Attendance::with('user:id,name,avatar')
             ->where('user_id', $user->id)
             ->whereBetween('date', [
@@ -260,9 +274,12 @@ class MasterCalendarAggregatorService
             ])
             ->orderBy('date')
             ->get()
-            ->map(function (Attendance $attendance) use ($timeEntriesByDate) {
-                $entries = $timeEntriesByDate->get($attendance->date?->toDateString(), collect());
-                $workedTasks = $entries
+            ->map(function (Attendance $attendance) use ($projectTimeEntriesByDate, $personalTimeEntriesByDate) {
+                $date = $attendance->date?->toDateString();
+                $projectEntries = $projectTimeEntriesByDate->get($date, collect());
+                $personalEntries = $personalTimeEntriesByDate->get($date, collect());
+
+                $projectWorkedTasks = $projectEntries
                     ->groupBy('task_id')
                     ->map(function (Collection $taskEntries) {
                         /** @var ProjectTimeEntry $first */
@@ -280,11 +297,43 @@ class MasterCalendarAggregatorService
                         });
 
                         return [
+                            'source' => 'project',
                             'taskId' => $first->task_id,
                             'projectId' => $first->task?->project_id,
                             'title' => $first->task?->title ?? 'Task #'.$first->task_id,
                             'status' => $first->task?->status?->value,
                             'projectTitle' => $first->task?->project?->title,
+                            'durationMinutes' => $durationMinutes,
+                            'entriesCount' => $taskEntries->count(),
+                            'lastStartTime' => $taskEntries->max('start_time')?->toIso8601String(),
+                        ];
+                    })
+                    ->values();
+
+                $personalWorkedTasks = $personalEntries
+                    ->groupBy('personal_task_id')
+                    ->map(function (Collection $taskEntries) {
+                        /** @var PersonalTimeEntry $first */
+                        $first = $taskEntries->first();
+                        $durationMinutes = $taskEntries->sum(function (PersonalTimeEntry $entry): int {
+                            if ($entry->duration_minutes !== null) {
+                                return (int) $entry->duration_minutes;
+                            }
+
+                            if ($entry->start_time !== null && $entry->end_time !== null) {
+                                return (int) $entry->start_time->diffInMinutes($entry->end_time);
+                            }
+
+                            return 0;
+                        });
+
+                        return [
+                            'source' => 'personal',
+                            'taskId' => $first->personal_task_id,
+                            'projectId' => null,
+                            'title' => $first->personalTask?->title ?? 'Personal task #'.$first->personal_task_id,
+                            'status' => $first->personalTask?->status,
+                            'projectTitle' => 'Personal',
                             'durationMinutes' => $durationMinutes,
                             'entriesCount' => $taskEntries->count(),
                             'lastStartTime' => $taskEntries->max('start_time')?->toIso8601String(),
@@ -316,7 +365,7 @@ class MasterCalendarAggregatorService
                         'idleMinutes' => $attendance->idle_minutes,
                         'usedGraceDay' => (bool) $attendance->used_grace_day,
                         'notes' => $attendance->notes,
-                        'workedTasks' => $workedTasks,
+                        'workedTasks' => $projectWorkedTasks->merge($personalWorkedTasks)->values(),
                     ],
                 ];
             });
