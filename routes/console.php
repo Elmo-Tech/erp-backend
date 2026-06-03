@@ -3,36 +3,32 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
-use App\Modules\Finance\Models\Subscription;
-use App\Modules\Notification\Notifications\SubscriptionCollectionDueNotification;
-use App\Modules\Settings\Models\User;
+use App\Modules\Reminder\Services\ReminderDispatchService;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
 Artisan::command('finance:notify-subscription-collections-due', function () {
-    $subscriptions = Subscription::query()
-        ->with(['client', 'project'])
-        ->where('status', 'active')
-        ->whereBetween('next_billing_date', [now()->toDateString(), now()->addDays(3)->toDateString()])
-        ->get();
+    $sent = app(ReminderDispatchService::class)->sendSubscriptionReminders();
 
-    if ($subscriptions->isEmpty()) {
-        $this->info('No subscription collections due.');
-        return 0;
-    }
+    $this->info("Queued {$sent} subscription collection reminder(s).");
 
-    $recipients = User::permission('collect_subscription_payments')->get();
-
-    foreach ($subscriptions as $subscription) {
-        foreach ($recipients as $recipient) {
-            $recipient->notify(new SubscriptionCollectionDueNotification($subscription));
-        }
-    }
-
-    $this->info("Queued {$subscriptions->count()} subscription collection notification batch(es).");
     return 0;
 })->purpose('Notify finance users about subscription collections due soon');
 
+Artisan::command('reminders:send-due {--days=3 : Number of days ahead for due-date reminders}', function () {
+    $days = max(0, (int) $this->option('days'));
+    $results = app(ReminderDispatchService::class)->sendDueReminders($days);
+
+    foreach ($results as $type => $sent) {
+        $this->line("{$type}: {$sent}");
+    }
+
+    $this->info('Due reminders processed.');
+
+    return 0;
+})->purpose('Send due email reminders for meetings, tasks, invoices, subscriptions, and client follow-ups');
+
 Schedule::command('finance:notify-subscription-collections-due')->dailyAt('09:00');
+Schedule::command('reminders:send-due')->dailyAt('08:30');
