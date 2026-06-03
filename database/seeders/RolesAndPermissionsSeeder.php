@@ -99,6 +99,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage_users',
             'manage_roles',
             'manage_dictionaries',
+            'use_ai_agent',
 
             // ── HR & Finance ─────────────────────────────────────────────────
             'manage_hr',
@@ -346,6 +347,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_team_performance', 'view_all_blockers',
                 'view_escalated_blockers', 'view_team_pulse',
                 'view_reports', 'view_admin_stats',
+                'use_ai_agent',
                 'view_profitability', 'view_quality_metrics',
                 'view_user_performance', 'view_attendance_analytics',
                 'manage_invoices', 'manage_subscriptions', 'collect_subscription_payments',
@@ -367,6 +369,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'pmo' => [
                 'view_my_workspace',
                 'view_dashboard', 'view_dashboard_overview',
+                'use_ai_agent',
                 'view_project_timeline', 'view_all_blockers',
                 'view_morning_sop', 'submit_morning_sop',
                 'view_projects', 'view_all_projects', 'manage_all_projects',
@@ -398,6 +401,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manager' => [
                 'view_my_workspace',
                 'view_dashboard', 'view_dashboard_overview',
+                'use_ai_agent',
                 'view_team_performance', 'view_project_timeline',
                 'view_projects', 'view_assigned_projects', 'create_projects',
                 'edit_projects',
@@ -424,6 +428,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'techdev' => [
                 'view_my_workspace',
                 'view_dashboard', 'view_dashboard_overview',
+                'use_ai_agent',
                 'view_team_performance', 'view_project_timeline',
                 'view_projects', 'view_assigned_projects',
                 'view_project_members',
@@ -446,6 +451,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'qa' => [
                 'view_my_workspace',
                 'view_dashboard', 'view_dashboard_overview',
+                'use_ai_agent',
                 'view_personal_tasks',
                 'view_projects', 'view_assigned_projects',
                 'view_project_members',
@@ -465,6 +471,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'dev' => [
                 'view_my_workspace',
                 'view_dashboard', 'view_dashboard_overview',
+                'use_ai_agent',
                 'view_personal_tasks',
                 'view_projects', 'view_assigned_projects',
                 'view_project_members',
