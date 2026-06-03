@@ -23,15 +23,17 @@ class AuthRefreshControllerTest extends TestCase
             'password' => 'password',
         ])->assertOk();
 
-        $oldToken = $loginResponse->json('data.tokenDetails.token');
+        $oldToken = $this->cookieValue($loginResponse, 'auth_token');
+        $csrfToken = $this->cookieValue($loginResponse, 'csrf_token');
 
         $refreshResponse = $this
-            ->withHeader('Authorization', 'Bearer '.$oldToken)
+            ->withHeader('Cookie', $this->cookieHeader($oldToken, $csrfToken))
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
             ->postJson('/api/v1/auth/refresh')
             ->assertOk()
             ->assertJsonPath('message', 'Token refreshed successfully');
 
-        $newToken = $refreshResponse->json('data.tokenDetails.token');
+        $newToken = $this->cookieValue($refreshResponse, 'auth_token');
 
         $this->assertNotEmpty($newToken);
         $this->assertNotSame($oldToken, $newToken);
@@ -41,16 +43,32 @@ class AuthRefreshControllerTest extends TestCase
         auth()->forgetGuards();
 
         $this
-            ->withHeader('Authorization', 'Bearer '.$oldToken)
+            ->withHeader('Cookie', 'auth_token='.rawurlencode($oldToken))
             ->getJson('/api/v1/auth/profile')
             ->assertUnauthorized();
 
         auth()->forgetGuards();
 
         $this
-            ->withHeader('Authorization', 'Bearer '.$newToken)
+            ->withHeader('Cookie', 'auth_token='.rawurlencode($newToken))
             ->getJson('/api/v1/auth/profile')
             ->assertOk()
             ->assertJsonPath('data.profile.email', 'refresh@example.com');
+    }
+
+    private function cookieValue($response, string $name): string
+    {
+        foreach ($response->headers->getCookies() as $cookie) {
+            if ($cookie->getName() === $name) {
+                return (string) $cookie->getValue();
+            }
+        }
+
+        $this->fail("Cookie {$name} was not set.");
+    }
+
+    private function cookieHeader(string $authToken, string $csrfToken): string
+    {
+        return 'auth_token='.rawurlencode($authToken).'; csrf_token='.rawurlencode($csrfToken);
     }
 }

@@ -86,6 +86,8 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'https://elmo-erp.elmotechsoft.online'),
 
+    'auth_cookie_domain' => env('AUTH_COOKIE_DOMAIN', env('SESSION_DOMAIN')),
+
     /*
     |--------------------------------------------------------------------------
     | Encryption Key

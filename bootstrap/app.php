@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\AuthenticateWithCookieToken;
 use App\Http\Middleware\SetLocaleMiddleware;
+use App\Http\Middleware\VerifyCookieCsrfToken;
 use App\Providers\AuthServiceProvider;
 use App\Providers\ModuleServiceProvider;
 use Illuminate\Foundation\Application;
@@ -31,8 +33,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         ]);
 
+        $middleware->prependToGroup('api', [
+            AuthenticateWithCookieToken::class,
+            VerifyCookieCsrfToken::class,
+        ]);
+
         // Append CORS and locale middleware to API middleware group
-        $middleware->api(append: [
+        $middleware->appendToGroup('api', [
             \Illuminate\Http\Middleware\HandleCors::class,
             SetLocaleMiddleware::class,
         ]);

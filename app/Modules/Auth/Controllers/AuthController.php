@@ -13,7 +13,9 @@ use App\Modules\Auth\Resources\LoginProfileResource;
 use App\Modules\Settings\Services\UserPermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use OpenApi\Attributes as OA;
 
@@ -124,12 +126,14 @@ class AuthController extends Controller
             return ApiResponse::error('Invalid credentials', 401);
         }
 
-        return ApiResponse::success([
-            'tokenDetails' => $this->generateTokenAction->execute($user),
+        $tokenDetails = $this->generateTokenAction->execute($user);
+
+        return $this->withAuthCookies(ApiResponse::success([
+            'tokenDetails' => $this->publicTokenDetails($tokenDetails),
             'profile' => new LoginProfileResource($user),
             'role' => $user->roles->first()->name ?? 'guest',
             'permissions' => $this->userPermissionService->getUserPermissions($user) ?? [],
-        ], 'Login successful');
+        ], 'Login successful'), $request, $tokenDetails);
     }
 
     #[OA\Post(
@@ -213,12 +217,14 @@ class AuthController extends Controller
         $data['password'] = Hash::make($data['password']);
         $user = $this->registerUserAction->execute($data);
 
-        return ApiResponse::success([
-            'tokenDetails' => $this->generateTokenAction->execute($user),
+        $tokenDetails = $this->generateTokenAction->execute($user);
+
+        return $this->withAuthCookies(ApiResponse::success([
+            'tokenDetails' => $this->publicTokenDetails($tokenDetails),
             'profile' => new LoginProfileResource($user),
             'role' => $user->roles->first()->name ?? 'user',
             'permissions' => $this->userPermissionService->getUserPermissions($user) ?? [],
-        ], 'Registration successful');
+        ], 'Registration successful'), $request, $tokenDetails);
     }
 
     #[OA\Post(
@@ -252,9 +258,13 @@ class AuthController extends Controller
     )]
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $token = $request->user()->currentAccessToken();
 
-        return ApiResponse::success([], 'Logout successful');
+        if ($token && method_exists($token, 'delete')) {
+            $token->delete();
+        }
+
+        return $this->withoutAuthCookies(ApiResponse::success([], 'Logout successful'));
     }
 
     public function refresh(Request $request): JsonResponse
@@ -267,12 +277,12 @@ class AuthController extends Controller
             $currentToken->delete();
         }
 
-        return ApiResponse::success([
-            'tokenDetails' => $tokenDetails,
+        return $this->withAuthCookies(ApiResponse::success([
+            'tokenDetails' => $this->publicTokenDetails($tokenDetails),
             'profile' => new LoginProfileResource($user),
             'role' => $user->roles->first()->name ?? 'guest',
             'permissions' => $this->userPermissionService->getUserPermissions($user) ?? [],
-        ], 'Token refreshed successfully');
+        ], 'Token refreshed successfully'), $request, $tokenDetails);
     }
 
     #[OA\Get(
@@ -511,5 +521,57 @@ class AuthController extends Controller
         // $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
 
         return ApiResponse::success([], 'Password changed successfully');
+    }
+
+    /**
+     * @param array{token: string, expiresIn: int} $tokenDetails
+     */
+    private function withAuthCookies(JsonResponse $response, Request $request, array $tokenDetails): JsonResponse
+    {
+        $minutes = $tokenDetails['expiresIn'];
+        $secure = app()->isProduction() || $request->isSecure();
+        $csrfToken = Str::random(40);
+
+        return $response
+            ->withCookie(Cookie::make(
+                name: 'auth_token',
+                value: $tokenDetails['token'],
+                minutes: $minutes,
+                path: '/',
+                domain: config('app.auth_cookie_domain'),
+                secure: $secure,
+                httpOnly: true,
+                raw: false,
+                sameSite: 'lax'
+            ))
+            ->withCookie(Cookie::make(
+                name: 'csrf_token',
+                value: $csrfToken,
+                minutes: $minutes,
+                path: '/',
+                domain: config('app.auth_cookie_domain'),
+                secure: $secure,
+                httpOnly: false,
+                raw: false,
+                sameSite: 'lax'
+            ));
+    }
+
+    private function withoutAuthCookies(JsonResponse $response): JsonResponse
+    {
+        return $response
+            ->withCookie(Cookie::forget('auth_token', '/', config('app.auth_cookie_domain')))
+            ->withCookie(Cookie::forget('csrf_token', '/', config('app.auth_cookie_domain')));
+    }
+
+    /**
+     * @param array{token: string, expiresIn: int} $tokenDetails
+     * @return array{expiresIn: int}
+     */
+    private function publicTokenDetails(array $tokenDetails): array
+    {
+        return [
+            'expiresIn' => $tokenDetails['expiresIn'],
+        ];
     }
 }
