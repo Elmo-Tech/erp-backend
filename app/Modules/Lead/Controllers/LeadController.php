@@ -24,9 +24,38 @@ class LeadController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $leads = Lead::query()
-            ->orderByDesc('created_at')
-            ->get();
+        $query = Lead::query();
+
+        if ($request->filled('search')) {
+            $value = (string) $request->input('search');
+            $query->where(function ($searchQuery) use ($value) {
+                $searchQuery
+                    ->where('title', 'like', "%{$value}%")
+                    ->orWhere('source', 'like', "%{$value}%")
+                    ->orWhere('metadata->company_name', 'like', "%{$value}%")
+                    ->orWhere('metadata->primary_email', 'like', "%{$value}%");
+            });
+        }
+
+        if ($request->filled('stage')) {
+            $stage = (string) $request->input('stage');
+            $backendStage = $stage === 'new' ? 'new_lead' : ($stage === 'closed_won' ? 'won' : $stage);
+            $query->where('stage', $backendStage);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('source')) {
+            $query->where('source', $request->input('source'));
+        }
+
+        if ($request->filled('assigneeId')) {
+            $query->where('assigned_to', (int) $request->input('assigneeId'));
+        }
+
+        $leads = $query->orderByDesc('created_at')->get();
 
         $data = $leads->map(fn (Lead $lead) => [
             'id'              => $lead->id,

@@ -31,8 +31,25 @@ class FinanceInvoiceController extends Controller
         $query = FinanceInvoice::with(['client', 'project'])->latest();
 
         // Filter by client when the caller passes ?client_id=X (e.g. Client Ledger tab)
-        if ($request->filled('client_id')) {
-            $query->where('client_id', (int) $request->client_id);
+        $clientId = $request->input('client_id', $request->input('clientId'));
+        if ($clientId) {
+            $query->where('client_id', (int) $clientId);
+        }
+
+        if ($request->filled('projectId')) {
+            $query->where('project_id', (int) $request->input('projectId'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('from')) {
+            $query->whereDate('due_date', '>=', $request->input('from'));
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('due_date', '<=', $request->input('to'));
         }
 
         $invoices = $query->paginate(20);

@@ -20,7 +20,29 @@ class SubscriptionController extends Controller
     {
         abort_if(! $request->user()->can('manage_subscriptions'), 403, 'Unauthorized');
 
-        $subscriptions = Subscription::with(['client', 'project'])->latest()->paginate(20);
+        $query = Subscription::with(['client', 'project'])->latest();
+
+        if ($request->filled('clientId')) {
+            $query->where('client_id', (int) $request->input('clientId'));
+        }
+
+        if ($request->filled('projectId')) {
+            $query->where('project_id', (int) $request->input('projectId'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('from')) {
+            $query->whereDate('next_billing_date', '>=', $request->input('from'));
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('next_billing_date', '<=', $request->input('to'));
+        }
+
+        $subscriptions = $query->paginate(20);
 
         return ApiResponse::success(
             SubscriptionResource::collection($subscriptions)->response()->getData(true),

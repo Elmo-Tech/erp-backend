@@ -3,19 +3,18 @@
 namespace App\Modules\Auth\Actions;
 
 use App\Modules\Settings\Models\User;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use InvalidArgumentException;
 
 class LoginUserAction
 {
     public function execute(array $credentials): User
     {
-        if (! Auth::attempt($credentials)) {
+        $user = User::query()->where('email', $credentials['email'])->first();
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw new InvalidArgumentException('Invalid credentials');
         }
-
-        /** @var User $user */
-        $user = Auth::user();
 
         return $user;
     }

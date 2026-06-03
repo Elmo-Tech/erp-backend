@@ -69,12 +69,38 @@ class ProjectTaskController extends Controller
             }
         }
 
-        if (request()->filled('milestoneId')) {
-            $query->where('milestone_id', request()->integer('milestoneId'));
+        $request = request();
+        $filter = (array) $request->input('filter', []);
+
+        $milestoneId = $request->input('milestoneId', $filter['milestoneId'] ?? null);
+        if ($milestoneId !== null && $milestoneId !== '') {
+            $query->where('milestone_id', (int) $milestoneId);
         }
 
-        if (request()->boolean('backlog')) {
+        $backlog = $request->input('backlog', $filter['isInBacklog'] ?? null);
+        if (filter_var($backlog, FILTER_VALIDATE_BOOLEAN)) {
             $query->backlog();
+        }
+
+        if (! empty($filter['status'])) {
+            $query->where('status', $filter['status']);
+        }
+
+        if (! empty($filter['assigneeId'])) {
+            $query->where('assignee_id', (int) $filter['assigneeId']);
+        }
+
+        if (! empty($filter['search'])) {
+            $value = (string) $filter['search'];
+            $query->where('title', 'like', "%{$value}%");
+        }
+
+        if (! empty($filter['dueFrom'])) {
+            $query->whereDate('due_date', '>=', $filter['dueFrom']);
+        }
+
+        if (! empty($filter['dueTo'])) {
+            $query->whereDate('due_date', '<=', $filter['dueTo']);
         }
 
         $tasks = $query->orderBy('created_at')->get();

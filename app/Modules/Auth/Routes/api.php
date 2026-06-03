@@ -14,6 +14,9 @@ Route::prefix('v1/auth')->group(function () {
     //     ->name('auth.register');
 
     Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
+    Route::post('refresh', [AuthController::class, 'refresh'])
+        ->middleware('auth:sanctum')
+        ->name('auth.refresh');
     Route::get('profile', [AuthController::class, 'profile'])->name('auth.profile');
     Route::put('profile', [AuthController::class, 'updateProfile'])->name('auth.profile.update');
     Route::post('profile/avatar', [AuthController::class, 'updateAvatar'])->name('auth.profile.avatar');

@@ -30,7 +30,7 @@ class AuthController extends Controller
         $this->middleware('locale');
 
         // Apply auth middleware only to logout
-        $this->middleware('auth:sanctum')->only(['logout', 'profile', 'updateProfile', 'updateAvatar']);
+        $this->middleware('auth:sanctum')->only(['logout', 'refresh', 'profile', 'updateProfile', 'updateAvatar']);
     }
 
     #[OA\Post(
@@ -255,6 +255,24 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return ApiResponse::success([], 'Logout successful');
+    }
+
+    public function refresh(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $currentToken = $user->currentAccessToken();
+        $tokenDetails = $this->generateTokenAction->execute($user, 'refresh-token');
+
+        if ($currentToken && method_exists($currentToken, 'delete')) {
+            $currentToken->delete();
+        }
+
+        return ApiResponse::success([
+            'tokenDetails' => $tokenDetails,
+            'profile' => new LoginProfileResource($user),
+            'role' => $user->roles->first()->name ?? 'guest',
+            'permissions' => $this->userPermissionService->getUserPermissions($user) ?? [],
+        ], 'Token refreshed successfully');
     }
 
     #[OA\Get(

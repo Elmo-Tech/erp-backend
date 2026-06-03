@@ -28,6 +28,12 @@ class ListProjectsAction
                 AllowedFilter::callback('search', function ($query, $value) {
                     $query->where('title', 'like', "%{$value}%");
                 }),
+                AllowedFilter::callback('deadlineFrom', function ($query, $value) {
+                    $query->whereDate('deadline', '>=', $value);
+                }),
+                AllowedFilter::callback('deadlineTo', function ($query, $value) {
+                    $query->whereDate('deadline', '<=', $value);
+                }),
             ]);
 
         // ── SECURITY: Project-level scoping ───────────────────────────────────
