@@ -9,6 +9,7 @@ use App\Modules\Project\Controllers\ProjectMemberController;
 use App\Modules\Project\Controllers\ProjectTaskController;
 use App\Modules\Project\Controllers\ProjectTaskDeliverableController;
 use App\Modules\Project\Controllers\ProjectTimeEntryController;
+use App\Modules\Project\Controllers\ProjectTimelineController;
 use App\Modules\Project\Controllers\ProjectWikiController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
 
         Route::get('projects/tasks/my-active', [ProjectTaskController::class, 'myActive'])
             ->name('projects.tasks.my-active');
+
+        Route::get('projects/timeline', [ProjectTimelineController::class, 'index'])
+            ->withoutMiddleware('permission:view_projects|manage_all_projects')
+            ->middleware('permission:view_project_timeline')
+            ->name('projects.timeline');
 
         Route::get('projects/time-entries/active', [ProjectTimeEntryController::class, 'active'])
             ->name('projects.time-entries.active');

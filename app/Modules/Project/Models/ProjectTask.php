@@ -33,6 +33,7 @@ class ProjectTask extends Model
         'description',
         'status',
         'estimated_hours',
+        'start_date',
         'due_date',
         'assignee_id',
     ];
@@ -42,6 +43,7 @@ class ProjectTask extends Model
         return [
             'status'          => ExecutionTaskStatus::class,
             'estimated_hours' => 'decimal:2',
+            'start_date'      => 'date',
             'due_date'        => 'date',
         ];
     }

@@ -150,6 +150,7 @@ class ProjectTaskController extends Controller
             'description'     => $data['description'] ?? null,
             'status'          => $data['status'] ?? 'to_do',
             'estimated_hours' => $data['estimatedHours'] ?? null,
+            'start_date'      => $data['startDate'] ?? null,
             'due_date'        => $data['dueDate'] ?? null,
             'assignee_id'     => $data['assigneeId'] ?? null,
         ]);
@@ -259,6 +260,7 @@ class ProjectTaskController extends Controller
             'description'     => array_key_exists('description', $data) ? $data['description'] : $task->description,
             'status'          => $data['status'] ?? null,
             'estimated_hours' => array_key_exists('estimatedHours', $data) ? $data['estimatedHours'] : $task->estimated_hours,
+            'start_date'      => array_key_exists('startDate', $data) ? $data['startDate'] : $task->start_date,
             'due_date'        => array_key_exists('dueDate', $data) ? $data['dueDate'] : $task->due_date,
             'assignee_id'     => array_key_exists('assigneeId', $data) ? $data['assigneeId'] : $task->assignee_id,
         ], fn ($v) => $v !== null));

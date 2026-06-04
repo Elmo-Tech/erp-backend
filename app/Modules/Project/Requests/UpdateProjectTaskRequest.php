@@ -25,6 +25,7 @@ class UpdateProjectTaskRequest extends FormRequest
             'description'    => ['nullable', 'string'],
             'status'         => ['sometimes', new Enum(ExecutionTaskStatus::class)],
             'estimatedHours' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'startDate'      => ['nullable', 'date'],
             'dueDate'        => ['nullable', 'date'],
             'assigneeId'     => ['nullable', 'integer', 'exists:users,id'],
         ];
