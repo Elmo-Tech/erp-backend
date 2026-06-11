@@ -109,18 +109,14 @@ class UserManagementController extends Controller
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 
-        try {
-            $users = $this->userService->getUsers([
-                'perPage' => $request->input('perPage', 15),
-            ]);
+        $users = $this->userService->getUsers([
+            'perPage' => $request->input('perPage', 15),
+        ]);
 
-            return ApiResponse::success(
-                new UserCollection($users),
-                __('messages.users_retrieved')
-            );
-        } catch (\Exception $e) {
-            return ApiResponse::error($e->getMessage(), 500);
-        }
+        return ApiResponse::success(
+            new UserCollection($users),
+            __('messages.users_retrieved')
+        );
     }
 
     /**
@@ -198,19 +194,15 @@ class UserManagementController extends Controller
      */
     public function store(StoreUserRequest $request): JsonResponse
     {
-        try {
-            return DB::transaction(function () use ($request) {
-                $user = $this->userService->createUser($request->validated());
+        return DB::transaction(function () use ($request) {
+            $user = $this->userService->createUser($request->validated());
 
-                return ApiResponse::success(
-                    ['user' => new UserResource($user)],
-                    __('messages.user_created'),
-                    201
-                );
-            });
-        } catch (\Exception $e) {
-            return ApiResponse::error($e->getMessage(), 500);
-        }
+            return ApiResponse::success(
+                ['user' => new UserResource($user)],
+                __('messages.user_created'),
+                201
+            );
+        });
     }
 
     /**
@@ -343,18 +335,14 @@ class UserManagementController extends Controller
             return ApiResponse::notFound(__('messages.user_not_found'));
         }
 
-        try {
-            return DB::transaction(function () use ($request, $user) {
-                $user = $this->userService->updateUser($user, $request->validated());
+        return DB::transaction(function () use ($request, $user) {
+            $user = $this->userService->updateUser($user, $request->validated());
 
-                return ApiResponse::success(
-                    ['user' => new UserResource($user)],
-                    __('messages.user_updated')
-                );
-            });
-        } catch (\Exception $e) {
-            return ApiResponse::error($e->getMessage(), 500);
-        }
+            return ApiResponse::success(
+                ['user' => new UserResource($user)],
+                __('messages.user_updated')
+            );
+        });
     }
 
     /**
@@ -415,15 +403,11 @@ class UserManagementController extends Controller
             return ApiResponse::error(__('messages.cannot_delete_self'), 400);
         }
 
-        try {
-            return DB::transaction(function () use ($user) {
-                $this->userService->deleteUser($user);
+        return DB::transaction(function () use ($user) {
+            $this->userService->deleteUser($user);
 
-                return ApiResponse::success(null, __('messages.user_deleted'));
-            });
-        } catch (\Exception $e) {
-            return ApiResponse::error($e->getMessage(), 500);
-        }
+            return ApiResponse::success(null, __('messages.user_deleted'));
+        });
     }
 
     /**
@@ -482,22 +466,18 @@ class UserManagementController extends Controller
             return ApiResponse::notFound(__('messages.user_not_found'));
         }
 
-        try {
-            return DB::transaction(function () use ($user) {
-                $user = $this->userService->toggleUserStatus($user);
+        return DB::transaction(function () use ($user) {
+            $user = $this->userService->toggleUserStatus($user);
 
-                $message = $user->is_active
-                    ? __('messages.user_activated')
-                    : __('messages.user_deactivated');
+            $message = $user->is_active
+                ? __('messages.user_activated')
+                : __('messages.user_deactivated');
 
-                return ApiResponse::success(
-                    ['user' => new UserResource($user)],
-                    $message
-                );
-            });
-        } catch (\Exception $e) {
-            return ApiResponse::error($e->getMessage(), 500);
-        }
+            return ApiResponse::success(
+                ['user' => new UserResource($user)],
+                $message
+            );
+        });
     }
 
     /**
@@ -572,17 +552,13 @@ class UserManagementController extends Controller
             return ApiResponse::notFound(__('messages.user_not_found'));
         }
 
-        try {
-            return DB::transaction(function () use ($request, $user) {
-                $user = $this->userService->assignRoles($user, $request->input('roles'));
+        return DB::transaction(function () use ($request, $user) {
+            $user = $this->userService->assignRoles($user, $request->input('roles'));
 
-                return ApiResponse::success(
-                    ['user' => new UserResource($user)],
-                    __('messages.roles_assigned')
-                );
-            });
-        } catch (\Exception $e) {
-            return ApiResponse::error($e->getMessage(), 500);
-        }
+            return ApiResponse::success(
+                ['user' => new UserResource($user)],
+                __('messages.roles_assigned')
+            );
+        });
     }
 }

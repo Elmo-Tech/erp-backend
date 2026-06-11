@@ -19,30 +19,33 @@ class ProjectResource extends JsonResource
         $user = $request->user();
         $canViewBudget = $user && $user->can('view_project_budget');
 
+        $attributes = $this->resource->getAttributes();
+        $hasPinnedProjection = array_key_exists('is_pinned', $attributes);
+
         return [
             'projectId' => $this->id,
-            'clientId' => $this->client_id ?? 0,
-            'quotationId' => $this->quotation_id ?? 0,
+            'clientId' => $this->client_id,
+            'quotationId' => $this->quotation_id,
             'title' => $this->title ?? '',
-            'description' => $this->description ?? '',
-            'status' => $this->status?->value ?? '',
-            'previousStatus' => $this->previous_status?->value ?? '',
+            'description' => $this->description,
+            'status' => $this->status?->value,
+            'previousStatus' => $this->previous_status?->value,
             // Budget is only visible to users with permission
             'budget' => $canViewBudget ? (float) ($this->budget ?? 0.0) : null,
             'canViewBudget' => $canViewBudget,
-            'deadline' => $this->deadline?->toDateString() ?? '',
-            'uiApprovedAt' => $this->ui_approved_at?->toISOString() ?? '',
-            'autoApprovalJobId' => $this->auto_approval_job_id ?? '',
+            'deadline' => $this->deadline?->toDateString(),
+            'uiApprovedAt' => $this->ui_approved_at?->toISOString(),
+            'autoApprovalJobId' => $this->auto_approval_job_id,
             'progress' => (float) ($this->progress ?? 0),
             'totalTimeSpent' => (int) ($this->total_time_spent ?? 0),
-            'isPinned' => $this->isPinnedBy($user?->id),
+            'isPinned' => $hasPinnedProjection ? (bool) $this->is_pinned : $this->isPinnedBy($user?->id),
             'client' => $this->whenLoaded('client', function () {
                 return [
                     'clientId' => $this->client->id,
                     'name' => $this->client->display_name ?? '',
-                    'email' => $this->client->primary_email ?? '',
-                    'company' => $this->client->company_name ?? '',
-                    'phone' => $this->client->primary_phone ?? '',
+                    'email' => $this->client->primary_email,
+                    'company' => $this->client->company_name,
+                    'phone' => $this->client->primary_phone,
                 ];
             }),
             'members' => $this->whenLoaded('members', function () {

@@ -39,13 +39,38 @@ class CreateMeetingRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
             'location' => ['nullable', 'string', 'max:255'],
-            'locationDetails' => ['nullable', 'string', 'max:500'],
+            'locationDetails' => [
+                'nullable',
+                'string',
+                'max:500',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $location = (string) $this->input('location');
+                    $details = is_string($value) ? trim($value) : '';
+
+                    if ($location === 'online' && $details !== '' && filter_var($details, FILTER_VALIDATE_URL) === false) {
+                        $fail('Enter a valid meeting link.');
+                    }
+                },
+            ],
             'assignedTo' => ['nullable', 'integer', 'exists:users,id'],
             'internalAttendees' => ['nullable', 'array'],
             'internalAttendees.*' => ['integer', 'exists:users,id'],
             'externalAttendees' => ['nullable', 'array'],
             'externalAttendees.*' => ['string', 'max:255'],
-            'scheduledAt' => ['required', 'date', 'after:now'],
+            'scheduledAt' => ['required', 'date'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'subjectType.required' => 'Meeting subject is required.',
+            'subjectType.in' => 'Meeting subject is invalid.',
+            'subjectId.required' => 'Meeting subject is required.',
+            'title.required' => 'Meeting title is required.',
+            'scheduledAt.required' => 'Meeting date and time are required.',
+            'scheduledAt.date' => 'Meeting date and time must be valid.',
+            'internalAttendees.*.exists' => 'One or more selected attendees are invalid.',
         ];
     }
 

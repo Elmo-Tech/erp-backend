@@ -66,6 +66,9 @@ class MasterCalendarAggregatorServiceTest extends TestCase
             'status' => 'scheduled',
             'title' => 'Discovery Call',
             'meeting_type' => 'discovery-call',
+            'description' => 'Discussed budget and stakeholders.',
+            'location' => 'online',
+            'location_details' => 'https://meet.example.com/discovery',
             'internal_attendees' => [$attendee->id],
             'external_attendees' => ['primary-contact'],
             'assigned_to' => $attendee->id,
@@ -85,6 +88,12 @@ class MasterCalendarAggregatorServiceTest extends TestCase
         $this->assertSame('2026-05-20', $item['date']);
         $this->assertStringStartsWith('2026-05-20T14:30:00', $item['startTime']);
         $this->assertSame('Mona Scheduler', $item['meta']['creatorName']);
+        $this->assertSame('App\\Modules\\Client\\Models\\Client', $item['meta']['subjectType']);
+        $this->assertSame($client->id, $item['meta']['subjectId']);
+        $this->assertSame('Acme', $item['meta']['subjectName']);
+        $this->assertSame('Discussed budget and stakeholders.', $item['meta']['notes']);
+        $this->assertSame('online', $item['meta']['location']);
+        $this->assertSame('https://meet.example.com/discovery', $item['meta']['locationDetails']);
     }
 
     public function test_it_excludes_item_types_without_matching_calendar_permission(): void

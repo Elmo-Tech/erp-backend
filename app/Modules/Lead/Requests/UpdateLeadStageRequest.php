@@ -26,6 +26,17 @@ class UpdateLeadStageRequest extends FormRequest
             // ── Top-level ─────────────────────────────────────────────────────
             'new_stage'    => ['required', 'string', Rule::enum(LeadStage::class)],
             'stage_results' => ['present', 'array'],
+            'scheduled_meeting' => ['nullable', 'array'],
+            'scheduled_meeting.meeting_type' => ['required_with:scheduled_meeting', 'string', 'max:100'],
+            'scheduled_meeting.date' => ['required_with:scheduled_meeting', 'date'],
+            'scheduled_meeting.time' => ['required_with:scheduled_meeting', 'string', 'max:10'],
+            'scheduled_meeting.location_type' => ['nullable', 'string', 'in:online,client_site,our_office,office,other'],
+            'scheduled_meeting.location_details' => ['nullable', 'string', 'max:1000'],
+            'scheduled_meeting.internal_attendees' => ['nullable', 'array'],
+            'scheduled_meeting.internal_attendees.*' => ['string'],
+            'scheduled_meeting.external_attendees' => ['nullable', 'array'],
+            'scheduled_meeting.external_attendees.*' => ['string'],
+            'scheduled_meeting.notes' => ['nullable', 'string', 'max:5000'],
 
             // ── Each stage result entry ───────────────────────────────────────
             'stage_results.*.type'          => ['required', 'string', Rule::in($documentTypes)],
@@ -104,6 +115,9 @@ class UpdateLeadStageRequest extends FormRequest
             'stage_results.*.type.in' => 'Document type must be one of: proposal, quotation, contract.',
             'stage_results.*.creation_type.required' => 'Each stage result must specify a creation type.',
             'stage_results.*.creation_type.in' => 'Creation type must be one of: task, direct_upload, skipped.',
+            'scheduled_meeting.meeting_type.required_with' => 'Meeting type is required.',
+            'scheduled_meeting.date.required_with' => 'Meeting date is required.',
+            'scheduled_meeting.time.required_with' => 'Meeting time is required.',
         ];
     }
 

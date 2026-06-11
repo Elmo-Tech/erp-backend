@@ -75,6 +75,62 @@ class MeetingSyncTest extends TestCase
         ]);
     }
 
+    public function test_store_allows_past_meetings_and_blank_online_link_with_notes(): void
+    {
+        Carbon::setTestNow('2026-05-14 09:00:00');
+
+        $creator = $this->userWithPermissions(['schedule_meetings']);
+        $client = Client::factory()->create();
+
+        $this->actingAs($creator, 'sanctum')
+            ->postJson('/api/v1/meetings', [
+                'subjectType' => Client::class,
+                'subjectId' => $client->id,
+                'meetingType' => 'discovery',
+                'title' => 'Backfilled Discovery',
+                'description' => 'Client asked to revisit pricing.',
+                'scheduledAt' => '2026-05-01T11:00:00+00:00',
+                'location' => 'online',
+                'locationDetails' => '',
+                'internalAttendees' => [$creator->id],
+                'externalAttendees' => ['primary-contact'],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.description', 'Client asked to revisit pricing.')
+            ->assertJsonPath('data.locationDetails', '');
+
+        $this->assertDatabaseHas('meetings', [
+            'model_type' => Client::class,
+            'model_id' => $client->id,
+            'title' => 'Backfilled Discovery',
+            'description' => 'Client asked to revisit pricing.',
+            'location' => 'online',
+            'location_details' => null,
+        ]);
+    }
+
+    public function test_store_rejects_invalid_non_empty_online_link(): void
+    {
+        Carbon::setTestNow('2026-05-14 09:00:00');
+
+        $creator = $this->userWithPermissions(['schedule_meetings']);
+        $client = Client::factory()->create();
+
+        $this->actingAs($creator, 'sanctum')
+            ->postJson('/api/v1/meetings', [
+                'subjectType' => Client::class,
+                'subjectId' => $client->id,
+                'meetingType' => 'discovery',
+                'title' => 'Discovery',
+                'scheduledAt' => '2026-05-14T11:00:00+00:00',
+                'location' => 'online',
+                'locationDetails' => 'not a url',
+                'internalAttendees' => [$creator->id],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('locationDetails');
+    }
+
     public function test_meeting_status_can_be_updated_through_meeting_update_route(): void
     {
         Carbon::setTestNow('2026-05-14 09:00:00');

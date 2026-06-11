@@ -9,7 +9,6 @@ use App\Modules\Client\Actions\LogClientAuditAction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use OpenApi\Annotations as OA;
 
 class AdminUserController extends Controller
@@ -90,23 +89,15 @@ class AdminUserController extends Controller
             return ApiResponse::forbidden('You do not have permission to manage internal costs');
         }
 
-        try {
-            // Get all users with their roles
-            $users = User::with('roles')->get();
+        // Get all users with their roles
+        $users = User::with('roles')->get();
 
-            // Transform using AdminUserResource
-            $usersData = \App\Modules\Settings\Resources\AdminUserResource::collection($users);
+        // Transform using AdminUserResource
+        $usersData = \App\Modules\Settings\Resources\AdminUserResource::collection($users);
 
-            return ApiResponse::success([
-                'users' => $usersData,
-            ], 'Users retrieved successfully');
-
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to retrieve users: '.$e->getMessage(),
-                500
-            );
-        }
+        return ApiResponse::success([
+            'users' => $usersData,
+        ], 'Users retrieved successfully');
     }
 
     /**
@@ -228,74 +219,42 @@ class AdminUserController extends Controller
      *     )
      * )
      */
-    public function updateInternalCost(Request $request, int $id): JsonResponse
+    public function updateInternalCost(\App\Modules\Settings\Requests\UpdateInternalCostRequest $request, int $id): JsonResponse
     {
-        // Check permission
-        if (! auth()->user()->can('manage_internal_costs')) {
-            return ApiResponse::forbidden('You do not have permission to manage internal costs');
-        }
+        return DB::transaction(function () use ($request, $id) {
+            // Find the user
+            $user = User::find($id);
+            if (! $user) {
+                return ApiResponse::notFound('User not found');
+            }
 
-        // Validate input
-        $validator = Validator::make($request->all(), [
-            'internalHourlyCost' => [
-                'required',
-                'numeric',
-                'min:0.01',
-                'max:9999.99',
-            ],
-        ], [
-            'internalHourlyCost.required' => 'The internal hourly cost is required',
-            'internalHourlyCost.numeric' => 'The internal hourly cost must be a number',
-            'internalHourlyCost.min' => 'The internal hourly cost must be at least 0.01',
-            'internalHourlyCost.max' => 'The internal hourly cost cannot exceed 9999.99',
-        ]);
+            $oldCost = $user->internal_hourly_cost;
+            $newCost = $request->input('internalHourlyCost');
 
-        if ($validator->fails()) {
-            return ApiResponse::validationError($validator->errors()->toArray(), 'Validation failed');
-        }
+            // Update the internal cost
+            $user->internal_hourly_cost = $newCost;
+            $user->save();
 
-        try {
-            return DB::transaction(function () use ($request, $id) {
-                // Find the user
-                $user = User::find($id);
-                if (! $user) {
-                    return ApiResponse::notFound('User not found');
-                }
-
-                $oldCost = $user->internal_hourly_cost;
-                $newCost = $request->input('internalHourlyCost');
-
-                // Update the internal cost
-                $user->internal_hourly_cost = $newCost;
-                $user->save();
-
-                // Log the change to audit_logs
-                $this->auditLogService->log(
-                    'update_internal_cost',
-                    $user,
-                    [
-                        'old_cost' => $oldCost ? (string) $oldCost : null,
-                        'new_cost' => (string) $newCost,
-                        'updated_by' => auth()->user()->name,
-                        'updated_by_id' => auth()->id(),
-                    ]
-                );
-
-                // Return success without exposing the actual cost value
-                return ApiResponse::success([
-                    'userId' => $user->id,
-                    'userName' => $user->name,
-                    'updated' => true,
-                    'updatedAt' => $user->updated_at->toISOString(),
-                ], 'Internal hourly cost updated successfully');
-            });
-
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to update internal cost: '.$e->getMessage(),
-                500
+            // Log the change to audit_logs
+            $this->auditLogService->log(
+                'update_internal_cost',
+                $user,
+                [
+                    'old_cost' => $oldCost ? (string) $oldCost : null,
+                    'new_cost' => (string) $newCost,
+                    'updated_by' => auth()->user()->name,
+                    'updated_by_id' => auth()->id(),
+                ]
             );
-        }
+
+            // Return success without exposing the actual cost value
+            return ApiResponse::success([
+                'userId' => $user->id,
+                'userName' => $user->name,
+                'updated' => true,
+                'updatedAt' => $user->updated_at->toISOString(),
+            ], 'Internal hourly cost updated successfully');
+        });
     }
 
     /**
@@ -412,98 +371,57 @@ class AdminUserController extends Controller
      *     )
      * )
      */
-    public function bulkUpdateInternalCosts(Request $request): JsonResponse
+    public function bulkUpdateInternalCosts(\App\Modules\Settings\Requests\BulkUpdateInternalCostsRequest $request): JsonResponse
     {
-        // Check permission
-        if (! auth()->user()->can('manage_internal_costs')) {
-            return ApiResponse::forbidden('You do not have permission to manage internal costs');
-        }
+        return DB::transaction(function () use ($request) {
+            $usersData = $request->input('users');
+            $updatedUsers = [];
+            $totalUpdated = 0;
 
-        // Validate input
-        $validator = Validator::make($request->all(), [
-            'users' => 'required|array|min:1|max:100',
-            'users.*.userId' => 'required|integer|exists:users,id',
-            'users.*.internalHourlyCost' => [
-                'required',
-                'numeric',
-                'min:0.01',
-                'max:9999.99',
-            ],
-        ], [
-            'users.required' => 'The users array is required',
-            'users.array' => 'The users must be an array',
-            'users.min' => 'At least one user must be provided',
-            'users.max' => 'Cannot update more than 100 users at once',
-            'users.*.userId.required' => 'User ID is required for each user',
-            'users.*.userId.integer' => 'User ID must be an integer',
-            'users.*.userId.exists' => 'User does not exist',
-            'users.*.internalHourlyCost.required' => 'Internal hourly cost is required for each user',
-            'users.*.internalHourlyCost.numeric' => 'Internal hourly cost must be a number',
-            'users.*.internalHourlyCost.min' => 'Internal hourly cost must be at least 0.01',
-            'users.*.internalHourlyCost.max' => 'Internal hourly cost cannot exceed 9999.99',
-        ]);
+            foreach ($usersData as $userData) {
+                $userId = $userData['userId'];
+                $newCost = $userData['internalHourlyCost'];
 
-        if ($validator->fails()) {
-            return ApiResponse::validationError($validator->errors()->toArray(), 'Validation failed');
-        }
-
-        try {
-            return DB::transaction(function () use ($request) {
-                $usersData = $request->input('users');
-                $updatedUsers = [];
-                $totalUpdated = 0;
-
-                foreach ($usersData as $userData) {
-                    $userId = $userData['userId'];
-                    $newCost = $userData['internalHourlyCost'];
-
-                    // Find the user
-                    $user = User::find($userId);
-                    if (! $user) {
-                        continue; // Skip if user not found (should not happen due to validation)
-                    }
-
-                    $oldCost = $user->internal_hourly_cost;
-
-                    // Update the internal cost
-                    $user->internal_hourly_cost = $newCost;
-                    $user->save();
-
-                    // Log the change to audit_logs
-                    $this->auditLogService->log(
-                        'bulk_update_internal_cost',
-                        $user,
-                        [
-                            'old_cost' => $oldCost ? (string) $oldCost : null,
-                            'new_cost' => (string) $newCost,
-                            'updated_by' => auth()->user()->name,
-                            'updated_by_id' => auth()->id(),
-                            'bulk_operation' => true,
-                        ]
-                    );
-
-                    $updatedUsers[] = [
-                        'userId' => $user->id,
-                        'userName' => $user->name,
-                        'updated' => true,
-                    ];
-
-                    $totalUpdated++;
+                // Find the user
+                $user = User::find($userId);
+                if (! $user) {
+                    continue; // Skip if user not found (should not happen due to validation)
                 }
 
-                // Return success without exposing actual cost values
-                return ApiResponse::success([
-                    'totalUpdated' => $totalUpdated,
-                    'updatedAt' => now()->toISOString(),
-                    'updatedUsers' => $updatedUsers,
-                ], 'Bulk internal costs updated successfully');
-            });
+                $oldCost = $user->internal_hourly_cost;
 
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to update internal costs: '.$e->getMessage(),
-                500
-            );
-        }
+                // Update the internal cost
+                $user->internal_hourly_cost = $newCost;
+                $user->save();
+
+                // Log the change to audit_logs
+                $this->auditLogService->log(
+                    'bulk_update_internal_cost',
+                    $user,
+                    [
+                        'old_cost' => $oldCost ? (string) $oldCost : null,
+                        'new_cost' => (string) $newCost,
+                        'updated_by' => auth()->user()->name,
+                        'updated_by_id' => auth()->id(),
+                        'bulk_operation' => true,
+                    ]
+                );
+
+                $updatedUsers[] = [
+                    'userId' => $user->id,
+                    'userName' => $user->name,
+                    'updated' => true,
+                ];
+
+                $totalUpdated++;
+            }
+
+            // Return success without exposing actual cost values
+            return ApiResponse::success([
+                'totalUpdated' => $totalUpdated,
+                'updatedAt' => now()->toISOString(),
+                'updatedUsers' => $updatedUsers,
+            ], 'Bulk internal costs updated successfully');
+        });
     }
 }

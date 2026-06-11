@@ -104,31 +104,24 @@ class AdminRoleController extends Controller
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
-        try {
-            $roles = Role::with('permissions')->get();
+        $roles = Role::with('permissions')->get();
 
-            $rolesData = $roles->map(function ($role) {
-                return [
-                    'id' => $role->id,
-                    'name' => $role->name,
-                    'guardName' => $role->guard_name,
-                    'isProtected' => in_array($role->name, self::PROTECTED_ROLE_NAMES),
-                    'permissions' => $role->permissions->pluck('name')->toArray(),
-                    'createdAt' => $role->created_at?->toISOString(),
-                    'updatedAt' => $role->updated_at?->toISOString(),
-                ];
-            });
+        $rolesData = $roles->map(function ($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+                'guardName' => $role->guard_name,
+                'isProtected' => in_array($role->name, self::PROTECTED_ROLE_NAMES),
+                'permissions' => $role->permissions->pluck('name')->toArray(),
+                'createdAt' => $role->created_at?->toISOString(),
+                'updatedAt' => $role->updated_at?->toISOString(),
+            ];
+        });
 
-            return ApiResponse::success(
-                $rolesData,
-                'Roles retrieved successfully'
-            );
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to retrieve roles: '.$e->getMessage(),
-                500
-            );
-        }
+        return ApiResponse::success(
+            $rolesData,
+            'Roles retrieved successfully'
+        );
     }
 
     /**
@@ -246,11 +239,6 @@ class AdminRoleController extends Controller
             );
         } catch (ModelNotFoundException $e) {
             return ApiResponse::notFound('Role not found');
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to retrieve role: '.$e->getMessage(),
-                500
-            );
         }
     }
 
@@ -374,51 +362,44 @@ class AdminRoleController extends Controller
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
-        try {
-            $validatedData = $request->validated();
+        $validatedData = $request->validated();
 
-            // Create the role
-            $role = Role::create([
-                'name' => $validatedData['name'],
-                'guard_name' => 'web',
-            ]);
+        // Create the role
+        $role = Role::create([
+            'name' => $validatedData['name'],
+            'guard_name' => 'web',
+        ]);
 
-            // Assign permissions if provided
-            if (! empty($validatedData['permissions'])) {
-                $role->syncPermissions($validatedData['permissions']);
-            }
-
-            // Log the action
-            $this->auditLogService->log(
-                'create_role',
-                $role,
-                ['role_name' => $role->name, 'permissions' => $validatedData['permissions'] ?? []]
-            );
-
-            // Load permissions for response
-            $role->load('permissions');
-
-            $roleData = [
-                'id' => $role->id,
-                'name' => $role->name,
-                'guardName' => $role->guard_name,
-                'isProtected' => false, // New roles are never protected
-                'permissions' => $role->permissions->pluck('name')->toArray(),
-                'createdAt' => $role->created_at?->toISOString(),
-                'updatedAt' => $role->updated_at?->toISOString(),
-            ];
-
-            return ApiResponse::success(
-                $roleData,
-                'Role created successfully',
-                201
-            );
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to create role: '.$e->getMessage(),
-                500
-            );
+        // Assign permissions if provided
+        if (! empty($validatedData['permissions'])) {
+            $role->syncPermissions($validatedData['permissions']);
         }
+
+        // Log the action
+        $this->auditLogService->log(
+            'create_role',
+            $role,
+            ['role_name' => $role->name, 'permissions' => $validatedData['permissions'] ?? []]
+        );
+
+        // Load permissions for response
+        $role->load('permissions');
+
+        $roleData = [
+            'id' => $role->id,
+            'name' => $role->name,
+            'guardName' => $role->guard_name,
+            'isProtected' => false, // New roles are never protected
+            'permissions' => $role->permissions->pluck('name')->toArray(),
+            'createdAt' => $role->created_at?->toISOString(),
+            'updatedAt' => $role->updated_at?->toISOString(),
+        ];
+
+        return ApiResponse::success(
+            $roleData,
+            'Role created successfully',
+            201
+        );
     }
 
     /**
@@ -614,11 +595,6 @@ class AdminRoleController extends Controller
             );
         } catch (ModelNotFoundException $e) {
             return ApiResponse::notFound('Role not found');
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to update role: '.$e->getMessage(),
-                500
-            );
         }
     }
 
@@ -755,11 +731,6 @@ class AdminRoleController extends Controller
             );
         } catch (ModelNotFoundException $e) {
             return ApiResponse::notFound('Role not found');
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to delete role: '.$e->getMessage(),
-                500
-            );
         }
     }
 
@@ -837,34 +808,27 @@ class AdminRoleController extends Controller
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
-        try {
-            $permissions = Permission::all();
+        $permissions = Permission::all();
 
-            $permissionsData = $permissions->map(function ($permission) {
-                // Group permissions by their prefix for better organization
-                $group = $this->getPermissionGroup($permission->name);
+        $permissionsData = $permissions->map(function ($permission) {
+            // Group permissions by their prefix for better organization
+            $group = $this->getPermissionGroup($permission->name);
 
-                return [
-                    'id' => $permission->id,
-                    'name' => $permission->name,
-                    'guardName' => $permission->guard_name,
-                    'group' => $group,
-                    'description' => $this->getPermissionDescription($permission->name),
-                    'createdAt' => $permission->created_at?->toISOString(),
-                    'updatedAt' => $permission->updated_at?->toISOString(),
-                ];
-            });
+            return [
+                'id' => $permission->id,
+                'name' => $permission->name,
+                'guardName' => $permission->guard_name,
+                'group' => $group,
+                'description' => $this->getPermissionDescription($permission->name),
+                'createdAt' => $permission->created_at?->toISOString(),
+                'updatedAt' => $permission->updated_at?->toISOString(),
+            ];
+        });
 
-            return ApiResponse::success(
-                $permissionsData,
-                'Permissions retrieved successfully'
-            );
-        } catch (\Exception $e) {
-            return ApiResponse::error(
-                'Failed to retrieve permissions: '.$e->getMessage(),
-                500
-            );
-        }
+        return ApiResponse::success(
+            $permissionsData,
+            'Permissions retrieved successfully'
+        );
     }
 
     /**

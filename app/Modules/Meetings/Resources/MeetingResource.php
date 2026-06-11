@@ -3,6 +3,7 @@
 namespace App\Modules\Meetings\Resources;
 
 use App\Modules\Client\Models\Client;
+use App\Modules\Lead\Models\Lead;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Project\Models\Project;
 use Illuminate\Http\Request;
@@ -28,6 +29,10 @@ class MeetingResource extends JsonResource
                 }
 
                 if ($subject instanceof Project) {
+                    return $subject->title;
+                }
+
+                if ($subject instanceof Lead) {
                     return $subject->title;
                 }
 

@@ -14,7 +14,7 @@ class SettingsDictionarySeeder extends Seeder
      * @var array<string, list<string>>
      */
     private array $dictionaries = [
-        'lead_sources' => ['Website', 'Referral', 'LinkedIn', 'Trade Show'],
+        'lead_sources' => ['Website', 'Referral', 'LinkedIn', 'Trade Show', 'Sales'],
         'lead_interests' => ['Web Development', 'Mobile App', 'Branding', 'Support Retainer'],
         'meeting_types' => ['Discovery Call', 'Technical Review', 'Proposal Review', 'Kickoff'],
         'proposal_statuses' => ['Draft', 'Sent', 'Approved', 'Rejected'],

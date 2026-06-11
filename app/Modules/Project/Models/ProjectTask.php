@@ -156,6 +156,12 @@ class ProjectTask extends Model
      */
     public function totalLoggedMinutes(): int
     {
+        if ($this->relationLoaded('timeEntries')) {
+            return (int) $this->timeEntries
+                ->whereNotNull('end_time')
+                ->sum('duration_minutes');
+        }
+
         return (int) $this->timeEntries()->whereNotNull('end_time')->sum('duration_minutes');
     }
 

@@ -13,7 +13,6 @@ class ProjectTaskResource extends JsonResource
             'taskId'          => $this->id,
             'projectId'       => $this->project_id,
             'milestoneId'     => $this->milestone_id,
-            'parentId'        => $this->parent_id,
             'title'           => $this->title,
             'description'     => $this->description,
             'status'          => $this->status?->value,
@@ -40,7 +39,6 @@ class ProjectTaskResource extends JsonResource
                 'projectId' => $this->project->id,
                 'title'     => $this->project->title,
             ]),
-            'subtasks'        => ProjectTaskResource::collection($this->whenLoaded('subtasks')),
             'deliverables'    => ProjectTaskDeliverableResource::collection($this->whenLoaded('deliverables')),
             'timeEntries'     => ProjectTimeEntryResource::collection($this->whenLoaded('timeEntries')),
 

@@ -8,7 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Modules\Lead\Actions\ProcessLeadStageUpdateAction;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Meetings\Models\Meeting;
+use App\Modules\Meetings\Services\MeetingService;
 use App\Modules\Lead\Requests\UpdateLeadStageRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
 
 class LeadPipelineController extends Controller
@@ -25,16 +27,24 @@ class LeadPipelineController extends Controller
     public function updateStage(
         UpdateLeadStageRequest $request,
         Lead $lead,
-        ProcessLeadStageUpdateAction $action
+        ProcessLeadStageUpdateAction $action,
+        MeetingService $meetingService
     ): JsonResponse {
         $newStage     = LeadStage::from($request->validated('new_stage'));
         $stageResults = $request->validated('stage_results');
+        $scheduledMeeting = $request->validated('scheduled_meeting');
 
         if ($response = $this->validateStageGate($lead, $newStage)) {
             return $response;
         }
 
         $updatedLead = $action->execute($lead->id, $newStage, $stageResults);
+
+        if (is_array($scheduledMeeting)) {
+            abort_if(! $request->user()?->can('schedule_meetings'), 403, 'Unauthorized');
+
+            $meetingService->scheduleMeeting($lead, $this->meetingPayload($scheduledMeeting), $request->user());
+        }
 
         return ApiResponse::success(
             [
@@ -75,5 +85,36 @@ class LeadPipelineController extends Controller
     {
         return $lead->proposals()->where('status', 'accepted')->exists()
             || $lead->quotations()->where('status', 'accepted')->exists();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function meetingPayload(array $data): array
+    {
+        $meetingType = (string) ($data['meeting_type'] ?? 'meeting');
+        $title = str($meetingType)
+            ->replace(['-', '_'], ' ')
+            ->title()
+            ->append(' Meeting')
+            ->toString();
+        $internalAttendees = collect($data['internal_attendees'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->values()
+            ->all();
+
+        return [
+            'title' => $title,
+            'meetingType' => $meetingType,
+            'description' => $data['notes'] ?? null,
+            'location' => $data['location_type'] ?? null,
+            'locationDetails' => $data['location_details'] ?? null,
+            'internalAttendees' => $internalAttendees,
+            'externalAttendees' => $data['external_attendees'] ?? [],
+            'assignedTo' => $internalAttendees[0] ?? null,
+            'scheduledAt' => Carbon::parse(($data['date'] ?? now()->toDateString()).' '.($data['time'] ?? '00:00')),
+        ];
     }
 }

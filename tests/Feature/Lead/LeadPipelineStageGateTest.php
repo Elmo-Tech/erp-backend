@@ -50,6 +50,39 @@ class LeadPipelineStageGateTest extends TestCase
         $this->assertSame(LeadStage::QUOTATION, $lead->fresh()->stage);
     }
 
+    public function test_meeting_stage_update_can_schedule_a_real_lead_meeting(): void
+    {
+        $user = $this->userWithPermissions(['manage_leads', 'schedule_meetings']);
+        $lead = $this->lead();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::MEETING->value,
+                'stage_results' => [],
+                'scheduled_meeting' => [
+                    'meeting_type' => 'discovery',
+                    'date' => '2026-05-01',
+                    'time' => '10:30',
+                    'location_type' => 'online',
+                    'location_details' => '',
+                    'internal_attendees' => [(string) $user->id],
+                    'external_attendees' => ['primary-contact'],
+                    'notes' => 'Client wants a backfilled discovery call.',
+                ],
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('meetings', [
+            'model_type' => Lead::class,
+            'model_id' => $lead->id,
+            'meeting_type' => 'discovery',
+            'description' => 'Client wants a backfilled discovery call.',
+            'location' => 'online',
+            'location_details' => null,
+        ]);
+        $this->assertSame(LeadStage::MEETING, $lead->fresh()->stage);
+    }
+
     public function test_contract_stage_requires_an_accepted_proposal_or_quotation(): void
     {
         $user = $this->userWithPermissions(['manage_leads']);

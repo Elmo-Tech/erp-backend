@@ -24,7 +24,19 @@ class LeadController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Lead::query();
+        $query = Lead::query()
+            ->addSelect([
+                'has_completed_meeting' => Meeting::query()
+                    ->selectRaw('1')
+                    ->whereColumn('meetings.model_id', 'leads.id')
+                    ->where('meetings.model_type', Lead::class)
+                    ->where('meetings.status', 'completed')
+                    ->limit(1),
+            ])
+            ->withExists([
+                'proposals as has_accepted_proposal' => fn ($proposalQuery) => $proposalQuery->where('status', 'accepted'),
+                'quotations as has_accepted_quotation' => fn ($quotationQuery) => $quotationQuery->where('status', 'accepted'),
+            ]);
 
         if ($request->filled('search')) {
             $value = (string) $request->input('search');
@@ -68,8 +80,8 @@ class LeadController extends Controller
             'expected_budget' => $lead->expected_budget,
             'source'          => $lead->source,
             'assignedTo'      => $lead->assigned_to,
-            'hasCompletedMeeting' => $this->hasCompletedMeeting($lead),
-            'hasAcceptedProposalOrQuotation' => $this->hasAcceptedProposalOrQuotation($lead),
+            'hasCompletedMeeting' => (bool) $lead->has_completed_meeting,
+            'hasAcceptedProposalOrQuotation' => (bool) ($lead->has_accepted_proposal || $lead->has_accepted_quotation),
             'createdAt'       => $lead->created_at?->toISOString(),
             'updatedAt'       => $lead->updated_at?->toISOString(),
         ]);
@@ -146,13 +158,14 @@ class LeadController extends Controller
             'source'          => $validated['source'] ?? null,
             'expected_budget' => $validated['expected_budget'] ?? null,
             'notes'           => $validated['notes'] ?? null,
-            'assigned_to'     => $request->user()?->id,
+            'assigned_to'     => $validated['account_manager_id'] ?? $request->user()?->id,
             // Store contact details in metadata until the lead is converted
             'metadata'        => array_filter([
                 'company_name'  => $validated['company_name'] ?? null,
                 'contact_name'  => $validated['contact_name'] ?? null,
                 'primary_email' => $validated['primary_email'] ?? null,
                 'primary_phone' => $validated['primary_phone'] ?? null,
+                'sales_name'    => $validated['sales_name'] ?? null,
             ], fn ($v) => $v !== null),
         ]);
 

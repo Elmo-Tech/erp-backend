@@ -4,11 +4,14 @@ namespace App\Modules\Calendar\Services;
 
 use App\Modules\Calendar\Models\CalendarEvent;
 use App\Modules\Attendance\Models\Attendance;
+use App\Modules\Client\Models\Client;
 use App\Modules\Finance\Models\FinanceInvoice;
 use App\Modules\Finance\Models\Subscription;
+use App\Modules\Lead\Models\Lead;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Models\Milestone;
+use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
@@ -66,24 +69,80 @@ class MasterCalendarAggregatorService
                 $endDate->copy()->endOfDay(),
             ])
             ->get()
-            ->map(fn (Meeting $meeting) => [
-                'id'        => 'meeting-'.$meeting->id,
-                'type'      => 'meeting',
-                'title'     => $meeting->title,
-                'date'      => $meeting->scheduled_at->toDateString(),
-                'startTime' => $meeting->scheduled_at->toIso8601String(),
-                'endTime'   => $meeting->scheduled_at->copy()->addHour()->toIso8601String(),
-                'status'    => $meeting->status->value,
-                'meta'      => [
-                    'description' => $meeting->description,
-                    'eventType'   => 'meeting',
-                    'creatorId'   => $meeting->created_by,
-                    'creatorName' => $meeting->createdBy?->name,
-                    'meetingType' => $meeting->meeting_type,
-                    'internalAttendees' => $meeting->internal_attendees ?? [],
-                    'externalAttendees' => $meeting->external_attendees ?? [],
-                ],
+            ->map(function (Meeting $meeting) {
+                $subject = $meeting->model;
+                $subjectMeta = $this->meetingSubjectMeta($subject);
+
+                return [
+                    'id'        => 'meeting-'.$meeting->id,
+                    'type'      => 'meeting',
+                    'title'     => $meeting->title,
+                    'date'      => $meeting->scheduled_at->toDateString(),
+                    'startTime' => $meeting->scheduled_at->toIso8601String(),
+                    'endTime'   => $meeting->scheduled_at->copy()->addHour()->toIso8601String(),
+                    'status'    => $meeting->status->value,
+                    'meta'      => array_merge($subjectMeta, [
+                        'description' => $meeting->description,
+                        'notes' => $meeting->description,
+                        'eventType'   => 'meeting',
+                        'creatorId'   => $meeting->created_by,
+                        'creatorName' => $meeting->createdBy?->name,
+                        'meetingType' => $meeting->meeting_type,
+                        'location' => $meeting->location?->value,
+                        'locationDetails' => $meeting->location_details,
+                        'internalAttendees' => $meeting->internal_attendees ?? [],
+                        'externalAttendees' => $meeting->external_attendees ?? [],
+                    ]),
+                ];
+            });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function meetingSubjectMeta(?object $subject): array
+    {
+        $meta = [
+            'subjectType' => $subject ? get_class($subject) : null,
+            'subjectId' => $subject?->id,
+            'subjectName' => null,
+            'clientId' => null,
+            'clientName' => null,
+            'projectId' => null,
+            'projectTitle' => null,
+            'leadId' => null,
+            'leadTitle' => null,
+        ];
+
+        if ($subject instanceof Client) {
+            return array_merge($meta, [
+                'subjectName' => $subject->display_name ?? $subject->company_name,
+                'clientId' => $subject->id,
+                'clientName' => $subject->display_name ?? $subject->company_name,
             ]);
+        }
+
+        if ($subject instanceof Project) {
+            $client = $subject->relationLoaded('client') ? $subject->client : $subject->client()->first();
+
+            return array_merge($meta, [
+                'subjectName' => $subject->title,
+                'projectId' => $subject->id,
+                'projectTitle' => $subject->title,
+                'clientId' => $subject->client_id,
+                'clientName' => $client?->display_name ?? $client?->company_name,
+            ]);
+        }
+
+        if ($subject instanceof Lead) {
+            return array_merge($meta, [
+                'subjectName' => $subject->title,
+                'leadId' => $subject->id,
+                'leadTitle' => $subject->title,
+            ]);
+        }
+
+        return $meta;
     }
 
     // -------------------------------------------------------------------------

@@ -35,15 +35,7 @@ class DashboardController extends Controller
     )]
     public function index(Request $request, GetDashboardOverviewAction $dashboardOverview): JsonResponse
     {
-        try {
-            return response()->json($dashboardOverview->execute($request->user()));
-        } catch (\Exception $e) {
-            Log::error('Dashboard overview error: '.$e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return ApiResponse::error('Failed to load dashboard data: '.$e->getMessage(), 500);
-        }
+        return response()->json($dashboardOverview->execute($request->user()));
     }
 
     public function escalateBlocker(
