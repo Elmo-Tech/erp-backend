@@ -143,7 +143,9 @@ class ProjectIndexControllerTest extends TestCase
             ->getJson("/api/v1/projects/{$project->id}");
 
         $response->assertOk()
-            ->assertJsonPath('data.title', 'Mobile App');
+            ->assertJsonPath('data.title', 'Mobile App')
+            ->assertJsonMissingPath('data.members')
+            ->assertJsonMissingPath('data.files');
     }
 
     public function test_it_forbids_showing_a_project_outside_the_authorized_scope(): void

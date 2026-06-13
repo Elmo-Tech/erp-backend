@@ -51,6 +51,55 @@ class ProjectTimeEntryActiveControllerTest extends TestCase
             ->assertJsonPath('data', null);
     }
 
+    public function test_task_time_entries_index_returns_ui_contract_keys(): void
+    {
+        $user = $this->userWithPermissions(['view_projects', 'manage_all_projects']);
+        $project = Project::factory()->create();
+        $task = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Build timer',
+            'status' => 'in_progress',
+            'assignee_id' => $user->id,
+        ]);
+        $entry = ProjectTimeEntry::create([
+            'task_id' => $task->id,
+            'user_id' => $user->id,
+            'start_time' => now()->subMinutes(90),
+            'end_time' => now()->subMinutes(15),
+            'duration_minutes' => 75,
+            'is_manual' => true,
+            'note' => 'Reviewed delivery risks',
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries");
+
+        $response->assertOk()
+            ->assertJsonPath('data.timeEntries.0.entryId', $entry->id)
+            ->assertJsonPath('data.timeEntries.0.taskId', $task->id)
+            ->assertJsonPath('data.timeEntries.0.userId', $user->id)
+            ->assertJsonPath('data.timeEntries.0.durationMinutes', 75)
+            ->assertJsonPath('data.timeEntries.0.isManual', true)
+            ->assertJsonPath('data.timeEntries.0.isRunning', false)
+            ->assertJsonPath('data.timeEntries.0.note', 'Reviewed delivery risks')
+            ->assertJsonPath('data.timeEntries.0.user.name', $user->name);
+
+        $this->assertSame([
+            'entryId',
+            'taskId',
+            'userId',
+            'startTime',
+            'endTime',
+            'durationMinutes',
+            'isManual',
+            'isRunning',
+            'note',
+            'user',
+            'createdAt',
+            'updatedAt',
+        ], array_keys($response->json('data.timeEntries.0')));
+    }
+
     public function test_team_timer_start_requires_manage_team_timers_permission(): void
     {
         $manager = $this->userWithPermissions(['view_projects', 'manage_all_projects']);

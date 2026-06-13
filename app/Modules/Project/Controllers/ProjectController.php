@@ -310,7 +310,7 @@ class ProjectController extends Controller
         $this->authorize('view', $project);
 
         return ApiResponse::success(
-            new ProjectResource($project->load(['client', 'members.user', 'files'])),
+            new ProjectResource($project->load('client')),
             'Project retrieved successfully'
         );
     }

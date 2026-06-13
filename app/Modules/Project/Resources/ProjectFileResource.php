@@ -19,12 +19,7 @@ class ProjectFileResource extends JsonResource
             'size' => $this->size ?? 0,
             'description' => $this->description ?? '',
             'category' => $this->category ?? 'general',
-            'isClientVisible' => $this->is_client_visible ?? false,
-            'isDownloadable' => $this->is_downloadable ?? true,
-            'visibleToRoles' => $this->visible_to_roles ?? [],
-            'createdBy' => $this->created_by,
             'createdAt' => $this->created_at?->toISOString() ?? '',
-            'updatedAt' => $this->updated_at?->toISOString() ?? '',
         ];
     }
 }
