@@ -212,6 +212,14 @@ class ProjectTaskController extends Controller
         $this->authorize('update', $task);
 
         $data = $request->validated();
+        $user = $request->user();
+
+        if ($this->containsMetadataUpdate($data) && ! $this->canEditTaskMetadata($user, $project)) {
+            return ApiResponse::error(
+                'You do not have permission to edit task details.',
+                403
+            );
+        }
 
         // ── CRITICAL: "COMPLETED" STATUS GUARD ────────────────────────────────
         // If the user is trying to set status to "done", verify they have the authority.
@@ -224,8 +232,6 @@ class ProjectTaskController extends Controller
         // Regular assignees (developers, QA without special permissions) CANNOT
         // mark tasks as "done". They must use "in_review" instead.
         if (isset($data['status']) && $data['status'] === ExecutionTaskStatus::DONE->value) {
-            $user = $request->user();
-
             // Global bypass permissions
             if ($user->can('manage_all_projects') || $user->can('manage_deliverables') || $user->can('manage_tasks')) {
                 // Allowed — proceed
@@ -253,17 +259,24 @@ class ProjectTaskController extends Controller
         $oldStatus = $task->status;
         $oldAssignee = $task->assignee_id;
 
-        $task->update(array_filter([
-            'milestone_id'    => array_key_exists('milestoneId', $data) ? $data['milestoneId'] : $task->milestone_id,
-            // REMOVED: parent_id - subtasks are no longer supported
-            'title'           => $data['title'] ?? null,
-            'description'     => array_key_exists('description', $data) ? $data['description'] : $task->description,
-            'status'          => $data['status'] ?? null,
-            'estimated_hours' => array_key_exists('estimatedHours', $data) ? $data['estimatedHours'] : $task->estimated_hours,
-            'start_date'      => array_key_exists('startDate', $data) ? $data['startDate'] : $task->start_date,
-            'due_date'        => array_key_exists('dueDate', $data) ? $data['dueDate'] : $task->due_date,
-            'assignee_id'     => array_key_exists('assigneeId', $data) ? $data['assigneeId'] : $task->assignee_id,
-        ], fn ($v) => $v !== null));
+        $updateData = [];
+
+        foreach ([
+            'milestoneId'    => 'milestone_id',
+            'title'          => 'title',
+            'description'    => 'description',
+            'status'         => 'status',
+            'estimatedHours' => 'estimated_hours',
+            'startDate'      => 'start_date',
+            'dueDate'        => 'due_date',
+            'assigneeId'     => 'assignee_id',
+        ] as $requestKey => $column) {
+            if (array_key_exists($requestKey, $data)) {
+                $updateData[$column] = $data[$requestKey];
+            }
+        }
+
+        $task->update($updateData);
 
         $task->refresh();
 
@@ -300,7 +313,7 @@ class ProjectTaskController extends Controller
         }
 
         // Record activity for assignee changes
-        if (isset($data['assigneeId']) && $oldAssignee !== $data['assigneeId']) {
+        if (array_key_exists('assigneeId', $data) && $oldAssignee !== $data['assigneeId']) {
             $oldAssigneeName = $oldAssignee ? User::find($oldAssignee)?->name ?? "User #{$oldAssignee}" : 'Unassigned';
             $newAssigneeName = $data['assigneeId'] ? User::find($data['assigneeId'])?->name ?? "User #{$data['assigneeId']}" : 'Unassigned';
 
@@ -374,5 +387,44 @@ class ProjectTaskController extends Controller
         if ($task->project_id !== $project->id) {
             abort(404, 'Task not found for this project.');
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function containsMetadataUpdate(array $data): bool
+    {
+        $metadataFields = [
+            'milestoneId' => true,
+            'title' => true,
+            'description' => true,
+            'estimatedHours' => true,
+            'startDate' => true,
+            'dueDate' => true,
+            'assigneeId' => true,
+        ];
+
+        return array_intersect_key($data, $metadataFields) !== [];
+    }
+
+    private function canEditTaskMetadata(User $user, Project $project): bool
+    {
+        if ($user->can('manage_all_projects') || $user->can('manage_tasks')) {
+            return true;
+        }
+
+        if (! $user->can('edit_tasks')) {
+            return false;
+        }
+
+        $member = $project->members()->where('user_id', $user->id)->first();
+        $projectRole = $member?->role instanceof ProjectRole
+            ? $member->role->value
+            : (string) ($member?->role ?? '');
+
+        return in_array($projectRole, [
+            ProjectRole::MANAGER->value,
+            ProjectRole::TECH_LEAD->value,
+        ], true);
     }
 }
