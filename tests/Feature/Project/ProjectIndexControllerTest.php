@@ -7,6 +7,7 @@ use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -146,6 +147,67 @@ class ProjectIndexControllerTest extends TestCase
             ->assertJsonPath('data.title', 'Mobile App')
             ->assertJsonMissingPath('data.members')
             ->assertJsonMissingPath('data.files');
+    }
+
+    public function test_project_update_allows_budget_change_when_existing_deadline_is_past(): void
+    {
+        Carbon::setTestNow('2026-06-14 12:00:00');
+
+        try {
+            $this->seed(RolesAndPermissionsSeeder::class);
+
+            $user = User::factory()->create();
+            $user->givePermissionTo(['manage_all_projects', 'view_project_budget']);
+
+            $project = Project::factory()->create([
+                'title' => 'Legacy Project',
+                'budget' => 1000,
+                'deadline' => '2026-06-01',
+            ]);
+
+            $response = $this->actingAs($user, 'sanctum')
+                ->putJson("/api/v1/projects/{$project->id}", [
+                    'budget' => 1250,
+                    'deadline' => '2026-06-01',
+                    'reason' => 'Scope increased',
+                ]);
+
+            $response->assertOk()
+                ->assertJsonPath('data.budget', 1250);
+
+            $this->assertDatabaseHas('projects', [
+                'id' => $project->id,
+                'budget' => 1250,
+            ]);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_project_update_allows_zero_budget(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['manage_all_projects', 'view_project_budget']);
+
+        $project = Project::factory()->create([
+            'budget' => 1000,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->putJson("/api/v1/projects/{$project->id}", [
+                'budget' => 0,
+                'reason' => 'No billable budget',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.budget', 0);
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'budget' => 0,
+        ]);
     }
 
     public function test_it_forbids_showing_a_project_outside_the_authorized_scope(): void

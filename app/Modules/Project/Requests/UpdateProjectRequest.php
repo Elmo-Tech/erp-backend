@@ -8,6 +8,7 @@ use App\Modules\Project\Models\Project;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class UpdateProjectRequest extends FormRequest
@@ -31,8 +32,8 @@ class UpdateProjectRequest extends FormRequest
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['nullable', Rule::enum(ProjectStatus::class)],
-            'budget' => ['nullable', 'numeric', 'gt:0'],
-            'deadline' => ['nullable', 'date', 'after:today'],
+            'budget' => ['nullable', 'numeric', 'min:0'],
+            'deadline' => ['nullable', 'date'],
             'reason' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -44,6 +45,7 @@ class UpdateProjectRequest extends FormRequest
     {
         $validator->after(function (Validator $validator) {
             $this->validateReasonRequired($validator);
+            $this->validateFutureDeadlineWhenChanged($validator);
             $this->validateStatusTransition($validator);
         });
     }
@@ -134,6 +136,36 @@ class UpdateProjectRequest extends FormRequest
     }
 
     /**
+     * Only new deadline changes must be future dates. Existing older deadlines
+     * should not block unrelated project edits.
+     */
+    private function validateFutureDeadlineWhenChanged(Validator $validator): void
+    {
+        if (! $this->has('deadline') || $this->input('deadline') === null) {
+            return;
+        }
+
+        $project = $this->route('project');
+
+        if (! $project instanceof Project) {
+            return;
+        }
+
+        $currentDeadline = $project->deadline?->format('Y-m-d');
+        $newDeadline = $this->input('deadline');
+
+        if ($currentDeadline === $newDeadline) {
+            return;
+        }
+
+        $newDeadlineDate = Carbon::parse($newDeadline)->startOfDay();
+
+        if (! $newDeadlineDate->isAfter(Carbon::today())) {
+            $validator->errors()->add('deadline', 'The deadline must be a future date.');
+        }
+    }
+
+    /**
      * Get custom messages for validator errors.
      *
      * @return array<string, string>
@@ -146,7 +178,7 @@ class UpdateProjectRequest extends FormRequest
             'description.string' => 'The description must be a string.',
             'status.enum' => 'The selected status is invalid. Valid values are: draft, active, ui_ux, development, testing, completed, on_hold, cancelled.',
             'budget.numeric' => 'The budget must be a number.',
-            'budget.gt' => 'The budget must be greater than 0.',
+            'budget.min' => 'The budget must be at least 0.',
             'deadline.date' => 'The deadline must be a valid date.',
             'deadline.after' => 'The deadline must be a future date.',
             'reason.string' => 'The reason must be a string.',
