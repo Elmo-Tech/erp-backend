@@ -3,6 +3,7 @@
 namespace Tests\Feature\Dashboard;
 
 use App\Enums\TaskStatus;
+use App\Modules\PersonalTasks\Models\PersonalTask;
 use App\Modules\Task\Models\Task;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,6 +50,46 @@ class PermissionDrivenDashboardTest extends TestCase
             ->assertJsonMissingPath('financial')
             ->assertJsonMissingPath('timeline')
             ->assertJsonMissingPath('team');
+    }
+
+    public function test_personal_tasks_are_counted_with_assigned_work_in_dashboard_summary(): void
+    {
+        Permission::firstOrCreate(['name' => 'view_personal_tasks', 'guard_name' => 'web']);
+
+        $user = User::factory()->create();
+        $user->givePermissionTo('view_personal_tasks');
+
+        Task::factory()->create([
+            'assigned_to' => $user->id,
+            'title' => 'Project task',
+            'status' => TaskStatus::IN_PROGRESS,
+            'due_date' => now()->addDay(),
+        ]);
+
+        PersonalTask::create([
+            'user_id' => $user->id,
+            'title' => 'Personal todo',
+            'status' => 'todo',
+            'due_date' => now()->addDays(2),
+        ]);
+
+        PersonalTask::create([
+            'user_id' => $user->id,
+            'title' => 'Personal done',
+            'status' => 'done',
+            'completed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/dashboard/overview');
+
+        $response->assertOk()
+            ->assertJsonPath('personal_tasks.summary.total', 3)
+            ->assertJsonPath('personal_tasks.summary.todo', 1)
+            ->assertJsonPath('personal_tasks.summary.in_progress', 1)
+            ->assertJsonPath('personal_tasks.summary.completed', 1)
+            ->assertJsonPath('personal_tasks.items.0.source', 'project')
+            ->assertJsonPath('personal_tasks.items.1.source', 'personal');
     }
 
     public function test_dashboard_returns_empty_object_without_dashboard_section_permissions(): void

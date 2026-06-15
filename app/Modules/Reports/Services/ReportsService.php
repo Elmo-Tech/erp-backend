@@ -6,6 +6,8 @@ use App\Modules\Client\Models\Client;
 use App\Modules\Finance\Models\FinanceInvoice;
 use App\Modules\Finance\Models\Subscription;
 use App\Modules\Lead\Models\Lead;
+use App\Modules\PersonalTasks\Models\PersonalTask;
+use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
@@ -26,12 +28,14 @@ class ReportsService
         $projects = $this->projectQuery($request)->get();
         $invoices = $this->invoiceQuery($request)->get();
         $entries = $this->timeEntryQuery($request)->with('user:id,name')->get();
+        $personalEntries = $this->personalTimeEntryQuery($request)->with('user:id,name')->get();
+        $workEntries = $entries->merge($personalEntries);
         $subscriptions = $this->subscriptionQuery($request)->get();
         $leads = $this->leadQuery($request)->get();
 
         $paidInvoices = $invoices->where('status', 'paid');
-        $loggedMinutes = (int) $entries->sum('duration_minutes');
-        $internalCost = $this->internalCost($entries);
+        $loggedMinutes = (int) $workEntries->sum('duration_minutes');
+        $internalCost = $this->internalCost($workEntries);
         $canViewCost = $request->user()?->can('view_cost') || $request->user()?->can('view_internal_costs');
         $canViewProfit = $request->user()?->can('view_profitability');
 
@@ -116,24 +120,35 @@ class ReportsService
         $entries = $this->timeEntryQuery($request)
             ->with(['user:id,name,email,internal_hourly_cost', 'task.project:id,title'])
             ->get();
+        $personalEntries = $this->personalTimeEntryQuery($request)
+            ->with(['user:id,name,email,internal_hourly_cost', 'personalTask:id,user_id,title,status,due_date'])
+            ->get();
 
         $tasks = $this->taskQuery($request)->get();
+        $personalTasks = $this->personalTaskQuery($request)->get();
         $canViewCost = $request->user()?->can('view_cost') || $request->user()?->can('view_internal_costs');
+        $userIds = $entries->pluck('user_id')
+            ->merge($personalEntries->pluck('user_id'))
+            ->unique()
+            ->values();
 
-        $rows = $entries
-            ->groupBy('user_id')
-            ->map(function (Collection $userEntries, int $userId) use ($tasks, $canViewCost): array {
-                $user = $userEntries->first()?->user;
+        $rows = $userIds
+            ->map(function (int $userId) use ($entries, $personalEntries, $tasks, $personalTasks, $canViewCost): array {
+                $userEntries = $entries->where('user_id', $userId);
+                $userPersonalEntries = $personalEntries->where('user_id', $userId);
+                $workEntries = $userEntries->merge($userPersonalEntries);
+                $user = $workEntries->first()?->user;
                 $userTasks = $tasks->where('assignee_id', $userId);
-                $loggedMinutes = (int) $userEntries->sum('duration_minutes');
-                $internalCost = $this->internalCost($userEntries);
+                $userPersonalTasks = $personalTasks->where('user_id', $userId);
+                $loggedMinutes = (int) $workEntries->sum('duration_minutes');
+                $internalCost = $this->internalCost($workEntries);
 
                 return [
                     'userId' => $userId,
                     'name' => $user?->name ?? 'Unknown user',
                     'email' => $user?->email,
-                    'assignedTasks' => $userTasks->count(),
-                    'completedTasks' => $userTasks->where('status', ExecutionTaskStatus::DONE)->count(),
+                    'assignedTasks' => $userTasks->count() + $userPersonalTasks->count(),
+                    'completedTasks' => $userTasks->where('status', ExecutionTaskStatus::DONE)->count() + $userPersonalTasks->where('status', 'done')->count(),
                     'loggedMinutes' => $loggedMinutes,
                     'internalCost' => $canViewCost ? $internalCost : null,
                 ];
@@ -364,6 +379,40 @@ class ReportsService
     }
 
     /**
+     * @return Builder<PersonalTimeEntry>
+     */
+    private function personalTimeEntryQuery(Request $request): Builder
+    {
+        $query = PersonalTimeEntry::query()->whereNotNull('duration_minutes');
+
+        if ($request->filled('projectId')) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($request->filled('userId')) {
+            $query->where('user_id', $request->integer('userId'));
+        }
+
+        if ($request->filled('status')) {
+            $status = $this->personalStatus($request->query('status'));
+            if ($status === null) {
+                return $query->whereRaw('1 = 0');
+            }
+            $query->whereHas('personalTask', fn (Builder $taskQuery) => $taskQuery->where('status', $status));
+        }
+
+        if ($request->filled('from')) {
+            $query->whereDate('start_time', '>=', $request->query('from'));
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('start_time', '<=', $request->query('to'));
+        }
+
+        return $query;
+    }
+
+    /**
      * @return Builder<ProjectTask>
      */
     private function taskQuery(Request $request): Builder
@@ -380,6 +429,40 @@ class ReportsService
 
         if ($request->filled('status')) {
             $query->where('status', $request->query('status'));
+        }
+
+        if ($request->filled('from')) {
+            $query->whereDate('due_date', '>=', $request->query('from'));
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('due_date', '<=', $request->query('to'));
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return Builder<PersonalTask>
+     */
+    private function personalTaskQuery(Request $request): Builder
+    {
+        $query = PersonalTask::query();
+
+        if ($request->filled('projectId')) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($request->filled('userId')) {
+            $query->where('user_id', $request->integer('userId'));
+        }
+
+        if ($request->filled('status')) {
+            $status = $this->personalStatus($request->query('status'));
+            if ($status === null) {
+                return $query->whereRaw('1 = 0');
+            }
+            $query->where('status', $status);
         }
 
         if ($request->filled('from')) {
@@ -450,11 +533,11 @@ class ReportsService
     }
 
     /**
-     * @param  Collection<int, ProjectTimeEntry>  $entries
+     * @param  Collection<int, ProjectTimeEntry|PersonalTimeEntry>  $entries
      */
     private function internalCost(Collection $entries): float
     {
-        return round($entries->sum(function (ProjectTimeEntry $entry): float {
+        return round($entries->sum(function (ProjectTimeEntry|PersonalTimeEntry $entry): float {
             $cost = (float) ($entry->user?->internal_hourly_cost ?? 0);
 
             return ((int) ($entry->duration_minutes ?? 0) / 60) * $cost;
@@ -483,5 +566,17 @@ class ReportsService
         }
 
         return Carbon::parse($value)->toDateString();
+    }
+
+    private function personalStatus(mixed $status): ?string
+    {
+        return match ($status) {
+            ExecutionTaskStatus::DONE->value,
+            'completed' => 'done',
+            ExecutionTaskStatus::TO_DO->value,
+            'todo' => 'todo',
+            ExecutionTaskStatus::IN_PROGRESS->value => 'in_progress',
+            default => null,
+        };
     }
 }

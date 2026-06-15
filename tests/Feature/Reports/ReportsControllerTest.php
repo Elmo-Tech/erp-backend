@@ -5,6 +5,8 @@ namespace Tests\Feature\Reports;
 use App\Modules\Client\Models\Client;
 use App\Modules\Finance\Models\FinanceInvoice;
 use App\Modules\Finance\Models\Subscription;
+use App\Modules\PersonalTasks\Models\PersonalTask;
+use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
@@ -181,6 +183,57 @@ class ReportsControllerTest extends TestCase
             ->assertJsonCount(1, 'data.rows')
             ->assertJsonPath('data.rows.0.userId', $includedUser->id)
             ->assertJsonPath('data.rows.0.loggedMinutes', 60);
+    }
+
+    public function test_team_time_report_counts_personal_tasks_as_work(): void
+    {
+        $manager = $this->reportsUser(['view_reports', 'view_user_performance']);
+        $worker = User::factory()->create(['name' => 'Personal Worker']);
+        $project = Project::factory()->create();
+        $projectTask = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Project delivery',
+            'status' => ExecutionTaskStatus::DONE,
+            'assignee_id' => $worker->id,
+            'due_date' => '2026-06-03',
+        ]);
+
+        ProjectTimeEntry::create([
+            'task_id' => $projectTask->id,
+            'user_id' => $worker->id,
+            'start_time' => '2026-06-03 09:00:00',
+            'end_time' => '2026-06-03 10:00:00',
+            'duration_minutes' => 60,
+        ]);
+
+        $personalTask = PersonalTask::create([
+            'user_id' => $worker->id,
+            'title' => 'Personal admin',
+            'status' => 'done',
+            'due_date' => '2026-06-03',
+            'completed_at' => '2026-06-03 12:00:00',
+        ]);
+
+        PersonalTimeEntry::create([
+            'personal_task_id' => $personalTask->id,
+            'user_id' => $worker->id,
+            'start_time' => '2026-06-03 11:00:00',
+            'end_time' => '2026-06-03 11:30:00',
+            'duration_minutes' => 30,
+        ]);
+
+        $response = $this->actingAs($manager, 'sanctum')
+            ->getJson("/api/v1/reports/team-time?userId={$worker->id}&from=2026-06-01&to=2026-06-30");
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data.rows')
+            ->assertJsonPath('data.rows.0.userId', $worker->id)
+            ->assertJsonPath('data.rows.0.assignedTasks', 2)
+            ->assertJsonPath('data.rows.0.completedTasks', 2)
+            ->assertJsonPath('data.rows.0.loggedMinutes', 90)
+            ->assertJsonPath('data.summary.assignedTasks', 2)
+            ->assertJsonPath('data.summary.completedTasks', 2)
+            ->assertJsonPath('data.summary.loggedMinutes', 90);
     }
 
     private function reportsUser(array $permissions): User
