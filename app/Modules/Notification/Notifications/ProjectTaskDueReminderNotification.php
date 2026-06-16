@@ -31,8 +31,9 @@ class ProjectTaskDueReminderNotification extends Notification implements ShouldQ
             ->line('A task assigned to you is due soon.')
             ->line('Project: '.$this->task->project?->title)
             ->line('Task: '.$this->task->title)
+            ->line('Priority: '.ucfirst((string) $this->task->priority))
             ->line('Due date: '.$this->task->due_date?->toDateString())
-            ->action('Open Project', $this->frontendUrl('/dashboard/projects/'.$this->task->project_id));
+            ->action('Open Task', $this->frontendUrl('/dashboard/projects/'.$this->task->project_id.'?taskId='.$this->task->id));
     }
 
     public function toArray($notifiable): array
@@ -43,8 +44,9 @@ class ProjectTaskDueReminderNotification extends Notification implements ShouldQ
             'message' => $this->task->title,
             'project_id' => $this->task->project_id,
             'task_id' => $this->task->id,
+            'priority' => $this->task->priority,
             'due_date' => $this->task->due_date?->toDateString(),
-            'url' => '/dashboard/projects/'.$this->task->project_id,
+            'url' => '/dashboard/projects/'.$this->task->project_id.'?taskId='.$this->task->id,
         ];
     }
 

@@ -17,7 +17,7 @@ Artisan::command('finance:notify-subscription-collections-due', function () {
     return 0;
 })->purpose('Notify finance users about subscription collections due soon');
 
-Artisan::command('reminders:send-due {--days=3 : Number of days ahead for due-date reminders}', function () {
+Artisan::command('reminders:send-due {--days=2 : Number of days ahead for due-date reminders}', function () {
     $days = max(0, (int) $this->option('days'));
     $results = app(ReminderDispatchService::class)->sendDueReminders($days);
 

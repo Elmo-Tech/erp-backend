@@ -43,6 +43,36 @@ class PersonalTaskControllerTest extends TestCase
             ->assertJsonPath('data.tasks.0.title', 'Study Laravel');
     }
 
+    public function test_user_can_create_personal_task_with_details_without_assignment_or_milestone(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/personal-tasks', [
+                'title' => 'Prepare weekly notes',
+                'description' => 'Summarize blockers and follow-ups',
+                'dueDate' => '2026-06-20',
+                'priority' => 'high',
+                'assigneeId' => User::factory()->create()->id,
+                'milestoneId' => 99,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.title', 'Prepare weekly notes')
+            ->assertJsonPath('data.description', 'Summarize blockers and follow-ups')
+            ->assertJsonPath('data.dueDate', '2026-06-20')
+            ->assertJsonPath('data.priority', 'high')
+            ->assertJsonMissingPath('data.assigneeId')
+            ->assertJsonMissingPath('data.milestoneId');
+
+        $this->assertDatabaseHas('personal_tasks', [
+            'user_id' => $user->id,
+            'title' => 'Prepare weekly notes',
+            'description' => 'Summarize blockers and follow-ups',
+            'due_date' => '2026-06-20 00:00:00',
+            'priority' => 'high',
+        ]);
+    }
+
     public function test_user_cannot_update_another_users_personal_task(): void
     {
         $owner = User::factory()->create();

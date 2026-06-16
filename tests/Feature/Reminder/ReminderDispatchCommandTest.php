@@ -9,14 +9,17 @@ use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Notification\Notifications\ClientFollowUpReminderNotification;
 use App\Modules\Notification\Notifications\FinanceInvoiceDueReminderNotification;
 use App\Modules\Notification\Notifications\MeetingReminderNotification;
+use App\Modules\Notification\Notifications\PersonalTaskDueReminderNotification;
 use App\Modules\Notification\Notifications\ProjectTaskDueReminderNotification;
 use App\Modules\Notification\Notifications\SubscriptionCollectionDueNotification;
+use App\Modules\PersonalTasks\Models\PersonalTask;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Reminder\Models\ReminderDispatch;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -107,5 +110,50 @@ class ReminderDispatchCommandTest extends TestCase
         Notification::assertSentToTimes($financeUser, FinanceInvoiceDueReminderNotification::class, 1);
         Notification::assertSentToTimes($financeUser, SubscriptionCollectionDueNotification::class, 1);
         $this->assertSame(5, ReminderDispatch::query()->count());
+    }
+
+    public function test_task_due_reminders_send_for_project_and_personal_tasks_before_and_on_due_date(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow('2026-06-18 08:00:00');
+
+        $assignee = User::factory()->create();
+        $project = Project::factory()->create();
+        Permission::findOrCreate('view_finance', 'web');
+        Permission::findOrCreate('collect_subscription_payments', 'web');
+
+        ProjectTask::query()->create([
+            'project_id' => $project->id,
+            'title' => 'Ship project scope',
+            'status' => ExecutionTaskStatus::TO_DO,
+            'assignee_id' => $assignee->id,
+            'due_date' => '2026-06-20',
+        ]);
+
+        PersonalTask::query()->create([
+            'user_id' => $assignee->id,
+            'title' => 'Renew local certificate',
+            'status' => 'todo',
+            'due_date' => '2026-06-20',
+            'priority' => 'high',
+        ]);
+
+        $this->artisan('reminders:send-due', ['--days' => 2])
+            ->assertExitCode(0);
+
+        Notification::assertSentToTimes($assignee, ProjectTaskDueReminderNotification::class, 1);
+        Notification::assertSentToTimes($assignee, PersonalTaskDueReminderNotification::class, 1);
+        $this->assertSame(2, ReminderDispatch::query()->count());
+
+        Carbon::setTestNow('2026-06-20 08:00:00');
+
+        $this->artisan('reminders:send-due', ['--days' => 2])
+            ->assertExitCode(0);
+
+        Notification::assertSentToTimes($assignee, ProjectTaskDueReminderNotification::class, 2);
+        Notification::assertSentToTimes($assignee, PersonalTaskDueReminderNotification::class, 2);
+        $this->assertSame(4, ReminderDispatch::query()->count());
+
+        Carbon::setTestNow();
     }
 }

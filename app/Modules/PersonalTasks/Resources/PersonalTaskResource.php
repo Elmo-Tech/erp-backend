@@ -14,6 +14,7 @@ class PersonalTaskResource extends JsonResource
             'title' => $this->title,
             'description' => $this->description,
             'status' => $this->status,
+            'priority' => $this->priority,
             'dueDate' => $this->due_date?->toDateString(),
             'estimatedMinutes' => $this->estimated_minutes,
             'totalLoggedMinutes' => $this->totalLoggedMinutes(),

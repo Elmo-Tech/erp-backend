@@ -17,6 +17,7 @@ class PersonalTask extends Model
         'title',
         'description',
         'status',
+        'priority',
         'due_date',
         'estimated_minutes',
         'completed_at',

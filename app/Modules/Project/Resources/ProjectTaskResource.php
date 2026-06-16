@@ -17,6 +17,7 @@ class ProjectTaskResource extends JsonResource
             'description'     => $this->description,
             'status'          => $this->status?->value,
             'statusLabel'     => $this->status?->label(),
+            'priority'        => $this->priority,
             'estimatedHours'  => $this->estimated_hours !== null ? (float) $this->estimated_hours : null,
             'startDate'       => $this->start_date?->toDateString(),
             'dueDate'         => $this->due_date?->toDateString(),

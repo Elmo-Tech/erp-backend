@@ -6,6 +6,7 @@ use App\Enums\ProjectRole;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\HR\Actions\EvaluateQABugPointsAction;
+use App\Modules\Notification\Notifications\ProjectTaskAssignedNotification;
 use App\Modules\Project\Actions\CompleteProjectTaskAction;
 use App\Modules\Project\Actions\ProjectHistoryAction;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
@@ -86,6 +87,10 @@ class ProjectTaskController extends Controller
             $query->where('status', $filter['status']);
         }
 
+        if (! empty($filter['priority'])) {
+            $query->where('priority', $filter['priority']);
+        }
+
         if (! empty($filter['assigneeId'])) {
             $query->where('assignee_id', (int) $filter['assigneeId']);
         }
@@ -149,6 +154,7 @@ class ProjectTaskController extends Controller
             'title'           => $data['title'],
             'description'     => $data['description'] ?? null,
             'status'          => $data['status'] ?? 'to_do',
+            'priority'        => $data['priority'] ?? 'medium',
             'estimated_hours' => $data['estimatedHours'] ?? null,
             'start_date'      => $data['startDate'] ?? null,
             'due_date'        => $data['dueDate'] ?? null,
@@ -167,6 +173,10 @@ class ProjectTaskController extends Controller
         );
 
         $task->load(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
+
+        if ($task->assignee !== null) {
+            $task->assignee->notify(new ProjectTaskAssignedNotification($task));
+        }
 
         return ApiResponse::success(
             new ProjectTaskResource($task),
@@ -266,6 +276,7 @@ class ProjectTaskController extends Controller
             'title'          => 'title',
             'description'    => 'description',
             'status'         => 'status',
+            'priority'       => 'priority',
             'estimatedHours' => 'estimated_hours',
             'startDate'      => 'start_date',
             'dueDate'        => 'due_date',
@@ -324,6 +335,11 @@ class ProjectTaskController extends Controller
                 $newAssigneeName,
                 "Task '{$task->title}' reassigned"
             );
+
+            $task->loadMissing('assignee');
+            if ($task->assignee !== null) {
+                $task->assignee->notify(new ProjectTaskAssignedNotification($task));
+            }
         }
 
         $task->load(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
@@ -398,6 +414,7 @@ class ProjectTaskController extends Controller
             'milestoneId' => true,
             'title' => true,
             'description' => true,
+            'priority' => true,
             'estimatedHours' => true,
             'startDate' => true,
             'dueDate' => true,

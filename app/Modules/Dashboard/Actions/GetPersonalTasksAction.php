@@ -4,6 +4,8 @@ namespace App\Modules\Dashboard\Actions;
 
 use App\Enums\TaskStatus;
 use App\Modules\PersonalTasks\Models\PersonalTask;
+use App\Modules\Project\Enums\ExecutionTaskStatus;
+use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Task\Models\Task;
 use App\Modules\Settings\Models\User;
 use Illuminate\Support\Arr;
@@ -12,7 +14,7 @@ class GetPersonalTasksAction
 {
     public function execute(User $user): array
     {
-        $assignedSummary = Task::query()
+        $legacySummary = Task::query()
             ->where('assigned_to', $user->id)
             ->selectRaw(
                 'COUNT(*) as total,
@@ -27,6 +29,25 @@ class GetPersonalTasksAction
                     TaskStatus::REVIEW->value,
                     TaskStatus::TESTING->value,
                     TaskStatus::COMPLETED->value,
+                ]
+            )
+            ->first();
+
+        $projectSummary = ProjectTask::query()
+            ->where('assignee_id', $user->id)
+            ->selectRaw(
+                'COUNT(*) as total,
+                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as todo,
+                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as in_progress,
+                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as review,
+                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as testing,
+                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as completed',
+                [
+                    ExecutionTaskStatus::TO_DO->value,
+                    ExecutionTaskStatus::IN_PROGRESS->value,
+                    ExecutionTaskStatus::IN_REVIEW->value,
+                    ExecutionTaskStatus::QA->value,
+                    ExecutionTaskStatus::DONE->value,
                 ]
             )
             ->first();
@@ -62,19 +83,39 @@ class GetPersonalTasksAction
                 'sort_updated_at' => $task->updated_at?->timestamp ?? 0,
             ]);
 
+        $projectItems = ProjectTask::query()
+            ->with('project:id,title')
+            ->where('assignee_id', $user->id)
+            ->where('status', '!=', ExecutionTaskStatus::DONE->value)
+            ->orderByRaw('due_date IS NULL, due_date ASC')
+            ->orderByDesc('updated_at')
+            ->limit(10)
+            ->get(['id', 'project_id', 'title', 'status', 'priority', 'due_date', 'updated_at'])
+            ->map(fn (ProjectTask $task): array => [
+                'task_id' => $task->id,
+                'source' => 'project',
+                'title' => $task->title,
+                'status' => $this->scalar($task->status),
+                'priority' => $task->priority,
+                'due_date' => $task->due_date?->toDateString(),
+                'project' => $task->project?->title,
+                'sort_due_date' => $task->due_date?->toDateString() ?? '9999-12-31',
+                'sort_updated_at' => $task->updated_at?->timestamp ?? 0,
+            ]);
+
         $personalItems = PersonalTask::query()
             ->where('user_id', $user->id)
             ->where('status', '!=', 'done')
             ->orderByRaw('due_date IS NULL, due_date ASC')
             ->orderByDesc('updated_at')
             ->limit(10)
-            ->get(['id', 'title', 'status', 'due_date', 'updated_at'])
+            ->get(['id', 'title', 'status', 'priority', 'due_date', 'updated_at'])
             ->map(fn (PersonalTask $task): array => [
                 'task_id' => $task->id,
                 'source' => 'personal',
                 'title' => $task->title,
                 'status' => $task->status,
-                'priority' => null,
+                'priority' => $task->priority,
                 'due_date' => $task->due_date?->toDateString(),
                 'project' => 'Personal',
                 'sort_due_date' => $task->due_date?->toDateString() ?? '9999-12-31',
@@ -82,7 +123,8 @@ class GetPersonalTasksAction
             ]);
 
         $items = $assignedItems
-            ->merge($personalItems)
+            ->concat($projectItems)
+            ->concat($personalItems)
             ->sortBy([
                 ['sort_due_date', 'asc'],
                 ['sort_updated_at', 'desc'],
@@ -94,12 +136,12 @@ class GetPersonalTasksAction
 
         return [
             'summary' => [
-                'total' => (int) $assignedSummary->total + (int) $personalSummary->total,
-                'todo' => (int) $assignedSummary->todo + (int) $personalSummary->todo,
-                'in_progress' => (int) $assignedSummary->in_progress + (int) $personalSummary->in_progress,
-                'review' => (int) $assignedSummary->review,
-                'testing' => (int) $assignedSummary->testing,
-                'completed' => (int) $assignedSummary->completed + (int) $personalSummary->completed,
+                'total' => (int) $legacySummary->total + (int) $projectSummary->total + (int) $personalSummary->total,
+                'todo' => (int) $legacySummary->todo + (int) $projectSummary->todo + (int) $personalSummary->todo,
+                'in_progress' => (int) $legacySummary->in_progress + (int) $projectSummary->in_progress + (int) $personalSummary->in_progress,
+                'review' => (int) $legacySummary->review + (int) $projectSummary->review,
+                'testing' => (int) $legacySummary->testing + (int) $projectSummary->testing,
+                'completed' => (int) $legacySummary->completed + (int) $projectSummary->completed + (int) $personalSummary->completed,
             ],
             'items' => $items,
         ];

@@ -8,9 +8,11 @@ use App\Modules\Project\Models\Milestone;
 use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
+use App\Modules\Notification\Notifications\ProjectTaskAssignedNotification;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -58,10 +60,11 @@ class ProjectTaskApiContractTest extends TestCase
             'projectId',
             'milestoneId',
             'title',
-            'description',
-            'status',
-            'statusLabel',
-            'estimatedHours',
+                'description',
+                'status',
+                'statusLabel',
+                'priority',
+                'estimatedHours',
             'startDate',
             'dueDate',
             'assigneeId',
@@ -137,6 +140,38 @@ class ProjectTaskApiContractTest extends TestCase
             'old_value' => $assignee->name,
             'new_value' => 'Unassigned',
         ]);
+    }
+
+    public function test_project_task_create_accepts_priority_and_notifies_assignee(): void
+    {
+        Notification::fake();
+
+        $manager = $this->userWithPermissions(['view_projects', 'manage_all_projects', 'view_tasks', 'manage_tasks']);
+        $assignee = User::factory()->create();
+        $project = Project::factory()->create();
+
+        $response = $this->actingAs($manager, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/tasks", [
+                'title' => 'Prepare launch checklist',
+                'description' => 'Coordinate deployment requirements',
+                'dueDate' => '2026-06-22',
+                'priority' => 'urgent',
+                'assigneeId' => $assignee->id,
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.title', 'Prepare launch checklist')
+            ->assertJsonPath('data.priority', 'urgent')
+            ->assertJsonPath('data.assigneeId', $assignee->id);
+
+        $this->assertDatabaseHas('project_tasks', [
+            'project_id' => $project->id,
+            'title' => 'Prepare launch checklist',
+            'priority' => 'urgent',
+            'assignee_id' => $assignee->id,
+        ]);
+
+        Notification::assertSentTo($assignee, ProjectTaskAssignedNotification::class);
     }
 
     public function test_assigned_worker_can_update_task_status_without_metadata_permission(): void

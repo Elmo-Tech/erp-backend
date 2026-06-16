@@ -9,9 +9,11 @@ use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\HR\Models\LeaveRequest;
 use App\Modules\HR\Models\Payslip;
 use App\Modules\HR\Models\PayrollTransaction;
+use App\Modules\PersonalTasks\Models\PersonalTask;
+use App\Modules\Project\Enums\ExecutionTaskStatus;
+use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Settings\Models\Setting;
 use App\Modules\Settings\Models\User;
-use App\Modules\Task\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -86,26 +88,43 @@ class EmployeeReportController extends Controller
         $pointsBalance = (int) $pointEntries->sum('points');
 
         // ── Tasks / Deliverables ──────────────────────────────────────────────
-        // Group tasks by due_date for the deliverable day view
-        $tasks = [];
-        if (class_exists(\App\Modules\Task\Models\Task::class)) {
-            $tasks = \App\Modules\Task\Models\Task::where('assigned_to', $id)
-                ->whereBetween('due_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
-                ->get();
-        }
+        $projectTasks = ProjectTask::query()
+            ->where('assignee_id', $id)
+            ->whereBetween('due_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+            ->get()
+            ->map(fn (ProjectTask $task): array => [
+                'date' => $task->due_date?->toDateString(),
+                'completed' => $task->status === ExecutionTaskStatus::DONE,
+                'estimated_hours' => (float) ($task->estimated_hours ?? 0),
+            ]);
 
-        $tasksByDate = collect($tasks)->groupBy(fn ($t) => Carbon::parse($t->due_date)->toDateString());
+        $personalTasks = PersonalTask::query()
+            ->where('user_id', $id)
+            ->whereBetween('due_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+            ->get()
+            ->map(fn (PersonalTask $task): array => [
+                'date' => $task->due_date?->toDateString(),
+                'completed' => $task->status === 'done',
+                'estimated_hours' => round(((int) ($task->estimated_minutes ?? 0)) / 60, 2),
+            ]);
+
+        $tasks = $projectTasks
+            ->concat($personalTasks)
+            ->filter(fn (array $task): bool => $task['date'] !== null)
+            ->values();
+
+        $tasksByDate = $tasks->groupBy('date');
 
         $deliverableDays = $tasksByDate->map(fn ($dayTasks, $date) => [
             'date'               => $date,
-            'submitted'          => $dayTasks->where('status', 'done')->count() > 0,
+            'submitted'          => $dayTasks->where('completed', true)->count() > 0,
             'taskCount'          => $dayTasks->count(),
-            'completedTaskCount' => $dayTasks->where('status', 'done')->count(),
+            'completedTaskCount' => $dayTasks->where('completed', true)->count(),
             'qaIssues'           => [],
         ])->values()->toArray();
 
-        $totalTaskHours      = collect($tasks)->sum('estimated_hours') ?? 0;
-        $completedTaskCount  = collect($tasks)->where('status', 'done')->count();
+        $totalTaskHours      = $tasks->sum('estimated_hours') ?? 0;
+        $completedTaskCount  = $tasks->where('completed', true)->count();
 
         // ── Manual Payroll Transactions ───────────────────────────────────────
         $manualTransactions = PayrollTransaction::where('user_id', $id)

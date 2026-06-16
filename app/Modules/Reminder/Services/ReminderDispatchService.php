@@ -9,23 +9,26 @@ use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Notification\Notifications\ClientFollowUpReminderNotification;
 use App\Modules\Notification\Notifications\FinanceInvoiceDueReminderNotification;
 use App\Modules\Notification\Notifications\MeetingReminderNotification;
+use App\Modules\Notification\Notifications\PersonalTaskDueReminderNotification;
 use App\Modules\Notification\Notifications\ProjectTaskDueReminderNotification;
 use App\Modules\Notification\Notifications\SubscriptionCollectionDueNotification;
+use App\Modules\PersonalTasks\Models\PersonalTask;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Reminder\Models\ReminderDispatch;
 use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ReminderDispatchService
 {
-    public function sendDueReminders(int $daysAhead = 3): array
+    public function sendDueReminders(int $daysAhead = 2): array
     {
         return [
-            'meetings' => $this->sendMeetingReminders($daysAhead),
+            'meetings' => $this->sendMeetingReminders(),
             'tasks' => $this->sendTaskDueReminders($daysAhead),
             'invoices' => $this->sendInvoiceDueReminders($daysAhead),
             'subscriptions' => $this->sendSubscriptionReminders($daysAhead),
@@ -49,21 +52,40 @@ class ReminderDispatchService
             ));
     }
 
-    public function sendTaskDueReminders(int $daysAhead = 3): int
+    public function sendTaskDueReminders(int $daysAhead = 2): int
     {
-        return ProjectTask::query()
+        $projectReminders = ProjectTask::query()
             ->with(['assignee:id,name,email', 'project:id,title'])
             ->whereNotNull('assignee_id')
             ->whereNotIn('status', [ExecutionTaskStatus::DONE->value])
-            ->whereBetween('due_date', [now()->toDateString(), now()->addDays($daysAhead)->toDateString()])
+            ->whereDate('due_date', '>=', now()->toDateString())
+            ->whereDate('due_date', '<=', now()->addDays($daysAhead)->toDateString())
             ->get()
             ->sum(fn (ProjectTask $task): int => $this->notifyUsers(
                 'project_task_due',
                 $task,
                 collect([$task->assignee])->filter(),
                 new ProjectTaskDueReminderNotification($task),
-                $task->due_date?->toDateString()
+                $task->due_date?->toDateString(),
+                $this->dueReminderStage($task->due_date)
             ));
+
+        $personalReminders = PersonalTask::query()
+            ->with('user:id,name,email')
+            ->where('status', '!=', 'done')
+            ->whereDate('due_date', '>=', now()->toDateString())
+            ->whereDate('due_date', '<=', now()->addDays($daysAhead)->toDateString())
+            ->get()
+            ->sum(fn (PersonalTask $task): int => $this->notifyUsers(
+                'personal_task_due',
+                $task,
+                collect([$task->user])->filter(),
+                new PersonalTaskDueReminderNotification($task),
+                $task->due_date?->toDateString(),
+                $this->dueReminderStage($task->due_date)
+            ));
+
+        return $projectReminders + $personalReminders;
     }
 
     public function sendInvoiceDueReminders(int $daysAhead = 3): int
@@ -129,12 +151,13 @@ class ReminderDispatchService
         Model $remindable,
         Collection $recipients,
         Notification $notification,
-        ?string $scheduledFor
+        ?string $scheduledFor,
+        ?string $dedupeScope = null
     ): int {
         return $recipients
             ->unique('id')
-            ->sum(function (User $recipient) use ($type, $remindable, $notification, $scheduledFor): int {
-                $key = $this->reminderKey($type, $remindable, $recipient, $scheduledFor);
+            ->sum(function (User $recipient) use ($type, $remindable, $notification, $scheduledFor, $dedupeScope): int {
+                $key = $this->reminderKey($type, $remindable, $recipient, $scheduledFor, $dedupeScope);
 
                 return DB::transaction(function () use ($key, $type, $remindable, $recipient, $notification, $scheduledFor): int {
                     if (ReminderDispatch::query()->where('reminder_key', $key)->exists()) {
@@ -177,7 +200,7 @@ class ReminderDispatchService
             ->get(['id', 'name', 'email']);
     }
 
-    private function reminderKey(string $type, Model $remindable, User $recipient, ?string $scheduledFor): string
+    private function reminderKey(string $type, Model $remindable, User $recipient, ?string $scheduledFor, ?string $dedupeScope = null): string
     {
         return implode(':', [
             $type,
@@ -186,6 +209,18 @@ class ReminderDispatchService
             str_replace('\\', '.', $recipient::class),
             $recipient->getKey(),
             $scheduledFor ?? 'once',
+            $dedupeScope ?? 'default',
         ]);
+    }
+
+    private function dueReminderStage(mixed $dueDate): string
+    {
+        $daysUntilDue = now()->startOfDay()->diffInDays(Carbon::parse($dueDate)->startOfDay(), false);
+
+        if ($daysUntilDue === 0) {
+            return 'due_today';
+        }
+
+        return 'due_in_'.$daysUntilDue.'_days';
     }
 }

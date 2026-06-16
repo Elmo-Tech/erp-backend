@@ -29,7 +29,7 @@ class ReportsService
         $invoices = $this->invoiceQuery($request)->get();
         $entries = $this->timeEntryQuery($request)->with('user:id,name')->get();
         $personalEntries = $this->personalTimeEntryQuery($request)->with('user:id,name')->get();
-        $workEntries = $entries->merge($personalEntries);
+        $workEntries = $entries->concat($personalEntries);
         $subscriptions = $this->subscriptionQuery($request)->get();
         $leads = $this->leadQuery($request)->get();
 
@@ -136,7 +136,7 @@ class ReportsService
             ->map(function (int $userId) use ($entries, $personalEntries, $tasks, $personalTasks, $canViewCost): array {
                 $userEntries = $entries->where('user_id', $userId);
                 $userPersonalEntries = $personalEntries->where('user_id', $userId);
-                $workEntries = $userEntries->merge($userPersonalEntries);
+                $workEntries = $userEntries->concat($userPersonalEntries);
                 $user = $workEntries->first()?->user;
                 $userTasks = $tasks->where('assignee_id', $userId);
                 $userPersonalTasks = $personalTasks->where('user_id', $userId);

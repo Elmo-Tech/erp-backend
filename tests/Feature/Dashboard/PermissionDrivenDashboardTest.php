@@ -4,6 +4,9 @@ namespace Tests\Feature\Dashboard;
 
 use App\Enums\TaskStatus;
 use App\Modules\PersonalTasks\Models\PersonalTask;
+use App\Modules\Project\Enums\ExecutionTaskStatus;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Task\Models\Task;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -59,10 +62,13 @@ class PermissionDrivenDashboardTest extends TestCase
         $user = User::factory()->create();
         $user->givePermissionTo('view_personal_tasks');
 
-        Task::factory()->create([
-            'assigned_to' => $user->id,
+        $project = Project::factory()->create();
+
+        ProjectTask::create([
+            'project_id' => $project->id,
             'title' => 'Project task',
-            'status' => TaskStatus::IN_PROGRESS,
+            'status' => ExecutionTaskStatus::IN_PROGRESS,
+            'assignee_id' => $user->id,
             'due_date' => now()->addDay(),
         ]);
 

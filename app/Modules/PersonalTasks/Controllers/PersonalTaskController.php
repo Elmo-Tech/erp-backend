@@ -60,6 +60,7 @@ class PersonalTaskController extends Controller
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
             'status' => $data['status'] ?? 'todo',
+            'priority' => $data['priority'] ?? 'medium',
             'due_date' => $data['dueDate'] ?? null,
             'estimated_minutes' => $data['estimatedMinutes'] ?? null,
         ]);
@@ -78,6 +79,7 @@ class PersonalTaskController extends Controller
             'title' => $data['title'] ?? $task->title,
             'description' => array_key_exists('description', $data) ? $data['description'] : $task->description,
             'status' => $status,
+            'priority' => $data['priority'] ?? $task->priority,
             'due_date' => array_key_exists('dueDate', $data) ? $data['dueDate'] : $task->due_date,
             'estimated_minutes' => array_key_exists('estimatedMinutes', $data) ? $data['estimatedMinutes'] : $task->estimated_minutes,
             'completed_at' => $status === 'done' ? ($task->completed_at ?? now()) : null,
@@ -176,6 +178,7 @@ class PersonalTaskController extends Controller
             'title' => [$requiredTitle ? 'required' : 'sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['sometimes', 'string', 'in:todo,in_progress,done'],
+            'priority' => ['sometimes', 'string', 'in:low,medium,high,urgent'],
             'dueDate' => ['nullable', 'date'],
             'estimatedMinutes' => ['nullable', 'integer', 'min:1', 'max:1440'],
         ];
