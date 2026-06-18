@@ -2,8 +2,9 @@
 
 namespace App\Modules\Attendance\Models;
 
-use App\Modules\Settings\Models\User;
+use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Models\ProjectTimeEntry;
+use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,18 +12,18 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
- * @property int         $id
- * @property int         $user_id
- * @property Carbon      $date
+ * @property int $id
+ * @property int $user_id
+ * @property Carbon $date
  * @property Carbon|null $clock_in
  * @property Carbon|null $clock_out
- * @property string      $status              present|absent|late|excused
- * @property int         $total_worked_minutes
- * @property int         $late_minutes
- * @property bool        $is_late
- * @property int         $idle_minutes
- * @property int         $deduction_minutes
- * @property bool        $used_grace_day
+ * @property string $status present|absent|late|excused
+ * @property int $total_worked_minutes
+ * @property int $late_minutes
+ * @property bool $is_late
+ * @property int $idle_minutes
+ * @property int $deduction_minutes
+ * @property bool $used_grace_day
  * @property string|null $expected_clock_in
  * @property string|null $expected_clock_out
  * @property string|null $notes
@@ -52,15 +53,15 @@ class Attendance extends Model
     protected function casts(): array
     {
         return [
-            'date'                 => 'date',
-            'clock_in'             => 'datetime',
-            'clock_out'            => 'datetime',
-            'late_minutes'         => 'integer',
-            'is_late'              => 'boolean',
-            'idle_minutes'         => 'integer',
-            'deduction_minutes'    => 'integer',
+            'date' => 'date',
+            'clock_in' => 'datetime',
+            'clock_out' => 'datetime',
+            'late_minutes' => 'integer',
+            'is_late' => 'boolean',
+            'idle_minutes' => 'integer',
+            'deduction_minutes' => 'integer',
             'total_worked_minutes' => 'integer',
-            'used_grace_day'       => 'boolean',
+            'used_grace_day' => 'boolean',
         ];
     }
 
@@ -92,7 +93,7 @@ class Attendance extends Model
         }
 
         $expectedTime = Carbon::parse($this->date->format('Y-m-d').' '.$this->expected_clock_in);
-        $actualTime   = Carbon::parse($this->clock_in);
+        $actualTime = Carbon::parse($this->clock_in);
 
         if ($actualTime->lte($expectedTime)) {
             return 0;
@@ -113,7 +114,7 @@ class Attendance extends Model
      */
     public function calculateDeduction(User $user): array
     {
-        $lateMinutes   = $this->late_minutes ?? $this->calculateLateMinutes();
+        $lateMinutes = $this->late_minutes ?? $this->calculateLateMinutes();
         $lateThreshold = (int) config('attendance.late_threshold_minutes', 15);
 
         if ($lateMinutes <= $lateThreshold) {
@@ -140,11 +141,8 @@ class Attendance extends Model
             return 0;
         }
 
-        $totalMinutes  = $this->clock_in->diffInMinutes($this->clock_out);
-        $workedMinutes = ProjectTimeEntry::where('user_id', $this->user_id)
-            ->whereDate('start_time', $this->date)
-            ->whereNotNull('end_time')
-            ->sum('duration_minutes');
+        $totalMinutes = $this->clock_in->diffInMinutes($this->clock_out);
+        $workedMinutes = $this->getWorkedMinutes();
 
         return max(0, $totalMinutes - $workedMinutes);
     }
@@ -154,10 +152,17 @@ class Attendance extends Model
      */
     public function getWorkedMinutes(): int
     {
-        return ProjectTimeEntry::where('user_id', $this->user_id)
+        $projectMinutes = ProjectTimeEntry::where('user_id', $this->user_id)
             ->whereDate('start_time', $this->date)
             ->whereNotNull('end_time')
             ->sum('duration_minutes');
+
+        $personalMinutes = PersonalTimeEntry::where('user_id', $this->user_id)
+            ->whereDate('start_time', $this->date)
+            ->whereNotNull('end_time')
+            ->sum('duration_minutes');
+
+        return (int) $projectMinutes + (int) $personalMinutes;
     }
 
     public function getExpectedWorkedMinutes(): int

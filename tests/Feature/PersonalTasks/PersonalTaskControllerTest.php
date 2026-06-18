@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\PersonalTasks;
 
+use App\Modules\PersonalTasks\Models\PersonalTask;
+use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class PersonalTaskControllerTest extends TestCase
@@ -89,6 +92,59 @@ class PersonalTaskControllerTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_admin_can_list_and_edit_employee_personal_tasks_and_time_entries(): void
+    {
+        $admin = $this->userWithPermissions(['manage_employees', 'edit_time_entries']);
+        $employee = User::factory()->create();
+        $otherEmployee = User::factory()->create();
+
+        $task = PersonalTask::create([
+            'user_id' => $employee->id,
+            'title' => 'Original task',
+            'status' => 'todo',
+            'priority' => 'medium',
+        ]);
+        PersonalTask::create([
+            'user_id' => $otherEmployee->id,
+            'title' => 'Other task',
+            'status' => 'todo',
+            'priority' => 'medium',
+        ]);
+        $entry = PersonalTimeEntry::create([
+            'personal_task_id' => $task->id,
+            'user_id' => $employee->id,
+            'start_time' => '2026-06-18 09:00:00',
+            'end_time' => '2026-06-18 10:00:00',
+            'duration_minutes' => 60,
+            'is_manual' => false,
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/v1/personal-tasks?user_id={$employee->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.tasks')
+            ->assertJsonPath('data.tasks.0.title', 'Original task');
+
+        $this->actingAs($admin, 'sanctum')
+            ->patchJson("/api/v1/personal-tasks/{$task->id}", [
+                'title' => 'Admin updated task',
+                'status' => 'in_progress',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Admin updated task')
+            ->assertJsonPath('data.status', 'in_progress');
+
+        $this->actingAs($admin, 'sanctum')
+            ->patchJson("/api/v1/personal-tasks/{$task->id}/time-entries/{$entry->id}", [
+                'startTime' => '2026-06-18 09:30:00',
+                'endTime' => '2026-06-18 11:00:00',
+                'note' => 'Admin correction',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.durationMinutes', 90)
+            ->assertJsonPath('data.note', 'Admin correction');
+    }
+
     public function test_personal_timer_creates_and_stops_time_entry_without_project_time(): void
     {
         $user = User::factory()->create();
@@ -154,5 +210,20 @@ class PersonalTaskControllerTest extends TestCase
             ->assertJsonPath('data.isRunning', true);
 
         $this->assertNotNull($activeProjectEntry->fresh()->end_time);
+    }
+
+    /**
+     * @param  array<int, string>  $permissions
+     */
+    private function userWithPermissions(array $permissions): User
+    {
+        foreach ($permissions as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
+
+        $user = User::factory()->create();
+        $user->givePermissionTo($permissions);
+
+        return $user;
     }
 }

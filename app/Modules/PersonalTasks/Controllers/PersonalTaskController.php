@@ -23,8 +23,17 @@ class PersonalTaskController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $data = $request->validate([
+            'user_id' => ['sometimes', 'integer', 'exists:users,id'],
+        ]);
+        $targetUserId = $request->user()->id;
+
+        if (isset($data['user_id']) && $request->user()->can('manage_employees')) {
+            $targetUserId = (int) $data['user_id'];
+        }
+
         $tasks = PersonalTask::query()
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $targetUserId)
             ->with('timeEntries')
             ->orderByRaw('status = ? asc', ['done'])
             ->orderByRaw('due_date IS NULL, due_date ASC')
@@ -70,7 +79,7 @@ class PersonalTaskController extends Controller
 
     public function update(Request $request, PersonalTask $task): JsonResponse
     {
-        $this->assertTaskOwner($request, $task);
+        $this->assertCanManageTask($request, $task);
 
         $data = $request->validate($this->taskRules(requiredTitle: false));
         $status = $data['status'] ?? $task->status;
@@ -123,14 +132,14 @@ class PersonalTaskController extends Controller
 
     public function storeTimeEntry(Request $request, PersonalTask $task): JsonResponse
     {
-        $this->assertTaskOwner($request, $task);
+        $this->assertCanManageTimeEntry($request, $task, 'log_time');
         $data = $request->validate($this->timeEntryRules());
 
         $start = Carbon::parse($data['startTime']);
         $end = Carbon::parse($data['endTime']);
 
         $entry = $task->timeEntries()->create([
-            'user_id' => $request->user()->id,
+            'user_id' => $task->user_id,
             'start_time' => $start,
             'end_time' => $end,
             'duration_minutes' => (int) $start->diffInMinutes($end),
@@ -143,7 +152,7 @@ class PersonalTaskController extends Controller
 
     public function updateTimeEntry(Request $request, PersonalTask $task, PersonalTimeEntry $entry): JsonResponse
     {
-        $this->assertTaskOwner($request, $task);
+        $this->assertCanManageTimeEntry($request, $task, 'edit_time_entries');
         $this->assertEntryBelongsToTask($entry, $task);
         $data = $request->validate($this->timeEntryRules());
 
@@ -162,7 +171,7 @@ class PersonalTaskController extends Controller
 
     public function destroyTimeEntry(Request $request, PersonalTask $task, PersonalTimeEntry $entry): JsonResponse
     {
-        $this->assertTaskOwner($request, $task);
+        $this->assertCanManageTimeEntry($request, $task, 'delete_time_entries');
         $this->assertEntryBelongsToTask($entry, $task);
         $entry->delete();
 
@@ -199,6 +208,28 @@ class PersonalTaskController extends Controller
     private function assertTaskOwner(Request $request, PersonalTask $task): void
     {
         abort_if($task->user_id !== $request->user()->id, 404, 'Personal task not found.');
+    }
+
+    private function assertCanManageTask(Request $request, PersonalTask $task): void
+    {
+        if ($task->user_id === $request->user()->id || $request->user()->can('manage_employees')) {
+            return;
+        }
+
+        abort(404, 'Personal task not found.');
+    }
+
+    private function assertCanManageTimeEntry(Request $request, PersonalTask $task, string $permission): void
+    {
+        if ($task->user_id === $request->user()->id) {
+            return;
+        }
+
+        if ($request->user()->can($permission) || $request->user()->can('manage_time_entries')) {
+            return;
+        }
+
+        abort(404, 'Personal task not found.');
     }
 
     private function assertEntryBelongsToTask(PersonalTimeEntry $entry, PersonalTask $task): void

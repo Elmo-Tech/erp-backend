@@ -7,8 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\HR\Models\LeaveRequest;
-use App\Modules\HR\Models\Payslip;
 use App\Modules\HR\Models\PayrollTransaction;
+use App\Modules\HR\Models\Payslip;
 use App\Modules\PersonalTasks\Models\PersonalTask;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\ProjectTask;
@@ -42,10 +42,10 @@ class EmployeeReportController extends Controller
         $user = User::with(['roles:id,name', 'employeeProfile'])->findOrFail($id);
 
         $month = (int) $request->query('month', now()->month);
-        $year  = (int) $request->query('year', now()->year);
+        $year = (int) $request->query('year', now()->year);
 
         $periodStart = Carbon::create($year, $month, 1)->startOfDay();
-        $periodEnd   = $periodStart->copy()->endOfMonth();
+        $periodEnd = $periodStart->copy()->endOfMonth();
 
         // ── Attendance ────────────────────────────────────────────────────────
         $attendanceRecords = Attendance::where('user_id', $id)
@@ -54,20 +54,23 @@ class EmployeeReportController extends Controller
             ->get();
 
         $attendanceDays = $attendanceRecords->map(fn ($a) => [
-            'date'             => $a->date instanceof \Illuminate\Support\Carbon
+            'date' => $a->date instanceof Carbon
                 ? $a->date->toDateString()
                 : (string) $a->date,
-            'dayLabel'         => Carbon::parse($a->date)->format('D d'),
-            'clockIn'          => $a->clock_in ? Carbon::parse($a->clock_in)->format('H:i') : null,
-            'clockOut'         => $a->clock_out ? Carbon::parse($a->clock_out)->format('H:i') : null,
-            'workedHours'      => $a->worked_hours ?? 0,
-            'lateMinutes'      => $a->late_minutes ?? 0,
-            'status'           => $a->status,
-            'usedGraceDay'     => (bool) ($a->used_grace_day ?? false),
+            'dayLabel' => Carbon::parse($a->date)->format('D d'),
+            'clockIn' => $a->clock_in ? Carbon::parse($a->clock_in)->format('H:i') : null,
+            'clockOut' => $a->clock_out ? Carbon::parse($a->clock_out)->format('H:i') : null,
+            'workedHours' => round($a->getWorkedMinutes() / 60, 2),
+            'actualWorkedMinutes' => $a->getWorkedMinutes(),
+            'expectedWorkedMinutes' => $a->getExpectedWorkedMinutes(),
+            'stoppedMinutes' => $a->clock_out ? max(0, (int) $a->clock_in?->diffInMinutes($a->clock_out) - $a->getWorkedMinutes()) : 0,
+            'lateMinutes' => $a->late_minutes ?? 0,
+            'status' => $a->status,
+            'usedGraceDay' => (bool) ($a->used_grace_day ?? false),
             'deductionMinutes' => $a->deduction_minutes ?? 0,
         ])->values()->toArray();
 
-        $lateDays   = $attendanceRecords->where('status', 'late')->count();
+        $lateDays = $attendanceRecords->where('status', 'late')->count();
         $absentDays = $attendanceRecords->where('status', 'absent')->count();
         $presentDays = $attendanceRecords->whereIn('status', ['present', 'late'])->count();
 
@@ -78,10 +81,10 @@ class EmployeeReportController extends Controller
             ->get();
 
         $pointLedger = $pointEntries->map(fn ($p) => [
-            'id'         => $p->id,
-            'date'       => $p->created_at->toDateString(),
-            'points'     => $p->points,
-            'reason'     => $p->reason ?? '',
+            'id' => $p->id,
+            'date' => $p->created_at->toDateString(),
+            'points' => $p->points,
+            'reason' => $p->reason ?? '',
             'sourceType' => $p->source_type ?? null,
         ])->values()->toArray();
 
@@ -116,15 +119,15 @@ class EmployeeReportController extends Controller
         $tasksByDate = $tasks->groupBy('date');
 
         $deliverableDays = $tasksByDate->map(fn ($dayTasks, $date) => [
-            'date'               => $date,
-            'submitted'          => $dayTasks->where('completed', true)->count() > 0,
-            'taskCount'          => $dayTasks->count(),
+            'date' => $date,
+            'submitted' => $dayTasks->where('completed', true)->count() > 0,
+            'taskCount' => $dayTasks->count(),
             'completedTaskCount' => $dayTasks->where('completed', true)->count(),
-            'qaIssues'           => [],
+            'qaIssues' => [],
         ])->values()->toArray();
 
-        $totalTaskHours      = $tasks->sum('estimated_hours') ?? 0;
-        $completedTaskCount  = $tasks->where('completed', true)->count();
+        $totalTaskHours = $tasks->sum('estimated_hours') ?? 0;
+        $completedTaskCount = $tasks->where('completed', true)->count();
 
         // ── Manual Payroll Transactions ───────────────────────────────────────
         $manualTransactions = PayrollTransaction::where('user_id', $id)
@@ -132,33 +135,33 @@ class EmployeeReportController extends Controller
             ->orderBy('transaction_date')
             ->get();
 
-        $manualBonusTotal     = (float) $manualTransactions->where('type', 'manual_bonus')->sum('amount');
+        $manualBonusTotal = (float) $manualTransactions->where('type', 'manual_bonus')->sum('amount');
         $manualDeductionTotal = (float) $manualTransactions->where('type', 'manual_deduction')->sum('amount');
 
         $manualTransactionsData = $manualTransactions->map(fn ($t) => [
-            'id'              => $t->id,
-            'userId'          => $t->user_id,
-            'amount'          => (float) $t->amount,
-            'type'            => $t->type,
-            'reason'          => $t->reason,
-            'transactionDate' => $t->transaction_date instanceof \Illuminate\Support\Carbon
+            'id' => $t->id,
+            'userId' => $t->user_id,
+            'amount' => (float) $t->amount,
+            'type' => $t->type,
+            'reason' => $t->reason,
+            'transactionDate' => $t->transaction_date instanceof Carbon
                 ? $t->transaction_date->toDateString()
                 : (string) $t->transaction_date,
-            'createdAt'       => $t->created_at?->toISOString() ?? '',
-            'updatedAt'       => $t->updated_at?->toISOString() ?? '',
+            'createdAt' => $t->created_at?->toISOString() ?? '',
+            'updatedAt' => $t->updated_at?->toISOString() ?? '',
         ])->values()->toArray();
 
         // ── Financial Breakdown ───────────────────────────────────────────────
-        $profile    = $user->employeeProfile;
+        $profile = $user->employeeProfile;
         $baseSalary = $profile ? (float) $profile->base_salary : 0.0;
         $minuteRate = ($profile && $profile->hourly_rate > 0)
             ? (float) $profile->hourly_rate / 60
             : 0.0;
 
-        $pointValue        = (float) Setting::getValue('gamification_point_value', 50);
+        $pointValue = (float) Setting::getValue('gamification_point_value', 50);
         $pointsBonusAmount = max(0.0, round($pointsBalance * $pointValue, 2));
 
-        $latenessMinutes         = (int) $attendanceRecords->where('status', 'late')->sum('deduction_minutes');
+        $latenessMinutes = (int) $attendanceRecords->where('status', 'late')->sum('deduction_minutes');
         $latenessDeductionAmount = round($latenessMinutes * $minuteRate, 2);
 
         // Unpaid leave deduction
@@ -167,7 +170,7 @@ class EmployeeReportController extends Controller
             ->where('status', 'approved')
             ->where(function ($q) use ($periodStart, $periodEnd) {
                 $q->whereBetween('start_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
-                  ->orWhereBetween('end_date', [$periodStart->toDateString(), $periodEnd->toDateString()]);
+                    ->orWhereBetween('end_date', [$periodStart->toDateString(), $periodEnd->toDateString()]);
             })
             ->get();
 
@@ -175,9 +178,9 @@ class EmployeeReportController extends Controller
             ? round(($profile->working_days_per_week / 7) * $periodStart->daysInMonth)
             : 22;
 
-        $dailyRate              = $workingDaysPerMonth > 0 ? $baseSalary / $workingDaysPerMonth : 0;
-        $unpaidLeaveDays        = $unpaidLeaves->sum(fn ($l) => $l->durationInDays());
-        $unpaidLeaveDeduction   = round($unpaidLeaveDays * $dailyRate, 2);
+        $dailyRate = $workingDaysPerMonth > 0 ? $baseSalary / $workingDaysPerMonth : 0;
+        $unpaidLeaveDays = $unpaidLeaves->sum(fn ($l) => $l->durationInDays());
+        $unpaidLeaveDeduction = round($unpaidLeaveDays * $dailyRate, 2);
 
         $netSalary = round(
             $baseSalary
@@ -196,46 +199,46 @@ class EmployeeReportController extends Controller
             ->first();
 
         $financialBreakdown = [
-            'baseSalary'              => $baseSalary,
-            'pointsBonusAmount'       => $pointsBonusAmount,
-            'manualBonusTotal'        => $manualBonusTotal,
+            'baseSalary' => $baseSalary,
+            'pointsBonusAmount' => $pointsBonusAmount,
+            'manualBonusTotal' => $manualBonusTotal,
             'latenessDeductionAmount' => $latenessDeductionAmount,
-            'manualDeductionTotal'    => $manualDeductionTotal,
-            'unpaidLeaveDeduction'    => $unpaidLeaveDeduction,
-            'netSalary'               => $netSalary,
-            'payslipStatus'           => $payslip?->status,
+            'manualDeductionTotal' => $manualDeductionTotal,
+            'unpaidLeaveDeduction' => $unpaidLeaveDeduction,
+            'netSalary' => $netSalary,
+            'payslipStatus' => $payslip?->status,
         ];
 
         // ── Summary ───────────────────────────────────────────────────────────
         $summary = [
-            'totalTaskHours'     => (float) $totalTaskHours,
+            'totalTaskHours' => (float) $totalTaskHours,
             'completedTaskCount' => $completedTaskCount,
-            'pointsBalance'      => $pointsBalance,
-            'lateDays'           => $lateDays,
-            'absentDays'         => $absentDays,
-            'presentDays'        => $presentDays,
-            'netSalary'          => $netSalary,
+            'pointsBalance' => $pointsBalance,
+            'lateDays' => $lateDays,
+            'absentDays' => $absentDays,
+            'presentDays' => $presentDays,
+            'netSalary' => $netSalary,
         ];
 
         return ApiResponse::success([
             'employee' => [
-                'id'     => $user->id,
-                'name'   => $user->name ?? '',
-                'email'  => $user->email ?? '',
+                'id' => $user->id,
+                'name' => $user->name ?? '',
+                'email' => $user->email ?? '',
                 'avatar' => $user->avatar,
-                'roles'  => $user->roles->pluck('name')->toArray(),
+                'roles' => $user->roles->pluck('name')->toArray(),
             ],
             'period' => [
                 'month' => $month,
-                'year'  => $year,
+                'year' => $year,
                 'label' => Carbon::create($year, $month, 1)->format('F Y'),
             ],
-            'summary'             => $summary,
-            'attendanceDays'      => $attendanceDays,
-            'pointLedger'         => $pointLedger,
-            'deliverableDays'     => $deliverableDays,
-            'financialBreakdown'  => $financialBreakdown,
-            'manualTransactions'  => $manualTransactionsData,
+            'summary' => $summary,
+            'attendanceDays' => $attendanceDays,
+            'pointLedger' => $pointLedger,
+            'deliverableDays' => $deliverableDays,
+            'financialBreakdown' => $financialBreakdown,
+            'manualTransactions' => $manualTransactionsData,
         ], 'Employee report retrieved successfully');
     }
 }

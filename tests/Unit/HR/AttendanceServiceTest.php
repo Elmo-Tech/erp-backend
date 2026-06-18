@@ -4,6 +4,11 @@ namespace Tests\Unit\HR;
 
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\HR\Services\AttendanceService;
+use App\Modules\PersonalTasks\Models\PersonalTask;
+use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectTask;
+use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -34,5 +39,51 @@ class AttendanceServiceTest extends TestCase
         $this->assertDatabaseCount('attendances', 1);
 
         Carbon::setTestNow();
+    }
+
+    public function test_attendance_worked_minutes_include_project_and_personal_time_entries(): void
+    {
+        $user = User::factory()->create();
+        $attendance = Attendance::create([
+            'user_id' => $user->id,
+            'date' => '2026-06-18',
+            'clock_in' => '2026-06-18 09:00:00',
+            'clock_out' => '2026-06-18 12:00:00',
+            'status' => 'present',
+        ]);
+
+        $project = Project::factory()->create();
+        $projectTask = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Project task',
+            'status' => 'done',
+            'assignee_id' => $user->id,
+        ]);
+        ProjectTimeEntry::create([
+            'task_id' => $projectTask->id,
+            'user_id' => $user->id,
+            'start_time' => '2026-06-18 09:00:00',
+            'end_time' => '2026-06-18 10:00:00',
+            'duration_minutes' => 60,
+            'is_manual' => false,
+        ]);
+
+        $personalTask = PersonalTask::create([
+            'user_id' => $user->id,
+            'title' => 'Personal task',
+            'status' => 'done',
+            'priority' => 'medium',
+        ]);
+        PersonalTimeEntry::create([
+            'personal_task_id' => $personalTask->id,
+            'user_id' => $user->id,
+            'start_time' => '2026-06-18 10:15:00',
+            'end_time' => '2026-06-18 11:00:00',
+            'duration_minutes' => 45,
+            'is_manual' => false,
+        ]);
+
+        $this->assertSame(105, $attendance->getWorkedMinutes());
+        $this->assertSame(75, $attendance->calculateIdleMinutes());
     }
 }
