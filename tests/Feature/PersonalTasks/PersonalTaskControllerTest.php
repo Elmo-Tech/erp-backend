@@ -145,6 +145,61 @@ class PersonalTaskControllerTest extends TestCase
             ->assertJsonPath('data.note', 'Admin correction');
     }
 
+    public function test_team_timer_manager_can_stop_employee_personal_timer(): void
+    {
+        $manager = $this->userWithPermissions(['manage_team_timers']);
+        $employee = User::factory()->create();
+
+        $task = PersonalTask::create([
+            'user_id' => $employee->id,
+            'title' => 'Write handover notes',
+            'status' => 'in_progress',
+            'priority' => 'medium',
+        ]);
+        $entry = PersonalTimeEntry::create([
+            'personal_task_id' => $task->id,
+            'user_id' => $employee->id,
+            'start_time' => now()->subMinutes(25),
+            'is_manual' => false,
+        ]);
+
+        $this->actingAs($manager, 'sanctum')
+            ->patchJson("/api/v1/personal-tasks/time-entries/{$entry->id}/stop")
+            ->assertOk()
+            ->assertJsonPath('data.entryId', $entry->id)
+            ->assertJsonPath('data.personalTaskId', $task->id)
+            ->assertJsonPath('data.userId', $employee->id)
+            ->assertJsonPath('data.isRunning', false)
+            ->assertJsonPath('data.durationMinutes', 25);
+
+        $this->assertNotNull($entry->fresh()->end_time);
+    }
+
+    public function test_stopping_employee_personal_timer_requires_manage_team_timers_permission(): void
+    {
+        $manager = User::factory()->create();
+        $employee = User::factory()->create();
+
+        $task = PersonalTask::create([
+            'user_id' => $employee->id,
+            'title' => 'Write handover notes',
+            'status' => 'in_progress',
+            'priority' => 'medium',
+        ]);
+        $entry = PersonalTimeEntry::create([
+            'personal_task_id' => $task->id,
+            'user_id' => $employee->id,
+            'start_time' => now()->subMinutes(25),
+            'is_manual' => false,
+        ]);
+
+        $this->actingAs($manager, 'sanctum')
+            ->patchJson("/api/v1/personal-tasks/time-entries/{$entry->id}/stop")
+            ->assertForbidden();
+
+        $this->assertNull($entry->fresh()->end_time);
+    }
+
     public function test_personal_timer_creates_and_stops_time_entry_without_project_time(): void
     {
         $user = User::factory()->create();

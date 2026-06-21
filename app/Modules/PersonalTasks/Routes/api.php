@@ -13,6 +13,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::post('personal-tasks', [PersonalTaskController::class, 'store'])
         ->name('personal-tasks.store');
 
+    Route::middleware('permission:manage_team_timers')->group(function () {
+        Route::patch('personal-tasks/time-entries/{entry}/stop', [PersonalTaskController::class, 'stopTimeEntry'])
+            ->name('personal-tasks.time-entries.stop');
+    });
+
     Route::patch('personal-tasks/{task}', [PersonalTaskController::class, 'update'])
         ->name('personal-tasks.update');
 

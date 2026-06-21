@@ -63,6 +63,20 @@ class TogglePersonalTaskTimerAction
         }
     }
 
+    public function stop(PersonalTimeEntry $entry): PersonalTimeEntry
+    {
+        return DB::transaction(function () use ($entry) {
+            $entry = PersonalTimeEntry::query()
+                ->whereKey($entry->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $entry->stop();
+
+            return $entry->refresh();
+        });
+    }
+
     private function stopActiveProjectEntriesForUser(User $user): void
     {
         $activeEntries = ProjectTimeEntry::query()

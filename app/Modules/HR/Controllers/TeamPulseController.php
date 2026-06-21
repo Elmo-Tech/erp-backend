@@ -22,7 +22,10 @@ class TeamPulseController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         abort_if(
-            ! $request->user()->can('manage_all_projects') && ! $request->user()->can('manage_users'),
+            ! $request->user()->can('manage_all_projects')
+                && ! $request->user()->can('manage_users')
+                && ! $request->user()->can('manage_employees')
+                && ! $request->user()->can('manage_team_timers'),
             403,
             'Unauthorized'
         );

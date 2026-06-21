@@ -130,6 +130,19 @@ class PersonalTaskController extends Controller
         );
     }
 
+    public function stopTimeEntry(Request $request, PersonalTimeEntry $entry): JsonResponse
+    {
+        abort_if(! $request->user()->can('manage_team_timers'), 403, 'Unauthorized');
+
+        $entry = $this->toggleTimer->stop($entry);
+        $entry->load('personalTask');
+
+        return ApiResponse::success(
+            new PersonalTimeEntryResource($entry),
+            'Personal timer stopped'
+        );
+    }
+
     public function storeTimeEntry(Request $request, PersonalTask $task): JsonResponse
     {
         $this->assertCanManageTimeEntry($request, $task, 'log_time');

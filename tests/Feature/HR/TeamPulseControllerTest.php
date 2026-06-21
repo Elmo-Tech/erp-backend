@@ -125,6 +125,18 @@ class TeamPulseControllerTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_team_timer_managers_can_view_team_pulse(): void
+    {
+        $manager = $this->userWithPermissions(['manage_team_timers']);
+        User::factory()->create(['name' => 'Nour', 'is_employee' => true]);
+
+        $this->actingAs($manager, 'sanctum')
+            ->getJson('/api/v1/hr/team-pulse')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.user.name', 'Nour');
+    }
+
     public function test_non_managers_cannot_view_team_pulse(): void
     {
         $employee = User::factory()->create();
