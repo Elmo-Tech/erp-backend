@@ -38,28 +38,6 @@ class PerformancePermissionsSeeder extends Seeder
             $superAdmin->givePermissionTo($permissions);
         }
 
-        // Assign to admin role if exists
-        $admin = Role::where('name', 'admin')->first();
-        if ($admin) {
-            $admin->givePermissionTo([
-                'view_performance_evaluations',
-                'manage_performance_evaluations',
-                'view_all_code_reviews',
-                'manage_code_reviews',
-                'view_all_innovation_logs',
-                'verify_innovation_logs',
-            ]);
-        }
-
-        // Assign to manager role if exists
-        $manager = Role::where('name', 'manager')->first();
-        if ($manager) {
-            $manager->givePermissionTo([
-                'view_performance_evaluations',
-                'view_all_code_reviews',
-                'view_all_innovation_logs',
-                'verify_innovation_logs',
-            ]);
-        }
+        // Simplified roles do not receive performance, code review, or innovation permissions by default.
     }
 }

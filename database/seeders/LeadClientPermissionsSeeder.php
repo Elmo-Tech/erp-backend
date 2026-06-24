@@ -48,14 +48,10 @@ class LeadClientPermissionsSeeder extends Seeder
         $admin = Role::where('name', 'admin')->first();
         if ($admin) {
             $admin->givePermissionTo([
-                'convert_leads',
-                'view_lead_conversion_status',
                 'manage_client_portal_access',
                 'create_client_portal_access',
                 'revoke_client_portal_access',
                 'reset_client_portal_password',
-                'view_points',
-                'view_point_transactions',
             ]);
         }
 
@@ -63,11 +59,7 @@ class LeadClientPermissionsSeeder extends Seeder
         $manager = Role::where('name', 'manager')->first();
         if ($manager) {
             $manager->givePermissionTo([
-                'convert_leads',
-                'view_lead_conversion_status',
                 'create_client_portal_access',
-                'view_points',
-                'view_point_transactions',
             ]);
         }
 

@@ -19,18 +19,12 @@ class UserPointsPermissionSeeder extends Seeder
             'guard_name' => 'web',
         ]);
 
-        // Assign to Super Admin role
-        $superAdminRole = Role::where('name', 'Super Admin')->first();
+        // Assign to super-admin only in the simplified ERP defaults.
+        $superAdminRole = Role::where('name', 'super-admin')->first();
         if ($superAdminRole) {
             $superAdminRole->givePermissionTo($permission);
         }
 
-        // Assign to Admin role
-        $adminRole = Role::where('name', 'Admin')->first();
-        if ($adminRole) {
-            $adminRole->givePermissionTo($permission);
-        }
-
-        $this->command->info('User Points permission created and assigned to Admin roles.');
+        $this->command->info('User Points permission created for super-admin only.');
     }
 }

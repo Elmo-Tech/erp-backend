@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             NewPermissionsSeeder::class,
             UserPointsPermissionSeeder::class,
             DeliverablePermissionsSeeder::class,
+            SimplifiedRolePermissionsSeeder::class,
         ]);
     }
 }

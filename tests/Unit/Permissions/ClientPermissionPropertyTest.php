@@ -28,14 +28,11 @@ class ClientPermissionPropertyTest extends TestCase
         Role::firstOrCreate(['name' => 'client']);
         Role::firstOrCreate(['name' => 'admin']);
         Role::firstOrCreate(['name' => 'super-admin']);
-        Role::firstOrCreate(['name' => 'employee']);
+        Role::firstOrCreate(['name' => 'developer']);
 
         // Create client permissions
         $clientPermissions = [
             'view_own_projects',
-            'view_own_invoices',
-            'approve_ui_deliverables',
-            'pay_invoices',
         ];
 
         foreach ($clientPermissions as $permission) {
@@ -49,6 +46,9 @@ class ClientPermissionPropertyTest extends TestCase
             'view_wiki_credentials',
             'view_internal_notes',
             'view_time_entries',
+            'view_own_invoices',
+            'approve_ui_deliverables',
+            'pay_invoices',
         ];
 
         foreach ($forbiddenPermissions as $permission) {
@@ -64,7 +64,7 @@ class ClientPermissionPropertyTest extends TestCase
      * Property 1: Client Permission Enforcement - Allowed Permissions
      *
      * For any user with the 'client' role, they SHALL have permissions:
-     * view_own_projects, view_own_invoices, approve_ui_deliverables, pay_invoices.
+     * view_own_projects.
      *
      * **Validates: Requirements 1.3**
      */
@@ -78,9 +78,6 @@ class ClientPermissionPropertyTest extends TestCase
             ->then(function ($numClients) {
                 $allowedPermissions = [
                     'view_own_projects',
-                    'view_own_invoices',
-                    'approve_ui_deliverables',
-                    'pay_invoices',
                 ];
 
                 // Create client users
@@ -122,6 +119,9 @@ class ClientPermissionPropertyTest extends TestCase
                     'view_wiki_credentials',
                     'view_internal_notes',
                     'view_time_entries',
+                    'view_own_invoices',
+                    'approve_ui_deliverables',
+                    'pay_invoices',
                 ];
 
                 // Create client users
@@ -158,9 +158,6 @@ class ClientPermissionPropertyTest extends TestCase
             ->then(function ($numClients) {
                 $allowedPermissions = [
                     'view_own_projects',
-                    'view_own_invoices',
-                    'approve_ui_deliverables',
-                    'pay_invoices',
                 ];
 
                 $forbiddenPermissions = [
@@ -169,6 +166,9 @@ class ClientPermissionPropertyTest extends TestCase
                     'view_wiki_credentials',
                     'view_internal_notes',
                     'view_time_entries',
+                    'view_own_invoices',
+                    'approve_ui_deliverables',
+                    'pay_invoices',
                 ];
 
                 // Create client users
@@ -210,7 +210,7 @@ class ClientPermissionPropertyTest extends TestCase
         $this
             ->limitTo(3)
             ->forAll(
-                Generator\elements(['admin', 'super-admin', 'employee'])
+                Generator\elements(['admin', 'super-admin', 'developer'])
             )
             ->then(function ($role) {
                 $forbiddenForClients = [
@@ -219,6 +219,9 @@ class ClientPermissionPropertyTest extends TestCase
                     'view_wiki_credentials',
                     'view_internal_notes',
                     'view_time_entries',
+                    'view_own_invoices',
+                    'approve_ui_deliverables',
+                    'pay_invoices',
                 ];
 
                 // Create user with non-client role
@@ -263,6 +266,9 @@ class ClientPermissionPropertyTest extends TestCase
                     'view_wiki_credentials',
                     'view_internal_notes',
                     'view_time_entries',
+                    'view_own_invoices',
+                    'approve_ui_deliverables',
+                    'pay_invoices',
                 ])
             )
             ->then(function ($forbiddenPermission) {

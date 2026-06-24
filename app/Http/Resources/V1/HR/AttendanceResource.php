@@ -37,8 +37,10 @@ class AttendanceResource extends JsonResource
     {
         /** @var Attendance $attendance */
         $attendance = $this->resource;
+        $user = $request->user();
+        $canViewDeductions = $user && ($user->can('manage_attendance') || $user->can('view_all_attendance'));
 
-        return [
+        $data = [
             'attendanceId' => $attendance->id,
             'userId' => $attendance->user_id,
             'date' => $attendance->date?->format('Y-m-d'),
@@ -49,7 +51,6 @@ class AttendanceResource extends JsonResource
             'lateMinutes' => (int) $attendance->late_minutes,
             'isLate' => $attendance->is_late,
             'idleMinutes' => (int) $attendance->idle_minutes,
-            'deductionMinutes' => (int) $attendance->deduction_minutes,
             'usedGraceDay' => $attendance->used_grace_day,
             'workedMinutes' => $attendance->getWorkedMinutes(),
             'isClockedIn' => $attendance->isClockedIn(),
@@ -63,5 +64,11 @@ class AttendanceResource extends JsonResource
                 'graceDaysRemaining' => max(0, $attendance->user->grace_days_allowed - $attendance->user->grace_days_used),
             ]),
         ];
+
+        if ($canViewDeductions) {
+            $data['deductionMinutes'] = (int) $attendance->deduction_minutes;
+        }
+
+        return $data;
     }
 }

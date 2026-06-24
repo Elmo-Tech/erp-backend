@@ -81,7 +81,7 @@ return [
     | the grace period expires. If false, deductions must be applied manually.
     |
     */
-    'auto_deduct_points' => env('ATTENDANCE_AUTO_DEDUCT_POINTS', true),
+    'auto_deduct_points' => env('ATTENDANCE_AUTO_DEDUCT_POINTS', false),
 
     /*
     |--------------------------------------------------------------------------

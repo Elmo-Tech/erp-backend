@@ -81,6 +81,11 @@ class ProjectFile extends Model
         /** @var Project $project */
         $project = $this->project;
 
+        // Clients can only see explicitly client-visible files on their own projects.
+        if ($user->hasRole('client')) {
+            return $this->is_client_visible && $project->client_id === $user->client?->id;
+        }
+
         // Admin can see everything
         if ($user->hasRole('super-admin') || $user->hasRole('admin')) {
             return true;
@@ -90,11 +95,6 @@ class ProjectFile extends Model
         $isMember = $project->members()->where('user_id', $user->id)->exists();
         if ($isMember) {
             return true;
-        }
-
-        // Check client visibility
-        if ($user->hasRole('client') && $this->is_client_visible) {
-            return $project->client_id === $user->client?->id;
         }
 
         // Check role-based visibility

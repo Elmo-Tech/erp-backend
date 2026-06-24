@@ -86,7 +86,7 @@ print_success "Database migrations completed"
 print_status "Optimizing application..."
 php artisan config:cache
 php artisan route:cache
-php artisan view:cache
+# php artisan view:cache
 php artisan optimize
 print_success "Application optimized"
 

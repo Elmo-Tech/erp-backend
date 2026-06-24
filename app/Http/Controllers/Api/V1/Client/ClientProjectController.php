@@ -139,7 +139,6 @@ class ClientProjectController extends Controller
 
         // ClientScope automatically filters to only this client's projects
         $projects = QueryBuilder::for(Project::class)
-            ->with(['invoices']) // Load invoices for ClientProjectResource
             ->allowedFilters([
                 'status',
                 AllowedFilter::callback('search', function ($query, $value) {
@@ -235,7 +234,7 @@ class ClientProjectController extends Controller
 
         // ClientScope and ProjectPolicy ensure client can only see their own projects
         return ApiResponse::success(
-            new ClientProjectResource($project->load(['invoices'])),
+            new ClientProjectResource($project->load('files')),
             'Project retrieved successfully'
         );
     }
@@ -369,7 +368,7 @@ class ClientProjectController extends Controller
             ]);
 
             return ApiResponse::success(
-                new ClientProjectResource($project->fresh()->load(['invoices'])),
+                new ClientProjectResource($project->fresh()),
                 'UI/UX deliverables approved successfully'
             );
         });

@@ -11,6 +11,7 @@ use App\Http\Resources\V1\TimeEntries\TimeEntryCollection;
 use App\Http\Resources\V1\TimeEntries\TimeEntryResource;
 use App\Models\Lead;
 use App\Models\Quotation;
+use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Services\Sales\TimeTrackingService;
 use Illuminate\Http\JsonResponse;
@@ -153,6 +154,7 @@ class TimeEntryController extends Controller
     {
         $timeEntries = QueryBuilder::for(TimeEntry::class)
             ->with(['trackable', 'user'])
+            ->when(config('simplification.enabled'), fn ($query) => $query->where('trackable_type', Task::class))
             ->allowedFilters([
                 AllowedFilter::exact('user_id'),
                 AllowedFilter::exact('trackable_type'),
@@ -297,7 +299,7 @@ class TimeEntryController extends Controller
             $trackableClass = match ($data['trackableType']) {
                 'lead' => Lead::class,
                 'quotation' => Quotation::class,
-                'task' => 'App\\Models\\Task', // For future implementation
+                'task' => Task::class,
                 default => null
             };
 
@@ -407,6 +409,10 @@ class TimeEntryController extends Controller
             // Stop the timer
             $timeEntry = $this->timeTrackingService->stopTimer($user);
 
+            if (config('simplification.enabled') && $timeEntry->trackable_type !== Task::class) {
+                return ApiResponse::success(null, 'Timer stopped successfully');
+            }
+
             return ApiResponse::success(
                 new TimeEntryResource($timeEntry->load('trackable')),
                 'Timer stopped successfully'
@@ -490,7 +496,7 @@ class TimeEntryController extends Controller
 
         $activeTimer = $this->timeTrackingService->getActiveTimer($user);
 
-        if (! $activeTimer) {
+        if (! $activeTimer || (config('simplification.enabled') && $activeTimer->trackable_type !== Task::class)) {
             return ApiResponse::success(
                 null,
                 'No active timer found'
@@ -663,6 +669,7 @@ class TimeEntryController extends Controller
 
         $timeEntries = QueryBuilder::for(TimeEntry::class)
             ->with(['trackable', 'user'])
+            ->when(config('simplification.enabled'), fn ($query) => $query->where('trackable_type', Task::class))
             ->allowedFilters([
                 AllowedFilter::exact('user_id'),
                 AllowedFilter::exact('trackable_type'),
@@ -746,6 +753,7 @@ class TimeEntryController extends Controller
 
         $activeTimers = TimeEntry::with(['user', 'trackable'])
             ->whereNull('end_time')
+            ->when(config('simplification.enabled'), fn ($query) => $query->where('trackable_type', Task::class))
             ->orderBy('start_time', 'desc')
             ->get();
 

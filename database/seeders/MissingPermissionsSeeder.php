@@ -76,12 +76,7 @@ class MissingPermissionsSeeder extends Seeder
         // Assign relevant permissions to admin
         $adminRole = Role::where('name', 'admin')->first();
         if ($adminRole) {
-            $adminPermissions = Permission::whereNotIn('name', [
-                'view_profitability',
-                'view_cost',
-                'view_internal_costs',
-                'manage_internal_costs',
-            ])->get();
+            $adminPermissions = AdminUserSeeder::existingPermissions(AdminUserSeeder::ADMIN_PERMISSIONS);
             $adminRole->syncPermissions($adminPermissions);
             $this->command->info('Admin role updated with new permissions.');
         }
@@ -92,8 +87,6 @@ class MissingPermissionsSeeder extends Seeder
             $managerNewPermissions = [
                 'edit_time_entries',
                 'view_all_projects',
-                'view_project_budget',
-                'send_invoices',
                 'create_main_tasks',
                 'create_weekly_tasks',
                 'create_subtasks',
@@ -107,10 +100,6 @@ class MissingPermissionsSeeder extends Seeder
                 'approve_change_requests',
                 'reject_change_requests',
                 'manage_change_requests',
-                'view_milestones',
-                'create_milestones',
-                'edit_milestones',
-                'manage_milestones',
             ];
 
             foreach ($managerNewPermissions as $permission) {
@@ -127,7 +116,6 @@ class MissingPermissionsSeeder extends Seeder
                 'edit_subtasks',
                 'view_change_requests',
                 'create_change_requests',
-                'view_milestones',
             ];
 
             foreach ($developerNewPermissions as $permission) {

@@ -5,7 +5,7 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'Business OS API',
+                'title' => 'The Tables ERP API',
             ],
 
             'routes' => [

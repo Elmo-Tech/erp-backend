@@ -47,6 +47,10 @@ class AttendanceController extends Controller
      */
     public function today(Request $request): JsonResponse
     {
+        if ($forbidden = $this->forbidClientAttendance($request)) {
+            return $forbidden;
+        }
+
         $user = $request->user();
         $today = Carbon::today();
 
@@ -80,6 +84,10 @@ class AttendanceController extends Controller
      */
     public function clockOut(Request $request): JsonResponse
     {
+        if ($forbidden = $this->forbidClientAttendance($request)) {
+            return $forbidden;
+        }
+
         $user = $request->user();
 
         $attendance = $this->attendanceService->clockOut($user);
@@ -107,6 +115,10 @@ class AttendanceController extends Controller
      */
     public function history(Request $request): JsonResponse
     {
+        if ($forbidden = $this->forbidClientAttendance($request)) {
+            return $forbidden;
+        }
+
         $user = $request->user();
         $perPage = (int) $request->query('perPage', 15);
 
@@ -136,6 +148,10 @@ class AttendanceController extends Controller
      */
     public function summary(Request $request): JsonResponse
     {
+        if ($forbidden = $this->forbidClientAttendance($request)) {
+            return $forbidden;
+        }
+
         $user = $request->user();
         $year = (int) $request->query('year', date('Y'));
         $month = (int) $request->query('month', date('m'));
@@ -465,5 +481,14 @@ class AttendanceController extends Controller
         }
 
         return ($deductionMinutes / 60) * $hourlyRate;
+    }
+
+    private function forbidClientAttendance(Request $request): ?JsonResponse
+    {
+        if ($request->user()?->hasRole('client')) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+
+        return null;
     }
 }

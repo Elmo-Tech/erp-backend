@@ -221,14 +221,14 @@ class ProjectPolicyPropertyTest extends TestCase
     }
 
     /**
-     * Property 7: ProjectPolicy Authorization - UI Approval Access
+     * Property 7: ProjectPolicy Authorization - UI Approval Disabled
      *
-     * For any project, only the project's client or admin users SHALL be able
-     * to approve UI deliverables.
+     * In simplified ERP mode, UI approval workflow access SHALL be disabled
+     * for clients and internal users.
      *
      * **Validates: Requirements 11.2, 11.3**
      */
-    public function test_ui_approval_authorization(): void
+    public function test_ui_approval_authorization_is_disabled_in_simplified_mode(): void
     {
         $this
             ->limitTo(3)
@@ -261,31 +261,19 @@ class ProjectPolicyPropertyTest extends TestCase
                 // Create project for first client
                 $project = Project::factory()->create(['client_id' => $clientProfiles[$clients[0]->id]->id]);
 
-                // Test that only the project's client can approve UI
-                foreach ($clients as $index => $client) {
-                    $canApproveUI = $policy->approveUI($client, $project);
-
-                    if ($index === 0) {
-                        // The project owner should be able to approve UI
-                        $this->assertTrue($canApproveUI,
-                            "Client {$client->id} should be able to approve UI for their own project {$project->id}");
-                    } else {
-                        // Other clients should NOT be able to approve UI
-                        $this->assertFalse($canApproveUI,
-                            "Client {$client->id} should NOT be able to approve UI for project {$project->id} owned by client {$project->client_id}");
-                    }
+                foreach ($clients as $client) {
+                    $this->assertFalse(
+                        $policy->approveUI($client, $project),
+                        "Client {$client->id} should NOT be able to approve UI in simplified mode"
+                    );
                 }
 
-                // Test that admin and super-admin can approve UI
-                $this->assertTrue($policy->approveUI($admin, $project),
-                    'Admin should be able to approve UI for any project');
-                $this->assertTrue($policy->approveUI($superAdmin, $project),
-                    'Super-admin should be able to approve UI for any project');
-
-                // Test that employee cannot approve UI (not mentioned in requirements)
-                // Based on the policy implementation, employees cannot approve UI
                 $this->assertFalse($policy->approveUI($employee, $project),
-                    'Employee should NOT be able to approve UI');
+                    'Employee should NOT be able to approve UI in simplified mode');
+                $this->assertFalse($policy->approveUI($admin, $project),
+                    'Admin should NOT be able to approve UI in simplified mode');
+                $this->assertFalse($policy->approveUI($superAdmin, $project),
+                    'Super-admin should NOT be able to approve UI in simplified mode');
             });
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1\Client;
 
+use App\Http\Resources\V1\Project\ProjectFileResource;
 use App\Models\Project;
 use App\Services\Client\ProgressService;
 use Illuminate\Http\Request;
@@ -34,16 +35,14 @@ class ClientProjectResource extends JsonResource
             'statusLabel' => $project->status->label(),
             'progressPercentage' => $progressService->calculateProgress($project),
             'deadline' => $project->deadline?->toDateString() ?? '',
-            'budget' => (float) ($project->budget ?? 0.0),
-            'currency' => 'USD', // Default currency as per requirements
-            'uiApprovedAt' => $project->ui_approved_at?->toISOString() ?? '',
-            'canApproveUI' => $project->status->value === 'ui_ux' && ! $project->ui_approved_at,
-            'createdAt' => $project->created_at?->toISOString() ?? '',
-            // Invoices for this project (using ClientInvoiceResource)
-            'invoices' => $this->whenLoaded('invoices', function () use ($project) {
-                return ClientInvoiceResource::collection($project->invoices);
+            'files' => $this->whenLoaded('files', function () use ($request) {
+                return ProjectFileResource::collection(
+                    $this->files->filter(fn ($file) => $file->canUserView($request->user()))->values()
+                );
             }),
-            // HIDDEN: description, tasks, developers, wikis, timeEntries, internalNotes
+            'createdAt' => $project->created_at?->toISOString() ?? '',
+            // HIDDEN: budget, invoices, payments, UI approval workflow, tasks,
+            // developers, wikis, timeEntries, internalNotes, quotations.
         ];
     }
 }

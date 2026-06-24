@@ -38,13 +38,14 @@ class EmployeeResource extends JsonResource
         /** @var User $employee */
         $employee = $this->resource;
         $user = $request->user();
-        $canViewSalary = $user && $user->can('view_employee_salary');
+        $simplifiedMode = (bool) config('simplification.enabled');
+        $canViewSalary = ! $simplifiedMode && $user && $user->can('view_employee_salary');
         $roleName = $employee->roles->pluck('name')->first() ?? '';
         $specialization = $employee->specialization;
         $graceDaysAllowed = $employee->grace_days_allowed ?? 0;
         $graceDaysUsed = $employee->grace_days_used ?? 0;
 
-        return [
+        $data = [
             'userId' => $employee->id,
             'name' => $employee->name,
             'email' => $employee->email,
@@ -63,8 +64,6 @@ class EmployeeResource extends JsonResource
             'graceDaysUsed' => (int) $graceDaysUsed,
             'graceDaysRemaining' => max(0, $graceDaysAllowed - $graceDaysUsed),
 
-            // Performance
-            'totalPoints' => (int) ($employee->total_points ?? 0),
             'skills' => $employee->skills ?? [],
 
             // Salary info (admin only)
@@ -74,5 +73,11 @@ class EmployeeResource extends JsonResource
 
             'createdAt' => $employee->created_at?->toISOString() ?? '',
         ];
+
+        if (! $simplifiedMode) {
+            $data['totalPoints'] = (int) ($employee->total_points ?? 0);
+        }
+
+        return $data;
     }
 }

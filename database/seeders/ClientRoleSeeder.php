@@ -16,12 +16,9 @@ class ClientRoleSeeder extends Seeder
      */
     public function run(): void
     {
-        // Additional permissions specific to client portal functionality
+        // Client portal permissions for simplified project visibility.
         $clientSpecificPermissions = [
             'view_own_projects',
-            'view_own_invoices',
-            'approve_ui_deliverables',
-            'pay_invoices',
         ];
 
         foreach ($clientSpecificPermissions as $permission) {
@@ -37,13 +34,8 @@ class ClientRoleSeeder extends Seeder
             'guard_name' => 'web',
         ]);
 
-        // Get current permissions and add the new ones
-        $currentPermissions = $clientRole->permissions->pluck('name')->toArray();
-        $allClientPermissions = array_unique(array_merge($currentPermissions, $clientSpecificPermissions));
+        $clientRole->syncPermissions($clientSpecificPermissions);
 
-        // Sync all permissions to client role
-        $clientRole->syncPermissions($allClientPermissions);
-
-        $this->command->info('Client role additional permissions created successfully.');
+        $this->command->info('Client role simplified permissions created successfully.');
     }
 }

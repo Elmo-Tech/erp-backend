@@ -17,7 +17,10 @@ class ProjectPolicy
     {
         // Clients can view their own projects (filtered by ClientScope)
         // Admins/employees can view projects they're members of (or all if they have permission)
-        return true;
+        return $user->hasRole('client')
+            || $user->hasAnyRole(['admin', 'super-admin'])
+            || $user->can('view_all_projects')
+            || $user->can('view_assigned_projects');
     }
 
     /**
@@ -99,6 +102,10 @@ class ProjectPolicy
      */
     public function approveUI(User $user, Project $project): bool
     {
+        if (config('simplification.enabled')) {
+            return false;
+        }
+
         // Only the project's client can approve UI
         if ($user->hasRole('client')) {
             return $project->client_id === $user->client?->id;

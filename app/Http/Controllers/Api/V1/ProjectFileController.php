@@ -18,11 +18,21 @@ class ProjectFileController extends Controller
         $this->middleware(['auth:sanctum', 'locale']);
     }
 
-    public function index(Project $project): JsonResponse
+    public function index(Request $request, Project $project): JsonResponse
     {
-        $files = $project->files()
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $user = $request->user();
+
+        if ($user?->hasRole('client') && $project->client_id !== $user->client?->id) {
+            return ApiResponse::error('Project not found', 404);
+        }
+
+        $query = $project->files()->orderBy('created_at', 'desc');
+
+        if ($user?->hasRole('client')) {
+            $query->where('is_client_visible', true);
+        }
+
+        $files = $query->get();
 
         return ApiResponse::success([
             'files' => ProjectFileResource::collection($files),
@@ -31,6 +41,10 @@ class ProjectFileController extends Controller
 
     public function store(Request $request, Project $project): JsonResponse
     {
+        if (! $this->canUploadFiles($request, $project)) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:file,link',
@@ -74,9 +88,9 @@ class ProjectFileController extends Controller
         );
     }
 
-    public function show(Project $project, ProjectFile $file): JsonResponse
+    public function show(Request $request, Project $project, ProjectFile $file): JsonResponse
     {
-        if ($file->project_id !== $project->id) {
+        if ($file->project_id !== $project->id || ! $file->canUserView($request->user())) {
             return ApiResponse::error('File not found', 404);
         }
 
@@ -90,6 +104,10 @@ class ProjectFileController extends Controller
     {
         if ($file->project_id !== $project->id) {
             return ApiResponse::error('File not found', 404);
+        }
+
+        if (! $this->canManageFiles($request, $project)) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
         $request->validate([
@@ -116,10 +134,14 @@ class ProjectFileController extends Controller
         );
     }
 
-    public function destroy(Project $project, ProjectFile $file): JsonResponse
+    public function destroy(Request $request, Project $project, ProjectFile $file): JsonResponse
     {
         if ($file->project_id !== $project->id) {
             return ApiResponse::error('File not found', 404);
+        }
+
+        if (! $this->canDeleteFiles($request, $project)) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
         // Delete physical file if exists
@@ -130,5 +152,44 @@ class ProjectFileController extends Controller
         $file->delete();
 
         return ApiResponse::success(null, 'File deleted successfully');
+    }
+
+    private function canUploadFiles(Request $request, Project $project): bool
+    {
+        $user = $request->user();
+
+        if (! $user || $user->hasRole('client')) {
+            return false;
+        }
+
+        return $user->hasAnyRole(['admin', 'super-admin'])
+            || $user->can('manage_project_files')
+            || $user->can('upload_project_files')
+            || $project->members()->where('user_id', $user->id)->exists();
+    }
+
+    private function canManageFiles(Request $request, Project $project): bool
+    {
+        $user = $request->user();
+
+        if (! $user || $user->hasRole('client')) {
+            return false;
+        }
+
+        return $user->hasAnyRole(['admin', 'super-admin'])
+            || $user->can('manage_project_files');
+    }
+
+    private function canDeleteFiles(Request $request, Project $project): bool
+    {
+        $user = $request->user();
+
+        if (! $user || $user->hasRole('client')) {
+            return false;
+        }
+
+        return $user->hasAnyRole(['admin', 'super-admin'])
+            || $user->can('delete_project_files')
+            || $user->can('manage_project_files');
     }
 }

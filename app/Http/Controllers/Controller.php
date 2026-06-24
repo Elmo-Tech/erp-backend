@@ -10,17 +10,17 @@ use OpenApi\Annotations as OA;
 /**
  * @OA\Info(
  *     version="1.0.0",
- *     title="Business OS API",
- *     description="ERP/CRM System API for Software Development Agencies. This API provides endpoints for managing sales, projects, tasks, time tracking, and client portal functionality.",
+ *     title="The Tables ERP API",
+ *     description="Operational ERP API for managing clients, projects, tasks, attendance, reports, and client portal functionality.",
  *
  *     @OA\Contact(
- *         email="support@business-os.com",
- *         name="Business OS Support"
+ *         email="support@thetableserp.local",
+ *         name="The Tables ERP Support"
  *     ),
  *
  *     @OA\License(
  *         name="Proprietary",
- *         url="https://business-os.com/license"
+ *         url="https://the-tables-erp.local/license"
  *     )
  * )
  *
@@ -48,10 +48,6 @@ use OpenApi\Annotations as OA;
  * @OA\Tag(
  *     name="Users",
  *     description="API Endpoints for user management"
- * )
- * @OA\Tag(
- *     name="Sales",
- *     description="API Endpoints for leads and quotations"
  * )
  * @OA\Tag(
  *     name="Projects",

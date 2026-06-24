@@ -38,6 +38,13 @@ class TaskController extends Controller
         private TaskService $taskService
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
+        $this->middleware(function ($request, $next) {
+            if ($request->user()?->hasRole('client')) {
+                return ApiResponse::error(__('messages.unauthorized'), 403);
+            }
+
+            return $next($request);
+        });
     }
 
     /**
@@ -1174,6 +1181,10 @@ class TaskController extends Controller
      */
     public function pointsSummary(int $projectId): JsonResponse
     {
+        if (config('simplification.enabled')) {
+            return ApiResponse::forbidden('Points are disabled in the simplified ERP version.');
+        }
+
         $summary = $this->taskService->getUserPointsSummary($projectId);
 
         return ApiResponse::success(
