@@ -75,6 +75,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::get('hr/my-points', [PointTransactionController::class, 'myPoints'])
         ->name('hr.my-points.index');
 
+    Route::post('hr/point-adjustments', [PointTransactionController::class, 'adjust'])
+        ->name('hr.point-adjustments.store');
+
     // ── Leave Requests (HR admin — guarded via manage_hr) ─────────────────────
     Route::apiResource('hr/leave-requests', LeaveRequestController::class)
         ->names('hr.leave-requests');

@@ -51,23 +51,10 @@ class ProjectTaskController extends Controller
             // REMOVED: subtasks.assignee - subtasks are no longer supported
 
         // ── ABAC: Task isolation ──────────────────────────────────────────────
-        // Global admins and project managers see all tasks.
-        // Developers, QA, and designers only see tasks assigned to them.
-        if (! $user->can('manage_all_projects') && ! $user->can('manage_tasks')) {
-            $member      = $project->members()->where('user_id', $user->id)->first();
-            $projectRole = $member?->role instanceof \App\Enums\ProjectRole
-                ? $member->role->value
-                : (string) ($member?->role ?? '');
-
-            $isManagerLevel = in_array($projectRole, [
-                \App\Enums\ProjectRole::MANAGER->value,
-                \App\Enums\ProjectRole::TECH_LEAD->value,
-            ], true);
-
-            if (! $isManagerLevel) {
-                // Worker-level: only see own assigned tasks
-                $query->where('assignee_id', $user->id);
-            }
+        // Only global project admins see every task. Everyone else sees only the
+        // tasks explicitly assigned to them inside the project.
+        if (! $user->can('manage_all_projects')) {
+            $query->where('assignee_id', $user->id);
         }
 
         $request = request();

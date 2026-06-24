@@ -234,6 +234,39 @@ class ProjectTaskApiContractTest extends TestCase
         ]);
     }
 
+    public function test_project_task_index_scopes_non_global_users_to_their_assigned_tasks(): void
+    {
+        $user = $this->userWithPermissions(['view_projects', 'view_tasks', 'manage_tasks']);
+        $otherUser = User::factory()->create();
+        $project = Project::factory()->create();
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'role' => ProjectRole::MANAGER->value,
+        ]);
+
+        $ownTask = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Own task',
+            'status' => 'to_do',
+            'assignee_id' => $user->id,
+        ]);
+        ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Other task',
+            'status' => 'to_do',
+            'assignee_id' => $otherUser->id,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/projects/{$project->id}/tasks");
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data.tasks')
+            ->assertJsonPath('data.tasks.0.taskId', $ownTask->id)
+            ->assertJsonPath('data.tasks.0.title', 'Own task');
+    }
+
     /**
      * @param  array<int, string>  $permissions
      */

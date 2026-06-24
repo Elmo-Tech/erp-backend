@@ -38,6 +38,7 @@ class PointTransactionResource extends JsonResource
             'id'         => $this->id,
             'points'     => (int) $this->points,
             'reason'     => $this->reason,
+            'balanceAfter' => (int) $this->balance_after,
             'model_type' => $this->resolveModelType($this->source_type),
             'model_id'   => $this->source_id,
             'created_at' => $this->created_at?->toISOString(),

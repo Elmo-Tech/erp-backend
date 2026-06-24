@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Project;
 
+use App\Enums\ProjectRole;
 use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
@@ -13,6 +15,34 @@ use Tests\TestCase;
 class ProjectTimeEntryActiveControllerTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_starting_timer_moves_todo_task_to_in_progress(): void
+    {
+        $user = $this->userWithPermissions(['view_projects', 'view_tasks', 'work_on_tasks', 'log_time']);
+        $project = Project::factory()->create();
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
+        $task = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Implement timer status sync',
+            'status' => 'to_do',
+            'assignee_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/toggle");
+
+        $response->assertOk()
+            ->assertJsonPath('message', 'Timer started');
+
+        $this->assertDatabaseHas('project_tasks', [
+            'id' => $task->id,
+            'status' => 'in_progress',
+        ]);
+    }
 
     public function test_user_can_get_their_active_project_time_entry(): void
     {

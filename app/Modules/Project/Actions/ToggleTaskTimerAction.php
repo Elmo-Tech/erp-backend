@@ -4,6 +4,7 @@ namespace App\Modules\Project\Actions;
 
 use App\Modules\HR\Services\AttendanceService;
 use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
+use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
@@ -73,6 +74,7 @@ class ToggleTaskTimerAction
             // Fire auto check-in BEFORE creating the time entry. The service is
             // idempotent, so existing attendance never blocks timer starts.
             $this->attendanceService->checkInForToday($user);
+            $this->moveTaskIntoProgressWhenStarting($task);
 
             return ProjectTimeEntry::create([
                 'task_id'    => $task->id,
@@ -90,6 +92,7 @@ class ToggleTaskTimerAction
             $this->stopActiveEntriesForUser($user);
             $this->stopActivePersonalEntriesForUser($user);
             $this->attendanceService->checkInForToday($user);
+            $this->moveTaskIntoProgressWhenStarting($task);
 
             return ProjectTimeEntry::create([
                 'task_id'    => $task->id,
@@ -138,5 +141,14 @@ class ToggleTaskTimerAction
         foreach ($activeEntries as $entry) {
             $entry->stop();
         }
+    }
+
+    private function moveTaskIntoProgressWhenStarting(ProjectTask $task): void
+    {
+        if (! in_array($task->status, [ExecutionTaskStatus::TO_DO, ExecutionTaskStatus::BACKLOG], true)) {
+            return;
+        }
+
+        $task->forceFill(['status' => ExecutionTaskStatus::IN_PROGRESS])->save();
     }
 }
