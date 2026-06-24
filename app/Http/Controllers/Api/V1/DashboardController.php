@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\InvoiceStatus;
 use App\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
-use App\Models\Invoice;
-use App\Models\PointTransaction;
+use App\Models\Client;
 use App\Models\Project;
-use App\Models\Quotation;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
@@ -31,7 +28,7 @@ class DashboardController extends Controller
     #[OA\Get(
         path: '/api/v1/dashboard/overview',
         summary: 'Get dashboard overview',
-        description: 'Get dashboard statistics including projects, sales, work hours, and recent activities',
+        description: 'Get dashboard operational statistics including projects, tasks, work hours, attendance, and recent activities',
         security: [['sanctum' => []]],
         tags: ['Dashboard'],
         responses: [
@@ -50,8 +47,6 @@ class DashboardController extends Controller
                                     properties: [
                                         new OA\Property(property: 'totalProjects', type: 'integer', example: 24),
                                         new OA\Property(property: 'projectsChange', type: 'number', example: 12.5),
-                                        new OA\Property(property: 'monthlySales', type: 'number', example: 45231.00),
-                                        new OA\Property(property: 'salesChange', type: 'number', example: 8.2),
                                         new OA\Property(property: 'workHours', type: 'integer', example: 1284),
                                         new OA\Property(property: 'workHoursChange', type: 'number', example: -3.0),
                                         new OA\Property(property: 'activeClients', type: 'integer', example: 18),
@@ -143,15 +138,6 @@ class DashboardController extends Controller
         $projectsLastMonth = Project::withoutGlobalScopes()->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])->count();
         $projectsChange = $this->calculateChange($projectsThisMonth, $projectsLastMonth);
 
-        // Sales Stats - Calculate from PAID invoices
-        $salesThisMonth = Invoice::where('status', InvoiceStatus::PAID)
-            ->where('paid_at', '>=', $startOfMonth)
-            ->sum('amount') ?? 0;
-        $salesLastMonth = Invoice::where('status', InvoiceStatus::PAID)
-            ->whereBetween('paid_at', [$startOfLastMonth, $endOfLastMonth])
-            ->sum('amount') ?? 0;
-        $salesChange = $this->calculateChange($salesThisMonth, $salesLastMonth);
-
         // Work Hours Stats (all team)
         $workHoursThisMonth = (TimeEntry::where('start_time', '>=', $startOfMonth)
             ->whereNotNull('end_time')
@@ -174,6 +160,16 @@ class DashboardController extends Controller
             ->distinct('client_id')
             ->count('client_id');
         $clientsChange = $activeClients - $clientsLastMonth;
+        $completedProjects = Project::withoutGlobalScopes()
+            ->where('status', ProjectStatus::COMPLETED->value)
+            ->count();
+        $openTasks = Task::whereIn('status', ['todo', 'in_progress'])->count();
+        $overdueTasks = Task::whereNotNull('due_date')
+            ->whereDate('due_date', '<', Carbon::today())
+            ->where('status', '!=', 'completed')
+            ->count();
+        $employeesCount = User::role(['admin', 'manager', 'developer'])->count();
+        $todayAttendance = Attendance::whereDate('clock_in', Carbon::today())->count();
 
         // Recent Projects
         $recentProjects = $this->getRecentProjects();
@@ -184,12 +180,16 @@ class DashboardController extends Controller
             'stats' => [
                 'totalProjects' => $totalProjects,
                 'projectsChange' => $projectsChange,
-                'monthlySales' => round($salesThisMonth, 2),
-                'salesChange' => $salesChange,
+                'activeProjects' => Project::withoutGlobalScopes()->whereIn('status', $activeStatuses)->count(),
+                'completedProjects' => $completedProjects,
                 'workHours' => round($workHoursThisMonth),
                 'workHoursChange' => $workHoursChange,
                 'activeClients' => $activeClients,
                 'clientsChange' => $clientsChange,
+                'openTasks' => $openTasks,
+                'overdueTasks' => $overdueTasks,
+                'employeesCount' => $employeesCount,
+                'todayAttendance' => $todayAttendance,
             ],
             'recentProjects' => $recentProjects,
             'recentActivities' => $recentActivities,
@@ -253,10 +253,9 @@ class DashboardController extends Controller
                     'assignee' => $task->assignee?->name ?? 'Unassigned',
                     'project' => $task->project?->title ?? 'No Project',
                 ];
-            });
+        });
 
         $recentActivities = $this->getRecentActivitiesForTeam($teamMemberIds);
-        $pointsCycle = $this->getCurrentPointsCycleSummary($user);
 
         return ApiResponse::success([
             'role' => 'manager',
@@ -269,7 +268,6 @@ class DashboardController extends Controller
                 'teamHoursChange' => $teamHoursChange,
                 'teamMembers' => $teamMembersCount,
             ],
-            'pointsCycle' => $pointsCycle,
             'recentTasks' => $recentTasks,
             'recentActivities' => $recentActivities,
         ], 'Dashboard overview retrieved successfully');
@@ -350,7 +348,6 @@ class DashboardController extends Controller
 
         // My Recent Activities
         $myRecentActivities = $this->getRecentActivitiesForUser($userId);
-        $pointsCycle = $this->getCurrentPointsCycleSummary($user);
 
         return ApiResponse::success([
             'role' => 'developer',
@@ -365,45 +362,9 @@ class DashboardController extends Controller
                 'clockedIn' => $clockedIn,
                 'todayHours' => round($todayHours, 1),
             ],
-            'pointsCycle' => $pointsCycle,
             'recentTasks' => $myRecentTasks,
             'recentActivities' => $myRecentActivities,
         ], 'Dashboard overview retrieved successfully');
-    }
-
-    /**
-     * Get the current bi-monthly points cycle summary.
-     * Cycles are fixed to odd-month windows: Jan-Feb, Mar-Apr, May-Jun, etc.
-     */
-    private function getCurrentPointsCycleSummary(User $user): array
-    {
-        $now = Carbon::now();
-        $cycleStartMonth = $now->month % 2 === 1 ? $now->month : $now->month - 1;
-
-        $startDate = Carbon::create($now->year, $cycleStartMonth, 1)->startOfMonth();
-        $endDate = $startDate->copy()->addMonth()->endOfMonth();
-
-        $transactions = PointTransaction::where('user_id', $user->id)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->get();
-
-        $earnedPoints = (int) $transactions->where('points', '>', 0)->sum('points');
-        $deductedPoints = (int) abs($transactions->where('points', '<', 0)->sum('points'));
-
-        return [
-            'label' => sprintf(
-                '%s-%s %s',
-                $startDate->translatedFormat('M'),
-                $endDate->translatedFormat('M'),
-                $endDate->translatedFormat('Y')
-            ),
-            'startDate' => $startDate->toDateString(),
-            'endDate' => $endDate->toDateString(),
-            'netPoints' => $earnedPoints - $deductedPoints,
-            'earnedPoints' => $earnedPoints,
-            'deductedPoints' => $deductedPoints,
-            'transactionCount' => $transactions->count(),
-        ];
     }
 
     /**
@@ -608,22 +569,21 @@ class DashboardController extends Controller
                 });
             $activities = $activities->merge($recentProjectActivities);
 
-            // Recent Quotations
-            $recentQuotations = Quotation::with('lead')
-                ->orderBy('created_at', 'desc')
+            // Recent Clients
+            $recentClients = Client::orderBy('updated_at', 'desc')
                 ->limit(3)
                 ->get()
-                ->map(function ($quotation) {
+                ->map(function ($client) {
                     return [
-                        'activityId' => $quotation->id + 2000,
-                        'action' => 'Quotation created for '.($quotation->lead?->name ?? 'Unknown'),
+                        'activityId' => $client->id + 2000,
+                        'action' => 'Client updated: '.$client->name,
                         'user' => 'System',
-                        'time' => $quotation->created_at->diffForHumans(),
-                        'type' => 'quotation',
-                        'timestamp' => $quotation->created_at,
+                        'time' => $client->updated_at->diffForHumans(),
+                        'type' => 'client',
+                        'timestamp' => $client->updated_at,
                     ];
                 });
-            $activities = $activities->merge($recentQuotations);
+            $activities = $activities->merge($recentClients);
         } catch (\Exception $e) {
             Log::warning('Error fetching recent activities: '.$e->getMessage());
         }

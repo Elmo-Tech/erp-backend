@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register middleware aliases for use in controllers
         $middleware->alias([
             'locale' => SetLocaleMiddleware::class,
+            'simplified.disabled' => \App\Http\Middleware\BlockSimplifiedModule::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         ]);

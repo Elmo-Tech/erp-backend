@@ -289,6 +289,10 @@ class TimeEntryController extends Controller
             $data = $request->validated();
             $user = $request->user();
 
+            if (config('simplification.enabled') && in_array($data['trackableType'], ['lead', 'quotation'], true)) {
+                return ApiResponse::forbidden('Timers for this module are disabled in the simplified ERP version.');
+            }
+
             // Map trackable type to model class
             $trackableClass = match ($data['trackableType']) {
                 'lead' => Lead::class,

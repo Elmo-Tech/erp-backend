@@ -4,12 +4,18 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Models\Attendance;
+use App\Models\Client;
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Models\User;
 use App\Services\Reporting\EmployeeReviewService;
 use App\Services\Reporting\PdfService;
 use App\Services\Reporting\ProfitabilityService;
 use App\Services\Reporting\QualityService;
 use App\Services\Reporting\UserPerformanceService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
@@ -128,19 +134,55 @@ class AdminStatsController extends Controller
         }
 
         try {
-            // Get profitability overview
-            $profitabilityStats = $this->profitabilityService->getOverviewStats();
+            $activeProjectStatuses = ['active', 'ui_ux', 'development', 'testing'];
+            $totalProjects = Project::withoutGlobalScopes()->count();
+            $activeProjects = Project::withoutGlobalScopes()->whereIn('status', $activeProjectStatuses)->count();
+            $completedProjects = Project::withoutGlobalScopes()->where('status', 'completed')->count();
+            $openTasks = Task::whereIn('status', ['todo', 'in_progress'])->count();
+            $completedTasks = Task::where('status', 'completed')->count();
+            $overdueTasks = Task::whereNotNull('due_date')
+                ->whereDate('due_date', '<', Carbon::today())
+                ->where('status', '!=', 'completed')
+                ->count();
+            $activeClients = Client::whereHas('projects', function ($query) use ($activeProjectStatuses) {
+                $query->whereIn('status', $activeProjectStatuses);
+            })->count();
+            $employeesCount = User::role(['admin', 'manager', 'developer'])->count();
+            $todayAttendance = Attendance::whereDate('clock_in', Carbon::today())->count();
+            $trackedMinutesToday = TimeEntry::whereDate('start_time', Carbon::today())
+                ->whereNotNull('end_time')
+                ->sum('duration_minutes') ?? 0;
 
-            // Get quality overview
-            $qualityStats = $this->qualityService->getQualityOverview();
-
-            // Get attendance analytics
-            $attendanceStats = $this->userPerformanceService->getAttendanceAnalytics();
+            $completionRate = $openTasks + $completedTasks > 0
+                ? round(($completedTasks / ($openTasks + $completedTasks)) * 100, 2)
+                : 0;
 
             $overviewData = [
-                'profitability' => $profitabilityStats,
-                'quality' => $qualityStats,
-                'attendance' => $attendanceStats,
+                'projects' => [
+                    'total' => $totalProjects,
+                    'active' => $activeProjects,
+                    'completed' => $completedProjects,
+                ],
+                'tasks' => [
+                    'open' => $openTasks,
+                    'completed' => $completedTasks,
+                    'overdue' => $overdueTasks,
+                    'completionRate' => $completionRate,
+                ],
+                'clients' => [
+                    'active' => $activeClients,
+                ],
+                'employees' => [
+                    'total' => $employeesCount,
+                ],
+                'attendance' => [
+                    'todayClockIns' => $todayAttendance,
+                    'trackedHoursToday' => round($trackedMinutesToday / 60, 2),
+                ],
+                // Compatibility fields used by the simplified frontend reports.
+                'activeProjects' => $activeProjects,
+                'completedProjects' => $completedProjects,
+                'teamUtilization' => $employeesCount > 0 ? round(($todayAttendance / $employeesCount) * 100, 2) : 0,
             ];
 
             return ApiResponse::success(

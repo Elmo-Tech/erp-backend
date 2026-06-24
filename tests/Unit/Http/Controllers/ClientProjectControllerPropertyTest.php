@@ -33,6 +33,8 @@ class ClientProjectControllerPropertyTest extends TestCase
     {
         parent::setUp();
 
+        config(['simplification.enabled' => false]);
+
         // Create a client user for testing
         $this->clientUser = User::factory()->create();
         $this->clientUser->assignRole('client');

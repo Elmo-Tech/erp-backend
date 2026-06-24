@@ -95,42 +95,44 @@ Route::prefix('v1')->group(function () {
     // All routes have auth:sanctum and locale middleware applied in controllers
 
     // Lead Management Routes
-    Route::apiResource('leads', LeadController::class);
-    Route::get('leads-kanban', [LeadController::class, 'kanban'])->name('leads.kanban');
-    Route::get('leads-follow-ups', [LeadController::class, 'followUps'])->name('leads.follow-ups');
-    Route::patch('leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
-    Route::get('leads/{lead}/activities', [LeadController::class, 'activities'])->name('leads.activities');
-    Route::post('leads/{lead}/activities', [LeadController::class, 'addActivity'])->name('leads.add-activity');
-    Route::get('leads/{lead}/meetings', [LeadController::class, 'meetings'])->name('leads.meetings');
-    Route::post('leads/{lead}/meetings', [LeadController::class, 'scheduleMeeting'])->name('leads.schedule-meeting');
-    Route::put('leads/{lead}/meetings/{meeting}', [LeadController::class, 'updateMeeting'])->name('leads.update-meeting');
+    Route::middleware('simplified.disabled:sales')->group(function () {
+        Route::apiResource('leads', LeadController::class);
+        Route::get('leads-kanban', [LeadController::class, 'kanban'])->name('leads.kanban');
+        Route::get('leads-follow-ups', [LeadController::class, 'followUps'])->name('leads.follow-ups');
+        Route::patch('leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
+        Route::get('leads/{lead}/activities', [LeadController::class, 'activities'])->name('leads.activities');
+        Route::post('leads/{lead}/activities', [LeadController::class, 'addActivity'])->name('leads.add-activity');
+        Route::get('leads/{lead}/meetings', [LeadController::class, 'meetings'])->name('leads.meetings');
+        Route::post('leads/{lead}/meetings', [LeadController::class, 'scheduleMeeting'])->name('leads.schedule-meeting');
+        Route::put('leads/{lead}/meetings/{meeting}', [LeadController::class, 'updateMeeting'])->name('leads.update-meeting');
 
-    // Lead Conversion Routes
-    Route::get('leads/{lead}/can-convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'canConvert'])->name('leads.can-convert');
-    Route::post('leads/{lead}/convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'convert'])->name('leads.convert');
+        // Lead Conversion Routes
+        Route::get('leads/{lead}/can-convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'canConvert'])->name('leads.can-convert');
+        Route::post('leads/{lead}/convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'convert'])->name('leads.convert');
 
-    // Activity Management Routes
-    Route::apiResource('activities', ActivityController::class);
-    Route::post('activities/{activity}/complete', [ActivityController::class, 'complete'])->name('activities.complete');
-    Route::post('activities/{activity}/cancel', [ActivityController::class, 'cancel'])->name('activities.cancel');
+        // Activity Management Routes
+        Route::apiResource('activities', ActivityController::class);
+        Route::post('activities/{activity}/complete', [ActivityController::class, 'complete'])->name('activities.complete');
+        Route::post('activities/{activity}/cancel', [ActivityController::class, 'cancel'])->name('activities.cancel');
 
-    // Meeting Management Routes
-    Route::get('meetings', [ActivityController::class, 'meetings'])->name('meetings.index');
-    Route::post('meetings/{meeting}/complete', [ActivityController::class, 'completeMeeting'])->name('meetings.complete');
-    Route::post('meetings/{meeting}/cancel', [ActivityController::class, 'cancelMeeting'])->name('meetings.cancel');
+        // Meeting Management Routes
+        Route::get('meetings', [ActivityController::class, 'meetings'])->name('meetings.index');
+        Route::post('meetings/{meeting}/complete', [ActivityController::class, 'completeMeeting'])->name('meetings.complete');
+        Route::post('meetings/{meeting}/cancel', [ActivityController::class, 'cancelMeeting'])->name('meetings.cancel');
 
-    // Schedule Routes
-    Route::get('schedule/today', [ActivityController::class, 'todaySchedule'])->name('schedule.today');
-    Route::get('schedule/upcoming', [ActivityController::class, 'upcomingSchedule'])->name('schedule.upcoming');
+        // Schedule Routes
+        Route::get('schedule/today', [ActivityController::class, 'todaySchedule'])->name('schedule.today');
+        Route::get('schedule/upcoming', [ActivityController::class, 'upcomingSchedule'])->name('schedule.upcoming');
 
-    // Audit Trail Routes
-    Route::get('leads/{lead}/history', [LeadHistoryController::class, 'leadHistory'])->name('leads.history');
-    Route::get('leads/{lead}/full-history', [LeadHistoryController::class, 'leadFullHistory'])->name('leads.full-history');
-    Route::get('leads/{lead}/history-stats', [LeadHistoryController::class, 'leadHistoryStats'])->name('leads.history-stats');
-    Route::get('proposals/{proposal}/history', [LeadHistoryController::class, 'proposalHistory'])->name('proposals.history');
-    Route::get('quotations/{quotation}/history', [LeadHistoryController::class, 'quotationHistory'])->name('quotations.history');
-    Route::get('audit/recent', [LeadHistoryController::class, 'recentActivity'])->name('audit.recent');
-    Route::get('audit/user/{userId}', [LeadHistoryController::class, 'userActivity'])->name('audit.user');
+        // Audit Trail Routes
+        Route::get('leads/{lead}/history', [LeadHistoryController::class, 'leadHistory'])->name('leads.history');
+        Route::get('leads/{lead}/full-history', [LeadHistoryController::class, 'leadFullHistory'])->name('leads.full-history');
+        Route::get('leads/{lead}/history-stats', [LeadHistoryController::class, 'leadHistoryStats'])->name('leads.history-stats');
+        Route::get('proposals/{proposal}/history', [LeadHistoryController::class, 'proposalHistory'])->name('proposals.history');
+        Route::get('quotations/{quotation}/history', [LeadHistoryController::class, 'quotationHistory'])->name('quotations.history');
+        Route::get('audit/recent', [LeadHistoryController::class, 'recentActivity'])->name('audit.recent');
+        Route::get('audit/user/{userId}', [LeadHistoryController::class, 'userActivity'])->name('audit.user');
+    });
 
     // Client Management Routes
     Route::apiResource('clients', ClientController::class);
@@ -141,37 +143,43 @@ Route::prefix('v1')->group(function () {
     Route::post('clients/{client}/portal-access/reset-password', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'resetPassword'])->name('clients.portal-access.reset-password');
 
     // Proposal Management Routes (Technical Proposals)
-    Route::apiResource('proposals', ProposalController::class);
-    Route::post('proposals/fast-track', [ProposalController::class, 'fastTrack'])->name('proposals.fast-track');
-    Route::post('proposals/{proposal}/upload', [ProposalController::class, 'uploadFile'])->name('proposals.upload');
-    Route::post('proposals/{proposal}/send', [ProposalController::class, 'send'])->name('proposals.send');
-    Route::post('proposals/{proposal}/approve', [ProposalController::class, 'approve'])->name('proposals.approve');
-    Route::post('proposals/{proposal}/reject', [ProposalController::class, 'reject'])->name('proposals.reject');
-    Route::get('proposals-expiring', [ProposalController::class, 'expiring'])->name('proposals.expiring');
+    Route::middleware('simplified.disabled:proposals')->group(function () {
+        Route::apiResource('proposals', ProposalController::class);
+        Route::post('proposals/fast-track', [ProposalController::class, 'fastTrack'])->name('proposals.fast-track');
+        Route::post('proposals/{proposal}/upload', [ProposalController::class, 'uploadFile'])->name('proposals.upload');
+        Route::post('proposals/{proposal}/send', [ProposalController::class, 'send'])->name('proposals.send');
+        Route::post('proposals/{proposal}/approve', [ProposalController::class, 'approve'])->name('proposals.approve');
+        Route::post('proposals/{proposal}/reject', [ProposalController::class, 'reject'])->name('proposals.reject');
+        Route::get('proposals-expiring', [ProposalController::class, 'expiring'])->name('proposals.expiring');
+    });
 
     // Quotation Management Routes (Price Quotes)
-    Route::apiResource('quotations', QuotationController::class);
-    Route::post('quotations/calculate', [QuotationController::class, 'calculate'])->name('quotations.calculate');
-    Route::post('quotations/validate-payment-plan', [QuotationController::class, 'validatePaymentPlan'])->name('quotations.validate-payment-plan');
-    Route::post('quotations/{quotation}/send', [QuotationController::class, 'send'])->name('quotations.send');
-    Route::patch('quotations/{quotation}/status', [QuotationController::class, 'updateStatus'])->name('quotations.update-status');
-    Route::get('quotations-expiring', [QuotationController::class, 'expiring'])->name('quotations.expiring');
-    Route::get('quotations-overdue', [QuotationController::class, 'overdue'])->name('quotations.overdue');
+    Route::middleware('simplified.disabled:quotations')->group(function () {
+        Route::apiResource('quotations', QuotationController::class);
+        Route::post('quotations/calculate', [QuotationController::class, 'calculate'])->name('quotations.calculate');
+        Route::post('quotations/validate-payment-plan', [QuotationController::class, 'validatePaymentPlan'])->name('quotations.validate-payment-plan');
+        Route::post('quotations/{quotation}/send', [QuotationController::class, 'send'])->name('quotations.send');
+        Route::patch('quotations/{quotation}/status', [QuotationController::class, 'updateStatus'])->name('quotations.update-status');
+        Route::get('quotations-expiring', [QuotationController::class, 'expiring'])->name('quotations.expiring');
+        Route::get('quotations-overdue', [QuotationController::class, 'overdue'])->name('quotations.overdue');
+    });
 
     // Contract Management Routes
-    Route::get('contracts/milestones/due', [ContractController::class, 'dueMilestones'])->name('contracts.milestones.due');
-    Route::patch('contracts/milestones/{milestone}/paid', [ContractController::class, 'markMilestonePaid'])->name('contracts.milestones.paid');
-    Route::post('contracts', [ContractController::class, 'store'])->name('contracts.store');
-    Route::post('contracts/from-quotation/{quotation}', [ContractController::class, 'createFromQuotation'])->name('contracts.create-from-quotation');
-    Route::post('quotations/{quotation}/contract', [ContractController::class, 'createFromQuotation'])->name('contracts.generate-from-quotation');
-    Route::post('contracts/{contract}/sign', [ContractController::class, 'sign'])->name('contracts.sign');
-    Route::patch('contracts/{contract}/sign', [ContractController::class, 'signPatch'])->name('contracts.sign.patch');
-    Route::post('contracts/{contract}/activate', [ContractController::class, 'activate'])->name('contracts.activate');
-    Route::patch('contracts/{contract}/status', [ContractController::class, 'updateStatus'])->name('contracts.update-status');
-    Route::get('contracts', [ContractController::class, 'index'])->name('contracts.index');
-    Route::get('contracts/{contract}', [ContractController::class, 'show'])->name('contracts.show');
-    Route::put('contracts/{contract}', [ContractController::class, 'update'])->name('contracts.update');
-    Route::delete('contracts/{contract}', [ContractController::class, 'destroy'])->name('contracts.destroy');
+    Route::middleware('simplified.disabled:contracts')->group(function () {
+        Route::get('contracts/milestones/due', [ContractController::class, 'dueMilestones'])->name('contracts.milestones.due');
+        Route::patch('contracts/milestones/{milestone}/paid', [ContractController::class, 'markMilestonePaid'])->name('contracts.milestones.paid');
+        Route::post('contracts', [ContractController::class, 'store'])->name('contracts.store');
+        Route::post('contracts/from-quotation/{quotation}', [ContractController::class, 'createFromQuotation'])->name('contracts.create-from-quotation');
+        Route::post('quotations/{quotation}/contract', [ContractController::class, 'createFromQuotation'])->name('contracts.generate-from-quotation');
+        Route::post('contracts/{contract}/sign', [ContractController::class, 'sign'])->name('contracts.sign');
+        Route::patch('contracts/{contract}/sign', [ContractController::class, 'signPatch'])->name('contracts.sign.patch');
+        Route::post('contracts/{contract}/activate', [ContractController::class, 'activate'])->name('contracts.activate');
+        Route::patch('contracts/{contract}/status', [ContractController::class, 'updateStatus'])->name('contracts.update-status');
+        Route::get('contracts', [ContractController::class, 'index'])->name('contracts.index');
+        Route::get('contracts/{contract}', [ContractController::class, 'show'])->name('contracts.show');
+        Route::put('contracts/{contract}', [ContractController::class, 'update'])->name('contracts.update');
+        Route::delete('contracts/{contract}', [ContractController::class, 'destroy'])->name('contracts.destroy');
+    });
 
     // Change Request Routes
     Route::get('projects/{project}/change-requests', [ChangeRequestController::class, 'index'])->name('change-requests.index');
@@ -194,7 +202,7 @@ Route::prefix('v1')->group(function () {
     Route::post('handovers/{handover}/dispute', [HandoverController::class, 'dispute'])->name('handovers.dispute');
 
     // Template Routes
-    Route::prefix('templates')->group(function () {
+    Route::prefix('templates')->middleware('simplified.disabled:proposals')->group(function () {
         Route::get('proposals', [TemplateController::class, 'proposalTemplates'])->name('templates.proposals.index');
         Route::post('proposals', [TemplateController::class, 'storeProposalTemplate'])->name('templates.proposals.store');
         Route::put('proposals/{template}', [TemplateController::class, 'updateProposalTemplate'])->name('templates.proposals.update');
@@ -209,7 +217,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // Sales Analytics Routes
-    Route::prefix('analytics')->group(function () {
+    Route::prefix('analytics')->middleware('simplified.disabled:advanced_analytics')->group(function () {
         Route::get('sales/performance', [SalesAnalyticsController::class, 'performance'])->name('analytics.sales.performance');
         Route::get('sales/sources', [SalesAnalyticsController::class, 'sources'])->name('analytics.sales.sources');
         Route::get('sales/pipeline', [SalesAnalyticsController::class, 'pipeline'])->name('analytics.sales.pipeline');
@@ -219,7 +227,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // Executive Analytics Routes (Admin/Manager Only)
-    Route::prefix('analytics')->middleware(['auth:sanctum', 'locale'])->group(function () {
+    Route::prefix('analytics')->middleware(['auth:sanctum', 'locale', 'simplified.disabled:advanced_analytics'])->group(function () {
         Route::get('sales-performance', [AnalyticsController::class, 'salesPerformance'])->name('analytics.sales-performance');
         Route::get('rejection-reasons', [AnalyticsController::class, 'rejectionReasons'])->name('analytics.rejection-reasons');
         Route::get('financial-forecast', [AnalyticsController::class, 'financialForecast'])->name('analytics.financial-forecast');
@@ -253,7 +261,7 @@ Route::prefix('v1')->group(function () {
 
     // Employee Management Routes
     Route::apiResource('employees', EmployeeController::class)->except(['destroy']);
-    Route::get('employees/{id}/performance', [EmployeeController::class, 'performance'])->name('employees.performance');
+    Route::get('employees/{id}/performance', [EmployeeController::class, 'performance'])->middleware('simplified.disabled:performance')->name('employees.performance');
     Route::post('employees/{id}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
     Route::post('employees/{id}/activate', [EmployeeController::class, 'activate'])->name('employees.activate');
 
@@ -272,13 +280,13 @@ Route::prefix('v1')->group(function () {
     Route::patch('projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.update-status');
 
     // Project Conversion Route (convert quotation to project)
-    Route::post('projects/convert', [ProjectController::class, 'convert'])->name('projects.convert');
+    Route::post('projects/convert', [ProjectController::class, 'convert'])->middleware('simplified.disabled:quotations')->name('projects.convert');
 
     // Direct Project Creation Route (create project for client without quotation)
     Route::post('projects/direct', [ProjectController::class, 'storeDirect'])->name('projects.store-direct');
 
     // Project UI Approval Route (manual approval of UI/UX deliverables)
-    Route::post('projects/{project}/approve-ui', [ProjectController::class, 'approveUI'])->name('projects.approve-ui');
+    Route::post('projects/{project}/approve-ui', [ProjectController::class, 'approveUI'])->middleware('simplified.disabled:ui_approval')->name('projects.approve-ui');
 
     // Project History Route (audit trail)
     Route::get('projects/{project}/history', [ProjectHistoryController::class, 'index'])->name('projects.history');
@@ -344,7 +352,7 @@ Route::prefix('v1')->group(function () {
     Route::get('projects/{projectId}/tasks', [TaskController::class, 'projectTasks'])->name('projects.tasks');
 
     // Project Points Summary Route
-    Route::get('projects/{projectId}/points-summary', [TaskController::class, 'pointsSummary'])->name('projects.points-summary');
+    Route::get('projects/{projectId}/points-summary', [TaskController::class, 'pointsSummary'])->middleware('simplified.disabled:points')->name('projects.points-summary');
 
     // Task Deliverables Routes
     // All routes have auth:sanctum and locale middleware applied in controller
@@ -363,24 +371,26 @@ Route::prefix('v1')->group(function () {
         // Client Project Routes
         Route::get('projects', [ClientProjectController::class, 'index'])->name('client.projects.index');
         Route::get('projects/{project}', [ClientProjectController::class, 'show'])->name('client.projects.show');
-        Route::post('projects/{project}/approve-ui', [ClientProjectController::class, 'approveUI'])->name('client.projects.approve-ui');
+        Route::post('projects/{project}/approve-ui', [ClientProjectController::class, 'approveUI'])->middleware('simplified.disabled:ui_approval')->name('client.projects.approve-ui');
 
         // Client Invoice Routes
-        Route::get('invoices', [ClientInvoiceController::class, 'index'])->name('client.invoices.index');
-        Route::get('invoices/{invoice}', [ClientInvoiceController::class, 'show'])->name('client.invoices.show');
-        Route::post('invoices/{invoice}/pay', [ClientInvoiceController::class, 'pay'])->name('client.invoices.pay');
+        Route::middleware('simplified.disabled:client_billing')->group(function () {
+            Route::get('invoices', [ClientInvoiceController::class, 'index'])->name('client.invoices.index');
+            Route::get('invoices/{invoice}', [ClientInvoiceController::class, 'show'])->name('client.invoices.show');
+            Route::post('invoices/{invoice}/pay', [ClientInvoiceController::class, 'pay'])->name('client.invoices.pay');
+        });
     });
 
     // Admin Invoice Management Routes
     // All routes have auth:sanctum and locale middleware applied at route level
-    Route::apiResource('invoices', InvoiceController::class)->middleware(['auth:sanctum', 'locale']);
-    Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->middleware(['auth:sanctum', 'locale'])->name('invoices.send');
-    Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markAsPaid'])->middleware(['auth:sanctum', 'locale'])->name('invoices.mark-paid');
-    Route::post('projects/{project}/generate-milestone-invoice', [InvoiceController::class, 'generateMilestoneInvoice'])->middleware(['auth:sanctum', 'locale'])->name('projects.generate-milestone-invoice');
-    Route::post('projects/{project}/generate-pending-invoices', [InvoiceController::class, 'generatePendingInvoices'])->middleware(['auth:sanctum', 'locale'])->name('projects.generate-pending-invoices');
+    Route::apiResource('invoices', InvoiceController::class)->middleware(['auth:sanctum', 'locale', 'simplified.disabled:billing']);
+    Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->middleware(['auth:sanctum', 'locale', 'simplified.disabled:billing'])->name('invoices.send');
+    Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markAsPaid'])->middleware(['auth:sanctum', 'locale', 'simplified.disabled:billing'])->name('invoices.mark-paid');
+    Route::post('projects/{project}/generate-milestone-invoice', [InvoiceController::class, 'generateMilestoneInvoice'])->middleware(['auth:sanctum', 'locale', 'simplified.disabled:billing'])->name('projects.generate-milestone-invoice');
+    Route::post('projects/{project}/generate-pending-invoices', [InvoiceController::class, 'generatePendingInvoices'])->middleware(['auth:sanctum', 'locale', 'simplified.disabled:billing'])->name('projects.generate-pending-invoices');
 
     // Milestone Management Routes
-    Route::prefix('milestones')->middleware(['auth:sanctum', 'locale'])->group(function () {
+    Route::prefix('milestones')->middleware(['auth:sanctum', 'locale', 'simplified.disabled:billing'])->group(function () {
         Route::get('{id}', [MilestoneController::class, 'show'])->name('milestones.show');
         Route::post('{id}/create-invoice', [MilestoneController::class, 'createInvoice'])->name('milestones.create-invoice');
         Route::post('{id}/link-invoice', [MilestoneController::class, 'linkInvoice'])->name('milestones.link-invoice');
@@ -404,13 +414,13 @@ Route::prefix('v1')->group(function () {
         // Admin Statistics Routes
         Route::prefix('stats')->group(function () {
             Route::get('overview', [AdminStatsController::class, 'overview'])->name('admin.stats.overview');
-            Route::get('profitability', [AdminStatsController::class, 'profitability'])->name('admin.stats.profitability');
-            Route::get('quality', [AdminStatsController::class, 'quality'])->name('admin.stats.quality');
-            Route::get('user-performance', [AdminStatsController::class, 'userPerformance'])->name('admin.stats.user-performance');
+            Route::get('profitability', [AdminStatsController::class, 'profitability'])->middleware('simplified.disabled:financial_reports')->name('admin.stats.profitability');
+            Route::get('quality', [AdminStatsController::class, 'quality'])->middleware('simplified.disabled:code_reviews')->name('admin.stats.quality');
+            Route::get('user-performance', [AdminStatsController::class, 'userPerformance'])->middleware('simplified.disabled:performance')->name('admin.stats.user-performance');
             Route::get('attendance', [AdminStatsController::class, 'attendance'])->name('admin.stats.attendance');
             // More specific route first
-            Route::get('employee-review/{userId}/export', [AdminStatsController::class, 'exportEmployeeReview'])->name('admin.stats.employee-review.export');
-            Route::get('employee-review/{userId}', [AdminStatsController::class, 'employeeReview'])->name('admin.stats.employee-review');
+            Route::get('employee-review/{userId}/export', [AdminStatsController::class, 'exportEmployeeReview'])->middleware('simplified.disabled:employee_reviews')->name('admin.stats.employee-review.export');
+            Route::get('employee-review/{userId}', [AdminStatsController::class, 'employeeReview'])->middleware('simplified.disabled:employee_reviews')->name('admin.stats.employee-review');
         });
 
         // Admin Role Management Routes
@@ -419,8 +429,8 @@ Route::prefix('v1')->group(function () {
 
         // Admin User Management Routes (Internal Costs)
         Route::get('users', [AdminUserController::class, 'index'])->name('admin.users.index');
-        Route::put('users/{id}/internal-cost', [AdminUserController::class, 'updateInternalCost'])->name('admin.users.update-internal-cost');
-        Route::put('users/internal-costs', [AdminUserController::class, 'bulkUpdateInternalCosts'])->name('admin.users.bulk-update-internal-costs');
+        Route::put('users/{id}/internal-cost', [AdminUserController::class, 'updateInternalCost'])->middleware('simplified.disabled:internal_costs')->name('admin.users.update-internal-cost');
+        Route::put('users/internal-costs', [AdminUserController::class, 'bulkUpdateInternalCosts'])->middleware('simplified.disabled:internal_costs')->name('admin.users.bulk-update-internal-costs');
 
         // User Management Routes (CRUD)
         Route::apiResource('users/manage', UserController::class)->parameters(['manage' => 'user']);
@@ -445,7 +455,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // Performance Evaluation Routes
-    Route::prefix('performance')->group(function () {
+    Route::prefix('performance')->middleware('simplified.disabled:performance')->group(function () {
         // Evaluation Periods
         Route::get('periods', [PerformanceEvaluationController::class, 'periods'])->name('performance.periods.index');
         Route::post('periods', [PerformanceEvaluationController::class, 'createPeriod'])->name('performance.periods.store');
@@ -462,7 +472,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // Code Review Routes
-    Route::prefix('code-reviews')->group(function () {
+    Route::prefix('code-reviews')->middleware('simplified.disabled:code_reviews')->group(function () {
         Route::get('/', [CodeReviewController::class, 'index'])->name('code-reviews.index');
         Route::post('/', [CodeReviewController::class, 'store'])->name('code-reviews.store');
         Route::get('/my-pending', [CodeReviewController::class, 'myPending'])->name('code-reviews.my-pending');
@@ -475,7 +485,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // Innovation Log Routes
-    Route::prefix('innovation-logs')->group(function () {
+    Route::prefix('innovation-logs')->middleware('simplified.disabled:innovation')->group(function () {
         Route::get('/', [InnovationLogController::class, 'index'])->name('innovation-logs.index');
         Route::post('/', [InnovationLogController::class, 'store'])->name('innovation-logs.store');
         Route::get('/pending', [InnovationLogController::class, 'pending'])->name('innovation-logs.pending');
@@ -487,7 +497,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // User Points Management Routes
-    Route::prefix('user-points')->group(function () {
+    Route::prefix('user-points')->middleware('simplified.disabled:points')->group(function () {
         Route::get('/transaction-types', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'getTransactionTypes'])->name('user-points.transaction-types');
         Route::get('/', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'index'])->name('user-points.index');
         Route::post('/add', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'addPoints'])->name('user-points.add');
@@ -509,7 +519,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // Sales Dashboard Routes (Manager Dashboard)
-    Route::prefix('sales-dashboard')->group(function () {
+    Route::prefix('sales-dashboard')->middleware('simplified.disabled:sales')->group(function () {
         Route::get('summary', [SalesDashboardController::class, 'summary'])->name('sales-dashboard.summary');
         Route::get('pipeline', [SalesDashboardController::class, 'pipeline'])->name('sales-dashboard.pipeline');
         Route::get('team-performance', [SalesDashboardController::class, 'teamPerformance'])->name('sales-dashboard.team-performance');
@@ -521,7 +531,7 @@ Route::prefix('v1')->group(function () {
     Route::get('search', [GlobalSearchController::class, 'search'])->name('search');
 
     // Export Routes
-    Route::prefix('export')->group(function () {
+    Route::prefix('export')->middleware('simplified.disabled:sales_exports')->group(function () {
         Route::get('leads', [ExportController::class, 'exportLeads'])->name('export.leads');
         Route::get('proposals', [ExportController::class, 'exportProposals'])->name('export.proposals');
         Route::get('quotations', [ExportController::class, 'exportQuotations'])->name('export.quotations');
@@ -531,31 +541,31 @@ Route::prefix('v1')->group(function () {
     // HR Deductions & Rewards Routes
     Route::prefix('hr')->middleware(['auth:sanctum', 'locale'])->group(function () {
         // Deduction Types Routes
-        Route::apiResource('deduction-types', \App\Http\Controllers\Api\V1\HR\DeductionTypeController::class);
+        Route::apiResource('deduction-types', \App\Http\Controllers\Api\V1\HR\DeductionTypeController::class)->middleware('simplified.disabled:advanced_deductions');
 
         // Reward Types Routes
-        Route::apiResource('reward-types', \App\Http\Controllers\Api\V1\HR\RewardTypeController::class);
-        Route::post('reward-types/{reward_type}/calculate', [\App\Http\Controllers\Api\V1\HR\RewardTypeController::class, 'calculate'])->name('hr.reward-types.calculate');
+        Route::apiResource('reward-types', \App\Http\Controllers\Api\V1\HR\RewardTypeController::class)->middleware('simplified.disabled:rewards');
+        Route::post('reward-types/{reward_type}/calculate', [\App\Http\Controllers\Api\V1\HR\RewardTypeController::class, 'calculate'])->middleware('simplified.disabled:rewards')->name('hr.reward-types.calculate');
 
         // Employee Deductions Routes
-        Route::apiResource('employee-deductions', \App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class);
-        Route::post('employee-deductions/{employeeDeduction}/approve', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'approve'])->name('hr.employee-deductions.approve');
-        Route::post('employee-deductions/{employeeDeduction}/reject', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'reject'])->name('hr.employee-deductions.reject');
-        Route::get('employee-deductions-summary', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'summary'])->name('hr.employee-deductions.summary');
-        Route::post('employee-deductions/bulk-from-attendance', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'bulkFromAttendance'])->name('hr.employee-deductions.bulk-from-attendance');
+        Route::apiResource('employee-deductions', \App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class)->middleware('simplified.disabled:advanced_deductions');
+        Route::post('employee-deductions/{employeeDeduction}/approve', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'approve'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.approve');
+        Route::post('employee-deductions/{employeeDeduction}/reject', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'reject'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.reject');
+        Route::get('employee-deductions-summary', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'summary'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.summary');
+        Route::post('employee-deductions/bulk-from-attendance', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'bulkFromAttendance'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.bulk-from-attendance');
 
         // Employee Rewards Routes
-        Route::apiResource('employee-rewards', \App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class);
-        Route::post('employee-rewards/{employeeReward}/approve', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'approve'])->name('hr.employee-rewards.approve');
-        Route::post('employee-rewards/{employeeReward}/reject', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'reject'])->name('hr.employee-rewards.reject');
-        Route::post('employee-rewards/{employeeReward}/mark-paid', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'markAsPaid'])->name('hr.employee-rewards.mark-paid');
-        Route::get('employee-rewards-summary', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'summary'])->name('hr.employee-rewards.summary');
-        Route::post('employee-rewards/from-points', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'fromPoints'])->name('hr.employee-rewards.from-points');
-        Route::post('employee-rewards/bulk-from-evaluation', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'bulkFromEvaluation'])->name('hr.employee-rewards.bulk-from-evaluation');
+        Route::apiResource('employee-rewards', \App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class)->middleware('simplified.disabled:rewards');
+        Route::post('employee-rewards/{employeeReward}/approve', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'approve'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.approve');
+        Route::post('employee-rewards/{employeeReward}/reject', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'reject'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.reject');
+        Route::post('employee-rewards/{employeeReward}/mark-paid', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'markAsPaid'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.mark-paid');
+        Route::get('employee-rewards-summary', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'summary'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.summary');
+        Route::post('employee-rewards/from-points', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'fromPoints'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.from-points');
+        Route::post('employee-rewards/bulk-from-evaluation', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'bulkFromEvaluation'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.bulk-from-evaluation');
 
         // Salary Adjustments Routes
-        Route::get('salary-adjustments', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'index'])->name('hr.salary-adjustments.index');
-        Route::get('salary-adjustments/{salaryAdjustment}', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'show'])->name('hr.salary-adjustments.show');
-        Route::get('salary-adjustments-payroll-summary', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'payrollSummary'])->name('hr.salary-adjustments.payroll-summary');
+        Route::get('salary-adjustments', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'index'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.index');
+        Route::get('salary-adjustments/{salaryAdjustment}', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'show'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.show');
+        Route::get('salary-adjustments-payroll-summary', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'payrollSummary'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.payroll-summary');
     });
 });
