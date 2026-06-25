@@ -82,6 +82,11 @@ class SimplifiedRolePermissionsSeederTest extends TestCase
         }
 
         $this->assertSame(['view_dashboard', 'view_own_projects'], $client->permissions->pluck('name')->sort()->values()->all());
-        $this->assertTrue($superAdmin->hasPermissionTo('manage_user_points'));
+        $this->assertTrue($superAdmin->hasPermissionTo('manage_users'));
+        $this->assertDatabaseHas('users', [
+            'email' => 'admin@thetables.com',
+            'name' => 'The Tables (Admin)',
+        ]);
+        $this->assertDatabaseMissing('users', ['email' => 'm.saber@elmotech.it']);
     }
 }

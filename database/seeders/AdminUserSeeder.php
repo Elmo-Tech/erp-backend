@@ -172,124 +172,16 @@ class AdminUserSeeder extends Seeder
     ];
 
     /**
-     * Seed the admin user with super-admin role.
+     * Seed simplified ERP permissions, roles, and the default admin user.
      */
     public function run(): void
     {
-        // Create permissions
-        $permissions = [
-            // User management
-            'manage_users',
-            'view_users',
-            'create_users',
-            'edit_users',
-            'delete_users',
-
-            // Role management
-            'manage_roles',
-            'view_roles',
-            'create_roles',
-            'edit_roles',
-            'delete_roles',
-
-            // Client management
-            'manage_clients',
-            'view_clients',
-            'create_clients',
-            'edit_clients',
-            'delete_clients',
-
-            // Project management
-            'manage_projects',
-            'view_projects',
-            'create_projects',
-            'edit_projects',
-            'delete_projects',
-
-            // Project members
-            'manage_project_members',
-            'view_project_members',
-            'add_project_members',
-            'remove_project_members',
-
-            // Project files
-            'manage_project_files',
-            'view_project_files',
-            'upload_project_files',
-            'delete_project_files',
-
-            // Project history
-            'view_project_history',
-
-            // Task management
-            'manage_tasks',
-            'view_tasks',
-            'create_tasks',
-            'edit_tasks',
-            'delete_tasks',
-            'view_internal_notes',
-            'assign_tasks',
-
-            // Task test scenarios
-            'manage_test_scenarios',
-            'view_test_scenarios',
-            'create_test_scenarios',
-            'complete_test_scenarios',
-            'verify_test_scenarios',
-
-            // Wiki management
-            'manage_wiki',
-            'view_wiki',
-            'create_wiki',
-            'edit_wiki',
-            'delete_wiki',
-            'view_encrypted_content',
-
-            // Time tracking
-            'manage_time_entries',
-            'view_time_entries',
-            'start_timer',
-            'stop_timer',
-            'view_all_time_entries',
-
-            // Attendance
-            'manage_attendance',
-            'view_attendance',
-            'view_all_attendance',
-            'clock_out',
-
-            // Employee management
-            'manage_employees',
-            'view_employees',
-            'create_employees',
-            'edit_employees',
-            'view_employee_salary',
-            'view_employee_performance',
-
-            // Dashboard
-            'view_dashboard',
-            'view_dashboard_overview',
-
-            // Reports & Analytics
-            'view_reports',
-            'view_profitability',
-            'view_cost',
-            'view_quality_metrics',
-            'view_user_performance',
-            'view_attendance_analytics',
-
-            // Admin Statistics & Financial Data
-            'view_admin_stats',
-            'view_internal_costs',
-            'manage_internal_costs',
-
-            // Security & Audit
-            'view_audit_logs',
-
-            // Tags
-            'manage_tags',
-            'view_tags',
-        ];
+        $permissions = array_values(array_unique([
+            ...self::ADMIN_PERMISSIONS,
+            ...self::MANAGER_PERMISSIONS,
+            ...self::DEVELOPER_PERMISSIONS,
+            ...self::CLIENT_PERMISSIONS,
+        ]));
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
@@ -315,30 +207,32 @@ class AdminUserSeeder extends Seeder
 
         $clientRole->syncPermissions(self::existingPermissions(self::CLIENT_PERMISSIONS));
 
-        // Create super admin user
-        $admin = User::firstOrCreate(
-            ['email' => 'm.saber@elmotech.it'],
-            [
-                'name' => 'Mahmoud Saber',
-                'password' => 'Mahmoud_2091.',
-                'email_verified_at' => now(),
-                'is_active' => true,
-                'is_employee' => true,
-                'work_hours_per_day' => 8,
-                'work_start_time' => '10:00:00',
-                'grace_days_allowed' => 5,
-                'grace_days_used' => 0,
-            ]
-        );
+        // Create the default The Tables admin user. Password can be overridden per environment.
+        $admin = User::firstOrNew(['email' => 'admin@thetables.com']);
+        $isNewAdmin = ! $admin->exists;
 
-        // Assign super-admin role
-        if (! $admin->hasRole('super-admin')) {
-            $admin->assignRole('super-admin');
+        $admin->forceFill([
+            'name' => 'The Tables (Admin)',
+            'email_verified_at' => $admin->email_verified_at ?? now(),
+            'is_active' => true,
+            'is_employee' => true,
+            'work_hours_per_day' => $admin->work_hours_per_day ?? 8,
+            'work_start_time' => $admin->work_start_time ?? '10:00:00',
+            'grace_days_allowed' => $admin->grace_days_allowed ?? 5,
+            'grace_days_used' => $admin->grace_days_used ?? 0,
+        ]);
+
+        if ($isNewAdmin || env('TABLES_ADMIN_PASSWORD')) {
+            $admin->password = env('TABLES_ADMIN_PASSWORD', 'password');
         }
 
+        $admin->save();
+
+        $admin->syncRoles(['admin']);
+
         $this->command->info('Admin user created successfully!');
-        $this->command->info('Email: m.saber@elmotech.it');
-        $this->command->info('Password: Mahmoud_2091.');
+        $this->command->info('Email: admin@thetables.com');
+        $this->command->info('Password: set TABLES_ADMIN_PASSWORD per environment; defaults to local development password.');
     }
 
     public static function existingPermissions(array $permissions)
