@@ -47,7 +47,7 @@ class ProjectFileController extends Controller
             'file' => 'required_if:type,file|file|max:51200', // 50MB max
             'url' => 'required_if:type,link|nullable|url',
             'description' => 'nullable|string',
-            'category' => 'nullable|in:general,design,document,deliverable',
+            'category' => 'nullable|in:general,design,document,proposal,quotation,contract,deliverable',
             'isClientVisible' => 'nullable|boolean',
             'isDownloadable' => 'nullable|boolean',
             'visibleToRoles' => 'nullable|array',
@@ -83,7 +83,7 @@ class ProjectFileController extends Controller
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'nullable|in:general,design,document,deliverable',
+            'category' => 'nullable|in:general,design,document,proposal,quotation,contract,deliverable',
             'isClientVisible' => 'nullable|boolean',
             'isDownloadable' => 'nullable|boolean',
             'visibleToRoles' => 'nullable|array',
