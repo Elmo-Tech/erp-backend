@@ -28,6 +28,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         Route::get('projects/tasks/my-active', [ProjectTaskController::class, 'myActive'])
             ->name('projects.tasks.my-active');
 
+        Route::get('projects/tasks/control', [ProjectTaskController::class, 'controlIndex'])
+            ->withoutMiddleware('permission:view_projects|manage_all_projects')
+            ->middleware('permission:view_task_control|manage_all_projects')
+            ->name('projects.tasks.control');
+
         Route::get('projects/timeline', [ProjectTimelineController::class, 'index'])
             ->withoutMiddleware('permission:view_projects|manage_all_projects')
             ->middleware('permission:view_project_timeline')
@@ -51,6 +56,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         // ── Project files (read) ──────────────────────────────────────────────
         Route::get('projects/{project}/files', [ProjectFileController::class, 'index'])
             ->name('projects.files.index');
+
+        Route::get('projects/{project}/sales-documents', [ProjectFileController::class, 'salesDocuments'])
+            ->name('projects.sales-documents.index');
 
         Route::get('projects/{project}/files/{file}', [ProjectFileController::class, 'show'])
             ->name('projects.files.show');

@@ -7,11 +7,16 @@ use App\Http\Controllers\Controller;
 use App\Modules\Project\Actions\DeleteProjectFileAction;
 use App\Modules\Project\Actions\StoreProjectFileAction;
 use App\Modules\Project\Actions\UpdateProjectFileAction;
+use App\Modules\Lead\Models\Contract;
+use App\Modules\Lead\Models\Proposal;
+use App\Modules\Lead\Models\Quotation;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectFile;
 use App\Modules\Project\Resources\ProjectFileResource;
+use App\Modules\Project\Resources\ProjectSalesDocumentResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use RuntimeException;
 
 class ProjectFileController extends Controller
@@ -35,6 +40,22 @@ class ProjectFileController extends Controller
         return ApiResponse::success([
             'files' => ProjectFileResource::collection($files),
         ], 'Project files retrieved successfully');
+    }
+
+    public function salesDocuments(Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $documents = collect()
+            ->merge($this->mapSalesDocuments(Proposal::query()->where('project_id', $project->id)->get(), 'proposal'))
+            ->merge($this->mapSalesDocuments(Quotation::query()->where('project_id', $project->id)->get(), 'quotation'))
+            ->merge($this->mapSalesDocuments(Contract::query()->where('project_id', $project->id)->get(), 'contract'))
+            ->sortByDesc('createdAt')
+            ->values();
+
+        return ApiResponse::success([
+            'documents' => ProjectSalesDocumentResource::collection($documents),
+        ], 'Project sales documents retrieved successfully');
     }
 
     public function store(Request $request, Project $project): JsonResponse
@@ -112,5 +133,18 @@ class ProjectFileController extends Controller
         }
 
         return ApiResponse::success(null, 'File deleted successfully');
+    }
+
+    private function mapSalesDocuments(Collection $documents, string $category): Collection
+    {
+        return $documents->map(fn ($document) => [
+            'documentId' => "{$category}:{$document->id}",
+            'projectId' => $document->project_id,
+            'name' => ucfirst($category) . " #{$document->id}",
+            'category' => $category,
+            'status' => $document->status?->value ?? (string) $document->status,
+            'filePath' => $document->file_path,
+            'createdAt' => $document->created_at,
+        ]);
     }
 }

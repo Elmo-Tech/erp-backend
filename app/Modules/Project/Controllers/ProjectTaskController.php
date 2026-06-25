@@ -125,6 +125,28 @@ class ProjectTaskController extends Controller
     }
 
     /**
+     * GET /projects/tasks/control
+     * Returns every project task for users with the task-control permission.
+     */
+    public function controlIndex(): JsonResponse
+    {
+        if (! request()->user()->can('view_task_control') && ! request()->user()->can('manage_all_projects')) {
+            return ApiResponse::error('You do not have permission to view task control.', 403);
+        }
+
+        $tasks = ProjectTask::query()
+            ->with(['assignee', 'deliverables', 'milestone', 'timeEntries.user', 'project.client'])
+            ->orderByRaw('due_date IS NULL, due_date ASC')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return ApiResponse::success(
+            ['tasks' => ProjectTaskResource::collection($tasks)],
+            'Task control tasks retrieved successfully'
+        );
+    }
+
+    /**
      * POST /projects/{project}/tasks
      *
      * SECURITY: Only project managers/tech leads or global admins may create tasks.

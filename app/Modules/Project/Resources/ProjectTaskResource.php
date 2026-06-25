@@ -39,6 +39,10 @@ class ProjectTaskResource extends JsonResource
             'project'         => $this->whenLoaded('project', fn () => [
                 'projectId' => $this->project->id,
                 'title'     => $this->project->title,
+                'client'    => $this->project->relationLoaded('client') && $this->project->client ? [
+                    'clientId' => $this->project->client->id,
+                    'name'     => $this->project->client->name,
+                ] : null,
             ]),
             'deliverables'    => ProjectTaskDeliverableResource::collection($this->whenLoaded('deliverables')),
             'timeEntries'     => ProjectTimeEntryResource::collection($this->whenLoaded('timeEntries')),
