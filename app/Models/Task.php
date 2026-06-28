@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DynamicStatusCast;
 use App\Contracts\Trackable;
 use App\Enums\DeliverableStatus;
 use App\Enums\TaskCategory;
@@ -54,7 +55,7 @@ class Task extends Model implements Trackable
     protected function casts(): array
     {
         return [
-            'status' => TaskStatus::class,
+            'status' => DynamicStatusCast::class . ':task_status',
             'type' => TaskType::class,
             'priority' => TaskPriority::class,
             'task_category' => TaskCategory::class,

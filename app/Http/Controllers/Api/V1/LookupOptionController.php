@@ -118,8 +118,10 @@ class LookupOptionController extends Controller
      */
     public function destroy(LookupOption $lookupOption): JsonResponse
     {
-        // For now, hard delete. We could add checks here later if they are in use,
-        // and optionally soft-delete or deactivate instead.
+        if ($lookupOption->metadata['is_system'] ?? false) {
+            return ApiResponse::forbidden('System-reserved lookup options cannot be deleted.');
+        }
+
         $lookupOption->delete();
 
         return ApiResponse::success(null, 'Lookup option deleted successfully');

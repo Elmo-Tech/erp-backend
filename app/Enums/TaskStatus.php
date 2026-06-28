@@ -74,4 +74,12 @@ enum TaskStatus: string
             self::COMPLETED,
         ];
     }
+
+    /**
+     * Check if the status is completed.
+     */
+    public function isCompleted(): bool
+    {
+        return $this === self::COMPLETED;
+    }
 }

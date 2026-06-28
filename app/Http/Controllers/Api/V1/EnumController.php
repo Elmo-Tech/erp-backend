@@ -232,4 +232,42 @@ class EnumController extends Controller
             );
         }
     }
+
+    /**
+     * Get all active project statuses from lookup options.
+     */
+    public function getProjectStatuses(): JsonResponse
+    {
+        $options = LookupOption::getActiveByType('project_status')->map(function ($option) {
+            return [
+                'value' => $option->value,
+                'label' => $option->label,
+                'color' => $option->color,
+            ];
+        })->toArray();
+
+        return ApiResponse::success(
+            $options,
+            'Project statuses retrieved successfully'
+        );
+    }
+
+    /**
+     * Get all active task statuses from lookup options.
+     */
+    public function getTaskStatuses(): JsonResponse
+    {
+        $options = LookupOption::getActiveByType('task_status')->map(function ($option) {
+            return [
+                'value' => $option->value,
+                'label' => $option->label,
+                'color' => $option->color,
+            ];
+        })->toArray();
+
+        return ApiResponse::success(
+            $options,
+            'Task statuses retrieved successfully'
+        );
+    }
 }

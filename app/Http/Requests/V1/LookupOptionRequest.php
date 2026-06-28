@@ -21,7 +21,7 @@ class LookupOptionRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'type' => ['required', 'string', 'in:specialization,task_category'],
+            'type' => ['required', 'string', 'in:specialization,task_category,project_status,task_status'],
             'label' => ['required', 'string', 'max:100'],
             'color' => ['nullable', 'string', 'max:50'],
             'icon' => ['nullable', 'string', 'max:50'],
@@ -55,5 +55,22 @@ class LookupOptionRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
+                $lookupOption = $this->route('lookupOption');
+                if ($lookupOption && ($lookupOption->metadata['is_system'] ?? false)) {
+                    if ($this->has('value') && $this->input('value') !== $lookupOption->value) {
+                        $validator->errors()->add('value', 'The value/slug of a system-reserved lookup option cannot be modified.');
+                    }
+                }
+            }
+        });
     }
 }

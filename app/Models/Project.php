@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DynamicStatusCast;
 use App\Contracts\Trackable;
 use App\Enums\ProjectStatus;
 use App\Scopes\ClientScope;
@@ -60,8 +61,8 @@ class Project extends Model implements Trackable
     protected function casts(): array
     {
         return [
-            'status' => ProjectStatus::class,
-            'previous_status' => ProjectStatus::class,
+            'status' => DynamicStatusCast::class . ':project_status',
+            'previous_status' => DynamicStatusCast::class . ':project_status',
             'budget' => 'decimal:2',
             'deadline' => 'date',
             'ui_approved_at' => 'datetime',

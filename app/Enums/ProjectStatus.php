@@ -86,4 +86,12 @@ enum ProjectStatus: string
             self::CANCELLED,
         ];
     }
+
+    /**
+     * Check if the status is completed.
+     */
+    public function isCompleted(): bool
+    {
+        return $this === self::COMPLETED;
+    }
 }
