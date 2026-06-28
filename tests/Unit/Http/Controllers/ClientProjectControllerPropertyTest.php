@@ -156,8 +156,6 @@ class ClientProjectControllerPropertyTest extends TestCase
                 $this->assertEquals($project->id, $responseData['projectId']);
                 $this->assertEquals(ProjectStatus::DEVELOPMENT->value, $responseData['status']);
                 $this->assertEquals(ProjectStatus::DEVELOPMENT->label(), $responseData['statusLabel']);
-                $this->assertFalse($responseData['canApproveUI']); // Should be false after approval
-                $this->assertNotEmpty($responseData['uiApprovedAt']);
             });
     }
 

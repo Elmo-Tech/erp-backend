@@ -236,6 +236,8 @@ class ProjectPolicyPropertyTest extends TestCase
                 Generator\choose(2, 4) // Number of clients
             )
             ->then(function ($numClients) {
+                config(['simplification.enabled' => true]);
+
                 $policy = new ProjectPolicy;
 
                 // Create multiple clients
