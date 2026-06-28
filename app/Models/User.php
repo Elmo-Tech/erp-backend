@@ -100,7 +100,7 @@ class User extends Authenticatable
             'salary' => 'decimal:2',
             'total_deductions' => 'decimal:2',
             'skills' => 'array',
-            'specialization' => UserSpecialization::class,
+            'specialization' => 'string',
             'is_active' => 'boolean',
             'is_employee' => 'boolean',
             'work_hours_per_day' => 'integer',

@@ -18,6 +18,9 @@ use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\EnumController;
+use App\Http\Controllers\Api\V1\LookupOptionController;
+use App\Http\Controllers\Api\V1\TagController;
+use App\Http\Controllers\Api\V1\Financial\AccountController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\GlobalSearchController;
 use App\Http\Controllers\Api\V1\HandoverController;
@@ -518,6 +521,20 @@ Route::prefix('v1')->group(function () {
         Route::get('user-specializations', [EnumController::class, 'getUserSpecializations'])->name('enums.user-specializations');
         Route::get('task-categories', [EnumController::class, 'getTaskCategories'])->name('enums.task-categories');
         Route::get('compatible-task-categories/{specialization}', [EnumController::class, 'getCompatibleTaskCategories'])->name('enums.compatible-task-categories');
+    });
+
+    // Settings Routes (Admin only)
+    Route::prefix('settings')->group(function () {
+        Route::get('lookup-options', [LookupOptionController::class, 'index'])->name('settings.lookup-options.index');
+        Route::post('lookup-options', [LookupOptionController::class, 'store'])->name('settings.lookup-options.store');
+        Route::put('lookup-options/reorder', [LookupOptionController::class, 'reorder'])->name('settings.lookup-options.reorder');
+        Route::put('lookup-options/{lookupOption}', [LookupOptionController::class, 'update'])->name('settings.lookup-options.update');
+        Route::delete('lookup-options/{lookupOption}', [LookupOptionController::class, 'destroy'])->name('settings.lookup-options.destroy');
+
+        Route::get('tags', [TagController::class, 'index'])->name('settings.tags.index');
+        Route::post('tags', [TagController::class, 'store'])->name('settings.tags.store');
+        Route::put('tags/{tag}', [TagController::class, 'update'])->name('settings.tags.update');
+        Route::delete('tags/{tag}', [TagController::class, 'destroy'])->name('settings.tags.destroy');
     });
 
     // Sales Dashboard Routes (Manager Dashboard)

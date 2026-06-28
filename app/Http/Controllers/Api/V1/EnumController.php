@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\TaskCategory;
 use App\Enums\UserSpecialization;
+use App\Models\LookupOption;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -64,8 +65,17 @@ class EnumController extends Controller
      */
     public function getUserSpecializations(): JsonResponse
     {
+        $options = LookupOption::getActiveByType('specialization')->map(function ($option) {
+            return [
+                'value' => $option->value,
+                'label' => $option->label,
+                'color' => $option->color,
+                'metadata' => $option->metadata,
+            ];
+        })->toArray();
+
         return ApiResponse::success(
-            UserSpecialization::getAllOptions(),
+            $options,
             'User specializations retrieved successfully'
         );
     }
@@ -113,8 +123,16 @@ class EnumController extends Controller
      */
     public function getTaskCategories(): JsonResponse
     {
+        $options = LookupOption::getActiveByType('task_category')->map(function ($option) {
+            return [
+                'value' => $option->value,
+                'label' => $option->label,
+                'color' => $option->color,
+            ];
+        })->toArray();
+
         return ApiResponse::success(
-            TaskCategory::getAllOptions(),
+            $options,
             'Task categories retrieved successfully'
         );
     }
@@ -183,23 +201,34 @@ class EnumController extends Controller
     public function getCompatibleTaskCategories(string $specialization): JsonResponse
     {
         try {
-            $userSpecialization = UserSpecialization::from($specialization);
-            $compatibleCategories = TaskCategory::getCompatibleCategories($userSpecialization);
+            $userSpec = LookupOption::ofType('specialization')->where('value', $specialization)->first();
+            
+            if (!$userSpec) {
+                return ApiResponse::error('Invalid specialization provided', 400);
+            }
 
-            $options = array_map(fn ($category) => [
-                'value' => $category->value,
-                'label' => $category->label(),
-                'color' => $category->color(),
-            ], $compatibleCategories);
+            $compatibleTypes = $userSpec->metadata['compatible_task_types'] ?? [];
+
+            $options = LookupOption::getActiveByType('task_category')
+                ->filter(function ($category) use ($compatibleTypes) {
+                    return in_array($category->value, $compatibleTypes);
+                })
+                ->map(function ($category) {
+                    return [
+                        'value' => $category->value,
+                        'label' => $category->label,
+                        'color' => $category->color,
+                    ];
+                })->values()->toArray();
 
             return ApiResponse::success(
                 $options,
                 'Compatible task categories retrieved successfully'
             );
-        } catch (\ValueError $e) {
+        } catch (\Exception $e) {
             return ApiResponse::error(
-                'Invalid specialization provided',
-                400
+                'Error retrieving compatible categories: ' . $e->getMessage(),
+                500
             );
         }
     }
