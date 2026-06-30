@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\Financial\AccountController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\GlobalSearchController;
+use App\Http\Controllers\Api\V1\GoogleDriveController;
 use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InnovationLogController;
@@ -293,6 +294,14 @@ Route::prefix('v1')->group(function () {
 
     // Project History Route (audit trail)
     Route::get('projects/{project}/history', [ProjectHistoryController::class, 'index'])->name('projects.history');
+
+    // Google Drive project files
+    Route::get('google-drive/oauth-url', [GoogleDriveController::class, 'oauthUrl'])->name('google-drive.oauth-url');
+    Route::post('google-drive/oauth-callback', [GoogleDriveController::class, 'oauthCallback'])->name('google-drive.oauth-callback');
+    Route::get('projects/{project}/drive-folders', [GoogleDriveController::class, 'folders'])->name('projects.drive-folders');
+    Route::post('projects/{project}/drive-folder', [GoogleDriveController::class, 'connectFolder'])->name('projects.drive-folder');
+    Route::get('projects/{project}/drive-files', [GoogleDriveController::class, 'files'])->name('projects.drive-files');
+    Route::post('projects/{project}/drive-files', [GoogleDriveController::class, 'upload'])->name('projects.drive-files.upload');
 
     // Project Wiki Routes (nested resource)
     Route::apiResource('projects.wikis', ProjectWikiController::class);

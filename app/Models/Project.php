@@ -49,6 +49,9 @@ class Project extends Model implements Trackable
         'deadline',
         'ui_approved_at',
         'auto_approval_job_id',
+        'google_drive_folder_id',
+        'google_drive_folder_name',
+        'google_drive_folder_url',
         'created_by',
         'updated_by',
     ];

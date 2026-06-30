@@ -79,6 +79,9 @@ class ProjectResource extends JsonResource
                 });
             }),
             'files' => $this->whenLoaded('files', fn () => ProjectFileResource::collection($this->files)),
+            'googleDriveFolderId' => $this->google_drive_folder_id,
+            'googleDriveFolderName' => $this->google_drive_folder_name,
+            'googleDriveFolderUrl' => $this->google_drive_folder_url,
             'createdAt' => $this->created_at?->toISOString() ?? '',
             'updatedAt' => $this->updated_at?->toISOString() ?? '',
             'createdBy' => $this->created_by ?? 0,
