@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\V1\HR;
 
-use App\Enums\UserSpecialization;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -41,7 +40,6 @@ class EmployeeResource extends JsonResource
         $simplifiedMode = (bool) config('simplification.enabled');
         $canViewSalary = ! $simplifiedMode && $user && $user->can('view_employee_salary');
         $roleName = $employee->roles->pluck('name')->first() ?? '';
-        $specialization = $employee->specialization;
         $graceDaysAllowed = $employee->grace_days_allowed ?? 0;
         $graceDaysUsed = $employee->grace_days_used ?? 0;
 
@@ -52,7 +50,7 @@ class EmployeeResource extends JsonResource
             'avatar' => $employee->avatar,
             'isActive' => (bool) $employee->is_active,
             'role' => $roleName,
-            'specialization' => $specialization instanceof UserSpecialization ? $specialization->value : '',
+            'specialization' => $employee->specialization ?? '',
 
             // Work schedule
             'workHoursPerDay' => (int) ($employee->work_hours_per_day ?? 0),

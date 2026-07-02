@@ -3,7 +3,6 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Enums\UserSpecialization;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
@@ -27,7 +26,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $email_verified_at
  * @property string|null $avatar
  * @property array<int, string>|null $skills
- * @property UserSpecialization|null $specialization
+ * @property string|null $specialization
  * @property bool $is_active
  * @property float|int|string|null $salary
  * @property float|int|string|null $total_deductions
@@ -103,7 +102,7 @@ class User extends Authenticatable
             'salary' => 'decimal:2',
             'total_deductions' => 'decimal:2',
             'skills' => 'array',
-            'specialization' => UserSpecialization::class,
+            'specialization' => 'string',
             'is_active' => 'boolean',
             'is_employee' => 'boolean',
             'work_hours_per_day' => 'integer',

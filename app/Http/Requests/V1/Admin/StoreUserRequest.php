@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\V1\Admin;
 
-use App\Enums\UserSpecialization;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -24,7 +23,7 @@ class StoreUserRequest extends FormRequest
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'skills' => ['nullable', 'array'],
             'skills.*' => ['string', 'max:100'],
-            'specialization' => ['nullable', Rule::enum(UserSpecialization::class)],
+            'specialization' => ['nullable', Rule::exists('lookup_options', 'value')->where(fn ($query) => $query->where('type', 'specialization')->where('is_active', true))],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['string', 'exists:roles,name'],
             'isActive' => ['nullable', 'boolean'],

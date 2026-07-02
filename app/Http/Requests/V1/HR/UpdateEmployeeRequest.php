@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\V1\HR;
 
-use App\Enums\UserSpecialization;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -44,7 +43,7 @@ class UpdateEmployeeRequest extends FormRequest
             'email' => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($employeeId)],
             'password' => ['sometimes', 'string', 'min:8'],
             'role' => ['nullable', 'string', 'exists:roles,name'],
-            'specialization' => ['nullable', Rule::enum(UserSpecialization::class)],
+            'specialization' => ['nullable', Rule::exists('lookup_options', 'value')->where(fn ($query) => $query->where('type', 'specialization')->where('is_active', true))],
             'isActive' => ['sometimes', 'boolean'],
             'salary' => ['nullable', 'numeric', 'min:0'],
             'workHoursPerDay' => ['sometimes', 'integer', 'min:1', 'max:24'],

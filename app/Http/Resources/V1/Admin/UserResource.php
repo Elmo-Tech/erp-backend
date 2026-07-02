@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1\Admin;
 
+use App\Models\LookupOption;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -34,6 +35,9 @@ class UserResource extends JsonResource
     {
         /** @var User $user */
         $user = $this->resource;
+        $specialization = $user->specialization
+            ? LookupOption::ofType('specialization')->where('value', $user->specialization)->first()
+            : null;
 
         return [
             'userId' => $user->id,
@@ -41,9 +45,9 @@ class UserResource extends JsonResource
             'email' => $user->email ?? '',
             'emailVerifiedAt' => $user->email_verified_at?->toISOString(),
             'skills' => $user->skills ?? [],
-            'specialization' => $user->specialization?->value,
-            'specializationLabel' => $user->specialization?->label(),
-            'specializationColor' => $user->specialization?->color(),
+            'specialization' => $user->specialization,
+            'specializationLabel' => $specialization?->label ?? $user->specialization,
+            'specializationColor' => $specialization?->color,
             'roles' => $user->roles->pluck('name')->toArray(),
             'isActive' => $user->is_active,
             'graceDaysAllowed' => (int) ($user->grace_days_allowed ?? 2),

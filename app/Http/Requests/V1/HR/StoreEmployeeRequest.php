@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\V1\HR;
 
-use App\Enums\UserSpecialization;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -42,7 +41,7 @@ class StoreEmployeeRequest extends FormRequest
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
             'role' => ['nullable', 'string', 'exists:roles,name'],
-            'specialization' => ['nullable', Rule::enum(UserSpecialization::class)],
+            'specialization' => ['nullable', Rule::exists('lookup_options', 'value')->where(fn ($query) => $query->where('type', 'specialization')->where('is_active', true))],
             'isActive' => ['nullable', 'boolean'],
             'salary' => ['nullable', 'numeric', 'min:0'],
             'workHoursPerDay' => ['nullable', 'integer', 'min:1', 'max:24'],

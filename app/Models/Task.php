@@ -9,7 +9,9 @@ use App\Enums\TaskCategory;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
+use App\Enums\UserSpecialization;
 use App\Traits\HasCreatedUpdatedBy;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -55,7 +57,7 @@ class Task extends Model implements Trackable
     protected function casts(): array
     {
         return [
-            'status' => DynamicStatusCast::class . ':task_status',
+            'status' => DynamicStatusCast::class.':task_status',
             'type' => TaskType::class,
             'priority' => TaskPriority::class,
             'task_category' => TaskCategory::class,
@@ -315,7 +317,7 @@ class Task extends Model implements Trackable
     /**
      * Get the earliest possible start date based on dependencies
      */
-    public function getEarliestStartDate(): ?\Carbon\Carbon
+    public function getEarliestStartDate(): ?Carbon
     {
         $dates = $this->dependencies()
             ->get()
@@ -607,11 +609,7 @@ class Task extends Model implements Trackable
             return $query; // No filtering if no specialization set
         }
 
-        // Get compatible task categories for user's specialization
-        $compatibleCategories = TaskCategory::getCompatibleCategories($user->specialization);
-        $categoryValues = array_map(fn ($category) => $category->value, $compatibleCategories);
-
-        return $query->whereIn('task_category', $categoryValues);
+        return $query->whereIn('task_category', self::compatibleCategoryValues($user->specialization));
     }
 
     /**
@@ -627,11 +625,12 @@ class Task extends Model implements Trackable
             // OR tasks compatible with user's specialization
                 ->orWhere(function ($compatibleQuery) use ($user) {
                     if ($user->specialization) {
-                        $compatibleCategories = TaskCategory::getCompatibleCategories($user->specialization);
-                        $categoryValues = array_map(fn ($category) => $category->value, $compatibleCategories);
+                        $categoryValues = self::compatibleCategoryValues($user->specialization);
 
                         if (! empty($categoryValues)) {
                             $compatibleQuery->whereIn('task_category', $categoryValues);
+                        } else {
+                            $compatibleQuery->whereRaw('1 = 0');
                         }
                     }
                 })
@@ -646,5 +645,20 @@ class Task extends Model implements Trackable
     public function scopeByCategory($query, TaskCategory $category)
     {
         return $query->where('task_category', $category->value);
+    }
+
+    private static function compatibleCategoryValues(string $specialization): array
+    {
+        $option = LookupOption::ofType('specialization')->where('value', $specialization)->first();
+        if (is_array($option?->metadata['compatible_task_types'] ?? null)) {
+            return $option->metadata['compatible_task_types'];
+        }
+
+        $enum = UserSpecialization::tryFrom($specialization);
+        if (! $enum) {
+            return [];
+        }
+
+        return array_map(fn ($category) => $category->value, TaskCategory::getCompatibleCategories($enum));
     }
 }

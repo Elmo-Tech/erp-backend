@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('specialization', ['backend', 'frontend', 'fullstack', 'ui_ux', 'mobile', 'devops', 'qa'])
-                ->default('fullstack')
+            $table->string('specialization', 100)
+                ->nullable()
                 ->after('skills');
         });
     }

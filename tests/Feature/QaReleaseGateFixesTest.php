@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\LookupOption;
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\User;
 use App\Notifications\ChangeRequestSubmitted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -52,5 +54,26 @@ class QaReleaseGateFixesTest extends TestCase
             return $payload['project_id'] === $project->id
                 && str_contains($payload['url'], '/dashboard/projects/'.$project->id.'?tab=change-requests&changeRequest=');
         });
+    }
+
+    public function test_dynamic_specialization_filters_tasks_from_lookup_metadata(): void
+    {
+        LookupOption::create([
+            'type' => 'specialization',
+            'value' => 'backend_dev',
+            'label' => 'Backend Dev',
+            'metadata' => ['compatible_task_types' => ['backend']],
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $user = User::factory()->create(['specialization' => 'backend_dev']);
+        $backendTask = Task::factory()->create(['task_category' => 'backend']);
+        $frontendTask = Task::factory()->create(['task_category' => 'frontend']);
+
+        $taskIds = Task::query()->forUserSpecialization($user)->pluck('id')->all();
+
+        $this->assertContains($backendTask->id, $taskIds);
+        $this->assertNotContains($frontendTask->id, $taskIds);
     }
 }
