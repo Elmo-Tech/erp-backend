@@ -6,7 +6,9 @@ use App\Enums\ChangeRequestStatus;
 use App\Models\ChangeRequest;
 use App\Models\Project;
 use App\Models\User;
+use App\Notifications\ChangeRequestSubmitted;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Notification;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -40,7 +42,7 @@ class ChangeRequestService
      */
     public function createChangeRequest(Project $project, array $data, User $user): ChangeRequest
     {
-        return ChangeRequest::create([
+        $changeRequest = ChangeRequest::create([
             'cr_number' => ChangeRequest::generateCRNumber($project->id),
             'project_id' => $project->id,
             'requested_by' => $user->id,
@@ -55,6 +57,10 @@ class ChangeRequestService
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ]);
+
+        $this->notifyProjectReviewers($changeRequest, $user, 'created');
+
+        return $changeRequest->fresh(['project', 'requester']);
     }
 
     /**
@@ -86,7 +92,10 @@ class ChangeRequestService
             'updated_by' => $user->id,
         ]);
 
-        return $changeRequest->fresh();
+        $changeRequest = $changeRequest->fresh(['project', 'requester']);
+        $this->notifyProjectReviewers($changeRequest, $user, 'submitted');
+
+        return $changeRequest;
     }
 
     /**
@@ -160,5 +169,22 @@ class ChangeRequestService
                 ->whereIn('status', [ChangeRequestStatus::APPROVED, ChangeRequestStatus::IMPLEMENTED])
                 ->sum('estimated_hours'),
         ];
+    }
+
+    private function notifyProjectReviewers(ChangeRequest $changeRequest, User $actor, string $event): void
+    {
+        $changeRequest->loadMissing(['project.members.user', 'requester']);
+
+        $recipients = $changeRequest->project->members
+            ->pluck('user')
+            ->filter(fn ($user) => $user instanceof User && $user->id !== $actor->id)
+            ->unique('id')
+            ->values();
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        Notification::send($recipients, new ChangeRequestSubmitted($changeRequest, $actor->name, $actor->id, $event));
     }
 }

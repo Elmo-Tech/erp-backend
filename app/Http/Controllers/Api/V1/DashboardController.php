@@ -6,9 +6,12 @@ use App\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
-use App\Models\Client;
+use App\Models\ChangeRequest;
 use App\Models\Project;
+use App\Models\ProjectFile;
+use App\Models\ProjectHistory;
 use App\Models\Task;
+use App\Models\TaskActivity;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Carbon\Carbon;
@@ -253,7 +256,7 @@ class DashboardController extends Controller
                     'assignee' => $task->assignee?->name ?? 'Unassigned',
                     'project' => $task->project?->title ?? 'No Project',
                 ];
-        });
+            });
 
         $recentActivities = $this->getRecentActivitiesForTeam($teamMemberIds);
 
@@ -414,22 +417,22 @@ class DashboardController extends Controller
         $activities = collect();
 
         try {
-            $recentTasks = Task::with('assignee')
-                ->whereIn('assigned_to', $teamMemberIds)
+            $recentTaskActivities = TaskActivity::with(['user:id,name', 'task:id,title'])
+                ->whereIn('user_id', $teamMemberIds)
                 ->orderBy('updated_at', 'desc')
                 ->limit(5)
                 ->get()
-                ->map(function ($task) {
+                ->map(function ($activity) {
                     return [
-                        'activityId' => $task->id,
-                        'action' => 'Task updated: '.$task->title,
-                        'user' => $task->assignee?->name ?? 'System',
-                        'time' => $task->updated_at->diffForHumans(),
+                        'activityId' => $activity->id,
+                        'action' => $activity->description.($activity->task ? ': '.$activity->task->title : ''),
+                        'user' => $activity->user?->name ?? 'System',
+                        'time' => $activity->created_at->diffForHumans(),
                         'type' => 'task',
-                        'timestamp' => $task->updated_at,
+                        'timestamp' => $activity->created_at,
                     ];
                 });
-            $activities = $activities->merge($recentTasks);
+            $activities = $activities->merge($recentTaskActivities);
         } catch (\Exception $e) {
             Log::warning('Error fetching team activities: '.$e->getMessage());
         }
@@ -454,22 +457,22 @@ class DashboardController extends Controller
         $activities = collect();
 
         try {
-            // My recent tasks
-            $recentTasks = Task::where('assigned_to', $userId)
-                ->orderBy('updated_at', 'desc')
+            $recentTaskActivities = TaskActivity::with('task:id,title')
+                ->where('user_id', $userId)
+                ->orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get()
-                ->map(function ($task) {
+                ->map(function ($activity) {
                     return [
-                        'activityId' => $task->id,
-                        'action' => 'Task: '.$task->title,
+                        'activityId' => $activity->id,
+                        'action' => $activity->description.($activity->task ? ': '.$activity->task->title : ''),
                         'user' => 'You',
-                        'time' => $task->updated_at->diffForHumans(),
+                        'time' => $activity->created_at->diffForHumans(),
                         'type' => 'task',
-                        'timestamp' => $task->updated_at,
+                        'timestamp' => $activity->created_at,
                     ];
                 });
-            $activities = $activities->merge($recentTasks);
+            $activities = $activities->merge($recentTaskActivities);
 
             // My recent time entries
             $recentTimeEntries = TimeEntry::where('user_id', $userId)
@@ -535,55 +538,69 @@ class DashboardController extends Controller
         $activities = collect();
 
         try {
-            // Recent Tasks
-            $recentTasks = Task::with('assignee')
+            $recentTasks = TaskActivity::with(['user:id,name', 'task:id,title'])
                 ->orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get()
-                ->map(function ($task) {
+                ->map(function ($activity) {
                     return [
-                        'activityId' => $task->id,
-                        'action' => 'New task added: '.$task->title,
-                        'user' => $task->assignee?->name ?? 'System',
-                        'time' => $task->created_at->diffForHumans(),
+                        'activityId' => $activity->id,
+                        'action' => $activity->description.($activity->task ? ': '.$activity->task->title : ''),
+                        'user' => $activity->user?->name ?? 'System',
+                        'time' => $activity->created_at->diffForHumans(),
                         'type' => 'task',
-                        'timestamp' => $task->created_at,
+                        'timestamp' => $activity->created_at,
                     ];
                 });
             $activities = $activities->merge($recentTasks);
 
-            // Recent Projects
-            $recentProjectActivities = Project::withoutGlobalScopes()
-                ->orderBy('updated_at', 'desc')
+            $recentProjectActivities = ProjectHistory::with(['project:id,title', 'changedByUser:id,name'])
+                ->orderBy('created_at', 'desc')
                 ->limit(3)
                 ->get()
-                ->map(function ($project) {
+                ->map(function ($history) {
                     return [
-                        'activityId' => $project->id + 1000,
-                        'action' => 'Project updated: '.$project->title,
-                        'user' => 'System',
-                        'time' => $project->updated_at->diffForHumans(),
+                        'activityId' => $history->id + 100000,
+                        'action' => 'Project '.$history->field_name.' changed: '.$history->project?->title,
+                        'user' => $history->changedByUser?->name ?? 'System',
+                        'time' => $history->created_at->diffForHumans(),
                         'type' => 'project',
-                        'timestamp' => $project->updated_at,
+                        'timestamp' => $history->created_at,
                     ];
                 });
             $activities = $activities->merge($recentProjectActivities);
 
-            // Recent Clients
-            $recentClients = Client::orderBy('updated_at', 'desc')
+            $recentFiles = ProjectFile::with(['project:id,title', 'createdBy:id,name'])
+                ->orderBy('created_at', 'desc')
                 ->limit(3)
                 ->get()
-                ->map(function ($client) {
+                ->map(function ($file) {
                     return [
-                        'activityId' => $client->id + 2000,
-                        'action' => 'Client updated: '.$client->name,
-                        'user' => 'System',
-                        'time' => $client->updated_at->diffForHumans(),
-                        'type' => 'client',
-                        'timestamp' => $client->updated_at,
+                        'activityId' => $file->id + 200000,
+                        'action' => 'File added: '.$file->name,
+                        'user' => $file->createdBy?->name ?? 'System',
+                        'time' => $file->created_at->diffForHumans(),
+                        'type' => 'file',
+                        'timestamp' => $file->created_at,
                     ];
                 });
-            $activities = $activities->merge($recentClients);
+            $activities = $activities->merge($recentFiles);
+
+            $recentChangeRequests = ChangeRequest::with(['project:id,title', 'requester:id,name'])
+                ->orderBy('created_at', 'desc')
+                ->limit(3)
+                ->get()
+                ->map(function ($changeRequest) {
+                    return [
+                        'activityId' => $changeRequest->id + 300000,
+                        'action' => 'Change request: '.$changeRequest->title,
+                        'user' => $changeRequest->requester?->name ?? 'System',
+                        'time' => $changeRequest->created_at->diffForHumans(),
+                        'type' => 'change_request',
+                        'timestamp' => $changeRequest->created_at,
+                    ];
+                });
+            $activities = $activities->merge($recentChangeRequests);
         } catch (\Exception $e) {
             Log::warning('Error fetching recent activities: '.$e->getMessage());
         }

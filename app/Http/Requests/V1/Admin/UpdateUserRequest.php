@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\V1\Admin;
 
+use App\Enums\UserSpecialization;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -25,6 +26,7 @@ class UpdateUserRequest extends FormRequest
             'password' => ['sometimes', 'string', 'min:8', 'confirmed'],
             'skills' => ['nullable', 'array'],
             'skills.*' => ['string', 'max:100'],
+            'specialization' => ['nullable', Rule::enum(UserSpecialization::class)],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['string', 'exists:roles,name'],
             'isActive' => ['nullable', 'boolean'],

@@ -160,6 +160,11 @@ class ProjectObserver
             ->pluck('user')
             ->filter();
 
+        $clientUser = $project->loadMissing('client.user')->client?->user;
+        if ($clientUser) {
+            $teamMembers = $teamMembers->push($clientUser)->unique('id')->values();
+        }
+
         if ($teamMembers->isEmpty()) {
             return;
         }

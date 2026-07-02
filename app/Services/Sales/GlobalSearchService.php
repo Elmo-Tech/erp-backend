@@ -153,18 +153,17 @@ class GlobalSearchService
     private function searchProjects(string $query, int $limit): Collection
     {
         return Project::where(function ($q) use ($query) {
-            $q->where('name', 'like', "%{$query}%")
-                ->orWhere('code', 'like', "%{$query}%")
+            $q->where('title', 'like', "%{$query}%")
                 ->orWhereHas('client', fn ($cq) => $cq->where('name', 'like', "%{$query}%"));
         })
             ->with('client:id,name')
-            ->select('id', 'name', 'code', 'client_id', 'status', 'created_at')
+            ->select('id', 'title', 'client_id', 'status', 'created_at')
             ->limit($limit)
             ->get()
             ->map(fn ($project) => [
                 'id' => $project->id,
                 'type' => 'project',
-                'title' => $project->name ?? '',
+                'title' => $project->title ?? '',
                 'subtitle' => $project->client?->name ?? '',
                 'status' => $project->status?->value ?? null,
                 'url' => "/dashboard/projects/{$project->id}",

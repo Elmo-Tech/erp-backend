@@ -2,6 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ClientStatus;
+use App\Enums\UserSpecialization;
+use App\Models\Client;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
@@ -230,9 +233,59 @@ class AdminUserSeeder extends Seeder
 
         $admin->syncRoles(['admin']);
 
+        $this->seedQaAccount('QA Manager', 'manager@thetables.com', 'manager', [
+            'specialization' => UserSpecialization::FULLSTACK->value,
+        ]);
+
+        $this->seedQaAccount('QA Employee', 'employee@thetables.com', 'developer', [
+            'specialization' => UserSpecialization::QA->value,
+        ]);
+
+        $clientUser = $this->seedQaAccount('QA Client', 'client@thetables.com', 'client', [
+            'is_employee' => false,
+            'specialization' => UserSpecialization::FULLSTACK->value,
+        ]);
+
+        Client::updateOrCreate(
+            ['email' => $clientUser->email],
+            [
+                'name' => $clientUser->name,
+                'company' => 'The Tables QA Client',
+                'status' => ClientStatus::ACTIVE->value,
+                'user_id' => $clientUser->id,
+            ]
+        );
+
         $this->command->info('Admin user created successfully!');
         $this->command->info('Email: admin@thetables.com');
         $this->command->info('Password: set TABLES_ADMIN_PASSWORD per environment; defaults to local development password.');
+    }
+
+    private function seedQaAccount(string $name, string $email, string $role, array $extra = []): User
+    {
+        $user = User::firstOrNew(['email' => $email]);
+        $isNew = ! $user->exists;
+
+        $user->forceFill(array_merge([
+            'name' => $name,
+            'email_verified_at' => $user->email_verified_at ?? now(),
+            'is_active' => true,
+            'is_employee' => true,
+            'work_hours_per_day' => $user->work_hours_per_day ?? 8,
+            'work_start_time' => $user->work_start_time ?? '10:00:00',
+            'grace_days_allowed' => $user->grace_days_allowed ?? 5,
+            'grace_days_used' => $user->grace_days_used ?? 0,
+        ], $extra));
+
+        $envKey = 'TABLES_'.strtoupper(str_replace('-', '_', $role)).'_PASSWORD';
+        if ($isNew || env($envKey)) {
+            $user->password = env($envKey, 'password');
+        }
+
+        $user->save();
+        $user->syncRoles([$role]);
+
+        return $user;
     }
 
     public static function existingPermissions(array $permissions)

@@ -53,6 +53,7 @@ class UserService
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'skills' => $data['skills'] ?? [],
+            'specialization' => $data['specialization'] ?? null,
             'is_active' => $data['isActive'] ?? true,
         ]);
 
@@ -86,6 +87,7 @@ class UserService
             'name' => $user->name,
             'email' => $user->email,
             'skills' => $user->skills,
+            'specialization' => $user->specialization,
             'roles' => $user->roles->pluck('name')->toArray(),
             'is_active' => $user->is_active,
         ];
@@ -105,6 +107,10 @@ class UserService
 
         if (array_key_exists('skills', $data)) {
             $user->skills = $data['skills'];
+        }
+
+        if (array_key_exists('specialization', $data)) {
+            $user->specialization = $data['specialization'];
         }
 
         if (isset($data['isActive'])) {
@@ -128,6 +134,7 @@ class UserService
                     'name' => $user->name,
                     'email' => $user->email,
                     'skills' => $user->skills,
+                    'specialization' => $user->specialization,
                     'roles' => $user->roles->pluck('name')->toArray(),
                     'is_active' => $user->is_active,
                 ],

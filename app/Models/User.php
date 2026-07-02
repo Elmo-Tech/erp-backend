@@ -4,7 +4,9 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserSpecialization;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,13 +17,14 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property int $id
  * @property string|null $name
  * @property string|null $email
- * @property \Illuminate\Support\Carbon|null $email_verified_at
+ * @property Carbon|null $email_verified_at
  * @property string|null $avatar
  * @property array<int, string>|null $skills
  * @property UserSpecialization|null $specialization
@@ -39,11 +42,11 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $expected_clock_out
  * @property-read Client|null $client
  * @property-read Client|null $clientProfile
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \Spatie\Permission\Models\Role> $roles
+ * @property-read Collection<int, Role> $roles
  */
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
@@ -100,7 +103,7 @@ class User extends Authenticatable
             'salary' => 'decimal:2',
             'total_deductions' => 'decimal:2',
             'skills' => 'array',
-            'specialization' => 'string',
+            'specialization' => UserSpecialization::class,
             'is_active' => 'boolean',
             'is_employee' => 'boolean',
             'work_hours_per_day' => 'integer',

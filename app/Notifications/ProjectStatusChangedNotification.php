@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\Project;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -31,7 +32,7 @@ class ProjectStatusChangedNotification extends Notification implements ShouldQue
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        return ['database', 'broadcast', 'mail'];
     }
 
     /**
@@ -62,15 +63,20 @@ class ProjectStatusChangedNotification extends Notification implements ShouldQue
     {
         return [
             'type' => 'project_status_changed',
-            'projectId' => $this->project->id,
-            'projectTitle' => $this->project->title,
-            'oldStatus' => $this->oldStatus,
-            'newStatus' => $this->newStatus,
+            'project_id' => $this->project->id,
+            'project_title' => $this->project->title,
+            'old_status' => $this->oldStatus,
+            'new_status' => $this->newStatus,
             'message' => __('notifications.project_status_changed_short', [
                 'project' => $this->project->title,
                 'status' => $this->getStatusLabel($this->newStatus),
             ]),
         ];
+    }
+
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage($this->toArray($notifiable));
     }
 
     /**
