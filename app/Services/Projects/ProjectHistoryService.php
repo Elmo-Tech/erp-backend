@@ -4,7 +4,7 @@ namespace App\Services\Projects;
 
 use App\Models\Project;
 use App\Models\ProjectHistory;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 class ProjectHistoryService
@@ -83,6 +83,86 @@ class ProjectHistoryService
             $query->where('field_name', $fieldFilter);
         }
 
-        return $query->get();
+        return $query->get()
+            ->merge($this->currentActivityHistory($project, $fieldFilter))
+            ->sortByDesc('created_at')
+            ->values();
+    }
+
+    private function currentActivityHistory(Project $project, ?string $fieldFilter = null): Collection
+    {
+        $project->loadMissing(['members.user', 'files.createdBy', 'updatedBy']);
+
+        return collect()
+            ->merge($this->memberHistory($project))
+            ->merge($this->fileHistory($project))
+            ->merge($this->driveHistory($project))
+            ->when($fieldFilter !== null, fn ($items) => $items->where('field_name', $fieldFilter)->values());
+    }
+
+    private function memberHistory(Project $project): Collection
+    {
+        return $project->members->map(function ($member) use ($project) {
+            return $this->syntheticHistory(
+                id: 400000 + $member->id,
+                project: $project,
+                field: 'team_member',
+                value: trim(($member->user?->name ?? 'Unknown user').' ('.$member->role.')'),
+                createdAt: $member->created_at,
+            );
+        });
+    }
+
+    private function fileHistory(Project $project): Collection
+    {
+        return $project->files->map(function ($file) use ($project) {
+            return $this->syntheticHistory(
+                id: 500000 + $file->id,
+                project: $project,
+                field: 'project_file',
+                value: $file->name,
+                createdAt: $file->created_at,
+                changedBy: $file->created_by,
+                changedByUser: $file->createdBy,
+            );
+        });
+    }
+
+    private function driveHistory(Project $project): Collection
+    {
+        if (! $project->google_drive_folder_id) {
+            return collect();
+        }
+
+        return collect([
+            $this->syntheticHistory(
+                id: 600000 + $project->id,
+                project: $project,
+                field: 'google_drive_folder',
+                value: $project->google_drive_folder_name ?? $project->google_drive_folder_id,
+                createdAt: $project->updated_at,
+                changedBy: $project->updated_by,
+                changedByUser: $project->updatedBy,
+            ),
+        ]);
+    }
+
+    private function syntheticHistory(int $id, Project $project, string $field, string $value, mixed $createdAt, ?int $changedBy = null, mixed $changedByUser = null): ProjectHistory
+    {
+        $history = new ProjectHistory([
+            'project_id' => $project->id,
+            'field_name' => $field,
+            'old_value' => null,
+            'new_value' => $value,
+            'changed_by' => $changedBy,
+        ]);
+        $history->id = $id;
+        $history->created_at = $createdAt;
+        $history->updated_at = $createdAt;
+        if ($changedByUser) {
+            $history->setRelation('changedByUser', $changedByUser);
+        }
+
+        return $history;
     }
 }
