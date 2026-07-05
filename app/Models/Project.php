@@ -34,6 +34,13 @@ class Project extends Model implements Trackable
     use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
 
     /**
+     * Fields whose history was recorded before saving this model instance.
+     *
+     * @var array<int, string>
+     */
+    public array $skipHistoryFields = [];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

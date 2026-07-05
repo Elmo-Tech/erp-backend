@@ -561,7 +561,7 @@ class DashboardController extends Controller
                 ->map(function ($history) {
                     return [
                         'activityId' => $history->id + 100000,
-                        'action' => 'Project '.$history->field_name.' changed: '.$history->project?->title,
+                        'action' => $this->formatProjectHistoryActivity($history),
                         'user' => $history->changedByUser?->name ?? 'System',
                         'time' => $history->created_at->diffForHumans(),
                         'type' => 'project',
@@ -616,5 +616,21 @@ class DashboardController extends Controller
             })
             ->values()
             ->toArray();
+    }
+
+    private function formatProjectHistoryActivity(ProjectHistory $history): string
+    {
+        $projectTitle = $history->project?->title ?? 'Unknown project';
+        $fieldLabel = ucfirst(str_replace('_', ' ', $history->field_name));
+
+        if ($history->old_value !== null && $history->new_value !== null) {
+            return "{$fieldLabel} changed from {$history->old_value} to {$history->new_value}: {$projectTitle}";
+        }
+
+        if ($history->new_value !== null) {
+            return "{$fieldLabel} updated to {$history->new_value}: {$projectTitle}";
+        }
+
+        return "{$fieldLabel} updated: {$projectTitle}";
     }
 }

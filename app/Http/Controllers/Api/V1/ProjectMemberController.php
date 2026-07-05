@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\Project\ProjectMemberResource;
 use App\Models\Project;
 use App\Models\ProjectMember;
+use App\Notifications\UserAddedToProject;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -48,6 +49,12 @@ class ProjectMemberController extends Controller
         ]);
 
         $member->load('user:id,name,email,avatar');
+        $member->user?->notify(new UserAddedToProject(
+            $project->loadMissing('client'),
+            $request->user()?->name ?? 'System',
+            $request->user()?->id,
+            $member->role
+        ));
 
         return ApiResponse::success(
             new ProjectMemberResource($member),

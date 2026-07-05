@@ -307,6 +307,7 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('projects.wikis', ProjectWikiController::class);
 
     // Project Files Routes
+    Route::post('projects/{project}/files/{file}/replace', [ProjectFileController::class, 'replace'])->name('projects.files.replace');
     Route::apiResource('projects.files', ProjectFileController::class);
 
     // Project Members Routes

@@ -485,6 +485,10 @@ class ProjectController extends Controller
 
             // Update project
             if (! empty($updateData)) {
+                $project->skipHistoryFields = array_values(array_intersect(
+                    ['budget', 'deadline'],
+                    array_keys($updateData)
+                ));
                 $project->update($updateData);
             }
 
@@ -998,6 +1002,7 @@ class ProjectController extends Controller
             }
 
             // Update project status
+            $projectModel->skipHistoryFields = ['status'];
             $projectModel->update([
                 'status' => $newStatus,
                 'previous_status' => $oldStatus,

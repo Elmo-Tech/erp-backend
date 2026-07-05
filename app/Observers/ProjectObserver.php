@@ -110,12 +110,14 @@ class ProjectObserver
                 ? $newStatus->value
                 : (string) $newStatus;
 
-            $this->historyService->recordChange(
-                $project,
-                'status',
-                $oldStatusValue,
-                $newStatusValue
-            );
+            if (! in_array('status', $project->skipHistoryFields, true)) {
+                $this->historyService->recordChange(
+                    $project,
+                    'status',
+                    $oldStatusValue,
+                    $newStatusValue
+                );
+            }
 
             // Notify team members about status change
             $this->notifyTeamAboutStatusChange($project, $oldStatusValue, $newStatusValue);
@@ -126,19 +128,21 @@ class ProjectObserver
 
         // Record deadline changes
         if ($project->wasChanged('deadline')) {
-            $this->historyService->recordChange(
-                $project,
-                'deadline',
-                $project->getOriginal('deadline')?->format('Y-m-d'),
-                $project->deadline?->format('Y-m-d')
-            );
+            if (! in_array('deadline', $project->skipHistoryFields, true)) {
+                $this->historyService->recordChange(
+                    $project,
+                    'deadline',
+                    $project->getOriginal('deadline')?->format('Y-m-d'),
+                    $project->deadline?->format('Y-m-d')
+                );
+            }
 
             // Check if deadline is approaching (within 7 days)
             $this->checkDeadlineApproaching($project);
         }
 
         // Record budget changes
-        if ($project->wasChanged('budget')) {
+        if ($project->wasChanged('budget') && ! in_array('budget', $project->skipHistoryFields, true)) {
             $this->historyService->recordChange(
                 $project,
                 'budget',

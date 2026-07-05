@@ -7,14 +7,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\Project\ProjectFileResource;
 use App\Models\Project;
 use App\Models\ProjectFile;
+use App\Services\Projects\ProjectHistoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ProjectFileController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private ProjectHistoryService $historyService
+    ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
 
@@ -131,6 +133,54 @@ class ProjectFileController extends Controller
         return ApiResponse::success(
             new ProjectFileResource($file),
             'File updated successfully'
+        );
+    }
+
+    public function replace(Request $request, Project $project, ProjectFile $file): JsonResponse
+    {
+        if ($file->project_id !== $project->id) {
+            return ApiResponse::error('File not found', 404);
+        }
+
+        if (! $this->canManageFiles($request, $project)) {
+            return ApiResponse::error(__('messages.unauthorized'), 403);
+        }
+
+        if ($file->type !== 'file') {
+            return ApiResponse::error('Only uploaded files can be replaced', 422);
+        }
+
+        $request->validate([
+            'file' => 'required|file|max:51200',
+        ]);
+
+        $oldName = $file->name;
+        $uploadedFile = $request->file('file');
+
+        if ($file->file_path && Storage::disk('public')->exists($file->file_path)) {
+            Storage::disk('public')->delete($file->file_path);
+        }
+
+        $path = $uploadedFile->store("projects/{$project->id}/files", 'public');
+
+        $file->update([
+            'name' => $uploadedFile->getClientOriginalName(),
+            'file_path' => $path,
+            'mime_type' => $uploadedFile->getMimeType(),
+            'size' => $uploadedFile->getSize(),
+        ]);
+
+        $this->historyService->recordChange(
+            $project,
+            'project_file',
+            $oldName,
+            $file->name,
+            'File replaced'
+        );
+
+        return ApiResponse::success(
+            new ProjectFileResource($file->fresh()),
+            'File replaced successfully'
         );
     }
 
