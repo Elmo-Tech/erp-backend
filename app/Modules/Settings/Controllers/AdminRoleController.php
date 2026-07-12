@@ -907,6 +907,10 @@ class AdminRoleController extends Controller
             'assign_tasks' => 'Task Management',
             'view_internal_notes' => 'Task Management',
             'work_on_tasks' => 'Task Management',
+            'manage_deliverables' => 'Task Deliverables',
+            'create_project_task_deliverables' => 'Task Deliverables',
+            'edit_project_task_deliverables' => 'Task Deliverables',
+            'delete_project_task_deliverables' => 'Task Deliverables',
 
             // ── Sales — Leads ────────────────────────────────────────────────
             'manage_leads' => 'Sales — Leads',
@@ -1086,6 +1090,10 @@ class AdminRoleController extends Controller
             'assign_tasks' => 'Assign tasks to team members',
             'view_internal_notes' => 'View internal (private) task notes',
             'work_on_tasks' => 'Work on and update assigned tasks',
+            'manage_deliverables' => 'Full task deliverable management',
+            'create_project_task_deliverables' => 'Create task deliverables',
+            'edit_project_task_deliverables' => 'Edit task deliverables',
+            'delete_project_task_deliverables' => 'Delete task deliverables',
 
             // ── Sales — Leads ────────────────────────────────────────────────
             'manage_leads' => 'Full lead management capabilities',

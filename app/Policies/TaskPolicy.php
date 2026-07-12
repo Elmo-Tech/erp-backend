@@ -21,8 +21,8 @@ use Illuminate\Auth\Access\HandlesAuthorization;
  * Permission matrix:
  *   manage_all_projects  → unrestricted access to every action.
  *   manage_tasks         → can create, edit, delete tasks in any visible project.
- *   create_tasks         → can create tasks if project manager/tech_lead OR manage_all_projects.
- *   edit_tasks           → can edit tasks if project manager/tech_lead OR manage_all_projects.
+ *   create_tasks         → can create tasks in any visible project.
+ *   edit_tasks           → can edit task metadata in any visible project.
  *   work_on_tasks        → can update status/deliverables on tasks where assignee_id === user.id.
  *   delete_tasks         → can delete tasks if project manager/tech_lead OR manage_all_projects.
  *   manage_deliverables  → can add/edit/delete deliverables on any task.
@@ -52,8 +52,7 @@ class TaskPolicy
     //
     // Rules:
     //   1. manage_all_projects OR manage_tasks → always allowed.
-    //   2. create_tasks + project membership role of manager/tech_lead → allowed.
-    //   3. Everyone else (developers, QA, designers) → DENIED.
+    //   2. create_tasks → allowed after the parent project visibility check.
     // ─────────────────────────────────────────────────────────────────────────
     public function create(User $user, Project $project): bool
     {
@@ -61,11 +60,7 @@ class TaskPolicy
             return true;
         }
 
-        if (! $user->can('create_tasks')) {
-            return false;
-        }
-
-        return $this->isProjectManager($user, $project);
+        return $user->can('create_tasks');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -73,7 +68,7 @@ class TaskPolicy
     //
     // STRICT RULES:
     //   1. manage_all_projects OR manage_tasks → always allowed.
-    //   2. edit_tasks + project membership role of manager/tech_lead → allowed.
+    //   2. edit_tasks → allowed after the parent project visibility check.
     //   3. work_on_tasks + task.assignee_id === user.id → allowed (own task only).
     //   4. Everyone else → DENIED.
     //
@@ -85,9 +80,7 @@ class TaskPolicy
             return true;
         }
 
-        $project = $task->project;
-
-        if ($user->can('edit_tasks') && $this->isProjectManager($user, $project)) {
+        if ($user->can('edit_tasks')) {
             return true;
         }
 

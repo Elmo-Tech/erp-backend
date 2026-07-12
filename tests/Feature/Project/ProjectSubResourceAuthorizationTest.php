@@ -6,6 +6,7 @@ use App\Enums\ProjectRole;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
+use App\Modules\Project\Models\ProjectTaskDeliverable;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -60,6 +61,112 @@ class ProjectSubResourceAuthorizationTest extends TestCase
         ]);
     }
 
+    public function test_project_task_store_allows_visible_project_member_with_create_permission(): void
+    {
+        $project = Project::factory()->create();
+        $developer = $this->userWithPermissions(['create_tasks', 'view_projects']);
+
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $developer->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
+
+        $this->actingAs($developer, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/tasks", [
+                'title' => 'Developer-created task',
+            ])
+            ->assertCreated();
+    }
+
+    public function test_project_task_update_allows_visible_project_member_with_edit_permission(): void
+    {
+        $project = Project::factory()->create();
+        $task = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Original task',
+            'status' => 'to_do',
+        ]);
+        $developer = $this->userWithPermissions(['edit_tasks', 'view_projects']);
+
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $developer->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
+
+        $this->actingAs($developer, 'sanctum')
+            ->patchJson("/api/v1/projects/{$project->id}/tasks/{$task->id}", [
+                'title' => 'Updated task',
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('project_tasks', [
+            'id' => $task->id,
+            'title' => 'Updated task',
+        ]);
+    }
+
+    public function test_task_deliverable_store_allows_granular_create_permission(): void
+    {
+        [$project, $task, $developer] = $this->taskForMemberWithPermissions([
+            'view_projects',
+            'create_project_task_deliverables',
+        ]);
+
+        $this->actingAs($developer, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/deliverables", [
+                'title' => 'Release checklist',
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('project_task_deliverables', [
+            'task_id' => $task->id,
+            'title' => 'Release checklist',
+        ]);
+    }
+
+    public function test_task_deliverable_store_requires_access_to_parent_project(): void
+    {
+        $project = Project::factory()->create();
+        $task = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Protected task',
+            'status' => 'to_do',
+        ]);
+        $outsider = $this->userWithPermissions(['create_project_task_deliverables']);
+
+        $this->actingAs($outsider, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/deliverables", [
+                'title' => 'Unauthorized deliverable',
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_task_deliverable_update_allows_granular_edit_permission(): void
+    {
+        [$project, $task, $developer] = $this->taskForMemberWithPermissions([
+            'view_projects',
+            'edit_project_task_deliverables',
+        ]);
+        $deliverable = ProjectTaskDeliverable::create([
+            'task_id' => $task->id,
+            'title' => 'Old title',
+            'is_completed' => false,
+        ]);
+
+        $this->actingAs($developer, 'sanctum')
+            ->patchJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/deliverables/{$deliverable->id}", [
+                'title' => 'Updated title',
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('project_task_deliverables', [
+            'id' => $deliverable->id,
+            'title' => 'Updated title',
+        ]);
+    }
+
     public function test_project_task_update_requires_access_to_parent_project_before_task_policy(): void
     {
         $project = Project::factory()->create();
@@ -91,5 +198,28 @@ class ProjectSubResourceAuthorizationTest extends TestCase
         $user->givePermissionTo($permissions);
 
         return $user;
+    }
+
+    /**
+     * @param  array<int, string>  $permissions
+     * @return array{Project, ProjectTask, User}
+     */
+    private function taskForMemberWithPermissions(array $permissions): array
+    {
+        $project = Project::factory()->create();
+        $task = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Task with deliverables',
+            'status' => 'to_do',
+        ]);
+        $member = $this->userWithPermissions($permissions);
+
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $member->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
+
+        return [$project, $task, $member];
     }
 }

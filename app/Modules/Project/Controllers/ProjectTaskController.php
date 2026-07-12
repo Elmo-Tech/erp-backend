@@ -10,12 +10,12 @@ use App\Modules\Notification\Notifications\ProjectTaskAssignedNotification;
 use App\Modules\Project\Actions\CompleteProjectTaskAction;
 use App\Modules\Project\Actions\ProjectHistoryAction;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
-use App\Modules\Settings\Models\User;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Requests\StoreProjectTaskRequest;
 use App\Modules\Project\Requests\UpdateProjectTaskRequest;
 use App\Modules\Project\Resources\ProjectTaskResource;
+use App\Modules\Settings\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
@@ -149,7 +149,7 @@ class ProjectTaskController extends Controller
     /**
      * POST /projects/{project}/tasks
      *
-     * SECURITY: Only project managers/tech leads or global admins may create tasks.
+     * SECURITY: Requires create_tasks or a task-management override in a visible project.
      */
     public function store(StoreProjectTaskRequest $request, Project $project): JsonResponse
     {
@@ -233,7 +233,7 @@ class ProjectTaskController extends Controller
         $data = $request->validated();
         $user = $request->user();
 
-        if ($this->containsMetadataUpdate($data) && ! $this->canEditTaskMetadata($user, $project)) {
+        if ($this->containsMetadataUpdate($data) && ! $this->canEditTaskMetadata($user)) {
             return ApiResponse::error(
                 'You do not have permission to edit task details.',
                 403
@@ -433,24 +433,10 @@ class ProjectTaskController extends Controller
         return array_intersect_key($data, $metadataFields) !== [];
     }
 
-    private function canEditTaskMetadata(User $user, Project $project): bool
+    private function canEditTaskMetadata(User $user): bool
     {
-        if ($user->can('manage_all_projects') || $user->can('manage_tasks')) {
-            return true;
-        }
-
-        if (! $user->can('edit_tasks')) {
-            return false;
-        }
-
-        $member = $project->members()->where('user_id', $user->id)->first();
-        $projectRole = $member?->role instanceof ProjectRole
-            ? $member->role->value
-            : (string) ($member?->role ?? '');
-
-        return in_array($projectRole, [
-            ProjectRole::MANAGER->value,
-            ProjectRole::TECH_LEAD->value,
-        ], true);
+        return $user->can('manage_all_projects')
+            || $user->can('manage_tasks')
+            || $user->can('edit_tasks');
     }
 }

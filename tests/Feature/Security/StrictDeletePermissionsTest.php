@@ -111,7 +111,12 @@ class StrictDeletePermissionsTest extends TestCase
             ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/deliverables/{$deliverable->id}")
             ->assertForbidden();
 
-        $allowedUser = $this->userWithPermissions(['manage_tasks', 'delete_project_task_deliverables']);
+        $allowedUser = $this->userWithPermissions(['view_projects', 'delete_project_task_deliverables']);
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $allowedUser->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
 
         $this->actingAs($allowedUser, 'sanctum')
             ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/deliverables/{$deliverable->id}")

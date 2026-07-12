@@ -2,7 +2,6 @@
 
 namespace App\Modules\Project\Controllers;
 
-use App\Enums\ProjectRole;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Project\Actions\ProjectHistoryAction;
@@ -25,18 +24,14 @@ class ProjectTaskDeliverableController extends Controller
     /**
      * POST /projects/{project}/tasks/{task}/deliverables
      *
-     * SECURITY: STRICTLY enforces manage_deliverables permission.
-     * Only users with manage_deliverables OR manage_all_projects may add
-     * deliverables. Developers and QA are execution-only.
+     * SECURITY: Requires the granular create permission or a management override.
      */
     public function store(StoreTaskDeliverableRequest $request, Project $project, ProjectTask $task): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertTaskBelongsToProject($task, $project);
 
-        // ── PBAC: Deliverable creation guard ─────────────────────────────────
-        $user = $request->user();
-
-        if (! $this->canManageDeliverables($user, $project)) {
+        if (! $this->canCreateDeliverables($request->user())) {
             return ApiResponse::error(
                 'You do not have permission to add deliverables.',
                 403
@@ -70,10 +65,11 @@ class ProjectTaskDeliverableController extends Controller
      */
     public function update(StoreTaskDeliverableRequest $request, Project $project, ProjectTask $task, ProjectTaskDeliverable $deliverable): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertTaskBelongsToProject($task, $project);
         $this->assertDeliverableBelongsToTask($deliverable, $task);
 
-        if (! $this->canManageDeliverables($request->user(), $project)) {
+        if (! $this->canEditDeliverables($request->user())) {
             return ApiResponse::error(
                 'You do not have permission to edit deliverables.',
                 403
@@ -130,13 +126,14 @@ class ProjectTaskDeliverableController extends Controller
     /**
      * DELETE /projects/{project}/tasks/{task}/deliverables/{deliverable}
      *
-     * SECURITY: Requires manage_deliverables OR manage_all_projects.
+     * SECURITY: Requires the granular delete permission or a management override.
      */
     public function destroy(Project $project, ProjectTask $task, ProjectTaskDeliverable $deliverable): JsonResponse
     {
+        $this->authorize('view', $project);
         $user = request()->user();
 
-        if (! $user?->can('delete_project_task_deliverables') && ! $this->canManageDeliverables($user, $project)) {
+        if (! $this->canDeleteDeliverables($user)) {
             return ApiResponse::error(
                 'You do not have permission to delete deliverables.',
                 403
@@ -167,26 +164,29 @@ class ProjectTaskDeliverableController extends Controller
         }
     }
 
-    private function canManageDeliverables(?User $user, Project $project): bool
+    private function canCreateDeliverables(?User $user): bool
+    {
+        return $this->hasDeliverablePermission($user, 'create_project_task_deliverables');
+    }
+
+    private function canEditDeliverables(?User $user): bool
+    {
+        return $this->hasDeliverablePermission($user, 'edit_project_task_deliverables');
+    }
+
+    private function canDeleteDeliverables(?User $user): bool
+    {
+        return $this->hasDeliverablePermission($user, 'delete_project_task_deliverables');
+    }
+
+    private function hasDeliverablePermission(?User $user, string $permission): bool
     {
         if ($user === null) {
             return false;
         }
 
-        if ($user->can('manage_all_projects') || $user->can('manage_deliverables')) {
-            return true;
-        }
-
-        if (! $user->can('edit_tasks') && ! $user->can('manage_tasks')) {
-            return false;
-        }
-
-        $member = $project->members()->where('user_id', $user->id)->first();
-        $role = $member?->role instanceof ProjectRole ? $member->role->value : (string) ($member?->role ?? '');
-
-        return in_array($role, [
-            ProjectRole::MANAGER->value,
-            ProjectRole::TECH_LEAD->value,
-        ], true);
+        return $user->can('manage_all_projects')
+            || $user->can('manage_deliverables')
+            || $user->can($permission);
     }
 }

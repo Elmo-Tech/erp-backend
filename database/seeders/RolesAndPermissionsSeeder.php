@@ -69,7 +69,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'add_deliverables',
             'complete_task',
             'edit_task_status',
-            'delete_project_task_deliverables',
             'manage_task_test_scenarios',
             'view_test_scenarios',
             'create_test_scenarios',
@@ -122,6 +121,9 @@ class RolesAndPermissionsSeeder extends Seeder
             // manage_deliverables: STRICTLY for users allowed to define what
             //   deliverables are required on a task. Developers/QA are excluded.
             'manage_deliverables',
+            'create_project_task_deliverables',
+            'edit_project_task_deliverables',
+            'delete_project_task_deliverables',
 
             // ── Dashboard ────────────────────────────────────────────────────
             'view_my_workspace',
