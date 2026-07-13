@@ -7,9 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\HR\Resources\AttendanceResource;
 use App\Modules\HR\Services\AttendanceService;
+use App\Modules\Settings\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AttendanceController extends Controller
 {
@@ -27,24 +31,12 @@ class AttendanceController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $user  = $request->user();
+        $user = $request->user();
         $query = Attendance::with('user:id,name,avatar');
 
-        if ($user->can('manage_attendance')) {
-            // Admin view — optional filters
-            if ($request->filled('user_id')) {
-                $query->where('user_id', $request->integer('user_id'));
-            }
-
-            if ($request->filled('from')) {
-                $query->whereDate('date', '>=', $request->input('from'));
-            }
-
-            if ($request->filled('to')) {
-                $query->whereDate('date', '<=', $request->input('to'));
-            }
+        if ($this->canViewAllAttendance($user)) {
+            $this->applyAttendanceFilters($query, $this->attendanceFilters($request));
         } else {
-            // Employee view — own records only
             $query->where('user_id', $user->id);
         }
 
@@ -89,7 +81,7 @@ class AttendanceController extends Controller
             'to' => ['sometimes', 'date', 'after_or_equal:from'],
         ]);
 
-        $targetUserId = $user->can('manage_attendance') && isset($validated['user_id'])
+        $targetUserId = $this->canViewAllAttendance($user) && isset($validated['user_id'])
             ? (int) $validated['user_id']
             : $user->id;
 
@@ -176,11 +168,11 @@ class AttendanceController extends Controller
             return ApiResponse::error('You have already checked out today.', 422);
         }
 
-        $now          = Carbon::now();
+        $now = Carbon::now();
         $workedMinutes = (int) $attendance->clock_in->diffInMinutes($now);
 
         $attendance->update([
-            'clock_out'            => $now,
+            'clock_out' => $now,
             'total_worked_minutes' => $workedMinutes,
         ]);
 
@@ -206,32 +198,121 @@ class AttendanceController extends Controller
 
         $validated = $request->validate([
             'status' => ['sometimes', 'in:present,absent,late,excused'],
-            'notes'  => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'lateTreatment' => ['sometimes', 'string', 'in:deduct,grace,excused'],
         ]);
 
-        if (($validated['lateTreatment'] ?? null) === 'grace') {
-            $validated['used_grace_day'] = true;
-            $validated['deduction_minutes'] = 0;
-            unset($validated['lateTreatment']);
-        }
+        $treatment = $validated['lateTreatment'] ?? null;
+        unset($validated['lateTreatment']);
 
-        if (($validated['lateTreatment'] ?? null) === 'excused') {
-            $validated['status'] = 'excused';
-            $validated['used_grace_day'] = false;
-            $validated['deduction_minutes'] = 0;
-            unset($validated['lateTreatment']);
-        }
+        DB::transaction(function () use ($attendance, $treatment, $validated): void {
+            if ($treatment !== null) {
+                $this->applyLateTreatment($attendance, $attendance->user, $treatment, $validated);
 
-        if (($validated['lateTreatment'] ?? null) === 'deduct') {
-            unset($validated['lateTreatment']);
-        }
+                return;
+            }
 
-        $attendance->update($validated);
+            $this->applyAttendanceUpdates($attendance, $validated);
+        });
 
         return ApiResponse::success(
             new AttendanceResource($attendance->fresh('user')),
             'Attendance record updated successfully'
         );
+    }
+
+    private function applyLateTreatment(Attendance $attendance, User $user, string $treatment, array $updates): void
+    {
+        if ($treatment !== 'excused' && (int) $attendance->late_minutes <= 0) {
+            throw ValidationException::withMessages([
+                'lateTreatment' => 'Late treatment requires a late attendance record.',
+            ]);
+        }
+
+        if ($treatment === 'grace') {
+            $this->applyGraceTreatment($attendance, $user, $updates);
+
+            return;
+        }
+
+        $this->restoreGraceDayIfNeeded($attendance, $user);
+        $attendance->update(array_merge($updates, $this->treatmentUpdates($attendance, $treatment)));
+    }
+
+    private function applyGraceTreatment(Attendance $attendance, User $user, array $updates): void
+    {
+        if (! $attendance->used_grace_day && ! $user->useGraceDay()) {
+            throw ValidationException::withMessages([
+                'lateTreatment' => 'This employee has no grace days remaining.',
+            ]);
+        }
+
+        $attendance->update(array_merge($updates, [
+            'status' => 'late',
+            'used_grace_day' => true,
+            'deduction_minutes' => 0,
+        ]));
+    }
+
+    private function treatmentUpdates(Attendance $attendance, string $treatment): array
+    {
+        if ($treatment === 'excused') {
+            return [
+                'status' => 'excused',
+                'used_grace_day' => false,
+                'deduction_minutes' => 0,
+            ];
+        }
+
+        return [
+            'status' => 'late',
+            'used_grace_day' => false,
+            'deduction_minutes' => $attendance->calculateLateDeductionMinutes(),
+        ];
+    }
+
+    private function applyAttendanceUpdates(Attendance $attendance, array $updates): void
+    {
+        $movesAwayFromLate = isset($updates['status']) && $updates['status'] !== 'late';
+
+        if ($movesAwayFromLate) {
+            $this->restoreGraceDayIfNeeded($attendance, $attendance->user);
+            $updates['used_grace_day'] = false;
+            $updates['deduction_minutes'] = 0;
+        }
+
+        $attendance->update($updates);
+    }
+
+    private function restoreGraceDayIfNeeded(Attendance $attendance, User $user): void
+    {
+        if ($attendance->used_grace_day) {
+            $user->restoreGraceDay();
+        }
+    }
+
+    private function canViewAllAttendance(User $user): bool
+    {
+        return $user->can('manage_attendance') || $user->can('view_all_attendance');
+    }
+
+    private function attendanceFilters(Request $request): array
+    {
+        return $request->validate([
+            'user_id' => ['sometimes', 'integer', 'exists:users,id'],
+            'from' => ['sometimes', 'date'],
+            'to' => ['sometimes', 'date', 'after_or_equal:from'],
+            'status' => ['sometimes', 'string', 'in:present,absent,late,excused'],
+            'search' => ['sometimes', 'string', 'max:255'],
+        ]);
+    }
+
+    private function applyAttendanceFilters(Builder $query, array $filters): void
+    {
+        $query->when($filters['user_id'] ?? null, fn (Builder $records, $userId) => $records->where('user_id', $userId));
+        $query->when($filters['from'] ?? null, fn (Builder $records, $from) => $records->whereDate('date', '>=', $from));
+        $query->when($filters['to'] ?? null, fn (Builder $records, $to) => $records->whereDate('date', '<=', $to));
+        $query->when($filters['status'] ?? null, fn (Builder $records, $status) => $records->where('status', $status));
+        $query->when($filters['search'] ?? null, fn (Builder $records, $search) => $records->whereHas('user', fn (Builder $users) => $users->where('name', 'like', '%'.$search.'%')));
     }
 }

@@ -50,7 +50,9 @@ class EmployeeReportControllerTest extends TestCase
             ->assertJsonPath('data.summary.completedTaskCount', 2)
             ->assertJsonPath('data.deliverableDays.0.date', '2026-06-10')
             ->assertJsonPath('data.deliverableDays.0.taskCount', 2)
-            ->assertJsonPath('data.deliverableDays.0.completedTaskCount', 2);
+            ->assertJsonPath('data.deliverableDays.0.completedTaskCount', 2)
+            ->assertJsonPath('data.deliverableDays.0.tasks.0.title', 'Project QA pass')
+            ->assertJsonPath('data.deliverableDays.0.tasks.0.source', 'project');
     }
 
     public function test_employee_report_attendance_days_include_personal_logged_time_and_differences(): void

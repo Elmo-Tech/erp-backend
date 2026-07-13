@@ -40,6 +40,7 @@ class EmployeeReportController extends Controller
         abort_if(! $request->user()->can('manage_employees'), 403, 'Unauthorized');
 
         $user = User::with(['roles:id,name', 'employeeProfile'])->findOrFail($id);
+        $user->resetGraceDaysIfNewMonth();
 
         $month = (int) $request->query('month', now()->month);
         $year = (int) $request->query('year', now()->year);
@@ -92,11 +93,15 @@ class EmployeeReportController extends Controller
 
         // ── Tasks / Deliverables ──────────────────────────────────────────────
         $projectTasks = ProjectTask::query()
+            ->with('project:id,title')
             ->where('assignee_id', $id)
             ->whereBetween('due_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
             ->get()
             ->map(fn (ProjectTask $task): array => [
                 'date' => $task->due_date?->toDateString(),
+                'title' => $task->title,
+                'source' => 'project',
+                'projectTitle' => $task->project?->title,
                 'completed' => $task->status === ExecutionTaskStatus::DONE,
                 'estimated_hours' => (float) ($task->estimated_hours ?? 0),
             ]);
@@ -107,6 +112,9 @@ class EmployeeReportController extends Controller
             ->get()
             ->map(fn (PersonalTask $task): array => [
                 'date' => $task->due_date?->toDateString(),
+                'title' => $task->title,
+                'source' => 'personal',
+                'projectTitle' => null,
                 'completed' => $task->status === 'done',
                 'estimated_hours' => round(((int) ($task->estimated_minutes ?? 0)) / 60, 2),
             ]);
@@ -123,6 +131,12 @@ class EmployeeReportController extends Controller
             'submitted' => $dayTasks->where('completed', true)->count() > 0,
             'taskCount' => $dayTasks->count(),
             'completedTaskCount' => $dayTasks->where('completed', true)->count(),
+            'tasks' => $dayTasks->map(fn (array $task): array => [
+                'title' => $task['title'],
+                'source' => $task['source'],
+                'projectTitle' => $task['projectTitle'],
+                'completed' => $task['completed'],
+            ])->values()->all(),
             'qaIssues' => [],
         ])->values()->toArray();
 
@@ -227,6 +241,9 @@ class EmployeeReportController extends Controller
                 'email' => $user->email ?? '',
                 'avatar' => $user->avatar,
                 'roles' => $user->roles->pluck('name')->toArray(),
+                'graceDaysAllowed' => (int) ($user->grace_days_allowed ?? 2),
+                'graceDaysUsed' => (int) ($user->grace_days_used ?? 0),
+                'graceDaysRemaining' => max(0, (int) ($user->grace_days_allowed ?? 2) - (int) ($user->grace_days_used ?? 0)),
             ],
             'period' => [
                 'month' => $month,

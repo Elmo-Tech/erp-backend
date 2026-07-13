@@ -125,9 +125,22 @@ class Attendance extends Model
             return ['deduction_minutes' => 0, 'used_grace_day' => true];
         }
 
-        $deductionMinutes = (int) (floor($lateMinutes / $lateThreshold) * $lateThreshold);
+        return [
+            'deduction_minutes' => $this->calculateLateDeductionMinutes(),
+            'used_grace_day' => false,
+        ];
+    }
 
-        return ['deduction_minutes' => $deductionMinutes, 'used_grace_day' => false];
+    public function calculateLateDeductionMinutes(): int
+    {
+        $lateMinutes = $this->late_minutes ?? $this->calculateLateMinutes();
+        $lateThreshold = (int) config('attendance.late_threshold_minutes', 15);
+
+        if ($lateMinutes <= $lateThreshold) {
+            return 0;
+        }
+
+        return (int) (floor($lateMinutes / $lateThreshold) * $lateThreshold);
     }
 
     /**
