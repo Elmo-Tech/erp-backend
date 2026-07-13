@@ -154,10 +154,34 @@ class Attendance extends Model
             return 0;
         }
 
-        $totalMinutes = $this->clock_in->diffInMinutes($this->clock_out);
+        $totalMinutes = $this->getPresenceMinutes();
         $workedMinutes = $this->getWorkedMinutes();
 
         return max(0, $totalMinutes - $workedMinutes);
+    }
+
+    /**
+     * Minutes present between clock-in and clock-out.
+     *
+     * An active attendance record is counted up to the supplied time (or now).
+     */
+    public function getPresenceMinutes(?Carbon $at = null): int
+    {
+        if ($this->clock_in === null) {
+            return 0;
+        }
+
+        $end = $this->clock_out ?? $at ?? Carbon::now();
+
+        if ($this->clock_out === null && ! $this->date->isSameDay($end)) {
+            return (int) $this->total_worked_minutes;
+        }
+
+        if ($end->lt($this->clock_in)) {
+            return 0;
+        }
+
+        return (int) $this->clock_in->diffInMinutes($end);
     }
 
     /**

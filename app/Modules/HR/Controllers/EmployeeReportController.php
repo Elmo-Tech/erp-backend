@@ -54,22 +54,28 @@ class EmployeeReportController extends Controller
             ->orderBy('date')
             ->get();
 
-        $attendanceDays = $attendanceRecords->map(fn ($a) => [
-            'date' => $a->date instanceof Carbon
-                ? $a->date->toDateString()
-                : (string) $a->date,
-            'dayLabel' => Carbon::parse($a->date)->format('D d'),
-            'clockIn' => $a->clock_in ? Carbon::parse($a->clock_in)->format('H:i') : null,
-            'clockOut' => $a->clock_out ? Carbon::parse($a->clock_out)->format('H:i') : null,
-            'workedHours' => round($a->getWorkedMinutes() / 60, 2),
-            'actualWorkedMinutes' => $a->getWorkedMinutes(),
-            'expectedWorkedMinutes' => $a->getExpectedWorkedMinutes(),
-            'stoppedMinutes' => $a->clock_out ? max(0, (int) $a->clock_in?->diffInMinutes($a->clock_out) - $a->getWorkedMinutes()) : 0,
-            'lateMinutes' => $a->late_minutes ?? 0,
-            'status' => $a->status,
-            'usedGraceDay' => (bool) ($a->used_grace_day ?? false),
-            'deductionMinutes' => $a->deduction_minutes ?? 0,
-        ])->values()->toArray();
+        $attendanceDays = $attendanceRecords->map(function (Attendance $attendance): array {
+            $presenceMinutes = $attendance->getPresenceMinutes();
+            $trackedWorkMinutes = $attendance->getWorkedMinutes();
+            $untrackedMinutes = max(0, $presenceMinutes - $trackedWorkMinutes);
+
+            return [
+                'date' => $attendance->date->toDateString(),
+                'dayLabel' => $attendance->date->format('D d'),
+                'clockIn' => $attendance->clock_in?->format('H:i'),
+                'clockOut' => $attendance->clock_out?->format('H:i'),
+                'workedHours' => round($presenceMinutes / 60, 2),
+                'actualWorkedMinutes' => $presenceMinutes,
+                'trackedWorkMinutes' => $trackedWorkMinutes,
+                'untrackedMinutes' => $untrackedMinutes,
+                'expectedWorkedMinutes' => $attendance->getExpectedWorkedMinutes(),
+                'stoppedMinutes' => $untrackedMinutes,
+                'lateMinutes' => $attendance->late_minutes ?? 0,
+                'status' => $attendance->status,
+                'usedGraceDay' => (bool) ($attendance->used_grace_day ?? false),
+                'deductionMinutes' => $attendance->deduction_minutes ?? 0,
+            ];
+        })->values()->toArray();
 
         $lateDays = $attendanceRecords->where('status', 'late')->count();
         $absentDays = $attendanceRecords->where('status', 'absent')->count();

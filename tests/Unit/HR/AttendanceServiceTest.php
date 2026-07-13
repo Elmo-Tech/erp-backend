@@ -84,6 +84,22 @@ class AttendanceServiceTest extends TestCase
         ]);
 
         $this->assertSame(105, $attendance->getWorkedMinutes());
+        $this->assertSame(180, $attendance->getPresenceMinutes());
         $this->assertSame(75, $attendance->calculateIdleMinutes());
+    }
+
+    public function test_stale_open_attendance_does_not_keep_accumulating_presence(): void
+    {
+        $user = User::factory()->create();
+        $attendance = Attendance::create([
+            'user_id' => $user->id,
+            'date' => '2026-06-18',
+            'clock_in' => '2026-06-18 09:00:00',
+            'clock_out' => null,
+            'status' => 'present',
+            'total_worked_minutes' => 120,
+        ]);
+
+        $this->assertSame(120, $attendance->getPresenceMinutes(Carbon::parse('2026-06-19 09:00:00')));
     }
 }

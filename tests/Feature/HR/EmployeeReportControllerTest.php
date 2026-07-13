@@ -55,7 +55,7 @@ class EmployeeReportControllerTest extends TestCase
             ->assertJsonPath('data.deliverableDays.0.tasks.0.source', 'project');
     }
 
-    public function test_employee_report_attendance_days_include_personal_logged_time_and_differences(): void
+    public function test_employee_report_separates_presence_from_tracked_task_time(): void
     {
         $manager = $this->userWithPermissions(['manage_employees']);
         $employee = User::factory()->create();
@@ -89,10 +89,12 @@ class EmployeeReportControllerTest extends TestCase
         $this->actingAs($manager, 'sanctum')
             ->getJson("/api/v1/hr/employee-report/{$employee->id}?month=6&year=2026")
             ->assertOk()
-            ->assertJsonPath('data.attendanceDays.0.actualWorkedMinutes', 75)
+            ->assertJsonPath('data.attendanceDays.0.actualWorkedMinutes', 180)
+            ->assertJsonPath('data.attendanceDays.0.trackedWorkMinutes', 75)
+            ->assertJsonPath('data.attendanceDays.0.untrackedMinutes', 105)
             ->assertJsonPath('data.attendanceDays.0.expectedWorkedMinutes', 480)
             ->assertJsonPath('data.attendanceDays.0.stoppedMinutes', 105)
-            ->assertJsonPath('data.attendanceDays.0.workedHours', 1.25);
+            ->assertJsonPath('data.attendanceDays.0.workedHours', 3);
     }
 
     /**
