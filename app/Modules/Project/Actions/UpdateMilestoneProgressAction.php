@@ -17,7 +17,7 @@ class UpdateMilestoneProgressAction
 {
     /**
      * @param  Milestone  $milestone  The milestone to recalculate.
-     * @return Milestone              The updated milestone instance.
+     * @return Milestone The updated milestone instance.
      */
     public function execute(Milestone $milestone): Milestone
     {
@@ -43,13 +43,13 @@ class UpdateMilestoneProgressAction
         //   0 %   → PENDING  (nothing done yet)
         $newStatus = match (true) {
             $percentage === 100 => MilestoneStatus::COMPLETED,
-            $percentage > 0     => MilestoneStatus::ACTIVE,
-            default             => MilestoneStatus::PENDING,
+            $percentage > 0 => MilestoneStatus::ACTIVE,
+            default => MilestoneStatus::PENDING,
         };
 
         $milestone->update([
             'progress_percentage' => $percentage,
-            'status'              => $newStatus,
+            'status' => $newStatus,
         ]);
 
         return $milestone->refresh();

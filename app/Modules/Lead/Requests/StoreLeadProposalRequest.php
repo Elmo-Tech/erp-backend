@@ -26,17 +26,17 @@ class StoreLeadProposalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'creation_type'   => ['required', 'string', 'in:direct_upload,task,skipped'],
-            'skip_reason'     => ['nullable', 'string', 'max:500'],
-            'assigned_to'     => ['nullable', 'integer', 'exists:users,id'],
-            'file_path'       => ['nullable', 'string', 'max:1000'],
-            'notes'           => ['nullable', 'string', 'max:5000'],
-            'status'          => ['nullable', 'string', 'max:50'],
+            'creation_type' => ['required', 'string', 'in:direct_upload,task,skipped'],
+            'skip_reason' => ['nullable', 'string', 'max:500'],
+            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'file_path' => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'status' => ['nullable', 'string', 'max:50'],
 
             // Proposal-specific
             'proposal_source' => ['nullable', 'string', 'in:upload_new,use_template'],
-            'template_id'     => ['nullable', 'integer', 'min:1'],
-            'validity_date'   => ['nullable', 'date'],
+            'template_id' => ['nullable', 'integer', 'min:1'],
+            'validity_date' => ['nullable', 'date'],
         ];
     }
 
@@ -44,7 +44,7 @@ class StoreLeadProposalRequest extends FormRequest
     {
         return [
             'creation_type.required' => 'The creation type is required.',
-            'creation_type.in'       => 'Creation type must be one of: direct_upload, task, skipped.',
+            'creation_type.in' => 'Creation type must be one of: direct_upload, task, skipped.',
         ];
     }
 

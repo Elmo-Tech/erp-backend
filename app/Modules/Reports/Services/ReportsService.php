@@ -2,7 +2,6 @@
 
 namespace App\Modules\Reports\Services;
 
-use App\Modules\Client\Models\Client;
 use App\Modules\Finance\Models\FinanceInvoice;
 use App\Modules\Finance\Models\Subscription;
 use App\Modules\Lead\Models\Lead;
@@ -20,11 +19,24 @@ use Illuminate\Support\Collection;
 
 class ReportsService
 {
+    private const FINANCIAL_REPORTS = ['overview', 'projects', 'sales-finance'];
+
+    public function authorizeReport(?User $user, string $report): void
+    {
+        abort_if(! $user?->can('view_reports'), 403, 'Unauthorized');
+
+        if (in_array($report, self::FINANCIAL_REPORTS, true)) {
+            abort_if(! $user->can('view_financial_stats'), 403, 'Unauthorized');
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
     public function overview(Request $request): array
     {
+        $this->authorizeReport($request->user(), 'overview');
+
         $projects = $this->projectQuery($request)->get();
         $invoices = $this->invoiceQuery($request)->get();
         $entries = $this->timeEntryQuery($request)->with('user:id,name')->get();
@@ -36,8 +48,8 @@ class ReportsService
         $paidInvoices = $invoices->where('status', 'paid');
         $loggedMinutes = (int) $workEntries->sum('duration_minutes');
         $internalCost = $this->internalCost($workEntries);
-        $canViewCost = $request->user()?->can('view_cost') || $request->user()?->can('view_internal_costs');
-        $canViewProfit = $request->user()?->can('view_profitability');
+        $canViewCost = $this->canViewCost($request);
+        $canViewProfit = $this->canViewProfit($request);
 
         return [
             'filters' => $this->filterSummary($request),
@@ -62,6 +74,8 @@ class ReportsService
      */
     public function projects(Request $request): array
     {
+        $this->authorizeReport($request->user(), 'projects');
+
         $projects = $this->projectQuery($request)
             ->with(['client:id,display_name,company_name'])
             ->orderByDesc('created_at')
@@ -79,8 +93,8 @@ class ReportsService
 
             $internalCost = $this->internalCost($entries);
             $paidTotal = (float) $invoices->where('status', 'paid')->sum('total_amount');
-            $canViewCost = $request->user()?->can('view_cost') || $request->user()?->can('view_internal_costs');
-            $canViewProfit = $request->user()?->can('view_profitability');
+            $canViewCost = $this->canViewCost($request);
+            $canViewProfit = $this->canViewProfit($request);
             $profit = round($paidTotal - $internalCost, 2);
 
             return [
@@ -117,6 +131,8 @@ class ReportsService
      */
     public function teamTime(Request $request): array
     {
+        $this->authorizeReport($request->user(), 'team-time');
+
         $entries = $this->timeEntryQuery($request)
             ->with(['user:id,name,email,internal_hourly_cost', 'task.project:id,title'])
             ->get();
@@ -126,7 +142,7 @@ class ReportsService
 
         $tasks = $this->taskQuery($request)->get();
         $personalTasks = $this->personalTaskQuery($request)->get();
-        $canViewCost = $request->user()?->can('view_cost') || $request->user()?->can('view_internal_costs');
+        $canViewCost = $this->canViewCost($request);
         $userIds = $entries->pluck('user_id')
             ->merge($personalEntries->pluck('user_id'))
             ->unique()
@@ -173,6 +189,8 @@ class ReportsService
      */
     public function salesFinance(Request $request): array
     {
+        $this->authorizeReport($request->user(), 'sales-finance');
+
         $invoices = $this->invoiceQuery($request)->with(['client:id,display_name,company_name', 'project:id,title'])->get();
         $subscriptions = $this->subscriptionQuery($request)->with(['client:id,display_name,company_name', 'project:id,title'])->get();
         $leads = $this->leadQuery($request)->get();
@@ -224,12 +242,55 @@ class ReportsService
      */
     public function csv(Request $request, string $report): array
     {
-        return match ($report) {
+        $this->authorizeReport($request->user(), $report);
+
+        [$filename, $headers, $rows] = match ($report) {
             'projects' => $this->projectsCsv($request),
             'team-time' => $this->teamTimeCsv($request),
             'sales-finance' => $this->salesFinanceCsv($request),
             default => $this->overviewCsv($request),
         };
+
+        return [
+            $filename,
+            $this->neutralizeCsvRow($headers),
+            array_map($this->neutralizeCsvRow(...), $rows),
+        ];
+    }
+
+    /**
+     * @param  array<int, mixed>  $row
+     * @return array<int, mixed>
+     */
+    private function neutralizeCsvRow(array $row): array
+    {
+        return array_map(function (mixed $value): mixed {
+            if (! is_string($value)) {
+                return $value;
+            }
+
+            return preg_match('/^(?:[\t\r]|\s*[=+\-@])/u', $value) === 1
+                ? "'{$value}"
+                : $value;
+        }, $row);
+    }
+
+    private function canViewCost(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user instanceof User
+            && $user->can('view_financial_stats')
+            && ($user->can('view_cost') || $user->can('view_internal_costs'));
+    }
+
+    private function canViewProfit(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user instanceof User
+            && $user->can('view_financial_stats')
+            && $user->can('view_profitability');
     }
 
     private function overviewCsv(Request $request): array

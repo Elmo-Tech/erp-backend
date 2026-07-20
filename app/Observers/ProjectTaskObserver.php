@@ -58,8 +58,8 @@ class ProjectTaskObserver
 
         // Assignee change
         if (isset($dirty['assignee_id'])) {
-            $oldId   = $task->getOriginal('assignee_id');
-            $newId   = $dirty['assignee_id'];
+            $oldId = $task->getOriginal('assignee_id');
+            $newId = $dirty['assignee_id'];
             $oldName = $oldId ? (User::find($oldId)?->name ?? "User #{$oldId}") : 'Unassigned';
             $newName = $newId ? (User::find($newId)?->name ?? "User #{$newId}") : 'Unassigned';
 
@@ -79,7 +79,7 @@ class ProjectTaskObserver
                 'task_title_changed',
                 $task->getOriginal('title'),
                 $dirty['title'],
-                "Task title changed"
+                'Task title changed'
             );
         }
     }
@@ -107,9 +107,9 @@ class ProjectTaskObserver
         ProjectHistory::create([
             'project_id' => $projectId,
             'field_name' => $fieldName,
-            'old_value'  => $oldValue,
-            'new_value'  => $newValue,
-            'reason'     => $reason,
+            'old_value' => $oldValue,
+            'new_value' => $newValue,
+            'reason' => $reason,
             'changed_by' => Auth::id(),
         ]);
     }

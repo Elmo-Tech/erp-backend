@@ -21,21 +21,22 @@ jobs:
           extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, sqlite3, dom
           coverage: none
 
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-php-${{ hashFiles('composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-php-
+      - name: Validate Composer metadata
+        run: composer validate --strict --no-check-publish
 
       - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Audit Composer dependencies
+        run: composer audit --locked
 
       - name: Prepare Laravel environment
         run: |
           cp .env.example .env
           php artisan key:generate
+
+      - name: Run static analysis
+        run: composer analyse
 
       - name: Run unit tests
         run: php artisan test --testsuite=Unit

@@ -4,16 +4,16 @@ namespace App\Enums;
 
 enum DocumentCreationType: string
 {
-    case TASK          = 'task';
+    case TASK = 'task';
     case DIRECT_UPLOAD = 'direct_upload';
-    case SKIPPED       = 'skipped';
+    case SKIPPED = 'skipped';
 
     public function label(): string
     {
         return match ($this) {
-            self::TASK          => 'Task',
+            self::TASK => 'Task',
             self::DIRECT_UPLOAD => 'Direct Upload',
-            self::SKIPPED       => 'Skipped',
+            self::SKIPPED => 'Skipped',
         };
     }
 

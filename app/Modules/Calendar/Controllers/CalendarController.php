@@ -35,11 +35,11 @@ class CalendarController extends Controller
 
         $request->validate([
             'startDate' => ['required', 'date'],
-            'endDate'   => ['required', 'date', 'after_or_equal:startDate'],
+            'endDate' => ['required', 'date', 'after_or_equal:startDate'],
         ]);
 
         $startDate = Carbon::parse($request->input('startDate'))->startOfDay();
-        $endDate   = Carbon::parse($request->input('endDate'))->endOfDay();
+        $endDate = Carbon::parse($request->input('endDate'))->endOfDay();
 
         $items = $this->aggregator->aggregate($startDate, $endDate, $request->user());
 
@@ -59,12 +59,12 @@ class CalendarController extends Controller
         $data = $request->validated();
 
         $event = CalendarEvent::create([
-            'user_id'     => $request->user()->id,
-            'title'       => $data['title'],
+            'user_id' => $request->user()->id,
+            'title' => $data['title'],
             'description' => $data['description'] ?? null,
-            'start_time'  => $data['startTime'],
-            'end_time'    => $data['endTime'],
-            'event_type'  => $data['eventType'] ?? 'custom',
+            'start_time' => $data['startTime'],
+            'end_time' => $data['endTime'],
+            'event_type' => $data['eventType'] ?? 'custom',
         ]);
 
         return ApiResponse::success(
@@ -80,6 +80,7 @@ class CalendarController extends Controller
     public function show(Request $request, CalendarEvent $event): JsonResponse
     {
         abort_if(! $request->user()->can('view_calendar'), 403, 'Unauthorized');
+        $this->authorize('view', $event);
 
         $event->load('creator');
 
@@ -95,15 +96,16 @@ class CalendarController extends Controller
     public function update(UpdateCalendarEventRequest $request, CalendarEvent $event): JsonResponse
     {
         abort_if(! $request->user()->can('view_calendar'), 403, 'Unauthorized');
+        $this->authorize('update', $event);
 
         $data = $request->validated();
 
         $event->update(array_filter([
-            'title'       => $data['title'] ?? null,
+            'title' => $data['title'] ?? null,
             'description' => array_key_exists('description', $data) ? $data['description'] : $event->description,
-            'start_time'  => $data['startTime'] ?? null,
-            'end_time'    => $data['endTime'] ?? null,
-            'event_type'  => $data['eventType'] ?? null,
+            'start_time' => $data['startTime'] ?? null,
+            'end_time' => $data['endTime'] ?? null,
+            'event_type' => $data['eventType'] ?? null,
         ], fn ($v) => $v !== null));
 
         return ApiResponse::success(
@@ -118,6 +120,7 @@ class CalendarController extends Controller
     public function destroy(Request $request, CalendarEvent $event): JsonResponse
     {
         abort_if(! $request->user()->can('view_calendar'), 403, 'Unauthorized');
+        $this->authorize('delete', $event);
 
         $event->delete();
 

@@ -26,6 +26,8 @@ class MilestoneController extends Controller
      */
     public function index(Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $milestones = $project->milestones()
             ->withCount(['tasks', 'tasks as done_tasks_count' => fn ($q) => $q->where('status', 'done')])
             ->orderBy('created_at')
@@ -44,7 +46,7 @@ class MilestoneController extends Controller
      */
     public function store(StoreMilestoneRequest $request, Project $project): JsonResponse
     {
-        $this->authorize('create', [\App\Modules\Project\Models\ProjectTask::class, $project]);
+        $this->authorize('view', $project);
         $data = $request->validated();
 
         $milestone = $project->milestones()->create([
@@ -65,7 +67,8 @@ class MilestoneController extends Controller
      */
     public function show(Project $project, Milestone $milestone): JsonResponse
     {
-        $this->assertBelongsToProject($milestone, $project);
+        $this->authorize('view', $project);
+        $milestone = $this->resolveMilestone($project, $milestone);
 
         $milestone->load(['tasks.assignee', 'tasks.deliverables']);
 
@@ -82,8 +85,8 @@ class MilestoneController extends Controller
      */
     public function update(UpdateMilestoneRequest $request, Project $project, Milestone $milestone): JsonResponse
     {
-        $this->assertBelongsToProject($milestone, $project);
-        $this->authorize('create', [\App\Modules\Project\Models\ProjectTask::class, $project]);
+        $this->authorize('view', $project);
+        $milestone = $this->resolveMilestone($project, $milestone);
 
         $data = $request->validated();
 
@@ -107,8 +110,8 @@ class MilestoneController extends Controller
      */
     public function destroy(Project $project, Milestone $milestone): JsonResponse
     {
-        $this->assertBelongsToProject($milestone, $project);
-        $this->authorize('delete', [\App\Modules\Project\Models\ProjectTask::class, $milestone->project]);
+        $this->authorize('view', $project);
+        $milestone = $this->resolveMilestone($project, $milestone);
 
         $milestone->delete();
 
@@ -117,10 +120,10 @@ class MilestoneController extends Controller
 
     // -------------------------------------------------------------------------
 
-    private function assertBelongsToProject(Milestone $milestone, Project $project): void
+    private function resolveMilestone(Project $project, Milestone $milestone): Milestone
     {
-        if ($milestone->project_id !== $project->id) {
-            abort(404, 'Milestone not found for this project.');
-        }
+        return Milestone::query()
+            ->where('project_id', $project->id)
+            ->findOrFail($milestone->getKey());
     }
 }

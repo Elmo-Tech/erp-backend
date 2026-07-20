@@ -22,7 +22,7 @@ class TeamPulseControllerTest extends TestCase
     {
         Carbon::setTestNow('2026-05-13 10:30:00');
 
-        $manager = $this->userWithPermissions(['manage_users']);
+        $manager = $this->userWithPermissions(['view_team_pulse']);
         $workingUser = User::factory()->create(['name' => 'Ahmed', 'is_employee' => true]);
         $idleUser = User::factory()->create(['name' => 'Sara', 'is_employee' => true]);
         $clockedOutUser = User::factory()->create(['name' => 'Omar', 'is_employee' => true]);
@@ -85,7 +85,7 @@ class TeamPulseControllerTest extends TestCase
     {
         Carbon::setTestNow('2026-06-16 10:30:00');
 
-        $manager = $this->userWithPermissions(['manage_users']);
+        $manager = $this->userWithPermissions(['view_team_pulse']);
         $workingUser = User::factory()->create(['name' => 'Nour', 'is_employee' => true]);
 
         Attendance::create([
@@ -125,16 +125,14 @@ class TeamPulseControllerTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_team_timer_managers_can_view_team_pulse(): void
+    public function test_team_timer_managers_cannot_view_company_team_pulse(): void
     {
         $manager = $this->userWithPermissions(['manage_team_timers']);
         User::factory()->create(['name' => 'Nour', 'is_employee' => true]);
 
         $this->actingAs($manager, 'sanctum')
             ->getJson('/api/v1/hr/team-pulse')
-            ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.user.name', 'Nour');
+            ->assertForbidden();
     }
 
     public function test_non_managers_cannot_view_team_pulse(): void

@@ -14,11 +14,11 @@ class UpdateCalendarEventRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'       => ['sometimes', 'string', 'max:255'],
+            'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
-            'startTime'   => ['sometimes', 'date'],
-            'endTime'     => ['sometimes', 'date'],
-            'eventType'   => ['sometimes', 'string', 'in:meeting,reminder,custom'],
+            'startTime' => ['sometimes', 'date'],
+            'endTime' => ['sometimes', 'date'],
+            'eventType' => ['sometimes', 'string', 'in:meeting,reminder,custom'],
         ];
     }
 }

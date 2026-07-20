@@ -65,24 +65,26 @@ class ProjectResource extends JsonResource
                     ];
                 });
             }),
-            'files' => $this->whenLoaded('files', function () {
-                return $this->files->map(function ($file) {
-                    return [
-                        'fileId' => $file->id,
-                        'projectId' => $file->project_id,
-                        'name' => $file->name ?? '',
-                        'type' => $file->type ?? 'file',
-                        'fileUrl' => $file->file_url ?? '',
-                        'mimeType' => $file->mime_type ?? '',
-                        'size' => (int) ($file->size ?? 0),
-                        'description' => $file->description ?? '',
-                        'category' => $file->category ?? '',
-                        'isClientVisible' => (bool) $file->is_client_visible,
-                        'isDownloadable' => (bool) $file->is_downloadable,
-                        'visibleToRoles' => $file->visible_to_roles ?? [],
-                        'createdAt' => $file->created_at?->toISOString() ?? '',
-                    ];
-                });
+            'files' => $this->whenLoaded('files', function () use ($user) {
+                return $this->files
+                    ->filter(fn ($file) => $user && $file->canUserView($user))
+                    ->map(function ($file) {
+                        return [
+                            'fileId' => $file->id,
+                            'projectId' => $file->project_id,
+                            'name' => $file->name ?? '',
+                            'type' => $file->type ?? 'file',
+                            'fileUrl' => $file->file_url,
+                            'mimeType' => $file->mime_type ?? '',
+                            'size' => (int) ($file->size ?? 0),
+                            'description' => $file->description ?? '',
+                            'category' => $file->category ?? '',
+                            'isClientVisible' => (bool) $file->is_client_visible,
+                            'isDownloadable' => (bool) $file->is_downloadable,
+                            'visibleToRoles' => $file->visible_to_roles ?? [],
+                            'createdAt' => $file->created_at?->toISOString() ?? '',
+                        ];
+                    })->values();
             }),
             'createdAt' => $this->created_at?->toISOString() ?? '',
             'updatedAt' => $this->updated_at?->toISOString() ?? '',

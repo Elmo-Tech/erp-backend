@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\PersonalAccessToken;
+use Symfony\Component\HttpFoundation\Cookie;
 use Tests\TestCase;
 
 class AuthCookieSecurityTest extends TestCase
@@ -64,7 +65,7 @@ class AuthCookieSecurityTest extends TestCase
             ->assertOk();
     }
 
-    private function cookie($response, string $name): \Symfony\Component\HttpFoundation\Cookie
+    private function cookie($response, string $name): Cookie
     {
         foreach ($response->headers->getCookies() as $cookie) {
             if ($cookie->getName() === $name) {

@@ -43,10 +43,11 @@ class GenerateMonthlyPayrollCommand extends Command
         $previousMonth = Carbon::now()->subMonth();
 
         $month = (int) ($this->option('month') ?: $previousMonth->month);
-        $year  = (int) ($this->option('year')  ?: $previousMonth->year);
+        $year = (int) ($this->option('year') ?: $previousMonth->year);
 
         if ($month < 1 || $month > 12) {
             $this->error('--month must be between 1 and 12.');
+
             return self::FAILURE;
         }
 
@@ -61,6 +62,7 @@ class GenerateMonthlyPayrollCommand extends Command
 
         if ($employees->isEmpty()) {
             $this->warn('No active employees found. Nothing to generate.');
+
             return self::SUCCESS;
         }
 
@@ -68,8 +70,8 @@ class GenerateMonthlyPayrollCommand extends Command
 
         // ── Process each employee ─────────────────────────────────────────────
         $generated = 0;
-        $skipped   = 0;
-        $failed    = 0;
+        $skipped = 0;
+        $failed = 0;
 
         $bar = $this->output->createProgressBar($employees->count());
         $bar->start();

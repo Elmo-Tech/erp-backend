@@ -17,7 +17,7 @@ class RecordAutoAttendanceAction
 
     /**
      * @param  User  $user  The authenticated user starting a task timer.
-     * @return Attendance   The existing or newly created attendance record.
+     * @return Attendance The existing or newly created attendance record.
      */
     public function execute(User $user): Attendance
     {

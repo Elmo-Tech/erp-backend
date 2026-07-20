@@ -19,26 +19,26 @@ class StoreProjectTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'milestoneId'      => ['nullable', 'integer', 'exists:milestones,id'],
+            'milestoneId' => ['nullable', 'integer', 'exists:milestones,id'],
             // REMOVED: parentId validation - subtasks are no longer supported
-            'title'            => ['required', 'string', 'max:255'],
-            'description'      => ['nullable', 'string'],
-            'status'           => ['nullable', new Enum(ExecutionTaskStatus::class)],
-            'priority'         => ['nullable', 'string', 'in:low,medium,high,urgent'],
-            'estimatedHours'   => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'startDate'        => ['nullable', 'date'],
-            'dueDate'          => ['nullable', 'date'],
-            'assigneeId'       => ['nullable', 'integer', 'exists:users,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'status' => ['nullable', new Enum(ExecutionTaskStatus::class)],
+            'priority' => ['nullable', 'string', 'in:low,medium,high,urgent'],
+            'estimatedHours' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'startDate' => ['nullable', 'date'],
+            'dueDate' => ['nullable', 'date'],
+            'assigneeId' => ['nullable', 'integer', 'exists:users,id'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'title.required'        => 'The task title is required.',
-            'milestoneId.exists'    => 'The selected milestone does not exist.',
+            'title.required' => 'The task title is required.',
+            'milestoneId.exists' => 'The selected milestone does not exist.',
             // REMOVED: parentId validation message - subtasks are no longer supported
-            'assigneeId.exists'     => 'The selected assignee does not exist.',
+            'assigneeId.exists' => 'The selected assignee does not exist.',
             'estimatedHours.numeric' => 'Estimated hours must be a number.',
         ];
     }

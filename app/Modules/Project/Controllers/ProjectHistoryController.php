@@ -4,9 +4,9 @@ namespace App\Modules\Project\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\Project\Resources\ProjectHistoryResource;
-use App\Modules\Project\Models\Project;
 use App\Modules\Project\Actions\ProjectHistoryAction;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Resources\ProjectHistoryResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
@@ -129,6 +129,8 @@ class ProjectHistoryController extends Controller
      */
     public function index(Request $request, Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         // Check permission to view project history.
         // Allowed if the user has the dedicated permission OR any general
         // project-viewing permission (view_projects / view_all_projects).

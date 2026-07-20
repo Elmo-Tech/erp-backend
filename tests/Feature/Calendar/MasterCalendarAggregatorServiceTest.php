@@ -3,6 +3,7 @@
 namespace Tests\Feature\Calendar;
 
 use App\Enums\MilestoneStatus;
+use App\Enums\ProjectRole;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Calendar\Services\MasterCalendarAggregatorService;
 use App\Modules\Client\Models\Client;
@@ -11,6 +12,7 @@ use App\Modules\PersonalTasks\Models\PersonalTask;
 use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Models\Milestone;
 use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
@@ -27,6 +29,7 @@ class MasterCalendarAggregatorServiceTest extends TestCase
     {
         $client = Client::factory()->create();
         $project = Project::factory()->for($client)->create(['title' => 'Client Portal Relaunch']);
+        $foreignProject = Project::factory()->create(['title' => 'Foreign project']);
 
         $milestone = Milestone::create([
             'project_id' => $project->id,
@@ -36,12 +39,26 @@ class MasterCalendarAggregatorServiceTest extends TestCase
             'due_date' => '2026-05-20',
         ]);
 
-        $user = $this->userWithPermissions(['view_calendar_milestones']);
+        $foreignMilestone = Milestone::create([
+            'project_id' => $foreignProject->id,
+            'title' => 'Foreign milestone',
+            'status' => MilestoneStatus::ACTIVE,
+            'progress_percentage' => 5,
+            'due_date' => '2026-05-21',
+        ]);
+
+        $user = $this->userWithPermissions(['view_calendar_milestones', 'view_projects']);
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
 
         $items = app(MasterCalendarAggregatorService::class)
             ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
 
         $this->assertContains('milestone-'.$milestone->id, $items->pluck('id')->all());
+        $this->assertNotContains('milestone-'.$foreignMilestone->id, $items->pluck('id')->all());
 
         $item = $items->firstWhere('id', 'milestone-'.$milestone->id);
 
@@ -76,10 +93,11 @@ class MasterCalendarAggregatorServiceTest extends TestCase
             'scheduled_at' => '2026-05-20 14:30:00',
         ]);
 
-        $user = $this->userWithPermissions(['view_calendar_meetings']);
+        Permission::findOrCreate('view_calendar_meetings', 'web');
+        $attendee->givePermissionTo('view_calendar_meetings');
 
         $items = app(MasterCalendarAggregatorService::class)
-            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
+            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $attendee);
 
         $item = $items->firstWhere('id', 'meeting-'.$meeting->id);
 
@@ -94,6 +112,37 @@ class MasterCalendarAggregatorServiceTest extends TestCase
         $this->assertSame('Discussed budget and stakeholders.', $item['meta']['notes']);
         $this->assertSame('online', $item['meta']['location']);
         $this->assertSame('https://meet.example.com/discovery', $item['meta']['locationDetails']);
+    }
+
+    public function test_meeting_feed_is_limited_to_participation_and_visible_projects(): void
+    {
+        $user = $this->userWithPermissions(['view_calendar_meetings', 'view_projects']);
+        $otherUser = User::factory()->create();
+        $visibleProject = Project::factory()->create();
+        $foreignProject = Project::factory()->create();
+        ProjectMember::create([
+            'project_id' => $visibleProject->id,
+            'user_id' => $user->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
+
+        $participantMeeting = $this->calendarMeeting(Client::factory()->create(), $user, 'Participant meeting');
+        $foreignClientMeeting = $this->calendarMeeting(Client::factory()->create(), $otherUser, 'Foreign client meeting');
+        $visibleProjectMeeting = $this->calendarMeeting($visibleProject, $otherUser, 'Visible project meeting');
+        $foreignProjectMeeting = $this->calendarMeeting($foreignProject, $otherUser, 'Foreign project meeting');
+
+        $items = app(MasterCalendarAggregatorService::class)
+            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
+
+        $meetingIds = $items
+            ->where('type', 'meeting')
+            ->pluck('id')
+            ->all();
+
+        $this->assertContains('meeting-'.$participantMeeting->id, $meetingIds);
+        $this->assertContains('meeting-'.$visibleProjectMeeting->id, $meetingIds);
+        $this->assertNotContains('meeting-'.$foreignClientMeeting->id, $meetingIds);
+        $this->assertNotContains('meeting-'.$foreignProjectMeeting->id, $meetingIds);
     }
 
     public function test_it_excludes_item_types_without_matching_calendar_permission(): void
@@ -115,6 +164,62 @@ class MasterCalendarAggregatorServiceTest extends TestCase
             ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
 
         $this->assertFalse($items->contains(fn (array $item) => $item['type'] === 'milestone'));
+    }
+
+    public function test_task_feed_respects_task_assignment_and_project_visibility(): void
+    {
+        $user = $this->userWithPermissions(['view_calendar_tasks', 'view_projects']);
+        $otherUser = User::factory()->create();
+        $visibleProject = Project::factory()->create();
+        $foreignProject = Project::factory()->create();
+        ProjectMember::create([
+            'project_id' => $visibleProject->id,
+            'user_id' => $user->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
+
+        $visibleTask = ProjectTask::create([
+            'project_id' => $visibleProject->id,
+            'title' => 'Visible assigned task',
+            'status' => 'to_do',
+            'due_date' => '2026-05-20',
+            'assignee_id' => $user->id,
+        ]);
+        $otherAssigneeTask = ProjectTask::create([
+            'project_id' => $visibleProject->id,
+            'title' => 'Other assignee task',
+            'status' => 'to_do',
+            'due_date' => '2026-05-21',
+            'assignee_id' => $otherUser->id,
+        ]);
+        $foreignTask = ProjectTask::create([
+            'project_id' => $foreignProject->id,
+            'title' => 'Foreign project task',
+            'status' => 'to_do',
+            'due_date' => '2026-05-22',
+            'assignee_id' => $user->id,
+        ]);
+
+        $items = app(MasterCalendarAggregatorService::class)
+            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $user);
+        $taskIds = $items->where('type', 'task')->pluck('id')->all();
+
+        $this->assertContains('task-'.$visibleTask->id, $taskIds);
+        $this->assertNotContains('task-'.$otherAssigneeTask->id, $taskIds);
+        $this->assertNotContains('task-'.$foreignTask->id, $taskIds);
+
+        $globalUser = $this->userWithPermissions(['view_calendar_tasks', 'manage_all_projects']);
+        $globalTaskIds = app(MasterCalendarAggregatorService::class)
+            ->aggregate(Carbon::parse('2026-05-01'), Carbon::parse('2026-05-31'), $globalUser)
+            ->where('type', 'task')
+            ->pluck('id')
+            ->all();
+
+        $this->assertEqualsCanonicalizing([
+            'task-'.$visibleTask->id,
+            'task-'.$otherAssigneeTask->id,
+            'task-'.$foreignTask->id,
+        ], $globalTaskIds);
     }
 
     public function test_it_includes_current_user_attendance_with_worked_tasks(): void
@@ -212,5 +317,18 @@ class MasterCalendarAggregatorServiceTest extends TestCase
         $user->givePermissionTo($permissions);
 
         return $user;
+    }
+
+    private function calendarMeeting(Client|Project $subject, User $participant, string $title): Meeting
+    {
+        return Meeting::create([
+            'model_id' => $subject->id,
+            'model_type' => get_class($subject),
+            'status' => 'scheduled',
+            'title' => $title,
+            'assigned_to' => $participant->id,
+            'created_by' => $participant->id,
+            'scheduled_at' => '2026-05-20 14:30:00',
+        ]);
     }
 }

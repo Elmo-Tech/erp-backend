@@ -13,15 +13,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @property int                   $id
- * @property int|null              $lead_id
- * @property int|null              $client_id
- * @property int|null              $project_id
- * @property ProposalStatus        $status
- * @property DocumentCreationType  $creation_type
- * @property string|null           $skip_reason
- * @property int|null              $assigned_to
- * @property string|null           $file_path
+ * @property int $id
+ * @property int|null $lead_id
+ * @property int|null $client_id
+ * @property int|null $project_id
+ * @property ProposalStatus $status
+ * @property DocumentCreationType $creation_type
+ * @property string|null $skip_reason
+ * @property int|null $assigned_to
+ * @property string|null $file_path
  */
 class Proposal extends Model
 {
@@ -45,7 +45,7 @@ class Proposal extends Model
     protected function casts(): array
     {
         return [
-            'status'        => ProposalStatus::class,
+            'status' => ProposalStatus::class,
             'creation_type' => DocumentCreationType::class,
         ];
     }

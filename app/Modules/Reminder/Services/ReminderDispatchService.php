@@ -144,7 +144,7 @@ class ReminderDispatchService
     }
 
     /**
-     * @param Collection<int, User> $recipients
+     * @param  Collection<int, User>  $recipients
      */
     private function notifyUsers(
         string $type,

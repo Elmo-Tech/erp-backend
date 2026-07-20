@@ -8,6 +8,9 @@ use App\Providers\ModuleServiceProvider;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\HandleCors;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
@@ -29,8 +32,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register middleware aliases for use in controllers
         $middleware->alias([
             'locale' => SetLocaleMiddleware::class,
-            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role' => RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
         ]);
 
         $middleware->prependToGroup('api', [
@@ -40,7 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Append CORS and locale middleware to API middleware group
         $middleware->appendToGroup('api', [
-            \Illuminate\Http\Middleware\HandleCors::class,
+            HandleCors::class,
             SetLocaleMiddleware::class,
         ]);
     })

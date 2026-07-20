@@ -15,7 +15,8 @@ class DeleteProjectFileAction
             throw new RuntimeException('File not found');
         }
 
-        if ($file->file_path && Storage::disk('public')->exists($file->file_path)) {
+        if ($file->file_path) {
+            Storage::disk('local')->delete($file->file_path);
             Storage::disk('public')->delete($file->file_path);
         }
 

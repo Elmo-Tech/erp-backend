@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Services;
 
-use App\Modules\Project\Models\Project;
 use App\Modules\Client\Actions\CalculateProjectProgressAction;
+use App\Modules\Project\Models\Project;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;

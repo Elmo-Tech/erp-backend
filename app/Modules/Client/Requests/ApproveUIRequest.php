@@ -2,9 +2,10 @@
 
 namespace App\Modules\Client\Requests;
 
-use App\Modules\Project\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
+use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -22,7 +23,7 @@ class ApproveUIRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

@@ -6,7 +6,6 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Finance\Actions\CalculateInvoiceTotalsAction;
 use App\Modules\Finance\Models\FinanceInvoice;
-use App\Modules\Finance\Models\FinanceInvoiceItem;
 use App\Modules\Finance\Models\Subscription;
 use App\Modules\Finance\Requests\StoreFinanceInvoiceRequest;
 use App\Modules\Finance\Requests\UpdateFinanceInvoiceRequest;
@@ -67,42 +66,42 @@ class FinanceInvoiceController extends Controller
     {
         abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
 
-        $data  = $request->validated();
+        $data = $request->validated();
         $items = $data['items'];
 
         $totals = $this->calculateTotals->execute(
             items: array_map(fn ($i) => [
-                'quantity'   => $i['quantity'],
+                'quantity' => $i['quantity'],
                 'unit_price' => $i['unitPrice'],
             ], $items),
-            taxRate:        $data['taxRate'] ?? 0,
+            taxRate: $data['taxRate'] ?? 0,
             discountAmount: $data['discountAmount'] ?? 0,
         );
 
         $invoice = DB::transaction(function () use ($data, $items, $totals): FinanceInvoice {
             $invoice = FinanceInvoice::create([
-                'client_id'       => $data['clientId'],
-                'project_id'      => $data['projectId'] ?? null,
-                'invoice_number'  => FinanceInvoice::generateInvoiceNumber(),
-                'invoice_type'    => $data['invoiceType'] ?? 'one_time',
-                'billing_cycle'   => ($data['invoiceType'] ?? 'one_time') === 'subscription' ? $data['billingCycle'] : null,
-                'issue_date'      => $data['issueDate'],
-                'due_date'        => $data['dueDate'],
-                'tax_rate'        => $data['taxRate'] ?? 0,
+                'client_id' => $data['clientId'],
+                'project_id' => $data['projectId'] ?? null,
+                'invoice_number' => FinanceInvoice::generateInvoiceNumber(),
+                'invoice_type' => $data['invoiceType'] ?? 'one_time',
+                'billing_cycle' => ($data['invoiceType'] ?? 'one_time') === 'subscription' ? $data['billingCycle'] : null,
+                'issue_date' => $data['issueDate'],
+                'due_date' => $data['dueDate'],
+                'tax_rate' => $data['taxRate'] ?? 0,
                 'discount_amount' => $data['discountAmount'] ?? 0,
-                'status'          => $data['status'] ?? 'draft',
-                'notes'           => $data['notes'] ?? null,
-                'subtotal'        => $totals['subtotal'],
-                'tax_amount'      => $totals['tax_amount'],
-                'total_amount'    => $totals['total_amount'],
+                'status' => $data['status'] ?? 'draft',
+                'notes' => $data['notes'] ?? null,
+                'subtotal' => $totals['subtotal'],
+                'tax_amount' => $totals['tax_amount'],
+                'total_amount' => $totals['total_amount'],
             ]);
 
             foreach ($items as $item) {
                 $invoice->items()->create([
                     'description' => $item['description'],
-                    'quantity'    => $item['quantity'],
-                    'unit_price'  => $item['unitPrice'],
-                    'total'       => round((int) $item['quantity'] * (float) $item['unitPrice'], 2),
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['unitPrice'],
+                    'total' => round((int) $item['quantity'] * (float) $item['unitPrice'], 2),
                 ]);
             }
 
@@ -148,43 +147,43 @@ class FinanceInvoiceController extends Controller
         if ($items !== null) {
             $totals = $this->calculateTotals->execute(
                 items: array_map(fn ($i) => [
-                    'quantity'   => $i['quantity'],
+                    'quantity' => $i['quantity'],
                     'unit_price' => $i['unitPrice'],
                 ], $items),
-                taxRate:        $data['taxRate'] ?? $invoice->tax_rate,
+                taxRate: $data['taxRate'] ?? $invoice->tax_rate,
                 discountAmount: $data['discountAmount'] ?? $invoice->discount_amount,
             );
         } elseif (isset($data['taxRate']) || isset($data['discountAmount'])) {
             // Items unchanged but tax/discount changed — recalculate from existing items
             $existingItems = $invoice->items->map(fn ($i) => [
-                'quantity'   => $i->quantity,
+                'quantity' => $i->quantity,
                 'unit_price' => $i->unit_price,
             ])->toArray();
 
             $totals = $this->calculateTotals->execute(
-                items:          $existingItems,
-                taxRate:        $data['taxRate'] ?? $invoice->tax_rate,
+                items: $existingItems,
+                taxRate: $data['taxRate'] ?? $invoice->tax_rate,
                 discountAmount: $data['discountAmount'] ?? $invoice->discount_amount,
             );
         }
 
         DB::transaction(function () use ($invoice, $data, $items, &$totals): void {
             $invoice->update(array_filter([
-                'client_id'       => $data['clientId'] ?? null,
-                'project_id'      => array_key_exists('projectId', $data) ? $data['projectId'] : $invoice->project_id,
-                'invoice_type'    => $data['invoiceType'] ?? null,
-                'billing_cycle'   => ($data['invoiceType'] ?? $invoice->invoice_type) === 'subscription'
+                'client_id' => $data['clientId'] ?? null,
+                'project_id' => array_key_exists('projectId', $data) ? $data['projectId'] : $invoice->project_id,
+                'invoice_type' => $data['invoiceType'] ?? null,
+                'billing_cycle' => ($data['invoiceType'] ?? $invoice->invoice_type) === 'subscription'
                     ? (array_key_exists('billingCycle', $data) ? $data['billingCycle'] : $invoice->billing_cycle)
                     : null,
-                'issue_date'      => $data['issueDate'] ?? null,
-                'due_date'        => $data['dueDate'] ?? null,
-                'tax_rate'        => $data['taxRate'] ?? null,
+                'issue_date' => $data['issueDate'] ?? null,
+                'due_date' => $data['dueDate'] ?? null,
+                'tax_rate' => $data['taxRate'] ?? null,
                 'discount_amount' => $data['discountAmount'] ?? null,
-                'status'          => $data['status'] ?? null,
-                'notes'           => array_key_exists('notes', $data) ? $data['notes'] : $invoice->notes,
-                'subtotal'        => $totals['subtotal'] ?? null,
-                'tax_amount'      => $totals['tax_amount'] ?? null,
-                'total_amount'    => $totals['total_amount'] ?? null,
+                'status' => $data['status'] ?? null,
+                'notes' => array_key_exists('notes', $data) ? $data['notes'] : $invoice->notes,
+                'subtotal' => $totals['subtotal'] ?? null,
+                'tax_amount' => $totals['tax_amount'] ?? null,
+                'total_amount' => $totals['total_amount'] ?? null,
             ], fn ($v) => $v !== null));
 
             // Replace items if provided
@@ -194,9 +193,9 @@ class FinanceInvoiceController extends Controller
                 foreach ($items as $item) {
                     $invoice->items()->create([
                         'description' => $item['description'],
-                        'quantity'    => $item['quantity'],
-                        'unit_price'  => $item['unitPrice'],
-                        'total'       => round((int) $item['quantity'] * (float) $item['unitPrice'], 2),
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['unitPrice'],
+                        'total' => round((int) $item['quantity'] * (float) $item['unitPrice'], 2),
                     ]);
                 }
             }
@@ -237,7 +236,7 @@ class FinanceInvoiceController extends Controller
 
         $subscription = $invoice->subscription_id
             ? Subscription::find($invoice->subscription_id)
-            : new Subscription();
+            : new Subscription;
 
         $subscription->fill([
             'client_id' => $invoice->client_id,

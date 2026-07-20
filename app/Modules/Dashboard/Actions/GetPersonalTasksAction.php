@@ -6,8 +6,8 @@ use App\Enums\TaskStatus;
 use App\Modules\PersonalTasks\Models\PersonalTask;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\ProjectTask;
-use App\Modules\Task\Models\Task;
 use App\Modules\Settings\Models\User;
+use App\Modules\Task\Models\Task;
 use Illuminate\Support\Arr;
 
 class GetPersonalTasksAction

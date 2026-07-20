@@ -26,7 +26,7 @@ class CalendarEvent extends Model
     {
         return [
             'start_time' => 'datetime',
-            'end_time'   => 'datetime',
+            'end_time' => 'datetime',
         ];
     }
 

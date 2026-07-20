@@ -14,11 +14,11 @@ class StoreCalendarEventRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'       => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'startTime'   => ['required', 'date'],
-            'endTime'     => ['required', 'date', 'after_or_equal:startTime'],
-            'eventType'   => ['sometimes', 'string', 'in:meeting,reminder,custom'],
+            'startTime' => ['required', 'date'],
+            'endTime' => ['required', 'date', 'after_or_equal:startTime'],
+            'eventType' => ['sometimes', 'string', 'in:meeting,reminder,custom'],
         ];
     }
 }

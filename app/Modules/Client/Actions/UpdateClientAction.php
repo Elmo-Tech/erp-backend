@@ -14,7 +14,7 @@ class UpdateClientAction
         $client->update($this->normalizeClientData($data));
 
         $contactData = $data['contact_person'] ?? $data['contactPerson'] ?? null;
-        if (is_array($contactData) && !empty($contactData)) {
+        if (is_array($contactData) && ! empty($contactData)) {
             $contact = $client->contacts()->where('is_primary', true)->first();
             if ($contact) {
                 $contact->update($this->normalizeContactData($client->id, $contactData));

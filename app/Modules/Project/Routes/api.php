@@ -55,13 +55,19 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
 
         // ── Project files (read) ──────────────────────────────────────────────
         Route::get('projects/{project}/files', [ProjectFileController::class, 'index'])
+            ->middleware('permission:view_project_files|manage_project_files|access_client_portal')
             ->name('projects.files.index');
 
         Route::get('projects/{project}/sales-documents', [ProjectFileController::class, 'salesDocuments'])
             ->name('projects.sales-documents.index');
 
         Route::get('projects/{project}/files/{file}', [ProjectFileController::class, 'show'])
+            ->middleware('permission:view_project_files|manage_project_files|access_client_portal')
             ->name('projects.files.show');
+
+        Route::get('projects/{project}/files/{file}/download', [ProjectFileController::class, 'download'])
+            ->middleware('permission:view_project_files|manage_project_files|access_client_portal')
+            ->name('projects.files.download');
 
         // ── Project members (read) ────────────────────────────────────────────
         Route::get('projects/{project}/members', [ProjectMemberController::class, 'index'])
@@ -69,9 +75,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
 
         // ── Wikis (read) ──────────────────────────────────────────────────────
         Route::get('projects/{project}/wikis', [ProjectWikiController::class, 'index'])
+            ->middleware('permission:view_wiki|manage_wiki')
             ->name('projects.wikis.index');
 
         Route::get('projects/{project}/wikis/{wiki}', [ProjectWikiController::class, 'show'])
+            ->middleware('permission:view_wiki|manage_wiki')
             ->name('projects.wikis.show');
 
         // ── Milestones (read) ─────────────────────────────────────────────────
@@ -194,9 +202,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         Route::patch('projects/{project}/milestones/{milestone}', [MilestoneController::class, 'update'])
             ->name('projects.milestones.patch');
 
-        Route::delete('projects/{project}/milestones/{milestone}', [MilestoneController::class, 'destroy'])
-            ->name('projects.milestones.destroy');
     });
+
+    Route::delete('projects/{project}/milestones/{milestone}', [MilestoneController::class, 'destroy'])
+        ->middleware('permission:delete_milestones|manage_all_projects')
+        ->name('projects.milestones.destroy');
 
     // ── Tasks (write) ─────────────────────────────────────────────────────────
     Route::middleware('permission:create_tasks|manage_tasks|manage_all_projects')->group(function () {
@@ -257,12 +267,14 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     });
 
     // ── Time Entries (write) ──────────────────────────────────────────────────
-    Route::middleware('permission:start_timer|log_time|manage_time_entries')->group(function () {
+    Route::middleware('permission:start_timer|stop_timer|manage_time_entries')->group(function () {
         Route::post(
             'projects/{project}/tasks/{task}/time-entries/toggle',
             [ProjectTimeEntryController::class, 'toggle']
         )->name('projects.tasks.time-entries.toggle');
+    });
 
+    Route::middleware('permission:log_time|manage_time_entries')->group(function () {
         Route::post(
             'projects/{project}/tasks/{task}/time-entries',
             [ProjectTimeEntryController::class, 'store']
@@ -281,7 +293,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         )->name('projects.time-entries.stop');
     });
 
-    Route::middleware('permission:log_time|edit_tasks|manage_tasks|manage_time_entries|delete_time_entries|manage_all_projects')->group(function () {
+    Route::middleware('permission:edit_time_entries|manage_time_entries|manage_all_projects')->group(function () {
         Route::put(
             'projects/{project}/tasks/{task}/time-entries/{entry}',
             [ProjectTimeEntryController::class, 'update']
@@ -291,7 +303,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
             'projects/{project}/tasks/{task}/time-entries/{entry}',
             [ProjectTimeEntryController::class, 'update']
         )->name('projects.tasks.time-entries.patch');
+    });
 
+    Route::middleware('permission:delete_time_entries|manage_time_entries|manage_all_projects')->group(function () {
         Route::delete(
             'projects/{project}/tasks/{task}/time-entries/{entry}',
             [ProjectTimeEntryController::class, 'destroy']

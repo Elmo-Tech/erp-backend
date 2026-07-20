@@ -4,8 +4,11 @@ namespace App\Modules\Settings\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\Settings\Models\User;
 use App\Modules\Client\Actions\LogClientAuditAction;
+use App\Modules\Settings\Models\User;
+use App\Modules\Settings\Requests\BulkUpdateInternalCostsRequest;
+use App\Modules\Settings\Requests\UpdateInternalCostRequest;
+use App\Modules\Settings\Resources\AdminUserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -93,7 +96,7 @@ class AdminUserController extends Controller
         $users = User::with('roles')->get();
 
         // Transform using AdminUserResource
-        $usersData = \App\Modules\Settings\Resources\AdminUserResource::collection($users);
+        $usersData = AdminUserResource::collection($users);
 
         return ApiResponse::success([
             'users' => $usersData,
@@ -219,7 +222,7 @@ class AdminUserController extends Controller
      *     )
      * )
      */
-    public function updateInternalCost(\App\Modules\Settings\Requests\UpdateInternalCostRequest $request, int $id): JsonResponse
+    public function updateInternalCost(UpdateInternalCostRequest $request, int $id): JsonResponse
     {
         return DB::transaction(function () use ($request, $id) {
             // Find the user
@@ -371,7 +374,7 @@ class AdminUserController extends Controller
      *     )
      * )
      */
-    public function bulkUpdateInternalCosts(\App\Modules\Settings\Requests\BulkUpdateInternalCostsRequest $request): JsonResponse
+    public function bulkUpdateInternalCosts(BulkUpdateInternalCostsRequest $request): JsonResponse
     {
         return DB::transaction(function () use ($request) {
             $usersData = $request->input('users');

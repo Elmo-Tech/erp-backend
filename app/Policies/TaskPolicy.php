@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\ProjectRole;
 use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Settings\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
@@ -61,6 +62,13 @@ class TaskPolicy
         }
 
         return $user->can('create_tasks');
+    }
+
+    public function createDeliverable(User $user, Project|ProjectTask $subject): bool
+    {
+        return $user->can('manage_all_projects')
+            || $user->can('manage_deliverables')
+            || $user->can('create_project_task_deliverables');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -155,8 +163,8 @@ class TaskPolicy
         }
 
         $project = $task->project;
-        $member  = $project->members()->where('user_id', $user->id)->first();
-        $role    = $member?->role instanceof ProjectRole ? $member->role->value : (string) ($member?->role ?? '');
+        $member = $project->members()->where('user_id', $user->id)->first();
+        $role = $member instanceof ProjectMember ? $member->role->value : '';
 
         // Developers cannot complete tasks directly
         if ($role === ProjectRole::DEVELOPER->value) {
@@ -183,11 +191,11 @@ class TaskPolicy
 
         $member = $project->members()->where('user_id', $user->id)->first();
 
-        if ($member === null) {
+        if (! $member instanceof ProjectMember) {
             return false;
         }
 
-        $role = $member->role instanceof ProjectRole ? $member->role->value : (string) $member->role;
+        $role = $member->role->value;
 
         return in_array($role, [
             ProjectRole::MANAGER->value,

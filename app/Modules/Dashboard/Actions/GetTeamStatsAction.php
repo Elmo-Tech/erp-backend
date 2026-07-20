@@ -3,9 +3,9 @@
 namespace App\Modules\Dashboard\Actions;
 
 use App\Enums\TaskStatus;
+use App\Modules\Settings\Models\User;
 use App\Modules\Task\Models\Task;
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\Settings\Models\User;
 use Carbon\Carbon;
 
 class GetTeamStatsAction

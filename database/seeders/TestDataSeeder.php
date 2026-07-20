@@ -5,9 +5,9 @@ namespace Database\Seeders;
 use App\Modules\CRM\Models\Client;
 use App\Modules\Project\Models\Project;
 use App\Modules\Quotation\Models\Quotation;
+use App\Modules\Settings\Models\User;
 use App\Modules\Task\Models\Task;
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\Settings\Models\User;
 use Illuminate\Database\Seeder;
 
 class TestDataSeeder extends Seeder

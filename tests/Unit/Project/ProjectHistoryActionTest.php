@@ -20,7 +20,7 @@ class ProjectHistoryActionTest extends TestCase
 
         $this->actingAs($user);
 
-        $history = (new ProjectHistoryAction())->recordChange(
+        $history = (new ProjectHistoryAction)->recordChange(
             $project,
             'task_status_changed',
             ExecutionTaskStatus::TO_DO,

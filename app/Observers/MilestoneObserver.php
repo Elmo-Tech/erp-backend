@@ -37,7 +37,7 @@ class MilestoneObserver
                 'milestone_title_changed',
                 $milestone->getOriginal('title'),
                 $dirty['title'],
-                "Milestone title changed"
+                'Milestone title changed'
             );
         }
 
@@ -79,9 +79,9 @@ class MilestoneObserver
         ProjectHistory::create([
             'project_id' => $projectId,
             'field_name' => $fieldName,
-            'old_value'  => $oldValue,
-            'new_value'  => $newValue,
-            'reason'     => $reason,
+            'old_value' => $oldValue,
+            'new_value' => $newValue,
+            'reason' => $reason,
             'changed_by' => Auth::id(),
         ]);
     }

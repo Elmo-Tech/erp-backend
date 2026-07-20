@@ -8,6 +8,7 @@ use App\Modules\Lead\Models\Contract;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Models\Proposal;
 use App\Modules\Lead\Models\Quotation;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -27,8 +28,8 @@ class ProcessLeadStageUpdateAction
     /**
      * Execute the pipeline stage update.
      *
-     * @param  int                    $leadId       The lead being moved.
-     * @param  LeadStage              $newStage     The destination stage.
+     * @param  int  $leadId  The lead being moved.
+     * @param  LeadStage  $newStage  The destination stage.
      * @param  array<int, array<string, mixed>>  $stageResults  Documents to create.
      *
      * Expected shape of each $stageResults item:
@@ -58,11 +59,10 @@ class ProcessLeadStageUpdateAction
      *   'billing_cycle'        => string|null,
      *   'payment_stages'       => array|null,
      * ]
+     * @return Lead The updated lead with its new stage.
      *
-     * @return Lead  The updated lead with its new stage.
-     *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException  If lead not found.
-     * @throws InvalidArgumentException  If a stage result has an unknown type or missing required fields.
+     * @throws ModelNotFoundException If lead not found.
+     * @throws InvalidArgumentException If a stage result has an unknown type or missing required fields.
      */
     public function execute(int $leadId, LeadStage $newStage, array $stageResults): Lead
     {
@@ -98,7 +98,7 @@ class ProcessLeadStageUpdateAction
         if (empty($result['type']) || ! in_array($result['type'], $allowedTypes, true)) {
             throw new InvalidArgumentException(
                 "stage_results[{$index}].type must be one of: ".implode(', ', $allowedTypes).
-                ". Got: ".($result['type'] ?? 'null')
+                '. Got: '.($result['type'] ?? 'null')
             );
         }
 
@@ -107,7 +107,7 @@ class ProcessLeadStageUpdateAction
         if (empty($result['creation_type']) || ! in_array($result['creation_type'], $allowedCreationTypes, true)) {
             throw new InvalidArgumentException(
                 "stage_results[{$index}].creation_type must be one of: ".implode(', ', $allowedCreationTypes).
-                ". Got: ".($result['creation_type'] ?? 'null')
+                '. Got: '.($result['creation_type'] ?? 'null')
             );
         }
 
@@ -126,9 +126,9 @@ class ProcessLeadStageUpdateAction
     private function createDocument(Lead $lead, array $result): void
     {
         match ($result['type']) {
-            'proposal'  => $this->createProposal($lead, $result),
+            'proposal' => $this->createProposal($lead, $result),
             'quotation' => $this->createQuotation($lead, $result),
-            'contract'  => $this->createContract($lead, $result),
+            'contract' => $this->createContract($lead, $result),
         };
     }
 
@@ -138,14 +138,14 @@ class ProcessLeadStageUpdateAction
     private function createProposal(Lead $lead, array $data): Proposal
     {
         return Proposal::create([
-            'lead_id'       => $lead->id,
-            'client_id'     => $lead->client_id,
-            'project_id'    => null, // not yet assigned at this stage
-            'status'        => $data['status'] ?? 'draft',
+            'lead_id' => $lead->id,
+            'client_id' => $lead->client_id,
+            'project_id' => null, // not yet assigned at this stage
+            'status' => $data['status'] ?? 'draft',
             'creation_type' => $data['creation_type'],
-            'skip_reason'   => $data['skip_reason'] ?? null,
-            'assigned_to'   => $data['assigned_to'] ?? null,
-            'file_path'     => $data['file_path'] ?? null,
+            'skip_reason' => $data['skip_reason'] ?? null,
+            'assigned_to' => $data['assigned_to'] ?? null,
+            'file_path' => $data['file_path'] ?? null,
         ]);
     }
 
@@ -155,19 +155,19 @@ class ProcessLeadStageUpdateAction
     private function createQuotation(Lead $lead, array $data): Quotation
     {
         return Quotation::create([
-            'lead_id'         => $lead->id,
-            'client_id'       => $lead->client_id,
-            'project_id'      => null,
-            'status'          => $data['status'] ?? 'draft',
-            'creation_type'   => $data['creation_type'],
-            'skip_reason'     => $data['skip_reason'] ?? null,
-            'assigned_to'     => $data['assigned_to'] ?? null,
-            'file_path'       => $data['file_path'] ?? null,
-            'currency'        => $data['currency'] ?? 'USD',
-            'base_price'      => $data['base_price'] ?? null,
+            'lead_id' => $lead->id,
+            'client_id' => $lead->client_id,
+            'project_id' => null,
+            'status' => $data['status'] ?? 'draft',
+            'creation_type' => $data['creation_type'],
+            'skip_reason' => $data['skip_reason'] ?? null,
+            'assigned_to' => $data['assigned_to'] ?? null,
+            'file_path' => $data['file_path'] ?? null,
+            'currency' => $data['currency'] ?? 'USD',
+            'base_price' => $data['base_price'] ?? null,
             'commission_type' => $data['commission_type'] ?? null,
-            'final_total'     => $data['final_total'] ?? null,
-            'payment_stages'  => $data['payment_stages'] ?? null,
+            'final_total' => $data['final_total'] ?? null,
+            'payment_stages' => $data['payment_stages'] ?? null,
         ]);
     }
 
@@ -177,23 +177,23 @@ class ProcessLeadStageUpdateAction
     private function createContract(Lead $lead, array $data): Contract
     {
         return Contract::create([
-            'lead_id'              => $lead->id,
-            'client_id'            => $lead->client_id,
-            'project_id'           => null,
-            'status'               => $data['status'] ?? 'draft',
-            'creation_type'        => $data['creation_type'],
-            'skip_reason'          => $data['skip_reason'] ?? null,
-            'assigned_to'          => $data['assigned_to'] ?? null,
-            'file_path'            => $data['file_path'] ?? null,
-            'contract_model'       => $data['contract_model'] ?? 'standard',
-            'development_days'     => $data['development_days'] ?? null,
-            'review_days'          => $data['review_days'] ?? null,
-            'delay_penalty'        => $data['delay_penalty'] ?? null,
+            'lead_id' => $lead->id,
+            'client_id' => $lead->client_id,
+            'project_id' => null,
+            'status' => $data['status'] ?? 'draft',
+            'creation_type' => $data['creation_type'],
+            'skip_reason' => $data['skip_reason'] ?? null,
+            'assigned_to' => $data['assigned_to'] ?? null,
+            'file_path' => $data['file_path'] ?? null,
+            'contract_model' => $data['contract_model'] ?? 'standard',
+            'development_days' => $data['development_days'] ?? null,
+            'review_days' => $data['review_days'] ?? null,
+            'delay_penalty' => $data['delay_penalty'] ?? null,
             'source_code_handover' => $data['source_code_handover'] ?? false,
-            'setup_fee'            => $data['setup_fee'] ?? null,
-            'recurring_fee'        => $data['recurring_fee'] ?? null,
-            'billing_cycle'        => $data['billing_cycle'] ?? null,
-            'payment_stages'       => $data['payment_stages'] ?? null,
+            'setup_fee' => $data['setup_fee'] ?? null,
+            'recurring_fee' => $data['recurring_fee'] ?? null,
+            'billing_cycle' => $data['billing_cycle'] ?? null,
+            'payment_stages' => $data['payment_stages'] ?? null,
         ]);
     }
 }

@@ -11,11 +11,11 @@ class ProjectTaskDeliverableResource extends JsonResource
     {
         return [
             'deliverableId' => $this->id,
-            'taskId'        => $this->task_id,
-            'title'         => $this->title,
-            'isCompleted'   => $this->is_completed,
-            'createdAt'     => $this->created_at?->toISOString(),
-            'updatedAt'     => $this->updated_at?->toISOString(),
+            'taskId' => $this->task_id,
+            'title' => $this->title,
+            'isCompleted' => $this->is_completed,
+            'createdAt' => $this->created_at?->toISOString(),
+            'updatedAt' => $this->updated_at?->toISOString(),
         ];
     }
 }

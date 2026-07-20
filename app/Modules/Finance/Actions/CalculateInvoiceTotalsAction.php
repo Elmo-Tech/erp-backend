@@ -17,13 +17,13 @@ class CalculateInvoiceTotalsAction
 {
     /**
      * @param  array<int, array{quantity: int, unit_price: float|string}>  $items
-     * @param  float|string  $taxRate        Percentage, e.g. 15 means 15 %
-     * @param  float|string  $discountAmount Flat discount in currency units
+     * @param  float|string  $taxRate  Percentage, e.g. 15 means 15 %
+     * @param  float|string  $discountAmount  Flat discount in currency units
      * @return array{subtotal: float, tax_amount: float, total_amount: float}
      */
     public function execute(array $items, float|string $taxRate = 0, float|string $discountAmount = 0): array
     {
-        $taxRate        = (float) $taxRate;
+        $taxRate = (float) $taxRate;
         $discountAmount = (float) $discountAmount;
 
         // 1. Subtotal — sum of all line items
@@ -39,8 +39,8 @@ class CalculateInvoiceTotalsAction
         $totalAmount = max(0.0, round($subtotal + $taxAmount - $discountAmount, 2));
 
         return [
-            'subtotal'     => round($subtotal, 2),
-            'tax_amount'   => $taxAmount,
+            'subtotal' => round($subtotal, 2),
+            'tax_amount' => $taxAmount,
             'total_amount' => $totalAmount,
         ];
     }

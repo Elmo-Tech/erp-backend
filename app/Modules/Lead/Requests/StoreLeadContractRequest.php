@@ -26,41 +26,41 @@ class StoreLeadContractRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'creation_type'   => ['required', 'string', 'in:direct_upload,task,skipped'],
-            'skip_reason'     => ['nullable', 'string', 'max:500'],
-            'assigned_to'     => ['nullable', 'integer', 'exists:users,id'],
-            'file_path'       => ['nullable', 'string', 'max:1000'],
-            'notes'           => ['nullable', 'string', 'max:5000'],
-            'status'          => ['nullable', 'string', 'max:50'],
+            'creation_type' => ['required', 'string', 'in:direct_upload,task,skipped'],
+            'skip_reason' => ['nullable', 'string', 'max:500'],
+            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'file_path' => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'status' => ['nullable', 'string', 'max:50'],
 
             // Contract base fields
-            'contract_model'        => ['nullable', 'string', 'in:standard,saas_subscription'],
-            'development_days'      => ['nullable', 'integer', 'min:1'],
-            'review_days'           => ['nullable', 'integer', 'min:0'],
-            'testing_days'          => ['nullable', 'integer', 'min:0'],
-            'delay_penalty'         => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'source_code_handover'  => ['nullable', 'boolean'],
-            'execution_start_date'  => ['nullable', 'date'],
+            'contract_model' => ['nullable', 'string', 'in:standard,saas_subscription'],
+            'development_days' => ['nullable', 'integer', 'min:1'],
+            'review_days' => ['nullable', 'integer', 'min:0'],
+            'testing_days' => ['nullable', 'integer', 'min:0'],
+            'delay_penalty' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'source_code_handover' => ['nullable', 'boolean'],
+            'execution_start_date' => ['nullable', 'date'],
             'working_days_per_week' => ['nullable', 'integer', 'min:1', 'max:7'],
 
             // Standard financials
-            'currency'        => ['nullable', 'string', 'max:10'],
-            'total_amount'    => ['nullable', 'numeric', 'min:0'],
-            'payment_stages'  => ['nullable', 'array'],
+            'currency' => ['nullable', 'string', 'max:10'],
+            'total_amount' => ['nullable', 'numeric', 'min:0'],
+            'payment_stages' => ['nullable', 'array'],
             'payment_stages.*.stage_name' => ['required_with:payment_stages', 'string', 'max:255'],
             'payment_stages.*.percentage' => ['required_with:payment_stages', 'numeric', 'min:0', 'max:100'],
-            'payment_stages.*.amount'     => ['required_with:payment_stages', 'numeric', 'min:0'],
+            'payment_stages.*.amount' => ['required_with:payment_stages', 'numeric', 'min:0'],
 
             // SaaS financials
-            'setup_fee'               => ['nullable', 'numeric', 'min:0'],
-            'recurring_fee'           => ['nullable', 'numeric', 'min:0'],
-            'billing_cycle'           => ['nullable', 'string', 'in:monthly,quarterly,semi_annual,annual'],
+            'setup_fee' => ['nullable', 'numeric', 'min:0'],
+            'recurring_fee' => ['nullable', 'numeric', 'min:0'],
+            'billing_cycle' => ['nullable', 'string', 'in:monthly,quarterly,semi_annual,annual'],
             'subscription_start_date' => ['nullable', 'date'],
-            'apply_promo'             => ['nullable', 'boolean'],
-            'promo_discount'          => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'addons'                  => ['nullable', 'array'],
-            'addons.*.name'           => ['required_with:addons', 'string', 'max:255'],
-            'addons.*.price'          => ['required_with:addons', 'numeric', 'min:0'],
+            'apply_promo' => ['nullable', 'boolean'],
+            'promo_discount' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'addons' => ['nullable', 'array'],
+            'addons.*.name' => ['required_with:addons', 'string', 'max:255'],
+            'addons.*.price' => ['required_with:addons', 'numeric', 'min:0'],
         ];
     }
 
@@ -68,7 +68,7 @@ class StoreLeadContractRequest extends FormRequest
     {
         return [
             'creation_type.required' => 'The creation type is required.',
-            'creation_type.in'       => 'Creation type must be one of: direct_upload, task, skipped.',
+            'creation_type.in' => 'Creation type must be one of: direct_upload, task, skipped.',
         ];
     }
 

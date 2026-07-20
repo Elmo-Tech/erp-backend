@@ -2,19 +2,21 @@
 
 namespace App\Modules\Calendar\Services;
 
-use App\Modules\Calendar\Models\CalendarEvent;
 use App\Modules\Attendance\Models\Attendance;
+use App\Modules\Calendar\Models\CalendarEvent;
 use App\Modules\Client\Models\Client;
 use App\Modules\Finance\Models\FinanceInvoice;
 use App\Modules\Finance\Models\Subscription;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Meetings\Models\Meeting;
+use App\Modules\Meetings\Services\MeetingService;
 use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Models\Milestone;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -37,21 +39,25 @@ use Illuminate\Support\Facades\Schema;
  */
 class MasterCalendarAggregatorService
 {
+    public function __construct(
+        private MeetingService $meetingService
+    ) {}
+
     /**
      * Aggregate all calendar items within the given date range.
      *
      * @param  Carbon  $startDate  Inclusive start of the range
-     * @param  Carbon  $endDate    Inclusive end of the range
+     * @param  Carbon  $endDate  Inclusive end of the range
      * @return Collection<int, array<string, mixed>>
      */
     public function aggregate(Carbon $startDate, Carbon $endDate, User $user): Collection
     {
         return collect()
-            ->merge($user->can('view_calendar_events') ? $this->fetchEvents($startDate, $endDate) : collect())
-            ->merge($user->can('view_calendar_meetings') ? $this->fetchMeetings($startDate, $endDate) : collect())
-            ->merge($user->can('view_calendar_tasks') ? $this->fetchProjectTasks($startDate, $endDate) : collect())
+            ->merge($user->can('view_calendar_events') ? $this->fetchEvents($startDate, $endDate, $user) : collect())
+            ->merge($user->can('view_calendar_meetings') ? $this->fetchMeetings($startDate, $endDate, $user) : collect())
+            ->merge($user->can('view_calendar_tasks') ? $this->fetchProjectTasks($startDate, $endDate, $user) : collect())
             ->merge($user->can('view_calendar_invoices') ? $this->fetchInvoices($startDate, $endDate) : collect())
-            ->merge($user->can('view_calendar_milestones') ? $this->fetchMilestones($startDate, $endDate) : collect())
+            ->merge($user->can('view_calendar_milestones') ? $this->fetchMilestones($startDate, $endDate, $user) : collect())
             ->merge($user->can('view_calendar_subscriptions') ? $this->fetchSubscriptions($startDate, $endDate) : collect())
             ->merge(($user->can('view_attendance') || $user->can('manage_attendance')) ? $this->fetchAttendance($startDate, $endDate, $user) : collect())
             ->sortBy('date')
@@ -61,9 +67,10 @@ class MasterCalendarAggregatorService
     /**
      * Fetch polymorphic Meeting records whose scheduled_at falls within the range.
      */
-    private function fetchMeetings(Carbon $startDate, Carbon $endDate): Collection
+    private function fetchMeetings(Carbon $startDate, Carbon $endDate, User $user): Collection
     {
-        return Meeting::with(['assignedTo:id,name', 'createdBy:id,name', 'model'])
+        return $this->meetingService->visibleToUserQuery($user)
+            ->with(['assignedTo:id,name', 'createdBy:id,name', 'model'])
             ->whereBetween('scheduled_at', [
                 $startDate->copy()->startOfDay(),
                 $endDate->copy()->endOfDay(),
@@ -74,18 +81,18 @@ class MasterCalendarAggregatorService
                 $subjectMeta = $this->meetingSubjectMeta($subject);
 
                 return [
-                    'id'        => 'meeting-'.$meeting->id,
-                    'type'      => 'meeting',
-                    'title'     => $meeting->title,
-                    'date'      => $meeting->scheduled_at->toDateString(),
+                    'id' => 'meeting-'.$meeting->id,
+                    'type' => 'meeting',
+                    'title' => $meeting->title,
+                    'date' => $meeting->scheduled_at->toDateString(),
                     'startTime' => $meeting->scheduled_at->toIso8601String(),
-                    'endTime'   => $meeting->scheduled_at->copy()->addHour()->toIso8601String(),
-                    'status'    => $meeting->status->value,
-                    'meta'      => array_merge($subjectMeta, [
+                    'endTime' => $meeting->scheduled_at->copy()->addHour()->toIso8601String(),
+                    'status' => $meeting->status->value,
+                    'meta' => array_merge($subjectMeta, [
                         'description' => $meeting->description,
                         'notes' => $meeting->description,
-                        'eventType'   => 'meeting',
-                        'creatorId'   => $meeting->created_by,
+                        'eventType' => 'meeting',
+                        'creatorId' => $meeting->created_by,
                         'creatorName' => $meeting->createdBy?->name,
                         'meetingType' => $meeting->meeting_type,
                         'location' => $meeting->location?->value,
@@ -152,26 +159,27 @@ class MasterCalendarAggregatorService
     /**
      * Fetch CalendarEvent records whose start_time falls within the range.
      */
-    private function fetchEvents(Carbon $startDate, Carbon $endDate): Collection
+    private function fetchEvents(Carbon $startDate, Carbon $endDate, User $user): Collection
     {
         return CalendarEvent::with('creator:id,name')
+            ->where('user_id', $user->id)
             ->whereBetween('start_time', [
-                $startDate->startOfDay(),
-                $endDate->endOfDay(),
+                $startDate->copy()->startOfDay(),
+                $endDate->copy()->endOfDay(),
             ])
             ->get()
             ->map(fn (CalendarEvent $event) => [
-                'id'        => 'event-'.$event->id,
-                'type'      => 'event',
-                'title'     => $event->title,
-                'date'      => $event->start_time->toDateString(),
+                'id' => 'event-'.$event->id,
+                'type' => 'event',
+                'title' => $event->title,
+                'date' => $event->start_time->toDateString(),
                 'startTime' => $event->start_time->toIso8601String(),
-                'endTime'   => $event->end_time->toIso8601String(),
-                'status'    => $event->event_type,
-                'meta'      => [
+                'endTime' => $event->end_time->toIso8601String(),
+                'status' => $event->event_type,
+                'meta' => [
                     'description' => $event->description,
-                    'eventType'   => $event->event_type,
-                    'creatorId'   => $event->user_id,
+                    'eventType' => $event->event_type,
+                    'creatorId' => $event->user_id,
                     'creatorName' => $event->creator?->name,
                 ],
             ]);
@@ -180,9 +188,10 @@ class MasterCalendarAggregatorService
     /**
      * Fetch ProjectTask records whose due_date falls within the range.
      */
-    private function fetchProjectTasks(Carbon $startDate, Carbon $endDate): Collection
+    private function fetchProjectTasks(Carbon $startDate, Carbon $endDate, User $user): Collection
     {
-        return ProjectTask::with(['project:id,title', 'assignee:id,name'])
+        return ProjectTask::visibleTo($user)
+            ->with(['project:id,title', 'assignee:id,name'])
             ->whereNotNull('due_date')
             ->whereBetween('due_date', [
                 $startDate->toDateString(),
@@ -190,19 +199,19 @@ class MasterCalendarAggregatorService
             ])
             ->get()
             ->map(fn (ProjectTask $task) => [
-                'id'        => 'task-'.$task->id,
-                'type'      => 'task',
-                'title'     => $task->title,
-                'date'      => $task->due_date->toDateString(),
+                'id' => 'task-'.$task->id,
+                'type' => 'task',
+                'title' => $task->title,
+                'date' => $task->due_date->toDateString(),
                 'startTime' => null,
-                'endTime'   => null,
-                'status'    => $task->status->value,
-                'meta'      => [
-                    'projectId'    => $task->project_id,
+                'endTime' => null,
+                'status' => $task->status->value,
+                'meta' => [
+                    'projectId' => $task->project_id,
                     'projectTitle' => $task->project?->title,
-                    'assigneeId'   => $task->assignee_id,
+                    'assigneeId' => $task->assignee_id,
                     'assigneeName' => $task->assignee?->name,
-                    'milestoneId'  => $task->milestone_id,
+                    'milestoneId' => $task->milestone_id,
                 ],
             ]);
     }
@@ -220,21 +229,21 @@ class MasterCalendarAggregatorService
             ])
             ->get()
             ->map(fn (FinanceInvoice $invoice) => [
-                'id'        => 'invoice-'.$invoice->id,
-                'type'      => 'invoice',
-                'title'     => 'Invoice '.$invoice->invoice_number,
-                'date'      => $invoice->due_date->toDateString(),
+                'id' => 'invoice-'.$invoice->id,
+                'type' => 'invoice',
+                'title' => 'Invoice '.$invoice->invoice_number,
+                'date' => $invoice->due_date->toDateString(),
                 'startTime' => null,
-                'endTime'   => null,
-                'status'    => $invoice->status,
-                'meta'      => [
+                'endTime' => null,
+                'status' => $invoice->status,
+                'meta' => [
                     'invoiceNumber' => $invoice->invoice_number,
-                    'clientId'      => $invoice->client_id,
-                    'clientName'    => $invoice->client?->display_name ?? $invoice->client?->company_name,
-                    'projectId'     => $invoice->project_id,
-                    'projectTitle'  => $invoice->project?->title,
-                    'totalAmount'   => (float) $invoice->total_amount,
-                    'currency'      => 'USD',
+                    'clientId' => $invoice->client_id,
+                    'clientName' => $invoice->client?->display_name ?? $invoice->client?->company_name,
+                    'projectId' => $invoice->project_id,
+                    'projectTitle' => $invoice->project?->title,
+                    'totalAmount' => (float) $invoice->total_amount,
+                    'currency' => 'USD',
                 ],
             ]);
     }
@@ -242,9 +251,20 @@ class MasterCalendarAggregatorService
     /**
      * Fetch Milestone records whose due_date falls within the range.
      */
-    private function fetchMilestones(Carbon $startDate, Carbon $endDate): Collection
+    private function fetchMilestones(Carbon $startDate, Carbon $endDate, User $user): Collection
     {
         return Milestone::with('project:id,title')
+            ->whereHas('project', function (Builder $query) use ($user): void {
+                if ($user->can('access_client_portal')) {
+                    $query->where('client_id', $user->client()->value('id') ?? 0);
+
+                    return;
+                }
+
+                if (! $user->can('manage_all_projects') && ! $user->can('view_all_projects')) {
+                    $query->whereHas('members', fn (Builder $memberQuery) => $memberQuery->where('user_id', $user->id));
+                }
+            })
             ->whereNotNull('due_date')
             ->whereBetween('due_date', [
                 $startDate->toDateString(),
@@ -252,20 +272,20 @@ class MasterCalendarAggregatorService
             ])
             ->get()
             ->map(fn (Milestone $milestone) => [
-                'id'        => 'milestone-'.$milestone->id,
-                'type'      => 'milestone',
-                'title'     => $milestone->title,
-                'date'      => $milestone->due_date->toDateString(),
+                'id' => 'milestone-'.$milestone->id,
+                'type' => 'milestone',
+                'title' => $milestone->title,
+                'date' => $milestone->due_date->toDateString(),
                 'startTime' => null,
-                'endTime'   => null,
-                'status'    => $milestone->status?->value,
-                'meta'      => [
-                    'milestoneId'        => $milestone->id,
-                    'projectId'          => $milestone->project_id,
-                    'projectTitle'       => $milestone->project?->title,
+                'endTime' => null,
+                'status' => $milestone->status?->value,
+                'meta' => [
+                    'milestoneId' => $milestone->id,
+                    'projectId' => $milestone->project_id,
+                    'projectTitle' => $milestone->project?->title,
                     'progressPercentage' => $milestone->progress_percentage,
-                    'invoiceId'          => $milestone->invoice_id,
-                    'paymentStageId'     => $milestone->payment_stage_id,
+                    'invoiceId' => $milestone->invoice_id,
+                    'paymentStageId' => $milestone->payment_stage_id,
                 ],
             ]);
     }
@@ -281,14 +301,14 @@ class MasterCalendarAggregatorService
             ])
             ->get()
             ->map(fn (Subscription $subscription) => [
-                'id'        => 'subscription-'.$subscription->id,
-                'type'      => 'subscription',
-                'title'     => $subscription->name,
-                'date'      => $subscription->next_billing_date->toDateString(),
+                'id' => 'subscription-'.$subscription->id,
+                'type' => 'subscription',
+                'title' => $subscription->name,
+                'date' => $subscription->next_billing_date->toDateString(),
                 'startTime' => null,
-                'endTime'   => null,
-                'status'    => $subscription->status,
-                'meta'      => [
+                'endTime' => null,
+                'status' => $subscription->status,
+                'meta' => [
                     'subscriptionId' => $subscription->id,
                     'billingCycle' => $subscription->billing_cycle,
                     'clientId' => $subscription->client_id,
@@ -401,14 +421,14 @@ class MasterCalendarAggregatorService
                     ->values();
 
                 return [
-                    'id'        => 'attendance-'.$attendance->id,
-                    'type'      => 'attendance',
-                    'title'     => 'Attendance: '.ucfirst((string) $attendance->status),
-                    'date'      => $attendance->date?->toDateString(),
+                    'id' => 'attendance-'.$attendance->id,
+                    'type' => 'attendance',
+                    'title' => 'Attendance: '.ucfirst((string) $attendance->status),
+                    'date' => $attendance->date?->toDateString(),
                     'startTime' => $attendance->clock_in?->toIso8601String(),
-                    'endTime'   => $attendance->clock_out?->toIso8601String(),
-                    'status'    => $attendance->status,
-                    'meta'      => [
+                    'endTime' => $attendance->clock_out?->toIso8601String(),
+                    'status' => $attendance->status,
+                    'meta' => [
                         'attendanceId' => $attendance->id,
                         'userId' => $attendance->user_id,
                         'userName' => $attendance->user?->name,

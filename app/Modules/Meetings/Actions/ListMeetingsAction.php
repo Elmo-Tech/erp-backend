@@ -4,8 +4,8 @@ namespace App\Modules\Meetings\Actions;
 
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Settings\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 
 class ListMeetingsAction
 {

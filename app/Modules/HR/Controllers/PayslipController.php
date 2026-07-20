@@ -10,7 +10,7 @@ use App\Modules\HR\Services\PayrollCalculatorService;
 use App\Modules\Settings\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Payslip endpoints.
@@ -111,8 +111,8 @@ class PayslipController extends Controller
 
         $validated = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
-            'month'   => ['required', 'integer', 'min:1', 'max:12'],
-            'year'    => ['required', 'integer', 'min:2020', 'max:2100'],
+            'month' => ['required', 'integer', 'min:1', 'max:12'],
+            'year' => ['required', 'integer', 'min:2020', 'max:2100'],
         ]);
 
         /** @var User $employee */
@@ -156,19 +156,23 @@ class PayslipController extends Controller
     {
         abort_if(! $request->user()->can('manage_payroll'), 403, 'Unauthorized');
 
-        if ($payslip->status !== 'draft') {
-            return ApiResponse::error(
-                "Payslip is already '{$payslip->status}' and cannot be approved again.",
-                422
+        return DB::transaction(function () use ($payslip): JsonResponse {
+            $lockedPayslip = Payslip::query()->whereKey($payslip->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedPayslip->status !== 'draft') {
+                return ApiResponse::error(
+                    "Payslip is already '{$lockedPayslip->status}' and cannot be approved again.",
+                    422
+                );
+            }
+
+            $lockedPayslip->update(['status' => 'approved']);
+
+            return ApiResponse::success(
+                new PayslipResource($lockedPayslip->load('user:id,name,email,avatar')),
+                'Payslip approved successfully.'
             );
-        }
-
-        $payslip->update(['status' => 'approved']);
-
-        return ApiResponse::success(
-            new PayslipResource($payslip->load('user:id,name,email,avatar')),
-            'Payslip approved successfully.'
-        );
+        }, 3);
     }
 
     // -------------------------------------------------------------------------
@@ -180,19 +184,23 @@ class PayslipController extends Controller
     {
         abort_if(! $request->user()->can('manage_payroll'), 403, 'Unauthorized');
 
-        if ($payslip->status !== 'approved') {
-            return ApiResponse::error(
-                "Payslip must be 'approved' before it can be marked as paid. Current status: '{$payslip->status}'.",
-                422
+        return DB::transaction(function () use ($payslip): JsonResponse {
+            $lockedPayslip = Payslip::query()->whereKey($payslip->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedPayslip->status !== 'approved') {
+                return ApiResponse::error(
+                    "Payslip must be 'approved' before it can be marked as paid. Current status: '{$lockedPayslip->status}'.",
+                    422
+                );
+            }
+
+            $lockedPayslip->update(['status' => 'paid']);
+
+            return ApiResponse::success(
+                new PayslipResource($lockedPayslip->load('user:id,name,email,avatar')),
+                'Payslip marked as paid.'
             );
-        }
-
-        $payslip->update(['status' => 'paid']);
-
-        return ApiResponse::success(
-            new PayslipResource($payslip->load('user:id,name,email,avatar')),
-            'Payslip marked as paid.'
-        );
+        }, 3);
     }
 
     // -------------------------------------------------------------------------
@@ -204,15 +212,19 @@ class PayslipController extends Controller
     {
         abort_if(! $request->user()->can('manage_payroll'), 403, 'Unauthorized');
 
-        if (! $payslip->isDraft()) {
-            return ApiResponse::error(
-                'Only draft payslips can be deleted.',
-                422
-            );
-        }
+        return DB::transaction(function () use ($payslip): JsonResponse {
+            $lockedPayslip = Payslip::query()->whereKey($payslip->id)->lockForUpdate()->firstOrFail();
 
-        $payslip->delete();
+            if (! $lockedPayslip->isDraft()) {
+                return ApiResponse::error(
+                    'Only draft payslips can be deleted.',
+                    422
+                );
+            }
 
-        return ApiResponse::success(null, 'Payslip deleted successfully.');
+            $lockedPayslip->delete();
+
+            return ApiResponse::success(null, 'Payslip deleted successfully.');
+        }, 3);
     }
 }

@@ -11,14 +11,14 @@ class ChangeRequestResource extends JsonResource
     {
         return [
             'changeRequestId' => $this->id,
-            'projectId'       => $this->project_id,
-            'title'           => $this->title,
-            'description'     => $this->description,
-            'price'           => (float) $this->price,
-            'status'          => $this->status?->value,
-            'statusLabel'     => $this->status?->label(),
-            'createdAt'       => $this->created_at?->toISOString(),
-            'updatedAt'       => $this->updated_at?->toISOString(),
+            'projectId' => $this->project_id,
+            'title' => $this->title,
+            'description' => $this->description,
+            'price' => (float) $this->price,
+            'status' => $this->status?->value,
+            'statusLabel' => $this->status?->label(),
+            'createdAt' => $this->created_at?->toISOString(),
+            'updatedAt' => $this->updated_at?->toISOString(),
         ];
     }
 }

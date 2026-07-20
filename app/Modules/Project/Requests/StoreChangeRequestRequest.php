@@ -17,20 +17,20 @@ class StoreChangeRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'       => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
-            'price'       => ['required', 'numeric', 'min:0'],
+            'price' => ['required', 'numeric', 'min:0'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'title.required'       => 'The change request title is required.',
+            'title.required' => 'The change request title is required.',
             'description.required' => 'The description is required.',
-            'price.required'       => 'The price is required.',
-            'price.numeric'        => 'The price must be a number.',
-            'price.min'            => 'The price must be at least 0.',
+            'price.required' => 'The price is required.',
+            'price.numeric' => 'The price must be a number.',
+            'price.min' => 'The price must be at least 0.',
         ];
     }
 

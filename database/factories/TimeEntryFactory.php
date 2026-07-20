@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Modules\Settings\Models\User;
+use App\Modules\TimeEntry\Models\TimeEntry;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

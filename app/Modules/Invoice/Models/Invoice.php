@@ -3,8 +3,8 @@
 namespace App\Modules\Invoice\Models;
 
 use App\Enums\InvoiceStatus;
-use App\Modules\Contract\Models\Contract;
 use App\Modules\Client\Models\Client;
+use App\Modules\Contract\Models\Contract;
 use App\Modules\Project\Models\Project;
 use App\Scopes\ClientScope;
 use App\Traits\HasCreatedUpdatedBy;
@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -24,10 +25,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float|int|string $amount
  * @property string $currency
  * @property InvoiceStatus $status
- * @property \Illuminate\Support\Carbon $due_date
- * @property \Illuminate\Support\Carbon|null $paid_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $due_date
+ * @property Carbon|null $paid_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  * @property-read Project $project
  */
 class Invoice extends Model

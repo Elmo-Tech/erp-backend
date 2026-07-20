@@ -6,14 +6,15 @@ use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
- * @property int    $id
- * @property int    $user_id
- * @property float  $amount
- * @property string $type   manual_bonus|manual_deduction
+ * @property int $id
+ * @property int $user_id
+ * @property float $amount
+ * @property string $type manual_bonus|manual_deduction
  * @property string $reason
- * @property \Illuminate\Support\Carbon $transaction_date
+ * @property Carbon $transaction_date
  * @property-read User $user
  */
 class PayrollTransaction extends Model
@@ -31,7 +32,7 @@ class PayrollTransaction extends Model
     protected function casts(): array
     {
         return [
-            'amount'           => 'decimal:2',
+            'amount' => 'decimal:2',
             'transaction_date' => 'date',
         ];
     }

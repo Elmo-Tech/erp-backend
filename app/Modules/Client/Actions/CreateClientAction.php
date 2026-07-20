@@ -14,9 +14,9 @@ class CreateClientAction
     {
         return DB::transaction(function () use ($data) {
             $client = Client::create($this->normalizeClientData($data));
-            
+
             $contactData = $data['contact_person'] ?? $data['contactPerson'] ?? null;
-            if (is_array($contactData) && !empty($contactData)) {
+            if (is_array($contactData) && ! empty($contactData)) {
                 $client->contacts()->create($this->normalizeContactData($client->id, $contactData));
             }
 

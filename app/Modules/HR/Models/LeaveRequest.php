@@ -6,13 +6,14 @@ use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
- * @property int    $id
- * @property int    $user_id
- * @property \Illuminate\Support\Carbon $start_date
- * @property \Illuminate\Support\Carbon $end_date
- * @property string $type   annual|sick|unpaid|permission
+ * @property int $id
+ * @property int $user_id
+ * @property Carbon $start_date
+ * @property Carbon $end_date
+ * @property string $type annual|sick|unpaid|permission
  * @property string $status pending|approved|rejected
  * @property string|null $reason
  * @property-read User $user
@@ -34,7 +35,7 @@ class LeaveRequest extends Model
     {
         return [
             'start_date' => 'date',
-            'end_date'   => 'date',
+            'end_date' => 'date',
         ];
     }
 

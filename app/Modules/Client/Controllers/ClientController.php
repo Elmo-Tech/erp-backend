@@ -11,10 +11,12 @@ use App\Modules\Client\Models\Client;
 use App\Modules\Client\Requests\StoreClientRequest;
 use App\Modules\Client\Requests\UpdateClientRequest;
 use App\Modules\Client\Resources\ClientCollection;
+use App\Modules\Client\Resources\ClientPortalResource;
+use App\Modules\Client\Resources\ClientProjectResource;
 use App\Modules\Client\Resources\ClientResource;
 use App\Modules\Client\Services\ClientActivityLogger;
-use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Meetings\Resources\MeetingResource;
+use App\Modules\Meetings\Services\MeetingService;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Resources\ProjectResource;
 use Illuminate\Http\JsonResponse;
@@ -36,7 +38,8 @@ class ClientController extends Controller
         private CreateClientAction $createClientAction,
         private UpdateClientAction $updateClientAction,
         private DeleteClientAction $deleteClientAction,
-        private ClientActivityLogger $clientActivityLogger
+        private ClientActivityLogger $clientActivityLogger,
+        private MeetingService $meetingService
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -59,6 +62,8 @@ class ClientController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Client::class);
+
         $perPage = $request->get('perPage', 15);
 
         $clients = QueryBuilder::for(
@@ -146,8 +151,17 @@ class ClientController extends Controller
      *     @OA\Response(response=200, description="Success")
      * )
      */
-    public function show(Client $client): JsonResponse
+    public function show(Request $request, Client $client): JsonResponse
     {
+        $this->authorize('view', $client);
+
+        if ($request->user()->can('access_client_portal')) {
+            return ApiResponse::success(
+                new ClientPortalResource($client),
+                'Client retrieved successfully'
+            );
+        }
+
         $client->load(['accountManager', 'contacts', 'user']);
 
         return ApiResponse::success(
@@ -214,25 +228,28 @@ class ClientController extends Controller
 
     public function projects(Request $request, Client $client): JsonResponse
     {
-        $projects = Project::withoutGlobalScopes()
-            ->where('client_id', $client->id)
+        $this->authorize('viewProjects', $client);
+
+        $projects = $client->projects()
             ->with(['client'])
             ->orderBy('created_at', 'desc')
             ->limit((int) $request->integer('limit', 100))
             ->get();
 
         return ApiResponse::success([
-            'projects' => ProjectResource::collection($projects),
+            'projects' => $request->user()->can('access_client_portal')
+                ? ClientProjectResource::collection($projects)
+                : ProjectResource::collection($projects),
         ], 'Client projects retrieved successfully');
     }
 
     public function meetings(Request $request, Client $client): JsonResponse
     {
-        $projectIds = Project::withoutGlobalScopes()
-            ->where('client_id', $client->id)
-            ->pluck('id');
+        $this->authorize('viewMeetings', $client);
 
-        $meetings = Meeting::query()
+        $projectIds = $client->projects()->pluck('projects.id');
+
+        $meetings = $this->meetingService->visibleToUserQuery($request->user())
             ->with(['model', 'assignedTo'])
             ->where(function ($query) use ($client, $projectIds) {
                 $query->where(function ($clientQuery) use ($client) {

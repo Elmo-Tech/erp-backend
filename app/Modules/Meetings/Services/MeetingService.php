@@ -4,9 +4,10 @@ namespace App\Modules\Meetings\Services;
 
 use App\Enums\MeetingStatus;
 use App\Modules\Meetings\Models\Meeting;
+use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class MeetingService
 {
@@ -87,14 +88,27 @@ class MeetingService
         return $query->get();
     }
 
+    /** @return Builder<Meeting> */
     public function visibleToUserQuery(User $user): Builder
     {
+        $visibleProjectIds = Project::query()->select('projects.id');
+
+        if ($user->can('access_client_portal')) {
+            $visibleProjectIds->where('client_id', $user->client()->value('id') ?? 0);
+        } elseif (! $user->can('manage_all_projects') && ! $user->can('view_all_projects')) {
+            $visibleProjectIds->whereHas('members', fn (Builder $query) => $query->where('user_id', $user->id));
+        }
+
         return Meeting::query()
             ->where(function (Builder $query) use ($user) {
                 $query->where('created_by', $user->id)
                     ->orWhere('assigned_to', $user->id)
                     ->orWhereJsonContains('internal_attendees', $user->id)
                     ->orWhereJsonContains('internal_attendees', (string) $user->id);
+            })
+            ->orWhere(function (Builder $query) use ($visibleProjectIds) {
+                $query->where('model_type', Project::class)
+                    ->whereIn('model_id', $visibleProjectIds);
             });
     }
 }

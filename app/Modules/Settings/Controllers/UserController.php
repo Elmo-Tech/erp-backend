@@ -59,7 +59,7 @@ class UserController extends Controller
         abort_if(! $request->user()->can('manage_users'), 403, 'Unauthorized');
 
         return DB::transaction(function () use ($request): JsonResponse {
-            $user = $this->userService->createUser($request->validated());
+            $user = $this->userService->createUser($request->user(), $request->validated());
 
             return ApiResponse::success(
                 ['user' => new UserResource($user)],
@@ -106,7 +106,7 @@ class UserController extends Controller
         }
 
         return DB::transaction(function () use ($request, $user): JsonResponse {
-            $updated = $this->userService->updateUser($user, $request->validated());
+            $updated = $this->userService->updateUser($request->user(), $user, $request->validated());
 
             return ApiResponse::success(
                 ['user' => new UserResource($updated)],
@@ -121,7 +121,7 @@ class UserController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_users'), 403, 'Unauthorized');
+        abort_if(! $request->user()->can('delete_users'), 403, 'Unauthorized');
 
         $user = $this->userService->getUserById($id);
 
@@ -133,8 +133,10 @@ class UserController extends Controller
             return ApiResponse::error('You cannot delete your own account', 400);
         }
 
-        return DB::transaction(function () use ($user): JsonResponse {
-            $this->userService->deleteUser($user);
+        $actor = $request->user();
+
+        return DB::transaction(function () use ($actor, $user): JsonResponse {
+            $this->userService->deleteUser($actor, $user);
 
             return ApiResponse::success(null, 'User deleted successfully');
         });

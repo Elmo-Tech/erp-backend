@@ -19,10 +19,10 @@ class UpdateChangeRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'       => ['sometimes', 'string', 'max:255'],
+            'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'string'],
-            'price'       => ['sometimes', 'numeric', 'min:0'],
-            'status'      => ['sometimes', new Enum(ChangeRequestStatus::class)],
+            'price' => ['sometimes', 'numeric', 'min:0'],
+            'status' => ['sometimes', new Enum(ChangeRequestStatus::class)],
         ];
     }
 

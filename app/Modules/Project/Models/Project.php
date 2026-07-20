@@ -3,14 +3,15 @@
 namespace App\Modules\Project\Models;
 
 use App\Enums\ProjectRole;
-use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Client\Models\Client;
 use App\Modules\Invoice\Models\Invoice;
+use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Settings\Models\User;
 use App\Modules\Task\Models\Task;
 use App\Scopes\ClientScope;
 use App\Traits\HasCreatedUpdatedBy;
 use Database\Factories\ProjectFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -26,12 +27,12 @@ use Illuminate\Support\Facades\Cache;
  * @property string $title
  * @property ProjectStatus|null $status
  * @property float|int|string|null $budget
- * @property \Illuminate\Support\Carbon|null $deadline
- * @property \Illuminate\Support\Carbon|null $ui_approved_at
- * @property \Illuminate\Support\Carbon|null $created_at
+ * @property Carbon|null $deadline
+ * @property Carbon|null $ui_approved_at
+ * @property Carbon|null $created_at
  * @property-read Client $client
- * @property-read \Illuminate\Database\Eloquent\Collection<int, Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, ProjectMember> $members
+ * @property-read Collection<int, Invoice> $invoices
+ * @property-read Collection<int, ProjectMember> $members
  */
 class Project extends Model
 {

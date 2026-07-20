@@ -3,12 +3,12 @@
 namespace Tests\Feature\Project;
 
 use App\Enums\ProjectRole;
-use App\Modules\Project\Models\Project;
+use App\Modules\Notification\Notifications\ProjectTaskAssignedNotification;
 use App\Modules\Project\Models\Milestone;
+use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
-use App\Modules\Notification\Notifications\ProjectTaskAssignedNotification;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -60,11 +60,11 @@ class ProjectTaskApiContractTest extends TestCase
             'projectId',
             'milestoneId',
             'title',
-                'description',
-                'status',
-                'statusLabel',
-                'priority',
-                'estimatedHours',
+            'description',
+            'status',
+            'statusLabel',
+            'priority',
+            'estimatedHours',
             'startDate',
             'dueDate',
             'assigneeId',
@@ -146,9 +146,14 @@ class ProjectTaskApiContractTest extends TestCase
     {
         Notification::fake();
 
-        $manager = $this->userWithPermissions(['view_projects', 'manage_all_projects', 'view_tasks', 'manage_tasks']);
+        $manager = $this->userWithPermissions(['view_projects', 'manage_all_projects', 'view_tasks', 'manage_tasks', 'assign_tasks']);
         $assignee = User::factory()->create();
         $project = Project::factory()->create();
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $assignee->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
 
         $response = $this->actingAs($manager, 'sanctum')
             ->postJson("/api/v1/projects/{$project->id}/tasks", [

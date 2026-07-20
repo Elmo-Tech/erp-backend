@@ -32,8 +32,8 @@ class ToggleTaskTimerAction
 
     /**
      * @param  ProjectTask  $task  The task to toggle the timer on.
-     * @param  User         $user  The developer toggling the timer.
-     * @return ProjectTimeEntry    The stopped entry (STOP) or the new entry (START).
+     * @param  User  $user  The developer toggling the timer.
+     * @return ProjectTimeEntry The stopped entry (STOP) or the new entry (START).
      */
     public function execute(ProjectTask $task, User $user): ProjectTimeEntry
     {
@@ -57,7 +57,7 @@ class ToggleTaskTimerAction
 
                 foreach ($activeEntries as $entry) {
                     $entry->update([
-                        'end_time'         => $now,
+                        'end_time' => $now,
                         'duration_minutes' => (int) $entry->start_time->diffInMinutes($now),
                     ]);
 
@@ -77,11 +77,11 @@ class ToggleTaskTimerAction
             $this->moveTaskIntoProgressWhenStarting($task);
 
             return ProjectTimeEntry::create([
-                'task_id'    => $task->id,
-                'user_id'    => $user->id,
+                'task_id' => $task->id,
+                'user_id' => $user->id,
                 'start_time' => now(),
-                'end_time'   => null,
-                'is_manual'  => false,
+                'end_time' => null,
+                'is_manual' => false,
             ]);
         });
     }
@@ -95,11 +95,11 @@ class ToggleTaskTimerAction
             $this->moveTaskIntoProgressWhenStarting($task);
 
             return ProjectTimeEntry::create([
-                'task_id'    => $task->id,
-                'user_id'    => $user->id,
+                'task_id' => $task->id,
+                'user_id' => $user->id,
                 'start_time' => now(),
-                'end_time'   => null,
-                'is_manual'  => false,
+                'end_time' => null,
+                'is_manual' => false,
             ]);
         });
     }

@@ -2,13 +2,13 @@
 
 namespace App\Scopes;
 
+use App\Modules\Client\Models\Client;
+use App\Modules\Invoice\Models\Invoice;
+use App\Modules\Project\Models\Project;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
-use App\Modules\Client\Models\Client;
-use App\Modules\Invoice\Models\Invoice;
-use App\Modules\Project\Models\Project;
 
 class ClientScope implements Scope
 {

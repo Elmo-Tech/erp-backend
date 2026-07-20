@@ -16,10 +16,19 @@ class ProjectTimeEntryPolicyTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_creator_can_delete_their_own_time_entry(): void
+    public function test_creator_requires_delete_permission_for_their_own_time_entry(): void
     {
         [$project, $task, $entry, $creator] = $this->timeEntryScenario();
+        $creator->givePermissionTo(Permission::findOrCreate('view_projects', 'web'));
         $creator->givePermissionTo(Permission::findOrCreate('log_time', 'web'));
+
+        $this->actingAs($creator, 'sanctum')
+            ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('project_time_entries', ['id' => $entry->id, 'deleted_at' => null]);
+
+        $creator->givePermissionTo(Permission::findOrCreate('delete_time_entries', 'web'));
 
         $this->actingAs($creator, 'sanctum')
             ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}")
@@ -28,16 +37,22 @@ class ProjectTimeEntryPolicyTest extends TestCase
         $this->assertSoftDeleted('project_time_entries', ['id' => $entry->id]);
     }
 
-    public function test_project_manager_can_delete_a_team_time_entry(): void
+    public function test_project_manager_requires_delete_permission_for_a_team_time_entry(): void
     {
         [$project, $task, $entry] = $this->timeEntryScenario();
-        $manager = $this->userWithPermissions(['edit_tasks']);
+        $manager = $this->userWithPermissions(['view_projects', 'edit_time_entries']);
 
         ProjectMember::create([
             'project_id' => $project->id,
             'user_id' => $manager->id,
             'role' => ProjectRole::MANAGER->value,
         ]);
+
+        $this->actingAs($manager, 'sanctum')
+            ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}")
+            ->assertForbidden();
+
+        $manager->givePermissionTo(Permission::findOrCreate('delete_time_entries', 'web'));
 
         $this->actingAs($manager, 'sanctum')
             ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}")
@@ -54,6 +69,38 @@ class ProjectTimeEntryPolicyTest extends TestCase
         $this->actingAs($outsider, 'sanctum')
             ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}")
             ->assertForbidden();
+    }
+
+    public function test_update_requires_edit_permission_independently_from_delete_permission(): void
+    {
+        [$project, $task, $entry, $creator] = $this->timeEntryScenario();
+        $creator->givePermissionTo(Permission::findOrCreate('view_projects', 'web'));
+        $creator->givePermissionTo(Permission::findOrCreate('delete_time_entries', 'web'));
+        $payload = [
+            'startTime' => now()->subMinutes(45)->toIso8601String(),
+            'endTime' => now()->toIso8601String(),
+            'note' => 'Corrected entry',
+        ];
+
+        $this->actingAs($creator, 'sanctum')
+            ->patchJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}", $payload)
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('project_time_entries', [
+            'id' => $entry->id,
+            'note' => null,
+        ]);
+
+        $creator->givePermissionTo(Permission::findOrCreate('edit_time_entries', 'web'));
+
+        $this->actingAs($creator, 'sanctum')
+            ->patchJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/time-entries/{$entry->id}", $payload)
+            ->assertOk();
+
+        $this->assertDatabaseHas('project_time_entries', [
+            'id' => $entry->id,
+            'note' => 'Corrected entry',
+        ]);
     }
 
     /**
@@ -75,6 +122,11 @@ class ProjectTimeEntryPolicyTest extends TestCase
             'end_time' => now(),
             'duration_minutes' => 60,
             'is_manual' => true,
+        ]);
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $creator->id,
+            'role' => ProjectRole::DEVELOPER->value,
         ]);
 
         return [$project, $task, $entry, $creator];

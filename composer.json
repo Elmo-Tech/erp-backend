@@ -55,7 +55,7 @@
             "@php artisan test"
         ],
         "analyse": [
-            "./vendor/bin/phpstan analyse --memory-limit=1G"
+            "./vendor/bin/phpstan analyse --memory-limit=1G --no-progress --debug"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

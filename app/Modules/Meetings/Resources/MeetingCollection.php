@@ -2,7 +2,6 @@
 
 namespace App\Modules\Meetings\Resources;
 
-use App\Modules\Meetings\Models\Meeting;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;

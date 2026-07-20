@@ -15,10 +15,10 @@ class UpdateLeaveRequestRequest extends FormRequest
     {
         return [
             'start_date' => ['sometimes', 'date'],
-            'end_date'   => ['sometimes', 'date', 'after_or_equal:start_date'],
-            'type'       => ['sometimes', 'string', 'in:annual,sick,unpaid,permission'],
-            'status'     => ['sometimes', 'string', 'in:pending,approved,rejected'],
-            'reason'     => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'end_date' => ['sometimes', 'date', 'after_or_equal:start_date'],
+            'type' => ['sometimes', 'string', 'in:annual,sick,unpaid,permission'],
+            'status' => ['sometimes', 'string', 'in:pending,approved,rejected'],
+            'reason' => ['sometimes', 'nullable', 'string', 'max:1000'],
         ];
     }
 }

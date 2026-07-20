@@ -2,9 +2,9 @@
 
 namespace App\Modules\SOP\Actions;
 
+use App\Modules\Settings\Models\User;
 use App\Modules\SOP\Models\DailyCheckin;
 use App\Modules\SOP\Models\Directive;
-use App\Modules\Settings\Models\User;
 
 class SubmitDailyCheckinAction
 {

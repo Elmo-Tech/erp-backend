@@ -14,6 +14,7 @@ use App\Modules\Settings\Services\UserPermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -512,19 +513,25 @@ class AuthController extends Controller
             return ApiResponse::error('Current password is incorrect', [], 422);
         }
 
-        // Update password
-        $user->update([
-            'password' => Hash::make($request->new_password),
-        ]);
+        $tokenDetails = DB::transaction(function () use ($request, $user): array {
+            $user->update([
+                'password' => Hash::make($request->new_password),
+            ]);
 
-        // Revoke all other tokens (optional - for security)
-        // $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
+            $user->tokens()->delete();
 
-        return ApiResponse::success([], 'Password changed successfully');
+            return $this->generateTokenAction->execute($user, 'password-change');
+        });
+
+        return $this->withAuthCookies(
+            ApiResponse::success([], 'Password changed successfully'),
+            $request,
+            $tokenDetails
+        );
     }
 
     /**
-     * @param array{token: string, expiresIn: int} $tokenDetails
+     * @param  array{token: string, expiresIn: int}  $tokenDetails
      */
     private function withAuthCookies(JsonResponse $response, Request $request, array $tokenDetails): JsonResponse
     {
@@ -565,7 +572,7 @@ class AuthController extends Controller
     }
 
     /**
-     * @param array{token: string, expiresIn: int} $tokenDetails
+     * @param  array{token: string, expiresIn: int}  $tokenDetails
      * @return array{expiresIn: int}
      */
     private function publicTokenDetails(array $tokenDetails): array

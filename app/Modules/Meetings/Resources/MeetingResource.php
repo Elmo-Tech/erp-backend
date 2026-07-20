@@ -4,7 +4,6 @@ namespace App\Modules\Meetings\Resources;
 
 use App\Modules\Client\Models\Client;
 use App\Modules\Lead\Models\Lead;
-use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Project\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

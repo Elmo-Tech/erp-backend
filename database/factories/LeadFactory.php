@@ -8,7 +8,7 @@ use App\Modules\Lead\Models\Lead;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Lead\Models\Lead>
+ * @extends Factory<Lead>
  */
 class LeadFactory extends Factory
 {

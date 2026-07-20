@@ -3,12 +3,10 @@
 namespace App\Providers;
 
 use App\Modules\Project\Models\Milestone;
-use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
 use App\Observers\MilestoneObserver;
 use App\Observers\ProjectMemberObserver;
-use App\Observers\ProjectObserver;
 use App\Observers\ProjectTaskObserver;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;

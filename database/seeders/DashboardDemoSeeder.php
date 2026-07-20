@@ -12,13 +12,13 @@ use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectMember;
+use App\Modules\Settings\Models\User;
 use App\Modules\SOP\Models\DailyCheckin;
 use App\Modules\SOP\Models\Directive;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskAssignee;
 use App\Modules\Task\Models\TaskDependency;
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\Settings\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
@@ -124,7 +124,7 @@ class DashboardDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<int, Client> $clients
+     * @param  array<int, Client>  $clients
      * @return array<string, Project>
      */
     private function seedProjects(array $clients, User $creator): array
@@ -187,7 +187,7 @@ class DashboardDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<string, Project> $projects
+     * @param  array<string, Project>  $projects
      * @return array<string, Task>
      */
     private function seedTasks(array $projects, User $developer, User $techLead, User $creator): array
@@ -231,8 +231,8 @@ class DashboardDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<string, Project> $projects
-     * @param array<int, User> $users
+     * @param  array<string, Project>  $projects
+     * @param  array<int, User>  $users
      */
     private function seedProjectMembers(array $projects, array $users): void
     {
@@ -247,7 +247,7 @@ class DashboardDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<string, Task> $tasks
+     * @param  array<string, Task>  $tasks
      */
     private function seedTaskAssignees(array $tasks, User $developer, User $techLead, User $creator): void
     {
@@ -277,7 +277,7 @@ class DashboardDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<string, Task> $tasks
+     * @param  array<string, Task>  $tasks
      */
     private function seedTaskDependencies(array $tasks, User $pmo): void
     {
@@ -316,7 +316,7 @@ class DashboardDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<string, Task> $tasks
+     * @param  array<string, Task>  $tasks
      */
     private function seedTimeEntries(array $tasks, User $developer, User $techLead): void
     {
@@ -345,7 +345,7 @@ class DashboardDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<string, Project> $projects
+     * @param  array<string, Project>  $projects
      */
     private function seedInvoices(array $projects, User $creator): void
     {

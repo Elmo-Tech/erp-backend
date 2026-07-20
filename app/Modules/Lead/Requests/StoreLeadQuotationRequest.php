@@ -26,24 +26,24 @@ class StoreLeadQuotationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'creation_type'   => ['required', 'string', 'in:direct_upload,task,skipped'],
-            'skip_reason'     => ['nullable', 'string', 'max:500'],
-            'assigned_to'     => ['nullable', 'integer', 'exists:users,id'],
-            'file_path'       => ['nullable', 'string', 'max:1000'],
-            'notes'           => ['nullable', 'string', 'max:5000'],
-            'status'          => ['nullable', 'string', 'max:50'],
+            'creation_type' => ['required', 'string', 'in:direct_upload,task,skipped'],
+            'skip_reason' => ['nullable', 'string', 'max:500'],
+            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'file_path' => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'status' => ['nullable', 'string', 'max:50'],
 
             // Quotation financials
-            'currency'        => ['nullable', 'string', 'max:10'],
-            'base_price'      => ['nullable', 'numeric', 'min:0'],
+            'currency' => ['nullable', 'string', 'max:10'],
+            'base_price' => ['nullable', 'numeric', 'min:0'],
             'commission_type' => ['nullable', 'string', 'in:percentage,fixed'],
-            'final_total'     => ['nullable', 'numeric', 'min:0'],
+            'final_total' => ['nullable', 'numeric', 'min:0'],
 
             // Payment stages
-            'payment_stages'                  => ['nullable', 'array'],
-            'payment_stages.*.stage_name'     => ['required_with:payment_stages', 'string', 'max:255'],
-            'payment_stages.*.percentage'     => ['required_with:payment_stages', 'numeric', 'min:0', 'max:100'],
-            'payment_stages.*.amount'         => ['required_with:payment_stages', 'numeric', 'min:0'],
+            'payment_stages' => ['nullable', 'array'],
+            'payment_stages.*.stage_name' => ['required_with:payment_stages', 'string', 'max:255'],
+            'payment_stages.*.percentage' => ['required_with:payment_stages', 'numeric', 'min:0', 'max:100'],
+            'payment_stages.*.amount' => ['required_with:payment_stages', 'numeric', 'min:0'],
         ];
     }
 
@@ -51,7 +51,7 @@ class StoreLeadQuotationRequest extends FormRequest
     {
         return [
             'creation_type.required' => 'The creation type is required.',
-            'creation_type.in'       => 'Creation type must be one of: direct_upload, task, skipped.',
+            'creation_type.in' => 'Creation type must be one of: direct_upload, task, skipped.',
         ];
     }
 

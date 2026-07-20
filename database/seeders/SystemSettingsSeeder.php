@@ -21,7 +21,7 @@ class SystemSettingsSeeder extends Seeder
      */
     private array $defaults = [
         'gamification_point_value' => [
-            'value'       => '50',
+            'value' => '50',
             'description' => 'Monetary value (in base currency) of a single gamification point. Used by the payroll engine to convert points_earned into points_bonus_amount.',
         ],
     ];
@@ -34,7 +34,7 @@ class SystemSettingsSeeder extends Seeder
             Setting::firstOrCreate(
                 ['key' => $key],
                 [
-                    'value'       => $meta['value'],
+                    'value' => $meta['value'],
                     'description' => $meta['description'],
                 ]
             );

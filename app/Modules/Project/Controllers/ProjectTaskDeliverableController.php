@@ -31,12 +31,7 @@ class ProjectTaskDeliverableController extends Controller
         $this->authorize('view', $project);
         $this->assertTaskBelongsToProject($task, $project);
 
-        if (! $this->canCreateDeliverables($request->user())) {
-            return ApiResponse::error(
-                'You do not have permission to add deliverables.',
-                403
-            );
-        }
+        $this->authorize('createDeliverable', $task);
 
         $deliverable = $task->deliverables()->create([
             'title' => $request->validated()['title'],
@@ -162,11 +157,6 @@ class ProjectTaskDeliverableController extends Controller
         if ($deliverable->task_id !== $task->id) {
             abort(404, 'Deliverable not found for this task.');
         }
-    }
-
-    private function canCreateDeliverables(?User $user): bool
-    {
-        return $this->hasDeliverablePermission($user, 'create_project_task_deliverables');
     }
 
     private function canEditDeliverables(?User $user): bool

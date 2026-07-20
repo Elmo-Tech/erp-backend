@@ -2,7 +2,6 @@
 
 namespace App\Modules\Lead\Controllers;
 
-use App\Enums\DocumentCreationType;
 use App\Enums\ProposalStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
@@ -53,14 +52,14 @@ class LeadProposalController extends Controller
         $data = $request->validated();
 
         $proposal = Proposal::create([
-            'lead_id'       => $lead->id,
-            'client_id'     => $lead->client_id,
-            'project_id'    => null,
-            'status'        => $data['status'] ?? ProposalStatus::DRAFT->value,
+            'lead_id' => $lead->id,
+            'client_id' => $lead->client_id,
+            'project_id' => null,
+            'status' => $data['status'] ?? ProposalStatus::DRAFT->value,
             'creation_type' => $data['creation_type'],
-            'skip_reason'   => $data['skip_reason'] ?? null,
-            'assigned_to'   => $data['assigned_to'] ?? null,
-            'file_path'     => $data['file_path'] ?? null,
+            'skip_reason' => $data['skip_reason'] ?? null,
+            'assigned_to' => $data['assigned_to'] ?? null,
+            'file_path' => $data['file_path'] ?? null,
         ]);
 
         $proposal->load('assignee:id,name,email,avatar');
@@ -99,20 +98,20 @@ class LeadProposalController extends Controller
     private function formatProposal(Proposal $p): array
     {
         return [
-            'id'            => $p->id,
-            'status'        => $p->status->value,
+            'id' => $p->id,
+            'status' => $p->status->value,
             'creation_type' => $p->creation_type->value,
-            'skip_reason'   => $p->skip_reason,
-            'file_path'     => $p->file_path,
-            'assigned_to'   => $p->assigned_to,
-            'assignee'      => $p->assignee ? [
-                'id'     => $p->assignee->id,
-                'name'   => $p->assignee->name,
-                'email'  => $p->assignee->email,
+            'skip_reason' => $p->skip_reason,
+            'file_path' => $p->file_path,
+            'assigned_to' => $p->assigned_to,
+            'assignee' => $p->assignee ? [
+                'id' => $p->assignee->id,
+                'name' => $p->assignee->name,
+                'email' => $p->assignee->email,
                 'avatar' => $p->assignee->avatar,
             ] : null,
-            'created_at'    => $p->created_at?->toISOString(),
-            'updated_at'    => $p->updated_at?->toISOString(),
+            'created_at' => $p->created_at?->toISOString(),
+            'updated_at' => $p->updated_at?->toISOString(),
         ];
     }
 

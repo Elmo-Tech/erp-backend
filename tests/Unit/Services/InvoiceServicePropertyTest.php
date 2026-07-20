@@ -3,10 +3,10 @@
 namespace Tests\Unit\Services;
 
 use App\Enums\InvoiceStatus;
+use App\Modules\Client\Actions\InvoiceWorkflowAction;
+use App\Modules\Client\Actions\LogClientAuditAction;
 use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Models\Project;
-use App\Modules\Client\Actions\LogClientAuditAction;
-use App\Modules\Client\Actions\InvoiceWorkflowAction;
 use Carbon\Carbon;
 use Eris\Generator;
 use Eris\TestTrait;

@@ -4,12 +4,12 @@ namespace App\Modules\Settings\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Modules\Settings\Actions\UserService;
+use App\Modules\Settings\Models\User;
 use App\Modules\Settings\Requests\StoreUserRequest;
 use App\Modules\Settings\Requests\UpdateUserRequest;
 use App\Modules\Settings\Resources\UserCollection;
 use App\Modules\Settings\Resources\UserResource;
-use App\Modules\Settings\Actions\UserService;
-use App\Modules\Settings\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -195,7 +195,7 @@ class UserManagementController extends Controller
     public function store(StoreUserRequest $request): JsonResponse
     {
         return DB::transaction(function () use ($request) {
-            $user = $this->userService->createUser($request->validated());
+            $user = $this->userService->createUser($request->user(), $request->validated());
 
             return ApiResponse::success(
                 ['user' => new UserResource($user)],
@@ -336,7 +336,7 @@ class UserManagementController extends Controller
         }
 
         return DB::transaction(function () use ($request, $user) {
-            $user = $this->userService->updateUser($user, $request->validated());
+            $user = $this->userService->updateUser($request->user(), $user, $request->validated());
 
             return ApiResponse::success(
                 ['user' => new UserResource($user)],
@@ -389,7 +389,7 @@ class UserManagementController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
-        if (! auth()->user()->can('manage_users')) {
+        if (! auth()->user()->can('delete_users')) {
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 
@@ -404,7 +404,7 @@ class UserManagementController extends Controller
         }
 
         return DB::transaction(function () use ($user) {
-            $this->userService->deleteUser($user);
+            $this->userService->deleteUser(auth()->user(), $user);
 
             return ApiResponse::success(null, __('messages.user_deleted'));
         });
@@ -467,7 +467,7 @@ class UserManagementController extends Controller
         }
 
         return DB::transaction(function () use ($user) {
-            $user = $this->userService->toggleUserStatus($user);
+            $user = $this->userService->toggleUserStatus(auth()->user(), $user);
 
             $message = $user->is_active
                 ? __('messages.user_activated')
@@ -537,7 +537,7 @@ class UserManagementController extends Controller
      */
     public function assignRoles(Request $request, int $id): JsonResponse
     {
-        if (! auth()->user()->can('manage_users')) {
+        if (! auth()->user()->can('assign_user_roles')) {
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 
@@ -553,7 +553,7 @@ class UserManagementController extends Controller
         }
 
         return DB::transaction(function () use ($request, $user) {
-            $user = $this->userService->assignRoles($user, $request->input('roles'));
+            $user = $this->userService->assignRoles(auth()->user(), $user, $request->input('roles'));
 
             return ApiResponse::success(
                 ['user' => new UserResource($user)],

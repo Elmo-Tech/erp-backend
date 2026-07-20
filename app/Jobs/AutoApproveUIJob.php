@@ -2,9 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Modules\Project\Actions\ProjectHistoryAction;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
-use App\Modules\Project\Actions\ProjectHistoryAction;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

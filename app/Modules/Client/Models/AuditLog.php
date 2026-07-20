@@ -2,9 +2,9 @@
 
 namespace App\Modules\Client\Models;
 
+use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Modules\Settings\Models\User;
 
 class AuditLog extends Model
 {

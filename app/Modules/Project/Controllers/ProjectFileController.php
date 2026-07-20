@@ -4,12 +4,12 @@ namespace App\Modules\Project\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\Project\Actions\DeleteProjectFileAction;
-use App\Modules\Project\Actions\StoreProjectFileAction;
-use App\Modules\Project\Actions\UpdateProjectFileAction;
 use App\Modules\Lead\Models\Contract;
 use App\Modules\Lead\Models\Proposal;
 use App\Modules\Lead\Models\Quotation;
+use App\Modules\Project\Actions\DeleteProjectFileAction;
+use App\Modules\Project\Actions\StoreProjectFileAction;
+use App\Modules\Project\Actions\UpdateProjectFileAction;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectFile;
 use App\Modules\Project\Resources\ProjectFileResource;
@@ -17,7 +17,9 @@ use App\Modules\Project\Resources\ProjectSalesDocumentResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProjectFileController extends Controller
 {
@@ -29,11 +31,13 @@ class ProjectFileController extends Controller
         $this->middleware(['auth:sanctum', 'locale']);
     }
 
-    public function index(Project $project): JsonResponse
+    public function index(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
 
-        $files = $project->files()
+        $files = ProjectFile::query()
+            ->where('project_id', $project->id)
+            ->visibleTo($request->user())
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -83,11 +87,11 @@ class ProjectFileController extends Controller
         );
     }
 
-    public function show(Project $project, ProjectFile $file): JsonResponse
+    public function show(Request $request, Project $project, ProjectFile $file): JsonResponse
     {
         $this->authorize('view', $project);
 
-        if ($file->project_id !== $project->id) {
+        if ($file->project_id !== $project->id || ! $file->canUserView($request->user())) {
             return ApiResponse::error('File not found', 404);
         }
 
@@ -95,6 +99,25 @@ class ProjectFileController extends Controller
             new ProjectFileResource($file),
             'File retrieved successfully'
         );
+    }
+
+    public function download(Request $request, Project $project, ProjectFile $file): JsonResponse|StreamedResponse
+    {
+        $this->authorize('view', $project);
+
+        if ($file->project_id !== $project->id || ! $file->canUserView($request->user())) {
+            return ApiResponse::error('File not found', 404);
+        }
+
+        if (! $file->is_downloadable) {
+            return ApiResponse::error('File is not downloadable', 403);
+        }
+
+        if ($file->type !== 'file' || ! $file->file_path || ! Storage::disk('local')->exists($file->file_path)) {
+            return ApiResponse::error('File not found', 404);
+        }
+
+        return Storage::disk('local')->download($file->file_path, $file->name);
     }
 
     public function update(Request $request, Project $project, ProjectFile $file): JsonResponse
@@ -140,7 +163,7 @@ class ProjectFileController extends Controller
         return $documents->map(fn ($document) => [
             'documentId' => "{$category}:{$document->id}",
             'projectId' => $document->project_id,
-            'name' => ucfirst($category) . " #{$document->id}",
+            'name' => ucfirst($category)." #{$document->id}",
             'category' => $category,
             'status' => $document->status?->value ?? (string) $document->status,
             'filePath' => $document->file_path,

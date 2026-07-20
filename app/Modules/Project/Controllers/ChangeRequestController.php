@@ -23,6 +23,8 @@ class ChangeRequestController extends Controller
      */
     public function index(Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $changeRequests = $project->changeRequests()
             ->orderByDesc('created_at')
             ->get();
@@ -39,6 +41,8 @@ class ChangeRequestController extends Controller
      */
     public function store(StoreChangeRequestRequest $request, Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $data = $request->validated();
 
         $changeRequest = $project->changeRequests()->create([
@@ -60,7 +64,8 @@ class ChangeRequestController extends Controller
      */
     public function show(Project $project, ChangeRequest $changeRequest): JsonResponse
     {
-        $this->assertBelongsToProject($changeRequest, $project);
+        $this->authorize('view', $project);
+        $changeRequest = $this->resolveChangeRequest($project, $changeRequest);
 
         return ApiResponse::success(
             new ChangeRequestResource($changeRequest),
@@ -73,7 +78,8 @@ class ChangeRequestController extends Controller
      */
     public function update(UpdateChangeRequestRequest $request, Project $project, ChangeRequest $changeRequest): JsonResponse
     {
-        $this->assertBelongsToProject($changeRequest, $project);
+        $this->authorize('view', $project);
+        $changeRequest = $this->resolveChangeRequest($project, $changeRequest);
 
         $changeRequest->update($request->validated());
 
@@ -89,9 +95,10 @@ class ChangeRequestController extends Controller
      */
     public function destroy(Project $project, ChangeRequest $changeRequest): JsonResponse
     {
+        $this->authorize('view', $project);
         abort_if(! request()->user()?->can('delete_change_requests'), 403, 'Unauthorized');
 
-        $this->assertBelongsToProject($changeRequest, $project);
+        $changeRequest = $this->resolveChangeRequest($project, $changeRequest);
 
         if (! $changeRequest->isDraft()) {
             return ApiResponse::error(
@@ -107,10 +114,10 @@ class ChangeRequestController extends Controller
 
     // -------------------------------------------------------------------------
 
-    private function assertBelongsToProject(ChangeRequest $changeRequest, Project $project): void
+    private function resolveChangeRequest(Project $project, ChangeRequest $changeRequest): ChangeRequest
     {
-        if ($changeRequest->project_id !== $project->id) {
-            abort(404, 'Change request not found for this project.');
-        }
+        return ChangeRequest::query()
+            ->where('project_id', $project->id)
+            ->findOrFail($changeRequest->getKey());
     }
 }

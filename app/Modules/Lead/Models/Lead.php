@@ -13,13 +13,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @property int         $id
- * @property string      $title
+ * @property int $id
+ * @property string $title
  * @property string|null $description
- * @property LeadStage   $stage
- * @property LeadStatus  $status
- * @property int|null    $assigned_to
- * @property int|null    $client_id
+ * @property LeadStage $stage
+ * @property LeadStatus $status
+ * @property int|null $assigned_to
+ * @property int|null $client_id
  */
 class Lead extends Model
 {
@@ -47,11 +47,11 @@ class Lead extends Model
     protected function casts(): array
     {
         return [
-            'stage'               => LeadStage::class,
-            'status'              => LeadStatus::class,
-            'expected_budget'     => 'decimal:2',
+            'stage' => LeadStage::class,
+            'status' => LeadStatus::class,
+            'expected_budget' => 'decimal:2',
             'expected_close_date' => 'date',
-            'metadata'            => 'array',
+            'metadata' => 'array',
         ];
     }
 
@@ -78,7 +78,7 @@ class Lead extends Model
      */
     public function proposals(): HasMany
     {
-        return $this->hasMany(\App\Modules\Lead\Models\Proposal::class, 'lead_id');
+        return $this->hasMany(Proposal::class, 'lead_id');
     }
 
     /**
@@ -86,7 +86,7 @@ class Lead extends Model
      */
     public function quotations(): HasMany
     {
-        return $this->hasMany(\App\Modules\Lead\Models\Quotation::class, 'lead_id');
+        return $this->hasMany(Quotation::class, 'lead_id');
     }
 
     /**
@@ -94,6 +94,6 @@ class Lead extends Model
      */
     public function contracts(): HasMany
     {
-        return $this->hasMany(\App\Modules\Lead\Models\Contract::class, 'lead_id');
+        return $this->hasMany(Contract::class, 'lead_id');
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Modules\Project\Actions;
 
-use App\Modules\Settings\Models\User;
 use App\Modules\Project\Models\Project;
+use App\Modules\Settings\Models\User;
 use RuntimeException;
 
 class PinProjectAction

@@ -25,22 +25,22 @@ class PointTransactionResource extends JsonResource
      * @var array<string, string>
      */
     private const SOURCE_TYPE_MAP = [
-        'App\Models\Task'           => 'task',
-        'App\Models\Attendance'     => 'attendance',
-        'App\Models\CodeReview'     => 'code_review',
-        'App\Models\ProjectMember'  => 'project',
+        'App\Models\Task' => 'task',
+        'App\Models\Attendance' => 'attendance',
+        'App\Models\CodeReview' => 'code_review',
+        'App\Models\ProjectMember' => 'project',
         // Fallback: any unmapped class will be slugified in toArray()
     ];
 
     public function toArray(Request $request): array
     {
         return [
-            'id'         => $this->id,
-            'points'     => (int) $this->points,
-            'reason'     => $this->reason,
+            'id' => $this->id,
+            'points' => (int) $this->points,
+            'reason' => $this->reason,
             'balanceAfter' => (int) $this->balance_after,
             'model_type' => $this->resolveModelType($this->source_type),
-            'model_id'   => $this->source_id,
+            'model_id' => $this->source_id,
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

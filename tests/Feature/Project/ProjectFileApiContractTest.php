@@ -15,7 +15,7 @@ class ProjectFileApiContractTest extends TestCase
 
     public function test_project_file_index_returns_lightweight_list_contract(): void
     {
-        $user = $this->userWithPermissions(['view_projects', 'manage_all_projects']);
+        $user = $this->userWithPermissions(['view_projects', 'manage_all_projects', 'view_project_files']);
         $project = Project::factory()->create();
 
         ProjectFile::create([
@@ -28,7 +28,7 @@ class ProjectFileApiContractTest extends TestCase
             'description' => 'Kickoff document',
             'category' => 'document',
             'is_client_visible' => true,
-            'is_downloadable' => false,
+            'is_downloadable' => true,
             'visible_to_roles' => ['manager'],
         ]);
 

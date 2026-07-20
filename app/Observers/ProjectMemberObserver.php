@@ -19,9 +19,7 @@ class ProjectMemberObserver
     public function created(ProjectMember $member): void
     {
         $userName = User::find($member->user_id)?->name ?? "User #{$member->user_id}";
-        $role     = $member->role instanceof \App\Enums\ProjectRole
-            ? $member->role->label()
-            : ucfirst((string) $member->role);
+        $role = $member->role->label();
 
         $this->record(
             $member->project_id,
@@ -38,8 +36,8 @@ class ProjectMemberObserver
 
         if (isset($dirty['role'])) {
             $userName = User::find($member->user_id)?->name ?? "User #{$member->user_id}";
-            $oldRole  = $member->getOriginal('role');
-            $newRole  = $dirty['role'];
+            $oldRole = $member->getOriginal('role');
+            $newRole = $dirty['role'];
 
             $this->record(
                 $member->project_id,
@@ -76,9 +74,9 @@ class ProjectMemberObserver
         ProjectHistory::create([
             'project_id' => $projectId,
             'field_name' => $fieldName,
-            'old_value'  => $oldValue,
-            'new_value'  => $newValue,
-            'reason'     => $reason,
+            'old_value' => $oldValue,
+            'new_value' => $newValue,
+            'reason' => $reason,
             'changed_by' => Auth::id(),
         ]);
     }

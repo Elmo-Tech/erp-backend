@@ -2,9 +2,26 @@
 
 namespace App\Providers;
 
+use App\Modules\Attendance\Models\Attendance;
+use App\Modules\Client\Models\Client;
+use App\Modules\Client\Models\ClientActivity;
+use App\Modules\HR\Models\EmployeeProfile;
+use App\Modules\HR\Models\Shift;
+use App\Modules\Lead\Models\Contract;
+use App\Modules\Lead\Models\Lead;
+use App\Modules\Lead\Models\Proposal;
+use App\Modules\Lead\Models\Quotation;
+use App\Modules\Meetings\Models\Meeting;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectFile;
+use App\Modules\Project\Models\ProjectHistory;
+use App\Modules\Project\Models\ProjectMember;
+use App\Modules\Project\Models\ProjectWiki;
+use App\Modules\Settings\Models\User;
+use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
 use Symfony\Component\Finder\Finder;
 
@@ -31,24 +48,24 @@ class ModuleServiceProvider extends ServiceProvider
     private function registerMorphAliases(): void
     {
         Relation::morphMap([
-            'App\Models\Project' => \App\Modules\Project\Models\Project::class,
-            'App\Models\ProjectFile' => \App\Modules\Project\Models\ProjectFile::class,
-            'App\Models\ProjectHistory' => \App\Modules\Project\Models\ProjectHistory::class,
-            'App\Models\ProjectMember' => \App\Modules\Project\Models\ProjectMember::class,
-            'App\Models\ProjectWiki' => \App\Modules\Project\Models\ProjectWiki::class,
-            'App\Models\Client' => \App\Modules\Client\Models\Client::class,
-            'App\Models\ClientActivity' => \App\Modules\Client\Models\ClientActivity::class,
-            'App\Models\Meeting' => \App\Modules\Meetings\Models\Meeting::class,
-            'App\Models\User' => \App\Modules\Settings\Models\User::class,
+            'App\Models\Project' => Project::class,
+            'App\Models\ProjectFile' => ProjectFile::class,
+            'App\Models\ProjectHistory' => ProjectHistory::class,
+            'App\Models\ProjectMember' => ProjectMember::class,
+            'App\Models\ProjectWiki' => ProjectWiki::class,
+            'App\Models\Client' => Client::class,
+            'App\Models\ClientActivity' => ClientActivity::class,
+            'App\Models\Meeting' => Meeting::class,
+            'App\Models\User' => User::class,
             // Lead pipeline
-            'App\Models\Lead' => \App\Modules\Lead\Models\Lead::class,
-            'App\Models\Proposal' => \App\Modules\Lead\Models\Proposal::class,
-            'App\Models\Quotation' => \App\Modules\Lead\Models\Quotation::class,
-            'App\Models\Contract' => \App\Modules\Lead\Models\Contract::class,
+            'App\Models\Lead' => Lead::class,
+            'App\Models\Proposal' => Proposal::class,
+            'App\Models\Quotation' => Quotation::class,
+            'App\Models\Contract' => Contract::class,
             // HR
-            'App\Models\Shift' => \App\Modules\HR\Models\Shift::class,
-            'App\Models\EmployeeProfile' => \App\Modules\HR\Models\EmployeeProfile::class,
-            'App\Models\Attendance' => \App\Modules\Attendance\Models\Attendance::class,
+            'App\Models\Shift' => Shift::class,
+            'App\Models\EmployeeProfile' => EmployeeProfile::class,
+            'App\Models\Attendance' => Attendance::class,
         ]);
     }
 
@@ -100,7 +117,7 @@ class ModuleServiceProvider extends ServiceProvider
 
         // Resolve the PSR-4 namespace from the path relative to app_path().
         // e.g. app_path('Modules/HR/Commands') → App\Modules\HR\Commands
-        $appPath   = app_path();
+        $appPath = app_path();
         $namespace = 'App\\'.str_replace('/', '\\', ltrim(
             str_replace($appPath, '', $commandsPath),
             DIRECTORY_SEPARATOR
@@ -117,7 +134,7 @@ class ModuleServiceProvider extends ServiceProvider
 
             if (
                 class_exists($class)
-                && is_subclass_of($class, \Illuminate\Console\Command::class)
+                && is_subclass_of($class, Command::class)
                 && ! (new \ReflectionClass($class))->isAbstract()
             ) {
                 $commands[] = $class;

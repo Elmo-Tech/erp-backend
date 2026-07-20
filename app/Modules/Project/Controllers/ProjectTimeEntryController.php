@@ -71,7 +71,21 @@ class ProjectTimeEntryController extends Controller
         $this->assertTaskBelongsToProject($task, $project);
         $this->authorize('execute', $task);
 
-        $entry = $this->toggleTimer->execute($task, request()->user());
+        $user = request()->user();
+        $isStopping = ProjectTimeEntry::query()
+            ->where('task_id', $task->id)
+            ->where('user_id', $user->id)
+            ->whereNull('end_time')
+            ->exists();
+        $requiredPermission = $isStopping ? 'stop_timer' : 'start_timer';
+
+        abort_unless(
+            $user->can($requiredPermission) || $user->can('manage_time_entries'),
+            403,
+            'Unauthorized'
+        );
+
+        $entry = $this->toggleTimer->execute($task, $user);
 
         $entry->load('user:id,name,avatar');
 
@@ -95,6 +109,7 @@ class ProjectTimeEntryController extends Controller
         ]);
 
         $user = User::findOrFail($data['userId']);
+        $this->assertTeamTimerTarget($project, $task, $user);
         $entry = $this->toggleTimer->startForUser($task, $user);
         $entry->load(['user:id,name,avatar', 'task.project']);
 
@@ -108,6 +123,16 @@ class ProjectTimeEntryController extends Controller
     public function stop(ProjectTimeEntry $entry): JsonResponse
     {
         abort_if(! request()->user()->can('manage_team_timers'), 403, 'Unauthorized');
+
+        $entry->loadMissing(['task.project', 'user']);
+        $task = $entry->task;
+        $project = $task?->project;
+        $target = $entry->user;
+
+        abort_unless($task instanceof ProjectTask && $project instanceof Project && $target instanceof User, 404);
+
+        $this->authorize('view', $project);
+        $this->assertTeamTimerTarget($project, $task, $target);
 
         $entry = $this->toggleTimer->stop($entry);
         $entry->load(['user:id,name,avatar', 'task.project']);
@@ -158,6 +183,7 @@ class ProjectTimeEntryController extends Controller
      */
     public function update(StoreManualTimeEntryRequest $request, Project $project, ProjectTask $task, ProjectTimeEntry $entry): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertTaskBelongsToProject($task, $project);
         $this->assertEntryBelongsToTask($entry, $task);
         $this->authorize('update', $entry);
@@ -189,6 +215,7 @@ class ProjectTimeEntryController extends Controller
      */
     public function destroy(Project $project, ProjectTask $task, ProjectTimeEntry $entry): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertTaskBelongsToProject($task, $project);
         $this->assertEntryBelongsToTask($entry, $task);
         $this->authorize('delete', $entry);
@@ -212,5 +239,20 @@ class ProjectTimeEntryController extends Controller
         if ($entry->task_id !== $task->id) {
             abort(404, 'Time entry not found for this task.');
         }
+    }
+
+    private function assertTeamTimerTarget(Project $project, ProjectTask $task, User $target): void
+    {
+        abort_unless(
+            $project->members()->where('user_id', $target->id)->exists(),
+            403,
+            'Target user is not a member of this project.'
+        );
+
+        abort_unless(
+            (int) $task->assignee_id === $target->id,
+            403,
+            'Target user is not assigned to this task.'
+        );
     }
 }

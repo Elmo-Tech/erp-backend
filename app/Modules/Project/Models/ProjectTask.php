@@ -5,6 +5,7 @@ namespace App\Modules\Project\Models;
 use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Settings\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,6 +19,9 @@ use Illuminate\Support\Carbon;
  * This model uses the `project_tasks` table and is intentionally separate
  * from App\Modules\Task\Models\Task (which uses the `tasks` table and serves
  * a different bounded context).
+ *
+ * @property ExecutionTaskStatus $status
+ * @property-read Project|null $project
  */
 class ProjectTask extends Model
 {
@@ -42,10 +46,10 @@ class ProjectTask extends Model
     protected function casts(): array
     {
         return [
-            'status'          => ExecutionTaskStatus::class,
+            'status' => ExecutionTaskStatus::class,
             'estimated_hours' => 'decimal:2',
-            'start_date'      => 'date',
-            'due_date'        => 'date',
+            'start_date' => 'date',
+            'due_date' => 'date',
         ];
     }
 
@@ -121,6 +125,33 @@ class ProjectTask extends Model
     // -------------------------------------------------------------------------
     // Scopes
     // -------------------------------------------------------------------------
+
+    /**
+     * Apply the execution-task visibility boundary for a caller.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->can('manage_all_projects')) {
+            return $query;
+        }
+
+        $query->where('assignee_id', $user->id);
+
+        return $query->whereHas('project', function (Builder $projectQuery) use ($user): void {
+            if ($user->can('access_client_portal')) {
+                $projectQuery->where('client_id', $user->client()->value('id') ?? 0);
+
+                return;
+            }
+
+            if (! $user->can('view_all_projects')) {
+                $projectQuery->whereHas(
+                    'members',
+                    fn (Builder $memberQuery) => $memberQuery->where('user_id', $user->id)
+                );
+            }
+        });
+    }
 
     /**
      * Tasks that are not assigned to any milestone (Backlog).

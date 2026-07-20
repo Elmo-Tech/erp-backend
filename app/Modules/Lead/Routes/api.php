@@ -1,8 +1,8 @@
 <?php
 
+use App\Modules\Lead\Controllers\LeadContractController;
 use App\Modules\Lead\Controllers\LeadController;
 use App\Modules\Lead\Controllers\LeadConversionController;
-use App\Modules\Lead\Controllers\LeadContractController;
 use App\Modules\Lead\Controllers\LeadPipelineController;
 use App\Modules\Lead\Controllers\LeadProposalController;
 use App\Modules\Lead\Controllers\LeadQuotationController;
@@ -27,9 +27,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         Route::get('leads/{lead}', [LeadController::class, 'show'])->name('leads.show');
 
         // Sub-resource lists (read-only)
-        Route::get('leads/{lead}/proposals',  [LeadProposalController::class,  'index'])->name('leads.proposals.index');
+        Route::get('leads/{lead}/proposals', [LeadProposalController::class,  'index'])->name('leads.proposals.index');
         Route::get('leads/{lead}/quotations', [LeadQuotationController::class, 'index'])->name('leads.quotations.index');
-        Route::get('leads/{lead}/contracts',  [LeadContractController::class,  'index'])->name('leads.contracts.index');
+        Route::get('leads/{lead}/contracts', [LeadContractController::class,  'index'])->name('leads.contracts.index');
     });
 
     // ── Write — requires manage_leads ─────────────────────────────────────────
@@ -50,9 +50,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         // These endpoints accept the EXACT same payload shape as the pipeline's
         // stage_results[*] entries, so the frontend reuses the same form tabs
         // and payload mapper without any changes.
-        Route::post('leads/{lead}/proposals',  [LeadProposalController::class,  'store'])->name('leads.proposals.store');
+        Route::post('leads/{lead}/proposals', [LeadProposalController::class,  'store'])->name('leads.proposals.store');
         Route::post('leads/{lead}/quotations', [LeadQuotationController::class, 'store'])->name('leads.quotations.store');
-        Route::post('leads/{lead}/contracts',  [LeadContractController::class,  'store'])->name('leads.contracts.store');
+        Route::post('leads/{lead}/contracts', [LeadContractController::class,  'store'])->name('leads.contracts.store');
 
         Route::patch('leads/{lead}/proposals/{proposal}', [LeadProposalController::class, 'update'])->name('leads.proposals.patch');
         Route::patch('leads/{lead}/quotations/{quotation}', [LeadQuotationController::class, 'update'])->name('leads.quotations.patch');

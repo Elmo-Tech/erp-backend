@@ -7,11 +7,11 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Lead\Actions\ProcessLeadStageUpdateAction;
 use App\Modules\Lead\Models\Lead;
+use App\Modules\Lead\Requests\UpdateLeadStageRequest;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Meetings\Services\MeetingService;
-use App\Modules\Lead\Requests\UpdateLeadStageRequest;
-use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 
 class LeadPipelineController extends Controller
 {
@@ -30,7 +30,7 @@ class LeadPipelineController extends Controller
         ProcessLeadStageUpdateAction $action,
         MeetingService $meetingService
     ): JsonResponse {
-        $newStage     = LeadStage::from($request->validated('new_stage'));
+        $newStage = LeadStage::from($request->validated('new_stage'));
         $stageResults = $request->validated('stage_results');
         $scheduledMeeting = $request->validated('scheduled_meeting');
 
@@ -48,7 +48,7 @@ class LeadPipelineController extends Controller
 
         return ApiResponse::success(
             [
-                'id'    => $updatedLead->id,
+                'id' => $updatedLead->id,
                 'stage' => $updatedLead->stage->value,
             ],
             'Lead stage updated successfully.'

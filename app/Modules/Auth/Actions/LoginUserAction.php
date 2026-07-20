@@ -12,7 +12,7 @@ class LoginUserAction
     {
         $user = User::query()->where('email', $credentials['email'])->first();
 
-        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password) || ! $user->is_active) {
             throw new InvalidArgumentException('Invalid credentials');
         }
 

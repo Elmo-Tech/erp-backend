@@ -5,14 +5,15 @@ namespace App\Modules\HR\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
- * @property int    $id
+ * @property int $id
  * @property string $name
- * @property string $start_time          HH:MM:SS
- * @property string $end_time            HH:MM:SS
- * @property array  $working_days        e.g. ["Sun","Mon","Tue","Wed","Thu"]
- * @property int    $grace_period_minutes
+ * @property string $start_time HH:MM:SS
+ * @property string $end_time HH:MM:SS
+ * @property array $working_days e.g. ["Sun","Mon","Tue","Wed","Thu"]
+ * @property int $grace_period_minutes
  */
 class Shift extends Model
 {
@@ -29,7 +30,7 @@ class Shift extends Model
     protected function casts(): array
     {
         return [
-            'working_days'         => 'array',
+            'working_days' => 'array',
             'grace_period_minutes' => 'integer',
         ];
     }
@@ -54,9 +55,9 @@ class Shift extends Model
      * Returns the deadline (start_time + grace_period_minutes) as a Carbon
      * instance anchored to today's date.
      */
-    public function latenessDeadlineToday(): \Illuminate\Support\Carbon
+    public function latenessDeadlineToday(): Carbon
     {
-        return \Illuminate\Support\Carbon::today()
+        return Carbon::today()
             ->setTimeFromTimeString($this->start_time)
             ->addMinutes($this->grace_period_minutes);
     }

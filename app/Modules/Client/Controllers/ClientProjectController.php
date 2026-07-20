@@ -2,15 +2,15 @@
 
 namespace App\Modules\Client\Controllers;
 
-use App\Modules\Project\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Client\Actions\LogClientAuditAction;
 use App\Modules\Client\Requests\ApproveUIRequest;
 use App\Modules\Client\Resources\ClientProjectCollection;
 use App\Modules\Client\Resources\ClientProjectResource;
-use App\Modules\Project\Models\Project;
 use App\Modules\Project\Actions\ProjectHistoryAction;
+use App\Modules\Project\Enums\ProjectStatus;
+use App\Modules\Project\Models\Project;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

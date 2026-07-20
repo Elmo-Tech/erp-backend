@@ -30,9 +30,9 @@ class CompleteProjectTaskAction
 
     /**
      * @param  ProjectTask  $task  The task to complete.
-     * @return ProjectTask         The updated task instance.
+     * @return ProjectTask The updated task instance.
      *
-     * @throws ValidationException  When one or more deliverables are still pending.
+     * @throws ValidationException When one or more deliverables are still pending.
      */
     public function execute(ProjectTask $task): ProjectTask
     {
@@ -53,7 +53,7 @@ class CompleteProjectTaskAction
             $task->refresh();
 
             // Load project if not already loaded
-            if (!$task->relationLoaded('project')) {
+            if (! $task->relationLoaded('project')) {
                 $task->load('project');
             }
 

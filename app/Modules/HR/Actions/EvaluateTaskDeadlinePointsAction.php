@@ -68,16 +68,16 @@ class EvaluateTaskDeadlinePointsAction
         }
 
         // ── Determine on-time vs late ─────────────────────────────────────────
-        $now      = Carbon::now();
+        $now = Carbon::now();
         $isOnTime = $now->lte($deadline);
 
         if ($isOnTime) {
             $points = 5;
-            $type   = PointTransactionType::TASK_ON_TIME;
+            $type = PointTransactionType::TASK_ON_TIME;
             $reason = 'Task completed on time';
         } else {
             $points = -5;
-            $type   = PointTransactionType::TASK_LATE;
+            $type = PointTransactionType::TASK_LATE;
             $reason = 'Task missed deadline';
         }
 
@@ -90,15 +90,15 @@ class EvaluateTaskDeadlinePointsAction
 
         // ── Record the transaction ────────────────────────────────────────────
         PointTransaction::create([
-            'user_id'      => $task->assignee_id,
-            'points'       => $points,
-            'type'         => $type,
-            'source_type'  => ProjectTask::class,
-            'source_id'    => $task->id,
-            'reason'       => $reason,
+            'user_id' => $task->assignee_id,
+            'points' => $points,
+            'type' => $type,
+            'source_type' => ProjectTask::class,
+            'source_id' => $task->id,
+            'reason' => $reason,
             'balance_after' => $balanceAfter,
-            'created_by'   => Auth::id(),
-            'updated_by'   => Auth::id(),
+            'created_by' => Auth::id(),
+            'updated_by' => Auth::id(),
         ]);
     }
 }

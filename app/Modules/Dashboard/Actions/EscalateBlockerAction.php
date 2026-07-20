@@ -3,9 +3,9 @@
 namespace App\Modules\Dashboard\Actions;
 
 use App\Enums\TaskStatus;
+use App\Modules\Settings\Models\User;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskDependency;
-use App\Modules\Settings\Models\User;
 
 class EscalateBlockerAction
 {
@@ -23,8 +23,9 @@ class EscalateBlockerAction
             'escalated_by' => $escalatedBy->id,
             'escalated_at' => $dependency->escalated_at ?? now(),
             'resolved_at' => null,
+            'resolved_by' => null,
         ])->save();
 
-        return $dependency->refresh()->load(['task.project', 'task.assignee', 'dependsOnTask', 'escalatedBy']);
+        return $dependency->refresh()->load(['task.project', 'task.assignee', 'dependsOnTask', 'escalatedBy', 'resolvedBy']);
     }
 }

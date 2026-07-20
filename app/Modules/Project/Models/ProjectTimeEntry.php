@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * Uses the `project_time_entries` table. This is intentionally separate from
  * the polymorphic `time_entries` table used by App\Modules\TimeEntry.
+ *
+ * @property-read ProjectTask|null $task
+ * @property-read User|null $user
  */
 class ProjectTimeEntry extends Model
 {

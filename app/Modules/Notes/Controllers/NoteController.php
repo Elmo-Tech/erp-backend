@@ -9,10 +9,12 @@ use App\Modules\Lead\Models\Lead;
 use App\Modules\Notes\Models\Note;
 use App\Modules\Notes\Resources\NoteResource;
 use App\Modules\Project\Models\Project;
+use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -35,7 +37,8 @@ class NoteController extends Controller
         ]);
 
         $modelType = self::MODEL_TYPE_MAP[$data['modelType']];
-        $this->resolveSubject($modelType, (int) $data['modelId']);
+        $subject = $this->resolveSubject($modelType, (int) $data['modelId']);
+        $this->authorizeSubject($request, $subject);
 
         $notes = Note::query()
             ->where('model_type', $modelType)
@@ -61,6 +64,7 @@ class NoteController extends Controller
 
         $modelType = self::MODEL_TYPE_MAP[$data['modelType']];
         $subject = $this->resolveSubject($modelType, (int) $data['modelId']);
+        $this->authorizeSubject($request, $subject);
 
         $note = Note::create([
             'model_type' => $modelType,
@@ -114,5 +118,19 @@ class NoteController extends Controller
     private function resolveSubject(string $modelType, int $modelId): Model
     {
         return $modelType::query()->findOrFail($modelId);
+    }
+
+    private function authorizeSubject(Request $request, Model $subject): void
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $allowed = match (true) {
+            $subject instanceof Client, $subject instanceof Project => Gate::forUser($user)->allows('view', $subject),
+            $subject instanceof Lead => $user->can('view_leads') || $user->can('manage_leads'),
+            default => false,
+        };
+
+        abort_unless($allowed, 403, 'Unauthorized note subject');
     }
 }

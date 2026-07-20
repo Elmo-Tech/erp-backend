@@ -3,15 +3,13 @@
 namespace App\Modules\Dashboard\Actions;
 
 use App\Enums\InvoiceStatus;
-use App\Modules\Gamification\Models\PointTransaction;
-use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Invoice\Models\Invoice;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
 use App\Modules\Task\Models\Task;
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\Settings\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class GetAdminDashboardStatsAction
 {
@@ -162,7 +160,7 @@ class GetAdminDashboardStatsAction
                 ]);
             $activities = $activities->merge($recentProjectActivities);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('Error fetching recent activities: '.$e->getMessage());
+            Log::warning('Error fetching recent activities: '.$e->getMessage());
         }
 
         return $activities

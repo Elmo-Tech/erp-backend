@@ -2,17 +2,15 @@
 
 namespace App\Modules\Dashboard\Controllers;
 
-use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Dashboard\Actions\EscalateBlockerAction;
-use App\Modules\Dashboard\Actions\GetEscalatedBlockersAction;
 use App\Modules\Dashboard\Actions\GetDashboardOverviewAction;
+use App\Modules\Dashboard\Actions\GetEscalatedBlockersAction;
 use App\Modules\Dashboard\Actions\ResolveEscalatedBlockerAction;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskDependency;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: 'Dashboard', description: 'Dashboard statistics endpoints')]
@@ -44,7 +42,11 @@ class DashboardController extends Controller
         EscalateBlockerAction $escalateBlocker,
         GetEscalatedBlockersAction $escalatedBlockers
     ): JsonResponse {
-        abort_unless($request->user()?->can('view_all_blockers'), 403);
+        abort_unless($request->user()?->can('escalate_blockers'), 403);
+
+        $task->loadMissing('project');
+        abort_unless($task->project !== null, 404);
+        $this->authorize('view', $task->project);
 
         $dependency = $escalateBlocker->execute($task, $request->user());
 
@@ -59,9 +61,14 @@ class DashboardController extends Controller
         ResolveEscalatedBlockerAction $resolveEscalatedBlocker,
         GetEscalatedBlockersAction $escalatedBlockers
     ): JsonResponse {
-        abort_unless($request->user()?->can('view_escalated_blockers'), 403);
+        abort_unless($request->user()?->can('resolve_blockers'), 403);
 
-        $resolvedDependency = $resolveEscalatedBlocker->execute($dependency);
+        $dependency->loadMissing('task.project');
+        abort_unless($dependency->task?->project !== null, 404);
+        $this->authorize('view', $dependency->task->project);
+        abort_unless($dependency->is_escalated && $dependency->resolved_at === null, 404);
+
+        $resolvedDependency = $resolveEscalatedBlocker->execute($dependency, $request->user());
 
         return response()->json([
             'data' => $escalatedBlockers->format($resolvedDependency),

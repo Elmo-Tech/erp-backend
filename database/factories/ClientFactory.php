@@ -4,16 +4,17 @@ namespace Database\Factories;
 
 use App\Modules\Client\Models\Client;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Model;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Client\Models\Client>
+ * @extends Factory<Client>
  */
 class ClientFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<\Illuminate\Database\Eloquent\Model>
+     * @var class-string<Model>
      */
     protected $model = Client::class;
 

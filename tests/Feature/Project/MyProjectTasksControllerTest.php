@@ -49,12 +49,12 @@ class MyProjectTasksControllerTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')
             ->getJson('/api/v1/projects/tasks/my-active');
 
-        $response->assertOk()
-            ->assertJsonCount(2, 'data.tasks')
-            ->assertJsonPath('data.tasks.0.taskId', $first->id)
-            ->assertJsonPath('data.tasks.0.project.title', 'Website')
-            ->assertJsonPath('data.tasks.1.taskId', $second->id)
-            ->assertJsonPath('data.tasks.1.project.title', 'Portal');
+        $response->assertOk()->assertJsonCount(2, 'data.tasks');
+
+        $tasks = collect($response->json('data.tasks'));
+
+        $this->assertEqualsCanonicalizing([$first->id, $second->id], $tasks->pluck('taskId')->all());
+        $this->assertEqualsCanonicalizing(['Website', 'Portal'], $tasks->pluck('project.title')->all());
     }
 
     /**

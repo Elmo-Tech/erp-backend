@@ -5,6 +5,7 @@ namespace Tests\Feature\Client;
 use App\Modules\Client\Models\Client;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class ClientMeetingsControllerTest extends TestCase
@@ -14,6 +15,10 @@ class ClientMeetingsControllerTest extends TestCase
     public function test_it_returns_an_empty_meetings_list_for_a_client_without_meetings(): void
     {
         $user = User::factory()->create();
+        $user->givePermissionTo([
+            Permission::findOrCreate('view_clients', 'web'),
+            Permission::findOrCreate('view_meetings', 'web'),
+        ]);
         $client = Client::create([
             'type' => 'company',
             'display_name' => 'Acme',

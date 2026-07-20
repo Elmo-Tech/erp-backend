@@ -13,6 +13,7 @@ use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Resources\ProjectMemberResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\Enum;
 use RuntimeException;
 
 class ProjectMemberController extends Controller
@@ -44,7 +45,7 @@ class ProjectMemberController extends Controller
 
         $request->validate([
             'userId' => 'required|exists:users,id',
-            'role'   => ['nullable', new \Illuminate\Validation\Rules\Enum(ProjectRole::class)],
+            'role' => ['nullable', new Enum(ProjectRole::class)],
         ]);
 
         try {
@@ -71,7 +72,7 @@ class ProjectMemberController extends Controller
         $this->authorize('view', $project);
 
         $request->validate([
-            'role' => ['required', new \Illuminate\Validation\Rules\Enum(ProjectRole::class)],
+            'role' => ['required', new Enum(ProjectRole::class)],
         ]);
 
         try {

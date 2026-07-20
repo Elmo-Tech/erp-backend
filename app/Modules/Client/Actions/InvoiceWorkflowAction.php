@@ -6,6 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\MilestoneStatus;
 use App\Modules\Contract\Models\ContractMilestone;
 use App\Modules\Invoice\Models\Invoice;
+use App\Modules\Notification\Notifications\InvoiceOverdue;
 use App\Modules\Project\Models\Project;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -223,7 +224,7 @@ class InvoiceWorkflowAction
 
             // Send overdue notification to client
             if ($invoice->project && $invoice->project->client?->user) {
-                $invoice->project->client->user->notify(new \App\Modules\Notification\Notifications\InvoiceOverdue(
+                $invoice->project->client->user->notify(new InvoiceOverdue(
                     $invoice,
                     $invoice->due_date->diffInDays(Carbon::today())
                 ));

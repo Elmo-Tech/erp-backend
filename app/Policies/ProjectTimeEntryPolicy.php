@@ -14,25 +14,29 @@ class ProjectTimeEntryPolicy
 
     public function update(User $user, ProjectTimeEntry $entry): bool
     {
-        return $this->canManageEntry($user, $entry);
+        return $this->canManageEntry($user, $entry, 'edit_time_entries');
     }
 
     public function delete(User $user, ProjectTimeEntry $entry): bool
     {
-        return $this->canManageEntry($user, $entry);
+        return $this->canManageEntry($user, $entry, 'delete_time_entries');
     }
 
-    private function canManageEntry(User $user, ProjectTimeEntry $entry): bool
+    private function canManageEntry(User $user, ProjectTimeEntry $entry, string $permission): bool
     {
+        if ($user->can('manage_all_projects') || $user->can('manage_time_entries')) {
+            return true;
+        }
+
+        if (! $user->can($permission)) {
+            return false;
+        }
+
         if ((int) $entry->user_id === $user->id) {
             return true;
         }
 
         $entry->loadMissing('task.project');
-
-        if ($user->can('manage_all_projects') || $user->can('manage_time_entries')) {
-            return true;
-        }
 
         return $this->isProjectManager($user, $entry->task?->project);
     }

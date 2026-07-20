@@ -2,11 +2,11 @@
 
 namespace Tests\Unit\Services;
 
+use App\Modules\Project\Actions\ProjectHistoryAction;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectHistory;
 use App\Modules\Settings\Models\User;
-use App\Modules\Project\Actions\ProjectHistoryAction;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;

@@ -15,17 +15,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * The payroll engine (PayrollCalculatorService) populates all monetary
  * fields. HR admins then approve and mark as paid via the PayslipController.
  *
- * @property int    $id
- * @property int    $user_id
- * @property int    $month                    1–12
- * @property int    $year
- * @property float  $base_salary
- * @property int    $points_earned
- * @property float  $points_bonus_amount
- * @property int    $lateness_minutes
- * @property float  $lateness_deduction_amount
- * @property float  $net_salary
- * @property string $status                   draft|approved|paid
+ * @property int $id
+ * @property int $user_id
+ * @property int $month 1–12
+ * @property int $year
+ * @property float $base_salary
+ * @property int $points_earned
+ * @property float $points_bonus_amount
+ * @property int $lateness_minutes
+ * @property float $lateness_deduction_amount
+ * @property float $net_salary
+ * @property string $status draft|approved|paid
  * @property-read User $user
  */
 class Payslip extends Model
@@ -48,14 +48,14 @@ class Payslip extends Model
     protected function casts(): array
     {
         return [
-            'month'                     => 'integer',
-            'year'                      => 'integer',
-            'base_salary'               => 'decimal:2',
-            'points_earned'             => 'integer',
-            'points_bonus_amount'       => 'decimal:2',
-            'lateness_minutes'          => 'integer',
+            'month' => 'integer',
+            'year' => 'integer',
+            'base_salary' => 'decimal:2',
+            'points_earned' => 'integer',
+            'points_bonus_amount' => 'decimal:2',
+            'lateness_minutes' => 'integer',
             'lateness_deduction_amount' => 'decimal:2',
-            'net_salary'                => 'decimal:2',
+            'net_salary' => 'decimal:2',
         ];
     }
 

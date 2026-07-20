@@ -194,8 +194,9 @@ class EmployeeReportController extends Controller
             })
             ->get();
 
-        $workingDaysPerMonth = $profile?->working_days_per_week
-            ? round(($profile->working_days_per_week / 7) * $periodStart->daysInMonth)
+        $workingDaysPerWeek = $profile?->getAttribute('working_days_per_week');
+        $workingDaysPerMonth = is_numeric($workingDaysPerWeek)
+            ? round(((float) $workingDaysPerWeek / 7) * $periodStart->daysInMonth)
             : 22;
 
         $dailyRate = $workingDaysPerMonth > 0 ? $baseSalary / $workingDaysPerMonth : 0;

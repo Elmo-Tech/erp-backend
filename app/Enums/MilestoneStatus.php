@@ -4,15 +4,15 @@ namespace App\Enums;
 
 enum MilestoneStatus: string
 {
-    case PENDING   = 'pending';
-    case ACTIVE    = 'active';
+    case PENDING = 'pending';
+    case ACTIVE = 'active';
     case COMPLETED = 'completed';
 
     public function label(): string
     {
         return match ($this) {
-            self::PENDING   => 'Pending',
-            self::ACTIVE    => 'Active',
+            self::PENDING => 'Pending',
+            self::ACTIVE => 'Active',
             self::COMPLETED => 'Completed',
         };
     }

@@ -2,8 +2,8 @@
 
 namespace App\Modules\Dashboard\Actions;
 
-use App\Modules\SOP\Models\DailyCheckin;
 use App\Modules\Settings\Models\User;
+use App\Modules\SOP\Models\DailyCheckin;
 
 class GetTeamPulseAction
 {

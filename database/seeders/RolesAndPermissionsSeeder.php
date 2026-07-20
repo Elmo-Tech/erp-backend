@@ -91,6 +91,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage_settings',
             'manage_users',
             'manage_roles',
+            'assign_user_roles',
+            'reset_user_credentials',
+            'manage_protected_users',
+            'protected_user_account',
             'manage_dictionaries',
             'use_ai_agent',
 
@@ -137,6 +141,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_all_blockers',
             'view_escalated_blockers',
             'view_team_pulse',
+            'escalate_blockers',
+            'resolve_blockers',
 
             // ── User Management (granular) ───────────────────────────────────
             'view_users',
@@ -192,6 +198,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete_tasks',
             'assign_tasks',
             'view_internal_notes',
+            'create_internal_notes',
             'work_on_tasks',
 
             // ── Project Wiki / Development Data ─────────────────────────────
@@ -313,7 +320,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate([
-                'name'       => $permission,
+                'name' => $permission,
                 'guard_name' => 'web',
             ]);
         }
@@ -348,13 +355,16 @@ class RolesAndPermissionsSeeder extends Seeder
             // Company-wide operational analytics. Does not include founder-only
             // role/system ownership capabilities.
             'admin' => [
+                'protected_user_account',
                 'view_my_workspace',
                 'view_global_stats',
                 'view_dashboard', 'view_dashboard_overview',
                 'view_financial_stats', 'view_project_timeline',
                 'view_team_performance', 'view_all_blockers',
                 'view_escalated_blockers', 'view_team_pulse',
+                'escalate_blockers', 'resolve_blockers',
                 'view_reports', 'view_admin_stats',
+                'view_clients',
                 'use_ai_agent',
                 'view_profitability', 'view_quality_metrics',
                 'view_user_performance', 'view_attendance_analytics',
@@ -383,14 +393,16 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_dashboard', 'view_dashboard_overview',
                 'use_ai_agent',
                 'view_project_timeline', 'view_all_blockers',
+                'escalate_blockers',
                 'view_morning_sop', 'submit_morning_sop',
                 'view_projects', 'view_all_projects', 'manage_all_projects',
                 'create_projects',
+                'view_clients',
                 'view_project_members', 'add_project_members', 'remove_project_members',
                 'view_project_files', 'upload_project_files',
                 'view_project_history',
                 'manage_tasks', 'view_tasks', 'view_task_control', 'create_tasks', 'edit_tasks',
-                'delete_tasks', 'assign_tasks', 'view_internal_notes',
+                'delete_tasks', 'assign_tasks', 'view_internal_notes', 'create_internal_notes',
                 'manage_wiki', 'view_wiki', 'create_wiki', 'edit_wiki',
                 'delete_wiki', 'view_encrypted_content',
                 'manage_deliverables',
@@ -418,12 +430,13 @@ class RolesAndPermissionsSeeder extends Seeder
                 'use_ai_agent',
                 'view_team_performance', 'view_project_timeline',
                 'view_projects', 'view_assigned_projects', 'create_projects',
+                'view_clients',
                 'edit_projects',
                 'view_project_members', 'add_project_members', 'remove_project_members',
                 'view_project_files', 'upload_project_files',
                 'view_project_history',
                 'manage_tasks', 'view_tasks', 'view_task_control', 'create_tasks', 'edit_tasks',
-                'delete_tasks', 'assign_tasks', 'view_internal_notes', 'work_on_tasks',
+                'delete_tasks', 'assign_tasks', 'view_internal_notes', 'create_internal_notes', 'work_on_tasks',
                 'view_wiki', 'create_wiki', 'edit_wiki', 'view_encrypted_content',
                 'manage_deliverables',
                 'manage_change_requests',
@@ -450,7 +463,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_project_files', 'upload_project_files',
                 'view_project_history',
                 'manage_tasks', 'view_tasks', 'create_tasks', 'edit_tasks', 'delete_tasks',
-                'assign_tasks', 'view_internal_notes', 'work_on_tasks',
+                'assign_tasks', 'view_internal_notes', 'create_internal_notes', 'work_on_tasks',
                 'view_wiki', 'create_wiki', 'edit_wiki', 'view_encrypted_content',
                 'manage_deliverables',
                 'view_time_entries', 'start_timer', 'stop_timer',
@@ -516,10 +529,14 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         foreach ($roles as $roleName => $rolePermissions) {
-            Role::firstOrCreate([
-                'name'       => $roleName,
+            $role = Role::firstOrCreate([
+                'name' => $roleName,
                 'guard_name' => 'web',
-            ])->syncPermissions($rolePermissions);
+            ]);
+            $role->forceFill([
+                'is_system' => in_array($roleName, ['founder', 'admin', 'pmo', 'techdev', 'dev', 'client'], true),
+            ])->save();
+            $role->syncPermissions($rolePermissions);
         }
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();

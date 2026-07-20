@@ -15,6 +15,7 @@ use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Requests\StoreProjectTaskRequest;
 use App\Modules\Project\Requests\UpdateProjectTaskRequest;
 use App\Modules\Project\Resources\ProjectTaskResource;
+use App\Modules\Project\Services\ProjectTaskRelationshipValidator;
 use App\Modules\Settings\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -25,6 +26,7 @@ class ProjectTaskController extends Controller
         private readonly CompleteProjectTaskAction $completeTask,
         private readonly ProjectHistoryAction $historyAction,
         private readonly EvaluateQABugPointsAction $evaluateQABugPoints,
+        private readonly ProjectTaskRelationshipValidator $relationshipValidator,
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -46,16 +48,11 @@ class ProjectTaskController extends Controller
 
         $user = request()->user();
 
-        $query = $project->executionTasks()
+        $query = ProjectTask::query()
+            ->where('project_id', $project->id)
+            ->visibleTo($user)
             ->with(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
-            // REMOVED: subtasks.assignee - subtasks are no longer supported
-
-        // ── ABAC: Task isolation ──────────────────────────────────────────────
-        // Only global project admins see every task. Everyone else sees only the
-        // tasks explicitly assigned to them inside the project.
-        if (! $user->can('manage_all_projects')) {
-            $query->where('assignee_id', $user->id);
-        }
+        // REMOVED: subtasks.assignee - subtasks are no longer supported
 
         $request = request();
         $filter = (array) $request->input('filter', []);
@@ -156,18 +153,19 @@ class ProjectTaskController extends Controller
         $this->authorize('view', $project);
         $this->authorize('create', [ProjectTask::class, $project]);
         $data = $request->validated();
+        $this->relationshipValidator->validate($request->user(), $project, $data);
 
         $task = $project->executionTasks()->create([
-            'milestone_id'    => $data['milestoneId'] ?? null,
+            'milestone_id' => $data['milestoneId'] ?? null,
             // REMOVED: parent_id - subtasks are no longer supported
-            'title'           => $data['title'],
-            'description'     => $data['description'] ?? null,
-            'status'          => $data['status'] ?? 'to_do',
-            'priority'        => $data['priority'] ?? 'medium',
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'status' => $data['status'] ?? 'to_do',
+            'priority' => $data['priority'] ?? 'medium',
             'estimated_hours' => $data['estimatedHours'] ?? null,
-            'start_date'      => $data['startDate'] ?? null,
-            'due_date'        => $data['dueDate'] ?? null,
-            'assignee_id'     => $data['assigneeId'] ?? null,
+            'start_date' => $data['startDate'] ?? null,
+            'due_date' => $data['dueDate'] ?? null,
+            'assignee_id' => $data['assigneeId'] ?? null,
         ]);
 
         // Record activity for task creation
@@ -240,6 +238,8 @@ class ProjectTaskController extends Controller
             );
         }
 
+        $this->relationshipValidator->validate($user, $project, $data);
+
         // ── CRITICAL: "COMPLETED" STATUS GUARD ────────────────────────────────
         // If the user is trying to set status to "done", verify they have the authority.
         // ONLY these users can mark tasks as completed:
@@ -281,15 +281,15 @@ class ProjectTaskController extends Controller
         $updateData = [];
 
         foreach ([
-            'milestoneId'    => 'milestone_id',
-            'title'          => 'title',
-            'description'    => 'description',
-            'status'         => 'status',
-            'priority'       => 'priority',
+            'milestoneId' => 'milestone_id',
+            'title' => 'title',
+            'description' => 'description',
+            'status' => 'status',
+            'priority' => 'priority',
             'estimatedHours' => 'estimated_hours',
-            'startDate'      => 'start_date',
-            'dueDate'        => 'due_date',
-            'assigneeId'     => 'assignee_id',
+            'startDate' => 'start_date',
+            'dueDate' => 'due_date',
+            'assigneeId' => 'assignee_id',
         ] as $requestKey => $column) {
             if (array_key_exists($requestKey, $data)) {
                 $updateData[$column] = $data[$requestKey];
@@ -316,9 +316,7 @@ class ProjectTaskController extends Controller
             // stage to a development stage:
             //   in_review → in_progress  (code review rejection)
             //   qa        → in_progress  (QA tester rejection)
-            $fromStatus = $oldStatus instanceof ExecutionTaskStatus
-                ? $oldStatus->value
-                : (string) $oldStatus;
+            $fromStatus = $oldStatus->value;
 
             $toStatus = $data['status'];
 
@@ -366,6 +364,7 @@ class ProjectTaskController extends Controller
      */
     public function destroy(Project $project, ProjectTask $task): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertBelongsToProject($task, $project);
         $this->authorize('delete', $task);
 

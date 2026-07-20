@@ -10,12 +10,14 @@ use App\Modules\Quotation\Models\Quotation;
 use App\Modules\Settings\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
 use Database\Factories\ClientFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -35,10 +37,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float|int|string|null $total_revenue
  * @property int|null $active_projects_count
  * @property int|null $projects_count
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property-read User|null $user
- * @property-read \Illuminate\Database\Eloquent\Collection<int, Project> $projects
+ * @property-read Collection<int, Project> $projects
  * @property-read Lead|null $originalLead
  */
 class Client extends Model

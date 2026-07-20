@@ -11,22 +11,22 @@ namespace App\Modules\Project\Enums;
  */
 enum ExecutionTaskStatus: string
 {
-    case BACKLOG    = 'backlog';
-    case TO_DO      = 'to_do';
+    case BACKLOG = 'backlog';
+    case TO_DO = 'to_do';
     case IN_PROGRESS = 'in_progress';
-    case IN_REVIEW  = 'in_review';
-    case QA         = 'qa';
-    case DONE       = 'done';
+    case IN_REVIEW = 'in_review';
+    case QA = 'qa';
+    case DONE = 'done';
 
     public function label(): string
     {
         return match ($this) {
-            self::BACKLOG     => 'Backlog',
-            self::TO_DO       => 'To Do',
+            self::BACKLOG => 'Backlog',
+            self::TO_DO => 'To Do',
             self::IN_PROGRESS => 'In Progress',
-            self::IN_REVIEW   => 'In Review',
-            self::QA          => 'QA',
-            self::DONE        => 'Done',
+            self::IN_REVIEW => 'In Review',
+            self::QA => 'QA',
+            self::DONE => 'Done',
         };
     }
 

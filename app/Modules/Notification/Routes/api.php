@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Modules\Notification\Controllers\NotificationController;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/notifications')->middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::get('/', [NotificationController::class, 'index']);

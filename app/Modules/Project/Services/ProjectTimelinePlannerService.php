@@ -2,8 +2,8 @@
 
 namespace App\Modules\Project\Services;
 
-use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Enums\ProjectRole;
+use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Settings\Models\User;
@@ -88,7 +88,7 @@ class ProjectTimelinePlannerService
                 'startDate' => $this->taskStart($task)?->toDateString(),
                 'dueDate' => $this->taskDue($task)?->toDateString(),
                 'estimatedHours' => $task->estimated_hours !== null ? (float) $task->estimated_hours : null,
-                'status' => $task->status?->value,
+                'status' => $task->status->value,
                 'allocatedHoursByDate' => $allocated,
             ];
         })->values()->all();
@@ -322,6 +322,7 @@ class ProjectTimelinePlannerService
 
                     if (! $fits) {
                         $candidateEnd->addDay();
+
                         continue;
                     }
 

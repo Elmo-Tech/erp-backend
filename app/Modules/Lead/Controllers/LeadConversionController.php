@@ -4,8 +4,10 @@ namespace App\Modules\Lead\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Modules\Client\Models\Client;
 use App\Modules\Lead\Actions\ConvertLeadToClientProjectAction;
 use App\Modules\Lead\Models\Lead;
+use App\Modules\Project\Models\Project;
 use Illuminate\Http\JsonResponse;
 
 class LeadConversionController extends Controller
@@ -25,17 +27,17 @@ class LeadConversionController extends Controller
     ): JsonResponse {
         $result = $action->execute($lead);
 
-        /** @var \App\Modules\Client\Models\Client  $client  */
-        /** @var \App\Modules\Project\Models\Project $project */
-        $client  = $result['client'];
+        /** @var Client $client */
+        /** @var Project $project */
+        $client = $result['client'];
         $project = $result['project'];
 
         return ApiResponse::success(
             [
-                'client_id'    => $client->id,
-                'client_name'  => $client->display_name,
-                'project_id'   => $project->id,
-                'project_title'=> $project->title,
+                'client_id' => $client->id,
+                'client_name' => $client->display_name,
+                'project_id' => $project->id,
+                'project_title' => $project->title,
             ],
             'Lead successfully converted to Client and Project.'
         );

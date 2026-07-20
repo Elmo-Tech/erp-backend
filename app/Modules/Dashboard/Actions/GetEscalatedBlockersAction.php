@@ -9,7 +9,7 @@ class GetEscalatedBlockersAction
     public function execute(): array
     {
         return TaskDependency::query()
-            ->with(['task.project', 'task.assignee', 'dependsOnTask', 'escalatedBy'])
+            ->with(['task.project', 'task.assignee', 'dependsOnTask', 'escalatedBy', 'resolvedBy'])
             ->where('is_escalated', true)
             ->whereNull('resolved_at')
             ->latest('escalated_at')
@@ -46,6 +46,11 @@ class GetEscalatedBlockersAction
                 'avatar_url' => $dependency->escalatedBy->avatar ?: null,
             ] : null,
             'escalated_at' => $dependency->escalated_at?->toISOString(),
+            'resolved_by' => $dependency->resolvedBy ? [
+                'id' => $dependency->resolvedBy->id,
+                'name' => $dependency->resolvedBy->name,
+            ] : null,
+            'resolved_at' => $dependency->resolved_at?->toISOString(),
         ];
     }
 

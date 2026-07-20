@@ -4,19 +4,20 @@ namespace Database\Factories;
 
 use App\Enums\TaskStatus;
 use App\Modules\Project\Models\Project;
-use App\Modules\Task\Models\Task;
 use App\Modules\Settings\Models\User;
+use App\Modules\Task\Models\Task;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Model;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Task\Models\Task>
+ * @extends Factory<Task>
  */
 class TaskFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<\Illuminate\Database\Eloquent\Model>
+     * @var class-string<Model>
      */
     protected $model = Task::class;
 

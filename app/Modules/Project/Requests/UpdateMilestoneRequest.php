@@ -19,10 +19,10 @@ class UpdateMilestoneRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'           => ['sometimes', 'string', 'max:255'],
-            'status'          => ['sometimes', new Enum(MilestoneStatus::class)],
-            'paymentStageId'  => ['nullable', 'integer'],
-            'invoiceId'       => ['nullable', 'integer'],
+            'title' => ['sometimes', 'string', 'max:255'],
+            'status' => ['sometimes', new Enum(MilestoneStatus::class)],
+            'paymentStageId' => ['nullable', 'integer'],
+            'invoiceId' => ['nullable', 'integer'],
         ];
     }
 

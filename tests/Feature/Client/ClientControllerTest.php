@@ -8,6 +8,7 @@ use App\Modules\Settings\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class ClientControllerTest extends TestCase
@@ -100,6 +101,7 @@ class ClientControllerTest extends TestCase
     public function test_it_returns_lightweight_client_directory_rows(): void
     {
         $user = User::factory()->create();
+        $user->givePermissionTo(Permission::findOrCreate('view_clients', 'web'));
 
         $client = Client::factory()->create([
             'type' => 'company',

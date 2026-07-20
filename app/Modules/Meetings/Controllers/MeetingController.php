@@ -57,6 +57,8 @@ class MeetingController extends Controller
 
     public function show(Meeting $meeting): JsonResponse
     {
+        $this->authorize('view', $meeting);
+
         return ApiResponse::success(
             new MeetingResource($meeting->load(['model', 'assignedTo'])),
             __('messages.meeting_retrieved')
@@ -65,6 +67,8 @@ class MeetingController extends Controller
 
     public function update(UpdateMeetingRequest $request, Meeting $meeting, UpdateMeetingAction $action): JsonResponse
     {
+        $this->authorize('update', $meeting);
+
         return ApiResponse::success(
             new MeetingResource($action->execute($meeting, $request->validated(), $request->user())),
             __('messages.meeting_updated')
@@ -73,6 +77,8 @@ class MeetingController extends Controller
 
     public function complete(CompleteMeetingRequest $request, Meeting $meeting): JsonResponse
     {
+        $this->authorize('complete', $meeting);
+
         $meeting = $this->meetingService->markAsComplete(
             $meeting,
             $request->get('minutes'),
@@ -87,6 +93,8 @@ class MeetingController extends Controller
 
     public function cancel(CancelMeetingRequest $request, Meeting $meeting): JsonResponse
     {
+        $this->authorize('cancel', $meeting);
+
         $meeting = $this->meetingService->cancelMeeting(
             $meeting,
             $request->get('cancellationReason'),
@@ -123,6 +131,7 @@ class MeetingController extends Controller
     public function destroy(Meeting $meeting, DeleteMeetingAction $action): JsonResponse
     {
         abort_if(! request()->user()?->can('delete_meetings'), 403, 'Unauthorized');
+        $this->authorize('delete', $meeting);
 
         $action->execute($meeting);
 

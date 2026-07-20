@@ -2,20 +2,21 @@
 
 namespace Database\Factories;
 
-use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Client\Models\Client;
+use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Model;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Project\Models\Project>
+ * @extends Factory<Project>
  */
 class ProjectFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<\Illuminate\Database\Eloquent\Model>
+     * @var class-string<Model>
      */
     protected $model = Project::class;
 

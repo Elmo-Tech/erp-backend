@@ -12,6 +12,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int|null $created_by
+ * @property int|null $assigned_to
+ * @property array<int, int|string>|null $internal_attendees
+ */
 class Meeting extends Model
 {
     use HasCreatedUpdatedBy, HasFactory, SoftDeletes;

@@ -50,7 +50,7 @@ class MeetingSyncTest extends TestCase
     {
         Carbon::setTestNow('2026-05-14 09:00:00');
 
-        $creator = $this->userWithPermissions(['schedule_meetings']);
+        $creator = $this->userWithPermissions(['schedule_meetings', 'view_clients']);
         $attendee = User::factory()->create();
         $client = Client::factory()->create();
 
@@ -79,7 +79,7 @@ class MeetingSyncTest extends TestCase
     {
         Carbon::setTestNow('2026-05-14 09:00:00');
 
-        $creator = $this->userWithPermissions(['schedule_meetings']);
+        $creator = $this->userWithPermissions(['schedule_meetings', 'view_clients']);
         $client = Client::factory()->create();
 
         $this->actingAs($creator, 'sanctum')

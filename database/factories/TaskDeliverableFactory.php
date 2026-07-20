@@ -3,13 +3,13 @@
 namespace Database\Factories;
 
 use App\Enums\DeliverableStatus;
+use App\Modules\Settings\Models\User;
 use App\Modules\Task\Models\Task;
 use App\Modules\Task\Models\TaskDeliverable;
-use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Task\Models\TaskDeliverable>
+ * @extends Factory<TaskDeliverable>
  */
 class TaskDeliverableFactory extends Factory
 {

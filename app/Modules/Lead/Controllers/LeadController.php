@@ -70,20 +70,20 @@ class LeadController extends Controller
         $leads = $query->orderByDesc('created_at')->get();
 
         $data = $leads->map(fn (Lead $lead) => [
-            'id'              => $lead->id,
-            'title'           => $lead->title,
-            'stage'           => $lead->stage->value,
-            'status'          => $lead->status->value,
-            'company'         => $lead->metadata['company_name'] ?? null,
-            'email'           => $lead->metadata['primary_email'] ?? null,
-            'phone'           => $lead->metadata['primary_phone'] ?? null,
+            'id' => $lead->id,
+            'title' => $lead->title,
+            'stage' => $lead->stage->value,
+            'status' => $lead->status->value,
+            'company' => $lead->metadata['company_name'] ?? null,
+            'email' => $lead->metadata['primary_email'] ?? null,
+            'phone' => $lead->metadata['primary_phone'] ?? null,
             'expected_budget' => $lead->expected_budget,
-            'source'          => $lead->source,
-            'assignedTo'      => $lead->assigned_to,
+            'source' => $lead->source,
+            'assignedTo' => $lead->assigned_to,
             'hasCompletedMeeting' => (bool) $lead->has_completed_meeting,
             'hasAcceptedProposalOrQuotation' => (bool) ($lead->has_accepted_proposal || $lead->has_accepted_quotation),
-            'createdAt'       => $lead->created_at?->toISOString(),
-            'updatedAt'       => $lead->updated_at?->toISOString(),
+            'createdAt' => $lead->created_at?->toISOString(),
+            'updatedAt' => $lead->updated_at?->toISOString(),
         ]);
 
         return ApiResponse::success($data, 'Leads retrieved successfully.');
@@ -105,29 +105,29 @@ class LeadController extends Controller
 
         return ApiResponse::success(
             [
-                'id'              => $lead->id,
-                'title'           => $lead->title,
-                'stage'           => $lead->stage->value,
-                'status'          => $lead->status->value,
-                'company'         => $lead->metadata['company_name'] ?? null,
-                'email'           => $lead->metadata['primary_email'] ?? null,
-                'phone'           => $lead->metadata['primary_phone'] ?? null,
-                'contact_name'    => $lead->metadata['contact_name'] ?? null,
+                'id' => $lead->id,
+                'title' => $lead->title,
+                'stage' => $lead->stage->value,
+                'status' => $lead->status->value,
+                'company' => $lead->metadata['company_name'] ?? null,
+                'email' => $lead->metadata['primary_email'] ?? null,
+                'phone' => $lead->metadata['primary_phone'] ?? null,
+                'contact_name' => $lead->metadata['contact_name'] ?? null,
                 'expected_budget' => $lead->expected_budget,
-                'source'          => $lead->source,
-                'notes'           => $lead->notes,
+                'source' => $lead->source,
+                'notes' => $lead->notes,
                 'expected_close_date' => $lead->expected_close_date?->toDateString(),
-                'assignedTo'      => $lead->assigned_to,
+                'assignedTo' => $lead->assigned_to,
                 'hasCompletedMeeting' => $this->hasCompletedMeeting($lead),
                 'hasAcceptedProposalOrQuotation' => $this->hasAcceptedProposalOrQuotation($lead),
-                'assignee'        => $lead->assignee ? [
-                    'id'     => $lead->assignee->id,
-                    'name'   => $lead->assignee->name,
-                    'email'  => $lead->assignee->email,
+                'assignee' => $lead->assignee ? [
+                    'id' => $lead->assignee->id,
+                    'name' => $lead->assignee->name,
+                    'email' => $lead->assignee->email,
                     'avatar' => $lead->assignee->avatar,
                 ] : null,
-                'createdAt'       => $lead->created_at?->toISOString(),
-                'updatedAt'       => $lead->updated_at?->toISOString(),
+                'createdAt' => $lead->created_at?->toISOString(),
+                'updatedAt' => $lead->updated_at?->toISOString(),
             ],
             'Lead retrieved successfully.'
         );
@@ -152,37 +152,37 @@ class LeadController extends Controller
         $validated = $request->validated();
 
         $lead = Lead::create([
-            'title'           => $validated['title'],
-            'stage'           => LeadStage::NEW_LEAD,
-            'status'          => LeadStatus::ACTIVE,
-            'source'          => $validated['source'] ?? null,
+            'title' => $validated['title'],
+            'stage' => LeadStage::NEW_LEAD,
+            'status' => LeadStatus::ACTIVE,
+            'source' => $validated['source'] ?? null,
             'expected_budget' => $validated['expected_budget'] ?? null,
-            'notes'           => $validated['notes'] ?? null,
-            'assigned_to'     => $validated['account_manager_id'] ?? $request->user()?->id,
+            'notes' => $validated['notes'] ?? null,
+            'assigned_to' => $validated['account_manager_id'] ?? $request->user()?->id,
             // Store contact details in metadata until the lead is converted
-            'metadata'        => array_filter([
-                'company_name'  => $validated['company_name'] ?? null,
-                'contact_name'  => $validated['contact_name'] ?? null,
+            'metadata' => array_filter([
+                'company_name' => $validated['company_name'] ?? null,
+                'contact_name' => $validated['contact_name'] ?? null,
                 'primary_email' => $validated['primary_email'] ?? null,
                 'primary_phone' => $validated['primary_phone'] ?? null,
-                'sales_name'    => $validated['sales_name'] ?? null,
+                'sales_name' => $validated['sales_name'] ?? null,
             ], fn ($v) => $v !== null),
         ]);
 
         return ApiResponse::success(
             [
-                'id'              => $lead->id,
-                'title'           => $lead->title,
-                'stage'           => $lead->stage->value,
-                'status'          => $lead->status->value,
-                'company'         => $lead->metadata['company_name'] ?? null,
-                'email'           => $lead->metadata['primary_email'] ?? null,
-                'phone'           => $lead->metadata['primary_phone'] ?? null,
+                'id' => $lead->id,
+                'title' => $lead->title,
+                'stage' => $lead->stage->value,
+                'status' => $lead->status->value,
+                'company' => $lead->metadata['company_name'] ?? null,
+                'email' => $lead->metadata['primary_email'] ?? null,
+                'phone' => $lead->metadata['primary_phone'] ?? null,
                 'expected_budget' => $lead->expected_budget,
-                'source'          => $lead->source,
-                'assignedTo'      => $lead->assigned_to,
-                'createdAt'       => $lead->created_at?->toISOString(),
-                'updatedAt'       => $lead->updated_at?->toISOString(),
+                'source' => $lead->source,
+                'assignedTo' => $lead->assigned_to,
+                'createdAt' => $lead->created_at?->toISOString(),
+                'updatedAt' => $lead->updated_at?->toISOString(),
             ],
             'Lead created successfully.',
             201

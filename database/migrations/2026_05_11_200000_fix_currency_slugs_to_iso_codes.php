@@ -15,12 +15,12 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration
 {
     private array $corrections = [
-        'us-dollar'      => 'USD',
-        'euro'           => 'EUR',
+        'us-dollar' => 'USD',
+        'euro' => 'EUR',
         'egyptian-pound' => 'EGP',
-        'saudi-riyal'    => 'SAR',
-        'uae-dirham'     => 'AED',
-        'british-pound'  => 'GBP',
+        'saudi-riyal' => 'SAR',
+        'uae-dirham' => 'AED',
+        'british-pound' => 'GBP',
     ];
 
     public function up(): void

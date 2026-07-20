@@ -13,20 +13,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @property int                   $id
- * @property int|null              $lead_id
- * @property int|null              $client_id
- * @property int|null              $project_id
- * @property QuotationStatus       $status
- * @property DocumentCreationType  $creation_type
- * @property string|null           $skip_reason
- * @property int|null              $assigned_to
- * @property string|null           $file_path
- * @property string                $currency
- * @property float|null            $base_price
- * @property string|null           $commission_type
- * @property float|null            $final_total
- * @property array|null            $payment_stages
+ * @property int $id
+ * @property int|null $lead_id
+ * @property int|null $client_id
+ * @property int|null $project_id
+ * @property QuotationStatus $status
+ * @property DocumentCreationType $creation_type
+ * @property string|null $skip_reason
+ * @property int|null $assigned_to
+ * @property string|null $file_path
+ * @property string $currency
+ * @property float|null $base_price
+ * @property string|null $commission_type
+ * @property float|null $final_total
+ * @property array|null $payment_stages
  */
 class Quotation extends Model
 {
@@ -55,10 +55,10 @@ class Quotation extends Model
     protected function casts(): array
     {
         return [
-            'status'         => QuotationStatus::class,
-            'creation_type'  => DocumentCreationType::class,
-            'base_price'     => 'decimal:2',
-            'final_total'    => 'decimal:2',
+            'status' => QuotationStatus::class,
+            'creation_type' => DocumentCreationType::class,
+            'base_price' => 'decimal:2',
+            'final_total' => 'decimal:2',
             'payment_stages' => 'array',
         ];
     }

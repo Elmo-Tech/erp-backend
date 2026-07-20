@@ -27,9 +27,9 @@ class Milestone extends Model
     protected function casts(): array
     {
         return [
-            'status'              => MilestoneStatus::class,
+            'status' => MilestoneStatus::class,
             'progress_percentage' => 'integer',
-            'due_date'            => 'date',
+            'due_date' => 'date',
         ];
     }
 

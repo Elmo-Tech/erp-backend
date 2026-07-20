@@ -23,7 +23,7 @@ class StoreProjectFileAction
 
         if ($request->type === 'file' && $request->hasFile('file')) {
             $file = $request->file('file');
-            $path = $file->store("projects/{$project->id}/files", 'public');
+            $path = $file->store("projects/{$project->id}/files", 'local');
 
             $data['file_path'] = $path;
             $data['mime_type'] = $file->getMimeType();

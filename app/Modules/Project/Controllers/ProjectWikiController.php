@@ -4,13 +4,13 @@ namespace App\Modules\Project\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Modules\Project\Actions\ProjectWikiAction;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Models\ProjectWiki;
 use App\Modules\Project\Requests\StoreProjectWikiRequest;
 use App\Modules\Project\Requests\UpdateProjectWikiRequest;
 use App\Modules\Project\Resources\ProjectWikiCollection;
 use App\Modules\Project\Resources\ProjectWikiResource;
-use App\Modules\Project\Models\Project;
-use App\Modules\Project\Models\ProjectWiki;
-use App\Modules\Project\Actions\ProjectWikiAction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

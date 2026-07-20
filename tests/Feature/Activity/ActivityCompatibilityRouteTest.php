@@ -15,9 +15,10 @@ class ActivityCompatibilityRouteTest extends TestCase
     public function test_it_schedules_a_meeting_through_the_activity_route(): void
     {
         Permission::firstOrCreate(['name' => 'schedule_meetings']);
+        Permission::firstOrCreate(['name' => 'view_clients']);
 
         $user = User::factory()->create();
-        $user->givePermissionTo('schedule_meetings');
+        $user->givePermissionTo(['schedule_meetings', 'view_clients']);
 
         $client = Client::create([
             'type' => 'company',

@@ -14,24 +14,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @property int                   $id
- * @property int|null              $lead_id
- * @property int|null              $client_id
- * @property int|null              $project_id
- * @property ContractStatus        $status
- * @property DocumentCreationType  $creation_type
- * @property string|null           $skip_reason
- * @property int|null              $assigned_to
- * @property string|null           $file_path
- * @property ContractModel         $contract_model
- * @property int|null              $development_days
- * @property int|null              $review_days
- * @property float|null            $delay_penalty
- * @property bool                  $source_code_handover
- * @property float|null            $setup_fee
- * @property float|null            $recurring_fee
- * @property string|null           $billing_cycle
- * @property array|null            $payment_stages
+ * @property int $id
+ * @property int|null $lead_id
+ * @property int|null $client_id
+ * @property int|null $project_id
+ * @property ContractStatus $status
+ * @property DocumentCreationType $creation_type
+ * @property string|null $skip_reason
+ * @property int|null $assigned_to
+ * @property string|null $file_path
+ * @property ContractModel $contract_model
+ * @property int|null $development_days
+ * @property int|null $review_days
+ * @property float|null $delay_penalty
+ * @property bool $source_code_handover
+ * @property float|null $setup_fee
+ * @property float|null $recurring_fee
+ * @property string|null $billing_cycle
+ * @property array|null $payment_stages
  */
 class Contract extends Model
 {
@@ -74,20 +74,20 @@ class Contract extends Model
     protected function casts(): array
     {
         return [
-            'status'                  => ContractStatus::class,
-            'creation_type'           => DocumentCreationType::class,
-            'contract_model'          => ContractModel::class,
-            'delay_penalty'           => 'decimal:2',
-            'total_amount'            => 'decimal:2',
-            'setup_fee'               => 'decimal:2',
-            'recurring_fee'           => 'decimal:2',
-            'promo_discount'          => 'decimal:2',
-            'source_code_handover'    => 'boolean',
-            'apply_promo'             => 'boolean',
-            'execution_start_date'    => 'date',
+            'status' => ContractStatus::class,
+            'creation_type' => DocumentCreationType::class,
+            'contract_model' => ContractModel::class,
+            'delay_penalty' => 'decimal:2',
+            'total_amount' => 'decimal:2',
+            'setup_fee' => 'decimal:2',
+            'recurring_fee' => 'decimal:2',
+            'promo_discount' => 'decimal:2',
+            'source_code_handover' => 'boolean',
+            'apply_promo' => 'boolean',
+            'execution_start_date' => 'date',
             'subscription_start_date' => 'date',
-            'payment_stages'          => 'array',
-            'addons'                  => 'array',
+            'payment_stages' => 'array',
+            'addons' => 'array',
         ];
     }
 

@@ -15,10 +15,10 @@ class UpdateEmployeeProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'shift_id'    => ['sometimes', 'nullable', 'integer', Rule::exists('shifts', 'id')],
+            'shift_id' => ['sometimes', 'nullable', 'integer', Rule::exists('shifts', 'id')],
             'base_salary' => ['sometimes', 'numeric', 'min:0'],
             'hourly_rate' => ['sometimes', 'numeric', 'min:0'],
-            'join_date'   => ['sometimes', 'date'],
+            'join_date' => ['sometimes', 'date'],
         ];
     }
 }

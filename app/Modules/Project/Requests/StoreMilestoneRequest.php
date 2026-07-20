@@ -17,9 +17,9 @@ class StoreMilestoneRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'           => ['required', 'string', 'max:255'],
-            'paymentStageId'  => ['nullable', 'integer'],
-            'invoiceId'       => ['nullable', 'integer'],
+            'title' => ['required', 'string', 'max:255'],
+            'paymentStageId' => ['nullable', 'integer'],
+            'invoiceId' => ['nullable', 'integer'],
         ];
     }
 
@@ -27,7 +27,7 @@ class StoreMilestoneRequest extends FormRequest
     {
         return [
             'title.required' => 'The milestone title is required.',
-            'title.max'      => 'The milestone title may not exceed 255 characters.',
+            'title.max' => 'The milestone title may not exceed 255 characters.',
         ];
     }
 

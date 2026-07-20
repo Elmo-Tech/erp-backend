@@ -5,7 +5,6 @@ namespace Tests\Feature\Agent;
 use App\Modules\Agent\Models\AgentActionLog;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
-use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -192,7 +191,7 @@ class AgentActionControllerTest extends TestCase
 
     public function test_reports_action_requires_view_reports_and_returns_permission_scoped_data(): void
     {
-        $user = $this->userWithPermissions(['use_ai_agent', 'view_reports']);
+        $user = $this->userWithPermissions(['use_ai_agent', 'view_reports', 'view_financial_stats']);
         Project::factory()->create();
 
         $this->actingAs($user, 'sanctum')

@@ -8,12 +8,12 @@ use App\Enums\TaskCategory;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Modules\ProjectHandover\Models\CodeReview;
-use App\Modules\Task\Models\Tag;
-use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\Settings\Models\User;
 use App\Modules\Project\Models\Project;
+use App\Modules\ProjectHandover\Models\CodeReview;
+use App\Modules\Settings\Models\User;
+use App\Modules\TimeEntry\Models\TimeEntry;
 use App\Traits\HasCreatedUpdatedBy;
+use Carbon\Carbon;
 use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,6 +24,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property TaskStatus $status
+ * @property \Illuminate\Support\Carbon|null $start_date
+ * @property \Illuminate\Support\Carbon|null $completed_at
+ * @property-read Project|null $project
+ * @property-read User|null $assignee
+ */
 class Task extends Model implements Trackable
 {
     use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
@@ -277,7 +284,7 @@ class Task extends Model implements Trackable
         return $this->areDependenciesSatisfied();
     }
 
-    public function getEarliestStartDate(): ?\Carbon\Carbon
+    public function getEarliestStartDate(): ?Carbon
     {
         $dates = $this->dependencies()
             ->get()
@@ -545,17 +552,17 @@ class Task extends Model implements Trackable
             $q->whereHas('assignees', function ($assigneeQuery) use ($user) {
                 $assigneeQuery->where('user_id', $user->id);
             })
-            ->orWhere(function ($compatibleQuery) use ($user) {
-                if ($user->specialization) {
-                    $compatibleCategories = TaskCategory::getCompatibleCategories($user->specialization);
-                    $categoryValues = array_map(fn ($category) => $category->value, $compatibleCategories);
+                ->orWhere(function ($compatibleQuery) use ($user) {
+                    if ($user->specialization) {
+                        $compatibleCategories = TaskCategory::getCompatibleCategories($user->specialization);
+                        $categoryValues = array_map(fn ($category) => $category->value, $compatibleCategories);
 
-                    if (! empty($categoryValues)) {
-                        $compatibleQuery->whereIn('task_category', $categoryValues);
+                        if (! empty($categoryValues)) {
+                            $compatibleQuery->whereIn('task_category', $categoryValues);
+                        }
                     }
-                }
-            })
-            ->orWhereNull('task_category');
+                })
+                ->orWhereNull('task_category');
         });
     }
 

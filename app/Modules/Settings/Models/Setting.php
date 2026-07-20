@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\Cache;
  *   Setting::getValue('gamification_point_value', 50)  // returns int|string
  *   Setting::setValue('gamification_point_value', 75)
  *
- * @property int         $id
- * @property string      $key
+ * @property int $id
+ * @property string $key
  * @property string|null $value
  * @property string|null $description
  */
@@ -43,9 +43,7 @@ class Setting extends Model
      * Results are cached to avoid repeated DB hits during batch operations
      * (e.g., generating payslips for all employees in one command run).
      *
-     * @param  string     $key
-     * @param  mixed      $default  Returned when the key does not exist in DB.
-     * @return mixed
+     * @param  mixed  $default  Returned when the key does not exist in DB.
      */
     public static function getValue(string $key, mixed $default = null): mixed
     {
@@ -60,10 +58,6 @@ class Setting extends Model
 
     /**
      * Persist a setting value and bust its cache entry.
-     *
-     * @param  string $key
-     * @param  mixed  $value
-     * @return static
      */
     public static function setValue(string $key, mixed $value): static
     {

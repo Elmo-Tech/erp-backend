@@ -6,16 +6,17 @@ use App\Enums\QuotationStatus;
 use App\Modules\CRM\Models\Client;
 use App\Modules\Quotation\Models\Quotation;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Model;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Modules\Quotation\Models\Quotation>
+ * @extends Factory<Quotation>
  */
 class QuotationFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<\Illuminate\Database\Eloquent\Model>
+     * @var class-string<Model>
      */
     protected $model = Quotation::class;
 

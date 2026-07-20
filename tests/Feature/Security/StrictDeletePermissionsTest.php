@@ -44,18 +44,18 @@ class StrictDeletePermissionsTest extends TestCase
     public function test_meeting_destroy_requires_delete_meetings_permission(): void
     {
         $client = Client::factory()->create();
+        $allowedUser = $this->userWithPermissions(['schedule_meetings', 'delete_meetings']);
         $meeting = Meeting::create([
             'model_id' => $client->id,
             'model_type' => Client::class,
             'status' => 'scheduled',
             'title' => 'Security review',
+            'created_by' => $allowedUser->id,
         ]);
 
         $this->actingAs($this->userWithPermissions(['schedule_meetings']), 'sanctum')
             ->deleteJson("/api/v1/meetings/{$meeting->id}")
             ->assertForbidden();
-
-        $allowedUser = $this->userWithPermissions(['schedule_meetings', 'delete_meetings']);
 
         $this->actingAs($allowedUser, 'sanctum')
             ->deleteJson("/api/v1/meetings/{$meeting->id}")
@@ -72,7 +72,12 @@ class StrictDeletePermissionsTest extends TestCase
             ->deleteJson("/api/v1/projects/{$project->id}/milestones/{$milestone->id}")
             ->assertForbidden();
 
-        $allowedUser = $this->userWithPermissions(['manage_projects', 'delete_milestones']);
+        $allowedUser = $this->userWithPermissions(['view_projects', 'delete_milestones']);
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $allowedUser->id,
+            'role' => ProjectRole::MANAGER->value,
+        ]);
 
         $this->actingAs($allowedUser, 'sanctum')
             ->deleteJson("/api/v1/projects/{$project->id}/milestones/{$milestone->id}")
@@ -90,6 +95,25 @@ class StrictDeletePermissionsTest extends TestCase
             ->assertForbidden();
 
         $allowedUser = $this->userWithPermissions(['delete_tasks']);
+
+        $this->actingAs($allowedUser, 'sanctum')
+            ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('project_tasks', [
+            'id' => $task->id,
+            'deleted_at' => null,
+        ]);
+        $this->assertDatabaseMissing('project_histories', [
+            'project_id' => $project->id,
+            'field_name' => 'task_deleted',
+        ]);
+
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $allowedUser->id,
+            'role' => ProjectRole::MANAGER->value,
+        ]);
 
         $this->actingAs($allowedUser, 'sanctum')
             ->deleteJson("/api/v1/projects/{$project->id}/tasks/{$task->id}")
@@ -125,10 +149,15 @@ class StrictDeletePermissionsTest extends TestCase
         $this->assertSoftDeleted('project_task_deliverables', ['id' => $deliverable->id]);
     }
 
-    public function test_time_entry_destroy_requires_creator_or_project_manager(): void
+    public function test_time_entry_destroy_requires_exact_permission_and_entry_scope(): void
     {
         [$project, $task] = $this->projectWithTask();
-        $creator = $this->userWithPermissions(['log_time']);
+        $creator = $this->userWithPermissions(['view_projects', 'delete_time_entries']);
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $creator->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
         $entry = ProjectTimeEntry::create([
             'task_id' => $task->id,
             'user_id' => $creator->id,
@@ -156,7 +185,7 @@ class StrictDeletePermissionsTest extends TestCase
             'duration_minutes' => 60,
             'is_manual' => true,
         ]);
-        $manager = $this->userWithPermissions(['edit_tasks']);
+        $manager = $this->userWithPermissions(['view_projects', 'delete_time_entries']);
         ProjectMember::create([
             'project_id' => $project->id,
             'user_id' => $manager->id,
@@ -181,11 +210,23 @@ class StrictDeletePermissionsTest extends TestCase
             'status' => 'draft',
         ]);
 
-        $this->actingAs($this->userWithPermissions(['manage_change_requests']), 'sanctum')
+        $readOnlyManager = $this->userWithPermissions(['manage_change_requests']);
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $readOnlyManager->id,
+            'role' => ProjectRole::MANAGER->value,
+        ]);
+
+        $this->actingAs($readOnlyManager, 'sanctum')
             ->deleteJson("/api/v1/projects/{$project->id}/change-requests/{$changeRequest->id}")
             ->assertForbidden();
 
         $allowedUser = $this->userWithPermissions(['manage_change_requests', 'delete_change_requests']);
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $allowedUser->id,
+            'role' => ProjectRole::MANAGER->value,
+        ]);
 
         $this->actingAs($allowedUser, 'sanctum')
             ->deleteJson("/api/v1/projects/{$project->id}/change-requests/{$changeRequest->id}")

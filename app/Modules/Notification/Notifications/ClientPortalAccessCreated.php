@@ -13,6 +13,7 @@ class ClientPortalAccessCreated extends Notification implements ShouldQueue
     use Queueable;
 
     private Client $client;
+
     private ?string $password;
 
     public function __construct(Client $client, ?string $password)
@@ -30,16 +31,16 @@ class ClientPortalAccessCreated extends Notification implements ShouldQueue
     {
         $message = (new MailMessage)
             ->subject('Welcome to the Client Portal')
-            ->greeting('Hello ' . $this->client->display_name . ',')
+            ->greeting('Hello '.$this->client->display_name.',')
             ->line('Your client portal access has been created.');
 
         if ($this->password) {
-            $message->line('Your temporary password is: ' . $this->password)
+            $message->line('Your temporary password is: '.$this->password)
                 ->line('Please change it after logging in for the first time.');
         }
 
         return $message
-            ->action('Go to Portal', config('app.frontend_url') . '/client')
+            ->action('Go to Portal', config('app.frontend_url').'/client')
             ->line('Thank you for using our application!');
     }
 

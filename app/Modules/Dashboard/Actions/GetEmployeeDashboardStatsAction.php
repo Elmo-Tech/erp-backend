@@ -2,14 +2,15 @@
 
 namespace App\Modules\Dashboard\Actions;
 
-use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\Attendance\Models\Attendance;
+use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
+use App\Modules\Settings\Models\User;
 use App\Modules\Task\Models\Task;
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\Settings\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class GetEmployeeDashboardStatsAction
 {
@@ -146,7 +147,7 @@ class GetEmployeeDashboardStatsAction
                 ]);
             $activities = $activities->merge($recentTimeEntries);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('Error fetching user activities: '.$e->getMessage());
+            Log::warning('Error fetching user activities: '.$e->getMessage());
         }
 
         return $activities

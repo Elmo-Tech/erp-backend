@@ -2,9 +2,8 @@
 
 namespace App\Modules\Gamification\Models;
 
-use App\Modules\Settings\Models\User;
-
 use App\Enums\PointTransactionType;
+use App\Modules\Settings\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

@@ -2,8 +2,8 @@
 
 namespace App\Modules\Client\Services;
 
-use App\Modules\Client\Models\ClientActivity;
 use App\Modules\Client\Models\Client;
+use App\Modules\Client\Models\ClientActivity;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;

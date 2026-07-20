@@ -6,11 +6,12 @@ use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\HR\Models\EmployeeProfile;
 use App\Modules\HR\Models\LeaveRequest;
-use App\Modules\HR\Models\Payslip;
 use App\Modules\HR\Models\PayrollTransaction;
+use App\Modules\HR\Models\Payslip;
 use App\Modules\Settings\Models\Setting;
 use App\Modules\Settings\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Payroll Calculation Engine.
@@ -36,9 +37,7 @@ class PayrollCalculatorService
     /**
      * Calculate payroll components for a single employee for a given month.
      *
-     * @param  User $user
      * @param  int  $month  1–12
-     * @param  int  $year
      * @return array{
      *   user_id: int,
      *   month: int,
@@ -55,7 +54,7 @@ class PayrollCalculatorService
      *   net_salary: float,
      * }
      *
-     * @throws \RuntimeException  When the user has no EmployeeProfile.
+     * @throws \RuntimeException When the user has no EmployeeProfile.
      */
     public function calculateForUser(User $user, int $month, int $year): array
     {
@@ -89,14 +88,24 @@ class PayrollCalculatorService
 
         // ── Step 3: Period boundaries ─────────────────────────────────────────
         $periodStart = Carbon::create($year, $month, 1)->startOfDay();
-        $periodEnd   = $periodStart->copy()->endOfMonth();
+        $periodEnd = $periodStart->copy()->endOfMonth();
 
         // ── Step 4: Gamification bonus ────────────────────────────────────────
         $pointsEarned = (int) PointTransaction::where('user_id', $user->id)
             ->whereBetween('created_at', [$periodStart, $periodEnd])
             ->sum('points');
 
+        if ($pointsEarned > 0 && $pointValue <= 0) {
+            throw new \RuntimeException('Payroll point value must be greater than zero when an employee has earned points.');
+        }
+
         $pointsBonusAmount = max(0.0, round($pointsEarned * $pointValue, 2));
+
+        if ($pointsBonusAmount > $baseSalary) {
+            throw new \RuntimeException(
+                "Points bonus [{$pointsBonusAmount}] exceeds the employee base salary [{$baseSalary}]."
+            );
+        }
 
         // ── Step 5: Attendance lateness deduction ─────────────────────────────
         $latenessMinutes = (int) Attendance::where('user_id', $user->id)
@@ -117,7 +126,7 @@ class PayrollCalculatorService
             ])
             ->get();
 
-        $manualBonusTotal     = round((float) $transactions->where('type', 'manual_bonus')->sum('amount'), 2);
+        $manualBonusTotal = round((float) $transactions->where('type', 'manual_bonus')->sum('amount'), 2);
         $manualDeductionTotal = round((float) $transactions->where('type', 'manual_deduction')->sum('amount'), 2);
 
         // ── Step 7: Unpaid leave deduction ────────────────────────────────────
@@ -126,11 +135,11 @@ class PayrollCalculatorService
             ->where('status', 'approved')
             ->where(function ($q) use ($periodStart, $periodEnd) {
                 $q->whereBetween('start_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
-                  ->orWhereBetween('end_date', [$periodStart->toDateString(), $periodEnd->toDateString()]);
+                    ->orWhereBetween('end_date', [$periodStart->toDateString(), $periodEnd->toDateString()]);
             })
             ->get();
 
-        $unpaidLeaveDays      = (int) $unpaidLeaves->sum(fn ($l) => $l->durationInDays());
+        $unpaidLeaveDays = (int) $unpaidLeaves->sum(fn ($l) => $l->durationInDays());
         $unpaidLeaveDeduction = round($unpaidLeaveDays * $dailyRate, 2);
 
         // ── Step 8: Net salary ────────────────────────────────────────────────
@@ -145,19 +154,19 @@ class PayrollCalculatorService
         );
 
         return [
-            'user_id'                    => $user->id,
-            'month'                      => $month,
-            'year'                       => $year,
-            'base_salary'                => $baseSalary,
-            'points_earned'              => $pointsEarned,
-            'points_bonus_amount'        => $pointsBonusAmount,
-            'lateness_minutes'           => $latenessMinutes,
-            'lateness_deduction_amount'  => $latenessDeductionAmount,
-            'manual_bonus_total'         => $manualBonusTotal,
-            'manual_deduction_total'     => $manualDeductionTotal,
-            'unpaid_leave_days'          => $unpaidLeaveDays,
-            'unpaid_leave_deduction'     => $unpaidLeaveDeduction,
-            'net_salary'                 => $netSalary,
+            'user_id' => $user->id,
+            'month' => $month,
+            'year' => $year,
+            'base_salary' => $baseSalary,
+            'points_earned' => $pointsEarned,
+            'points_bonus_amount' => $pointsBonusAmount,
+            'lateness_minutes' => $latenessMinutes,
+            'lateness_deduction_amount' => $latenessDeductionAmount,
+            'manual_bonus_total' => $manualBonusTotal,
+            'manual_deduction_total' => $manualDeductionTotal,
+            'unpaid_leave_days' => $unpaidLeaveDays,
+            'unpaid_leave_deduction' => $unpaidLeaveDeduction,
+            'net_salary' => $netSalary,
         ];
     }
 
@@ -167,48 +176,52 @@ class PayrollCalculatorService
      * Uses updateOrCreate so the command is safely re-runnable.
      * Only draft payslips are overwritten — approved/paid records are
      * left untouched to protect finalised payroll.
-     *
-     * @param  User $user
-     * @param  int  $month
-     * @param  int  $year
-     * @return Payslip
      */
     public function generateForUser(User $user, int $month, int $year): Payslip
     {
-        // Check for an existing non-draft payslip — do not overwrite.
-        $existing = Payslip::where('user_id', $user->id)
-            ->where('month', $month)
-            ->where('year', $year)
-            ->first();
+        return DB::transaction(function () use ($user, $month, $year): Payslip {
+            // The user row always exists, so it serializes concurrent first-time
+            // generation where there is no payslip row to lock yet.
+            $lockedUser = User::query()
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail()
+                ->load('employeeProfile');
 
-        if ($existing && ! $existing->isDraft()) {
-            return $existing; // Approved/paid — hands off.
-        }
+            $payslip = Payslip::withTrashed()
+                ->where('user_id', $lockedUser->id)
+                ->where('month', $month)
+                ->where('year', $year)
+                ->lockForUpdate()
+                ->first();
 
-        $data = $this->calculateForUser($user, $month, $year);
+            if ($payslip && ! $payslip->isDraft()) {
+                return $payslip;
+            }
 
-        // Only persist columns that exist in the payslips table.
-        // The extended breakdown fields (manual_bonus_total, etc.) are
-        // returned in the API response but stored in their source tables.
-        $persistable = array_intersect_key($data, array_flip([
-            'user_id',
-            'month',
-            'year',
-            'base_salary',
-            'points_earned',
-            'points_bonus_amount',
-            'lateness_minutes',
-            'lateness_deduction_amount',
-            'net_salary',
-        ]));
+            $data = $this->calculateForUser($lockedUser, $month, $year);
+            $persistable = array_intersect_key($data, array_flip([
+                'user_id',
+                'month',
+                'year',
+                'base_salary',
+                'points_earned',
+                'points_bonus_amount',
+                'lateness_minutes',
+                'lateness_deduction_amount',
+                'net_salary',
+            ]));
 
-        return Payslip::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'month'   => $month,
-                'year'    => $year,
-            ],
-            array_merge($persistable, ['status' => 'draft'])
-        );
+            $payslip ??= new Payslip;
+
+            if ($payslip->trashed()) {
+                $payslip->restore();
+            }
+
+            $payslip->fill(array_merge($persistable, ['status' => 'draft']));
+            $payslip->save();
+
+            return $payslip;
+        }, 3);
     }
 }

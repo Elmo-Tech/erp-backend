@@ -4,7 +4,6 @@ namespace Tests\Feature\Reports;
 
 use App\Modules\Client\Models\Client;
 use App\Modules\Finance\Models\FinanceInvoice;
-use App\Modules\Finance\Models\Subscription;
 use App\Modules\PersonalTasks\Models\PersonalTask;
 use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
@@ -30,9 +29,9 @@ class ReportsControllerTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_user_with_view_reports_can_load_all_report_endpoints(): void
+    public function test_user_with_required_permissions_can_load_all_report_endpoints(): void
     {
-        $user = $this->reportsUser(['view_reports']);
+        $user = $this->reportsUser(['view_reports', 'view_financial_stats']);
 
         foreach (['overview', 'projects', 'team-time', 'sales-finance'] as $report) {
             $this->actingAs($user, 'sanctum')
@@ -43,9 +42,39 @@ class ReportsControllerTest extends TestCase
         }
     }
 
-    public function test_sensitive_cost_and_profitability_fields_are_hidden_without_permissions(): void
+    public function test_general_report_viewer_cannot_read_or_export_finance_bearing_reports(): void
     {
         $user = $this->reportsUser(['view_reports']);
+
+        foreach (['overview', 'projects', 'sales-finance'] as $report) {
+            $this->actingAs($user, 'sanctum')
+                ->getJson("/api/v1/reports/{$report}")
+                ->assertForbidden();
+
+            $this->actingAs($user, 'sanctum')
+                ->get("/api/v1/reports/export?report={$report}")
+                ->assertForbidden();
+        }
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/reports/team-time')
+            ->assertOk();
+    }
+
+    public function test_financial_report_viewer_can_read_finance_bearing_reports(): void
+    {
+        $user = $this->reportsUser(['view_reports', 'view_financial_stats']);
+
+        foreach (['overview', 'projects', 'sales-finance'] as $report) {
+            $this->actingAs($user, 'sanctum')
+                ->getJson("/api/v1/reports/{$report}")
+                ->assertOk();
+        }
+    }
+
+    public function test_sensitive_cost_and_profitability_fields_are_hidden_without_permissions(): void
+    {
+        $user = $this->reportsUser(['view_reports', 'view_financial_stats']);
         $client = Client::factory()->create();
 
         Project::factory()->create([
@@ -66,7 +95,7 @@ class ReportsControllerTest extends TestCase
 
     public function test_date_and_project_filters_scope_report_data(): void
     {
-        $user = $this->reportsUser(['view_reports', 'view_profitability', 'view_cost']);
+        $user = $this->reportsUser(['view_reports', 'view_financial_stats', 'view_profitability', 'view_cost']);
         $client = Client::factory()->create();
         $includedProject = Project::factory()->create([
             'client_id' => $client->id,
@@ -120,7 +149,7 @@ class ReportsControllerTest extends TestCase
 
     public function test_csv_export_uses_selected_report_filters(): void
     {
-        $user = $this->reportsUser(['view_reports']);
+        $user = $this->reportsUser(['view_reports', 'view_financial_stats']);
         $client = Client::factory()->create(['display_name' => 'CSV Client']);
         $project = Project::factory()->create([
             'client_id' => $client->id,
@@ -145,6 +174,34 @@ class ReportsControllerTest extends TestCase
         $this->assertStringContainsString('CSV Project', $csv);
         $this->assertStringNotContainsString('Filtered Out Project', $csv);
         $this->assertStringContainsString((string) $project->id, $csv);
+    }
+
+    public function test_csv_export_neutralizes_formula_prefixes_after_leading_whitespace(): void
+    {
+        $user = $this->reportsUser(['view_reports', 'view_financial_stats']);
+        $client = Client::factory()->create(['display_name' => '  @SUM(1,1)']);
+
+        foreach (['=2+3', ' +cmd', "\t-10", '@payload'] as $title) {
+            Project::factory()->create([
+                'client_id' => $client->id,
+                'title' => $title,
+                'status' => ProjectStatus::ACTIVE,
+            ]);
+        }
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->get('/api/v1/reports/export?report=projects')
+            ->assertOk();
+
+        $rows = array_map('str_getcsv', array_filter(explode("\n", trim($response->streamedContent()))));
+        $titles = array_column(array_slice($rows, 1), 1);
+        $clients = array_column(array_slice($rows, 1), 2);
+
+        $this->assertContains("'=2+3", $titles);
+        $this->assertContains("' +cmd", $titles);
+        $this->assertContains("'\t-10", $titles);
+        $this->assertContains("'@payload", $titles);
+        $this->assertContains("'  @SUM(1,1)", $clients);
     }
 
     public function test_team_time_report_filters_by_user(): void

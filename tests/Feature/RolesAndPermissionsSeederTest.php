@@ -40,4 +40,59 @@ class RolesAndPermissionsSeederTest extends TestCase
             );
         }
     }
+
+    public function test_operational_roles_have_explicit_client_directory_visibility(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        foreach (['founder', 'admin', 'pmo', 'manager'] as $roleName) {
+            $this->assertTrue(
+                Role::findByName($roleName)->hasPermissionTo('view_clients'),
+                "{$roleName} should have client directory visibility"
+            );
+        }
+
+        foreach (['techdev', 'qa', 'dev', 'client'] as $roleName) {
+            $this->assertFalse(
+                Role::findByName($roleName)->hasPermissionTo('view_clients'),
+                "{$roleName} should not have internal client directory visibility"
+            );
+        }
+    }
+
+    public function test_blocker_mutations_and_company_team_pulse_are_separate_capabilities(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        foreach (['founder', 'admin'] as $roleName) {
+            $role = Role::findByName($roleName);
+
+            $this->assertTrue($role->hasPermissionTo('view_team_pulse'));
+            $this->assertTrue($role->hasPermissionTo('escalate_blockers'));
+            $this->assertTrue($role->hasPermissionTo('resolve_blockers'));
+        }
+
+        $pmo = Role::findByName('pmo');
+        $this->assertTrue($pmo->hasPermissionTo('escalate_blockers'));
+        $this->assertFalse($pmo->hasPermissionTo('resolve_blockers'));
+        $this->assertFalse($pmo->hasPermissionTo('view_team_pulse'));
+
+        $manager = Role::findByName('manager');
+        $this->assertTrue($manager->hasPermissionTo('manage_team_timers'));
+        $this->assertFalse($manager->hasPermissionTo('view_team_pulse'));
+        $this->assertFalse($manager->hasPermissionTo('escalate_blockers'));
+        $this->assertFalse($manager->hasPermissionTo('resolve_blockers'));
+    }
+
+    public function test_existing_internal_note_writers_receive_the_separate_create_permission(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        foreach (['founder', 'pmo', 'manager', 'techdev'] as $roleName) {
+            $role = Role::findByName($roleName);
+
+            $this->assertTrue($role->hasPermissionTo('view_internal_notes'), $roleName.' must retain note reads');
+            $this->assertTrue($role->hasPermissionTo('create_internal_notes'), $roleName.' must retain note writes');
+        }
+    }
 }

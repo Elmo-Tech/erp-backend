@@ -18,8 +18,8 @@ class StoreManualTimeEntryRequest extends FormRequest
     {
         return [
             'startTime' => ['required', 'date'],
-            'endTime'   => ['required', 'date', 'after:startTime'],
-            'note'      => ['nullable', 'string', 'max:1000'],
+            'endTime' => ['required', 'date', 'after:startTime'],
+            'note' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
@@ -27,10 +27,10 @@ class StoreManualTimeEntryRequest extends FormRequest
     {
         return [
             'startTime.required' => 'A start time is required.',
-            'startTime.date'     => 'Start time must be a valid date.',
-            'endTime.required'   => 'An end time is required.',
-            'endTime.date'       => 'End time must be a valid date.',
-            'endTime.after'      => 'End time must be after start time.',
+            'startTime.date' => 'Start time must be a valid date.',
+            'endTime.required' => 'An end time is required.',
+            'endTime.date' => 'End time must be a valid date.',
+            'endTime.after' => 'End time must be after start time.',
         ];
     }
 

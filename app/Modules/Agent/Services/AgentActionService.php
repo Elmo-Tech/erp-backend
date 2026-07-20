@@ -7,6 +7,7 @@ use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Resources\ProjectTaskResource;
 use App\Modules\Project\Resources\ProjectTimeEntryResource;
+use App\Modules\Project\Services\ProjectTaskRelationshipValidator;
 use App\Modules\Reports\Services\ReportsService;
 use App\Modules\Settings\Models\User;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class AgentActionService
     public function __construct(
         private readonly ToggleTaskTimerAction $toggleTimer,
         private readonly ReportsService $reports,
+        private readonly ProjectTaskRelationshipValidator $relationshipValidator,
     ) {}
 
     /**
@@ -58,6 +60,16 @@ class AgentActionService
 
         Gate::forUser($user)->authorize('view', $project);
         Gate::forUser($user)->authorize('create', [ProjectTask::class, $project]);
+
+        foreach ($payload['tasks'] as $task) {
+            $this->relationshipValidator->validate($user, $project, $task);
+        }
+
+        if (collect($payload['tasks'])->contains(
+            fn (array $task): bool => ! empty($task['deliverables'])
+        )) {
+            Gate::forUser($user)->authorize('createDeliverable', [ProjectTask::class, $project]);
+        }
 
         $tasks = collect($payload['tasks'])
             ->map(fn (array $task): array => [
@@ -142,6 +154,7 @@ class AgentActionService
 
         Gate::forUser($user)->authorize('view', $project);
         Gate::forUser($user)->authorize('execute', $task);
+        abort_unless($this->canStartTimer($user), 403, 'Unauthorized');
 
         return [
             'action' => 'project.start_timer',
@@ -153,7 +166,7 @@ class AgentActionService
             'task' => [
                 'taskId' => $task->id,
                 'title' => $task->title,
-                'status' => $task->status?->value,
+                'status' => $task->status->value,
             ],
             'operations' => [
                 [
@@ -184,13 +197,26 @@ class AgentActionService
         ];
     }
 
+    private function canStartTimer(User $user): bool
+    {
+        return $user->can('start_timer')
+            || $user->can('log_time')
+            || $user->can('manage_time_entries');
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     private function previewReport(User $user, array $payload): array
     {
-        abort_if(! $user->can('view_reports'), 403, 'Unauthorized');
+        $report = (string) $payload['report'];
+        $this->reports->authorizeReport($user, $report);
+        $requiredPermissions = ['use_ai_agent', 'view_reports'];
+
+        if (in_array($report, ['overview', 'projects', 'sales-finance'], true)) {
+            $requiredPermissions[] = 'view_financial_stats';
+        }
 
         return [
             'action' => 'reports.get',
@@ -203,7 +229,7 @@ class AgentActionService
                     'report' => $payload['report'],
                 ],
             ],
-            'requiredPermissions' => ['use_ai_agent', 'view_reports'],
+            'requiredPermissions' => $requiredPermissions,
         ];
     }
 

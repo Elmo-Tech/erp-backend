@@ -94,7 +94,15 @@ class ProjectPolicy
     // ─────────────────────────────────────────────────────────────────────────
     public function delete(User $user, Project $project): bool
     {
-        return $user->can('delete_projects');
+        if ($user->can('access_client_portal')) {
+            return false;
+        }
+
+        if ($user->can('manage_all_projects')) {
+            return true;
+        }
+
+        return $user->can('delete_projects') && $this->isProjectMember($user, $project);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

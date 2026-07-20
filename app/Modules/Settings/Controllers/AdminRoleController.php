@@ -5,6 +5,7 @@ namespace App\Modules\Settings\Controllers;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Client\Actions\LogClientAuditAction;
+use App\Modules\Settings\Policies\UserAdministrationPolicy;
 use App\Modules\Settings\Requests\StoreRoleRequest;
 use App\Modules\Settings\Requests\UpdateRoleRequest;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -18,7 +19,8 @@ class AdminRoleController extends Controller
     private const PROTECTED_ROLE_NAMES = ['founder', 'admin', 'pmo', 'techdev', 'dev', 'client'];
 
     public function __construct(
-        private LogClientAuditAction $auditLogService
+        private LogClientAuditAction $auditLogService,
+        private UserAdministrationPolicy $administrationPolicy,
     ) {
         // Apply middleware using Laravel 12 approach
         $this->middleware(['auth:sanctum', 'locale']);
@@ -111,7 +113,7 @@ class AdminRoleController extends Controller
                 'id' => $role->id,
                 'name' => $role->name,
                 'guardName' => $role->guard_name,
-                'isProtected' => in_array($role->name, self::PROTECTED_ROLE_NAMES),
+                'isProtected' => $this->isProtectedRole($role),
                 'permissions' => $role->permissions->pluck('name')->toArray(),
                 'createdAt' => $role->created_at?->toISOString(),
                 'updatedAt' => $role->updated_at?->toISOString(),
@@ -227,7 +229,7 @@ class AdminRoleController extends Controller
                 'id' => $roleModel->id,
                 'name' => $roleModel->name,
                 'guardName' => $roleModel->guard_name,
-                'isProtected' => in_array($roleModel->name, self::PROTECTED_ROLE_NAMES),
+                'isProtected' => $this->isProtectedRole($roleModel),
                 'permissions' => $roleModel->permissions->pluck('name')->toArray(),
                 'createdAt' => $roleModel->created_at?->toISOString(),
                 'updatedAt' => $roleModel->updated_at?->toISOString(),
@@ -363,6 +365,10 @@ class AdminRoleController extends Controller
         }
 
         $validatedData = $request->validated();
+        $this->administrationPolicy->authorizeRoleCreation(
+            $request->user(),
+            $validatedData['permissions'] ?? []
+        );
 
         // Create the role
         $role = Role::create([
@@ -538,12 +544,24 @@ class AdminRoleController extends Controller
         try {
             $roleModel = Role::findOrFail($role);
 
+            if ($this->isProtectedRole($roleModel)) {
+                return ApiResponse::validationError(
+                    ['role' => ['This role is protected and cannot be modified']],
+                    'Cannot modify protected role'
+                );
+            }
+
             // Protected roles can only be modified by users with manage_roles permission.
             // The manage_roles check above already gates this endpoint, so any user
             // who reaches here is authorised to edit ALL roles — including system ones.
             // (The old hard-block has been removed so the Founder can manage every role.)
 
             $validatedData = $request->validated();
+            $this->administrationPolicy->authorizeRoleMutation(
+                $request->user(),
+                $roleModel,
+                $validatedData['permissions'] ?? []
+            );
 
             // Store old data for audit log
             $oldData = [
@@ -583,7 +601,7 @@ class AdminRoleController extends Controller
                 'id' => $roleModel->id,
                 'name' => $roleModel->name,
                 'guardName' => $roleModel->guard_name,
-                'isProtected' => in_array($roleModel->name, self::PROTECTED_ROLE_NAMES),
+                'isProtected' => $this->isProtectedRole($roleModel),
                 'permissions' => $roleModel->permissions->pluck('name')->toArray(),
                 'createdAt' => $roleModel->created_at?->toISOString(),
                 'updatedAt' => $roleModel->updated_at?->toISOString(),
@@ -702,7 +720,7 @@ class AdminRoleController extends Controller
             $roleModel = Role::findOrFail($role);
 
             // Check if role is protected
-            if (in_array($roleModel->name, self::PROTECTED_ROLE_NAMES)) {
+            if ($this->isProtectedRole($roleModel)) {
                 return ApiResponse::validationError(
                     ['role' => ['This role is protected and cannot be deleted']],
                     'Cannot delete protected role'
@@ -732,6 +750,11 @@ class AdminRoleController extends Controller
         } catch (ModelNotFoundException $e) {
             return ApiResponse::notFound('Role not found');
         }
+    }
+
+    private function isProtectedRole(Role $role): bool
+    {
+        return (bool) $role->getAttribute('is_system') || in_array($role->name, self::PROTECTED_ROLE_NAMES, true);
     }
 
     /**
@@ -849,6 +872,8 @@ class AdminRoleController extends Controller
             'view_all_blockers' => 'Dashboard',
             'view_escalated_blockers' => 'Dashboard',
             'view_team_pulse' => 'Dashboard',
+            'escalate_blockers' => 'Dashboard',
+            'resolve_blockers' => 'Dashboard',
 
             // ── User Management ──────────────────────────────────────────────
             'manage_users' => 'User Management',
@@ -856,6 +881,10 @@ class AdminRoleController extends Controller
             'create_users' => 'User Management',
             'edit_users' => 'User Management',
             'delete_users' => 'User Management',
+            'assign_user_roles' => 'User Management',
+            'reset_user_credentials' => 'User Management',
+            'manage_protected_users' => 'User Management',
+            'protected_user_account' => 'User Management',
 
             // ── Role Management ──────────────────────────────────────────────
             'manage_roles' => 'Role Management',
@@ -906,6 +935,7 @@ class AdminRoleController extends Controller
             'delete_tasks' => 'Task Management',
             'assign_tasks' => 'Task Management',
             'view_internal_notes' => 'Task Management',
+            'create_internal_notes' => 'Task Management',
             'work_on_tasks' => 'Task Management',
             'manage_deliverables' => 'Task Deliverables',
             'create_project_task_deliverables' => 'Task Deliverables',
@@ -1032,6 +1062,8 @@ class AdminRoleController extends Controller
             'view_all_blockers' => 'View all project blockers across teams',
             'view_escalated_blockers' => 'View escalated blockers requiring attention',
             'view_team_pulse' => 'View team mood and pulse data',
+            'escalate_blockers' => 'Escalate blockers in visible projects',
+            'resolve_blockers' => 'Resolve escalated blockers in visible projects',
 
             // ── User Management ──────────────────────────────────────────────
             'manage_users' => 'Full user management (create, edit, delete, toggle status)',
@@ -1039,6 +1071,10 @@ class AdminRoleController extends Controller
             'create_users' => 'Create new user accounts',
             'edit_users' => 'Edit existing user accounts',
             'delete_users' => 'Delete user accounts',
+            'assign_user_roles' => 'Assign roles within the actor privilege ceiling',
+            'reset_user_credentials' => 'Reset credentials for lower-privilege users',
+            'manage_protected_users' => 'Manage protected lower-tier administrative accounts',
+            'protected_user_account' => 'Marks an account as protected from peer administrators',
 
             // ── Role Management ──────────────────────────────────────────────
             'manage_roles' => 'Full role and permission management',
@@ -1089,6 +1125,7 @@ class AdminRoleController extends Controller
             'delete_tasks' => 'Delete tasks',
             'assign_tasks' => 'Assign tasks to team members',
             'view_internal_notes' => 'View internal (private) task notes',
+            'create_internal_notes' => 'Create internal (private) notes',
             'work_on_tasks' => 'Work on and update assigned tasks',
             'manage_deliverables' => 'Full task deliverable management',
             'create_project_task_deliverables' => 'Create task deliverables',

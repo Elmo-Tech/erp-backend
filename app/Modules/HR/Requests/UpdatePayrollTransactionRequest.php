@@ -14,9 +14,9 @@ class UpdatePayrollTransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount'           => ['sometimes', 'numeric', 'min:0.01'],
-            'type'             => ['sometimes', 'string', 'in:manual_bonus,manual_deduction'],
-            'reason'           => ['sometimes', 'string', 'max:500'],
+            'amount' => ['sometimes', 'numeric', 'min:0.01'],
+            'type' => ['sometimes', 'string', 'in:manual_bonus,manual_deduction'],
+            'reason' => ['sometimes', 'string', 'max:500'],
             'transaction_date' => ['sometimes', 'date'],
         ];
     }

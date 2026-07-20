@@ -6,7 +6,6 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Project\Actions\ApproveProjectUiAction;
 use App\Modules\Project\Actions\ChangeProjectStatusAction;
-use App\Modules\Project\Requests\ConvertQuotationRequest;
 use App\Modules\Project\Actions\CreateDirectProjectAction;
 use App\Modules\Project\Actions\CreateProjectFromQuotationAction;
 use App\Modules\Project\Actions\DeleteProjectAction;
@@ -15,11 +14,12 @@ use App\Modules\Project\Actions\ListProjectsAction;
 use App\Modules\Project\Actions\PinProjectAction;
 use App\Modules\Project\Actions\UnpinProjectAction;
 use App\Modules\Project\Actions\UpdateProjectAction;
+use App\Modules\Project\Models\Project;
+use App\Modules\Project\Requests\ConvertQuotationRequest;
 use App\Modules\Project\Requests\StoreDirectProjectRequest;
 use App\Modules\Project\Requests\StoreProjectRequest;
 use App\Modules\Project\Requests\UpdateProjectRequest;
 use App\Modules\Project\Requests\UpdateProjectStatusRequest;
-use App\Modules\Project\Models\Project;
 use App\Modules\Project\Resources\ProjectCollection;
 use App\Modules\Project\Resources\ProjectResource;
 use Illuminate\Http\JsonResponse;
@@ -479,6 +479,8 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project, DeleteProjectAction $action): JsonResponse
     {
+        $this->authorize('delete', $project);
+
         $action->execute($project);
 
         return ApiResponse::success(

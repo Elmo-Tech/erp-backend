@@ -69,8 +69,8 @@ class SettingsDictionarySeeder extends Seeder
                 DB::table($table)->updateOrInsert(
                     ['slug' => Str::slug($name)],
                     [
-                        'name'       => $name,
-                        'is_active'  => true,
+                        'name' => $name,
+                        'is_active' => true,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]
@@ -84,8 +84,8 @@ class SettingsDictionarySeeder extends Seeder
                 DB::table($table)->updateOrInsert(
                     ['slug' => $slug],
                     [
-                        'name'       => $name,
-                        'is_active'  => true,
+                        'name' => $name,
+                        'is_active' => true,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]

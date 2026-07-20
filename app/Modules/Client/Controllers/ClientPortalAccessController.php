@@ -7,8 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Modules\Client\Models\Client;
 use App\Modules\Client\Requests\CreatePortalAccessRequest;
 use App\Modules\Client\Resources\ClientResource;
-use App\Modules\Settings\Models\User;
 use App\Modules\Notification\Notifications\ClientPortalAccessCreated;
+use App\Modules\Settings\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -22,7 +22,8 @@ use Illuminate\Support\Str;
  */
 class ClientPortalAccessController extends Controller
 {
-    public function __construct() {
+    public function __construct()
+    {
         $this->middleware(['auth:sanctum', 'locale']);
         $this->middleware('permission:create_client_portal_access')->only(['create']);
         $this->middleware('permission:revoke_client_portal_access')->only(['revoke']);
@@ -82,6 +83,7 @@ class ClientPortalAccessController extends Controller
             ]);
             $user->assignRole('client');
             $client->update(['user_id' => $user->id]);
+
             return $user;
         });
 

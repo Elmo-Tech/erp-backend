@@ -20,9 +20,9 @@ class FinanceInvoiceItem extends Model
     protected function casts(): array
     {
         return [
-            'quantity'   => 'integer',
+            'quantity' => 'integer',
             'unit_price' => 'decimal:2',
-            'total'      => 'decimal:2',
+            'total' => 'decimal:2',
         ];
     }
 

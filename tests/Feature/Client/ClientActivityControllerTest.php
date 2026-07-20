@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Client;
 
-use App\Modules\Client\Models\ClientActivity;
 use App\Modules\Client\Models\Client;
+use App\Modules\Client\Models\ClientActivity;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -16,6 +16,7 @@ class ClientActivityControllerTest extends TestCase
     public function test_it_returns_client_activity_timeline(): void
     {
         $user = User::factory()->create();
+        $user->givePermissionTo(Permission::findOrCreate('view_clients', 'web'));
         $client = Client::factory()->create();
 
         ClientActivity::create([
@@ -37,9 +38,11 @@ class ClientActivityControllerTest extends TestCase
     {
         Permission::firstOrCreate(['name' => 'create_projects']);
         Permission::firstOrCreate(['name' => 'schedule_meetings']);
+        Permission::firstOrCreate(['name' => 'view_projects']);
 
         $user = User::factory()->create();
-        $user->givePermissionTo(['create_projects', 'schedule_meetings']);
+        Permission::firstOrCreate(['name' => 'view_clients']);
+        $user->givePermissionTo(['create_projects', 'schedule_meetings', 'view_projects', 'view_clients']);
         $client = Client::factory()->create(['display_name' => 'Acme']);
 
         $this->actingAs($user, 'sanctum')

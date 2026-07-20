@@ -10,12 +10,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
- * @property int         $id
- * @property int         $user_id
- * @property int|null    $shift_id
- * @property float       $base_salary
- * @property float       $hourly_rate
- * @property \Illuminate\Support\Carbon $join_date
+ * @property int $id
+ * @property int $user_id
+ * @property int|null $shift_id
+ * @property float $base_salary
+ * @property float $hourly_rate
+ * @property Carbon $join_date
  * @property-read User        $user
  * @property-read Shift|null  $shift
  */
@@ -35,9 +35,9 @@ class EmployeeProfile extends Model
     protected function casts(): array
     {
         return [
-            'base_salary'        => 'decimal:2',
-            'hourly_rate'        => 'decimal:2',
-            'join_date'          => 'date',
+            'base_salary' => 'decimal:2',
+            'hourly_rate' => 'decimal:2',
+            'join_date' => 'date',
             'grace_days_balance' => 'integer',
         ];
     }
@@ -78,8 +78,8 @@ class EmployeeProfile extends Model
      *          if today is Jun 20 → cycle start = May 1.
      *          if today is Jul 5  → cycle start = Jul 1.
      *
-     * @return int  Sum of all point transactions in the current 2-month cycle.
-     *              Returns 0 if the user has no transactions in this period.
+     * @return int Sum of all point transactions in the current 2-month cycle.
+     *             Returns 0 if the user has no transactions in this period.
      */
     public function calculateActivePoints(): int
     {
@@ -92,7 +92,7 @@ class EmployeeProfile extends Model
             : $now->month - 1;     // even month: cycle started last month
 
         $cycleStart = Carbon::create($now->year, $cycleStartMonth, 1)->startOfDay();
-        $cycleEnd   = $cycleStart->copy()->addMonths(2)->subSecond(); // end of 2-month window
+        $cycleEnd = $cycleStart->copy()->addMonths(2)->subSecond(); // end of 2-month window
 
         return (int) PointTransaction::where('user_id', $this->user_id)
             ->whereBetween('created_at', [$cycleStart, $cycleEnd])

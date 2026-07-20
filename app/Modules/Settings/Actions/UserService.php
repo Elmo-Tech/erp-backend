@@ -2,8 +2,9 @@
 
 namespace App\Modules\Settings\Actions;
 
-use App\Modules\Settings\Models\User;
 use App\Modules\Client\Actions\LogClientAuditAction;
+use App\Modules\Settings\Models\User;
+use App\Modules\Settings\Policies\UserAdministrationPolicy;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -14,6 +15,7 @@ class UserService
     public function __construct(
         private LogClientAuditAction $auditLogService,
         private CreateUserAction $createUserAction,
+        private UserAdministrationPolicy $administrationPolicy,
     ) {}
 
     /**
@@ -47,16 +49,33 @@ class UserService
     /**
      * Create a new user
      */
-    public function createUser(array $data): User
+    public function createUser(User $actor, array $data): User
     {
+        if (! empty($data['roles'])) {
+            $this->administrationPolicy->authorizeRoleAssignment($actor, null, $data['roles']);
+        }
+
         return $this->createUserAction->execute($data);
     }
 
     /**
      * Update an existing user
      */
-    public function updateUser(User $user, array $data): User
+    public function updateUser(User $actor, User $user, array $data): User
     {
+        $this->administrationPolicy->authorizeManageTarget($actor, $user);
+
+        if (isset($data['password'])) {
+            $this->administrationPolicy->authorizePasswordReset($actor, $user);
+        }
+
+        if (isset($data['roles'])) {
+            $this->administrationPolicy->authorizeRoleAssignment($actor, $user, $data['roles']);
+        }
+
+        $shouldRevokeTokens = isset($data['password'])
+            || (array_key_exists('isActive', $data) && ! $data['isActive']);
+
         $oldData = [
             'name' => $user->name,
             'email' => $user->email,
@@ -88,6 +107,10 @@ class UserService
 
         $user->save();
 
+        if ($shouldRevokeTokens) {
+            $user->tokens()->delete();
+        }
+
         // Sync roles if provided
         if (isset($data['roles'])) {
             $user->syncRoles($data['roles']);
@@ -117,12 +140,9 @@ class UserService
     /**
      * Delete a user
      */
-    public function deleteUser(User $user): bool
+    public function deleteUser(User $actor, User $user): bool
     {
-        // Prevent self-deletion
-        if ($user->id === auth()->id()) {
-            return false;
-        }
+        $this->administrationPolicy->authorizeDelete($actor, $user);
 
         // Log before deletion
         $this->auditLogService->log(
@@ -137,7 +157,9 @@ class UserService
         );
 
         // Remove roles and delete
+        $user->tokens()->delete();
         $user->syncRoles([]);
+        $user->syncPermissions([]);
 
         return $user->delete();
     }
@@ -145,11 +167,16 @@ class UserService
     /**
      * Toggle user active status
      */
-    public function toggleUserStatus(User $user): User
+    public function toggleUserStatus(User $actor, User $user): User
     {
+        $this->administrationPolicy->authorizeManageTarget($actor, $user);
         $oldStatus = $user->is_active;
         $user->is_active = ! $user->is_active;
         $user->save();
+
+        if (! $user->is_active) {
+            $user->tokens()->delete();
+        }
 
         $this->auditLogService->log(
             $user->is_active ? 'activate_user' : 'deactivate_user',
@@ -168,8 +195,9 @@ class UserService
     /**
      * Assign roles to user
      */
-    public function assignRoles(User $user, array $roles): User
+    public function assignRoles(User $actor, User $user, array $roles): User
     {
+        $this->administrationPolicy->authorizeRoleAssignment($actor, $user, $roles);
         $oldRoles = $user->roles->pluck('name')->toArray();
         $user->syncRoles($roles);
 

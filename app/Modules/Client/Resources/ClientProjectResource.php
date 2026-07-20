@@ -2,8 +2,8 @@
 
 namespace App\Modules\Client\Resources;
 
-use App\Modules\Project\Models\Project;
 use App\Modules\Client\Actions\CalculateProjectProgressAction;
+use App\Modules\Project\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

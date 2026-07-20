@@ -5,10 +5,11 @@ namespace App\Modules\Dashboard\Actions;
 use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
+use App\Modules\Settings\Models\User;
 use App\Modules\Task\Models\Task;
 use App\Modules\TimeEntry\Models\TimeEntry;
-use App\Modules\Settings\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class GetManagerDashboardStatsAction
 {
@@ -114,7 +115,7 @@ class GetManagerDashboardStatsAction
                 ]);
             $activities = $activities->merge($recentTasks);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('Error fetching team activities: '.$e->getMessage());
+            Log::warning('Error fetching team activities: '.$e->getMessage());
         }
 
         return $activities
