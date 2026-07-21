@@ -5,6 +5,7 @@ namespace Tests\Feature\Lead;
 use App\Enums\LeadStage;
 use App\Enums\LeadStatus;
 use App\Modules\Lead\Models\Lead;
+use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -44,7 +45,7 @@ class LeadProposalTemplateTest extends TestCase
         $user->givePermissionTo('manage_leads');
         $lead = Lead::create([
             'title' => 'Customer Support Platform',
-            'stage' => LeadStage::PROPOSAL,
+            'stage' => LeadStage::MEETING,
             'status' => LeadStatus::ACTIVE,
             'expected_budget' => 25000,
             'metadata' => [
@@ -52,24 +53,34 @@ class LeadProposalTemplateTest extends TestCase
                 'contact_name' => 'Mona Ali',
             ],
         ]);
+        $this->completedMeeting($lead);
         $validityDate = now()->addMonth()->toDateString();
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->postJson("/api/v1/leads/{$lead->id}/proposals", [
-                'creation_type' => 'direct_upload',
-                'proposal_source' => 'use_template',
-                'template_id' => 1,
-                'validity_date' => $validityDate,
-                'notes' => 'Includes onboarding and knowledge transfer.',
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::PROPOSAL->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::PROPOSAL->value,
+                    'type' => 'proposal',
+                    'creation_type' => 'direct_upload',
+                    'proposal_source' => 'use_template',
+                    'template_id' => 1,
+                    'validity_date' => $validityDate,
+                    'notes' => 'Includes onboarding and knowledge transfer.',
+                ]],
             ])
-            ->assertCreated()
-            ->assertJsonPath('data.proposal_source', 'use_template')
-            ->assertJsonPath('data.template_id', 1)
-            ->assertJsonPath('data.validity_date', $validityDate)
-            ->assertJsonPath('data.file_mime_type', 'application/pdf');
+            ->assertOk();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/leads/{$lead->id}/proposals")
+            ->assertOk()
+            ->assertJsonPath('data.0.proposal_source', 'use_template')
+            ->assertJsonPath('data.0.template_id', 1)
+            ->assertJsonPath('data.0.validity_date', $validityDate)
+            ->assertJsonPath('data.0.file_mime_type', 'application/pdf');
 
         $download = $this->actingAs($user, 'sanctum')
-            ->get($response->json('data.file_path'))
+            ->get($response->json('data.0.file_path'))
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
 
@@ -83,19 +94,36 @@ class LeadProposalTemplateTest extends TestCase
         $user->givePermissionTo('manage_leads');
         $lead = Lead::create([
             'title' => 'Customer Support Platform',
-            'stage' => LeadStage::PROPOSAL,
+            'stage' => LeadStage::MEETING,
             'status' => LeadStatus::ACTIVE,
         ]);
+        $this->completedMeeting($lead);
 
         $this->actingAs($user, 'sanctum')
-            ->postJson("/api/v1/leads/{$lead->id}/proposals", [
-                'creation_type' => 'direct_upload',
-                'proposal_source' => 'use_template',
-                'template_id' => 99,
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::PROPOSAL->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::PROPOSAL->value,
+                    'type' => 'proposal',
+                    'creation_type' => 'direct_upload',
+                    'proposal_source' => 'use_template',
+                    'template_id' => 99,
+                ]],
             ])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['template_id', 'validity_date']);
+            ->assertJsonValidationErrors(['stage_results.0.template_id', 'stage_results.0.validity_date']);
 
         $this->assertDatabaseCount('proposals', 0);
+    }
+
+    private function completedMeeting(Lead $lead): void
+    {
+        Meeting::create([
+            'model_id' => $lead->id,
+            'model_type' => Lead::class,
+            'status' => 'completed',
+            'title' => 'Discovery',
+            'scheduled_at' => now(),
+        ]);
     }
 }

@@ -463,7 +463,7 @@ class LeadPipelineStageGateTest extends TestCase
         $this->assertSame(LeadStage::CONTRACT, $lead->fresh()->stage);
     }
 
-    public function test_quotation_status_can_be_updated_from_the_lead_endpoint(): void
+    public function test_quotation_status_can_be_updated_from_the_pipeline_endpoint(): void
     {
         $user = $this->userWithPermissions(['manage_leads']);
         $lead = $this->lead();
@@ -475,7 +475,7 @@ class LeadPipelineStageGateTest extends TestCase
         ]);
 
         $this->actingAs($user, 'sanctum')
-            ->patchJson("/api/v1/leads/{$lead->id}/quotations/{$quotation->id}", [
+            ->patchJson("/api/v1/leads/{$lead->id}/pipeline/quotations/{$quotation->id}", [
                 'status' => 'accepted',
             ])
             ->assertOk()

@@ -43,9 +43,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::post('leads', [LeadController::class, 'store'])
         ->middleware('permission:create_leads|manage_leads')
         ->name('leads.store');
-    Route::delete('leads/{lead}', [LeadController::class, 'destroy'])
+    Route::delete('leads/{lead}/pipeline', [LeadController::class, 'destroy'])
         ->middleware('permission:delete_leads|manage_leads')
-        ->name('leads.destroy');
+        ->name('leads.pipeline.destroy');
 
     Route::post('leads/{lead}/stage', [LeadPipelineController::class, 'updateStage'])
         ->middleware('permission:edit_leads|manage_leads')
@@ -56,31 +56,16 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::get('leads/{lead}/documents/{documentType}/{documentId}/download', [LeadDocumentDownloadController::class, 'download'])
         ->name('leads.documents.download');
 
-    Route::middleware('permission:manage_leads')->group(function () {
-        Route::post('leads/{lead}/proposals', [LeadProposalController::class,  'store'])->name('leads.proposals.store');
-        Route::patch('leads/{lead}/proposals/{proposal}', [LeadProposalController::class, 'update'])->name('leads.proposals.patch');
-    });
-
-    Route::post('leads/{lead}/quotations', [LeadQuotationController::class, 'store'])
-        ->middleware('permission:create_quotations|manage_leads')
-        ->name('leads.quotations.store');
-    Route::patch('leads/{lead}/quotations/{quotation}', [LeadQuotationController::class, 'update'])
+    Route::patch('leads/{lead}/pipeline/proposals/{proposal}', [LeadProposalController::class, 'update'])
+        ->middleware('permission:edit_leads|manage_leads')
+        ->name('leads.pipeline.proposals.patch');
+    Route::patch('leads/{lead}/pipeline/quotations/{quotation}', [LeadQuotationController::class, 'update'])
         ->middleware('permission:edit_quotations|manage_leads')
-        ->name('leads.quotations.patch');
-    Route::delete('leads/{lead}/quotations/{quotation}', [LeadQuotationController::class, 'destroy'])
-        ->middleware('permission:delete_quotations|manage_leads')
-        ->name('leads.quotations.destroy');
-
-    Route::post('leads/{lead}/contracts', [LeadContractController::class, 'store'])
-        ->middleware('permission:create_contracts|manage_contracts')
-        ->name('leads.contracts.store');
-    Route::patch('leads/{lead}/contracts/{contract}', [LeadContractController::class, 'update'])
+        ->name('leads.pipeline.quotations.patch');
+    Route::patch('leads/{lead}/pipeline/contracts/{contract}', [LeadContractController::class, 'update'])
         ->middleware('permission:edit_contracts|manage_contracts')
-        ->name('leads.contracts.patch');
-    Route::post('leads/{lead}/contracts/{contract}/sign', [LeadContractController::class, 'sign'])
+        ->name('leads.pipeline.contracts.patch');
+    Route::post('leads/{lead}/pipeline/contracts/{contract}/sign', [LeadContractController::class, 'sign'])
         ->middleware('permission:sign_contracts|manage_contracts')
-        ->name('leads.contracts.sign');
-    Route::delete('leads/{lead}/contracts/{contract}', [LeadContractController::class, 'destroy'])
-        ->middleware('permission:delete_contracts|manage_contracts')
-        ->name('leads.contracts.destroy');
+        ->name('leads.pipeline.contracts.sign');
 });

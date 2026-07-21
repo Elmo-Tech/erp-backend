@@ -3,33 +3,19 @@
 namespace App\Modules\Lead\Controllers;
 
 use App\Enums\ProposalStatus;
-use App\Enums\ProposalTemplate;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\Lead\Actions\GenerateLeadProposalPdfAction;
-use App\Modules\Lead\Actions\StoreLeadDocumentFileAction;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Models\Proposal;
-use App\Modules\Lead\Requests\StoreLeadProposalRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Throwable;
 
 /**
- * Manages proposals attached directly to a lead from the Details Page.
- *
- * These endpoints accept the EXACT same payload shape as the pipeline's
- * stage_results[*] entry for type=proposal, so the frontend reuses the
- * same ProposalDirectUploadTab form and payload mapper without changes.
+ * Reads proposals and handles Kanban pipeline status updates.
  */
 class LeadProposalController extends Controller
 {
-    public function __construct(
-        private readonly StoreLeadDocumentFileAction $storeDocumentFile,
-        private readonly GenerateLeadProposalPdfAction $generateProposalPdf,
-    ) {}
-
     /**
      * List all proposals for a lead.
      *
@@ -47,52 +33,7 @@ class LeadProposalController extends Controller
         return ApiResponse::success($data, 'Proposals retrieved successfully.');
     }
 
-    /**
-     * Create a new proposal directly on a lead (bypasses the pipeline drag).
-     *
-     * POST /api/v1/leads/{lead}/proposals
-     *
-     * Payload shape mirrors stage_results[*] for type=proposal so the
-     * frontend ProposalDirectUploadTab + mapStageResultToPayload can be
-     * reused without modification.
-     */
-    public function store(StoreLeadProposalRequest $request, Lead $lead): JsonResponse
-    {
-        $proposalInput = $request->validated();
-        $fileAttributes = $this->proposalFileAttributes($request, $lead, $proposalInput);
-
-        try {
-            $proposal = Proposal::create(array_merge([
-                'lead_id' => $lead->id,
-                'client_id' => $lead->client_id,
-                'project_id' => null,
-                'status' => $proposalInput['status'] ?? ProposalStatus::DRAFT->value,
-                'creation_type' => $proposalInput['creation_type'],
-                'proposal_source' => $proposalInput['proposal_source'] ?? null,
-                'template_id' => $proposalInput['template_id'] ?? null,
-                'validity_date' => $proposalInput['validity_date'] ?? null,
-                'notes' => $proposalInput['notes'] ?? null,
-                'skip_reason' => $proposalInput['skip_reason'] ?? null,
-                'assigned_to' => $proposalInput['assigned_to'] ?? null,
-            ], $fileAttributes));
-        } catch (Throwable $exception) {
-            $this->storeDocumentFile->delete($fileAttributes['file_path'] ?? null);
-
-            throw $exception;
-        }
-
-        $proposal->load('assignee:id,name,email,avatar');
-
-        return ApiResponse::success(
-            $this->formatProposal($proposal),
-            'Proposal created successfully.',
-            201
-        );
-    }
-
-    /**
-     * Update editable proposal fields from the lead details table.
-     */
+    /** Update proposal approval state from the Kanban pipeline. */
     public function update(Request $request, Lead $lead, Proposal $proposal): JsonResponse
     {
         $this->assertBelongsToLead($proposal, $lead);
@@ -150,25 +91,5 @@ class LeadProposalController extends Controller
         if ((int) $proposal->lead_id !== (int) $lead->id) {
             abort(404, 'Proposal not found for this lead.');
         }
-    }
-
-    /**
-     * @param  array<string, mixed>  $proposalInput
-     * @return array{file_path: string, file_name: string, file_mime_type: string|null, file_size: int}|array{}
-     */
-    private function proposalFileAttributes(StoreLeadProposalRequest $request, Lead $lead, array $proposalInput): array
-    {
-        if ($proposalInput['creation_type'] === 'direct_upload' && ($proposalInput['proposal_source'] ?? null) === 'use_template') {
-            return $this->generateProposalPdf->execute(
-                $lead,
-                ProposalTemplate::from((int) $proposalInput['template_id']),
-                $proposalInput['validity_date'],
-                $proposalInput['notes'] ?? null,
-            );
-        }
-
-        return $request->hasFile('upload_file')
-            ? $this->storeDocumentFile->execute($lead, $request->file('upload_file'), 'proposal')
-            : [];
     }
 }

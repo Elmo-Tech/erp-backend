@@ -2,32 +2,20 @@
 
 namespace App\Modules\Lead\Controllers;
 
-use App\Enums\ContractModel;
 use App\Enums\ContractStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Modules\Lead\Actions\StoreLeadDocumentFileAction;
 use App\Modules\Lead\Models\Contract;
 use App\Modules\Lead\Models\Lead;
-use App\Modules\Lead\Requests\StoreLeadContractRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Throwable;
 
 /**
- * Manages contracts attached directly to a lead from the Details Page.
- *
- * Payload shape mirrors stage_results[*] for type=contract so the
- * frontend ContractDirectUploadTab + mapStageResultToPayload can be
- * reused without modification.
+ * Reads contracts and handles Kanban pipeline status updates.
  */
 class LeadContractController extends Controller
 {
-    public function __construct(
-        private readonly StoreLeadDocumentFileAction $storeDocumentFile,
-    ) {}
-
     /**
      * List all contracts for a lead.
      *
@@ -47,74 +35,7 @@ class LeadContractController extends Controller
         return ApiResponse::success($data, 'Contracts retrieved successfully.');
     }
 
-    /**
-     * Create a new contract directly on a lead.
-     *
-     * POST /api/v1/leads/{lead}/contracts
-     */
-    public function store(StoreLeadContractRequest $request, Lead $lead): JsonResponse
-    {
-        abort_unless($request->user()?->canAny(['create_contracts', 'manage_contracts']), 403, 'Unauthorized');
-
-        $data = $request->validated();
-
-        if (($data['status'] ?? null) === ContractStatus::SIGNED->value) {
-            abort_unless($request->user()->canAny(['sign_contracts', 'manage_contracts']), 403, 'Unauthorized');
-        }
-        $fileAttributes = $request->hasFile('upload_file')
-            ? $this->storeDocumentFile->execute($lead, $request->file('upload_file'), 'contract')
-            : [];
-
-        try {
-            $contract = Contract::create(array_merge([
-                'lead_id' => $lead->id,
-                'client_id' => $lead->client_id,
-                'project_id' => null,
-                'status' => $data['status'] ?? ContractStatus::DRAFT->value,
-                'creation_type' => $data['creation_type'],
-                'skip_reason' => $data['skip_reason'] ?? null,
-                'assigned_to' => $data['assigned_to'] ?? null,
-                'contract_model' => $data['contract_model'] ?? ContractModel::STANDARD->value,
-                'development_days' => $data['development_days'] ?? null,
-                'review_days' => $data['review_days'] ?? null,
-                'testing_days' => $data['testing_days'] ?? null,
-                'delay_penalty' => $data['delay_penalty'] ?? null,
-                'source_code_handover' => $data['source_code_handover'] ?? false,
-                'execution_start_date' => $data['execution_start_date'] ?? null,
-                'working_days_per_week' => $data['working_days_per_week'] ?? null,
-                // Standard
-                'currency' => $data['currency'] ?? null,
-                'total_amount' => $data['total_amount'] ?? null,
-                'payment_stages' => $data['payment_stages'] ?? null,
-                // SaaS
-                'setup_fee' => $data['setup_fee'] ?? null,
-                'recurring_fee' => $data['recurring_fee'] ?? null,
-                'billing_cycle' => $data['billing_cycle'] ?? null,
-                'subscription_start_date' => $data['subscription_start_date'] ?? null,
-                'apply_promo' => $data['apply_promo'] ?? false,
-                'promo_discount' => $data['promo_discount'] ?? null,
-                'addons' => $data['addons'] ?? null,
-                // Shared
-                'notes' => $data['notes'] ?? null,
-            ], $fileAttributes));
-        } catch (Throwable $exception) {
-            $this->storeDocumentFile->delete($fileAttributes['file_path'] ?? null);
-
-            throw $exception;
-        }
-
-        $contract->load('assignee:id,name,email,avatar');
-
-        return ApiResponse::success(
-            $this->formatContract($contract),
-            'Contract created successfully.',
-            201
-        );
-    }
-
-    /**
-     * Update editable contract fields from the lead details table.
-     */
+    /** Update contract state from the Kanban pipeline. */
     public function update(Request $request, Lead $lead, Contract $contract): JsonResponse
     {
         abort_unless($request->user()?->canAny(['edit_contracts', 'manage_contracts']), 403, 'Unauthorized');
@@ -157,16 +78,6 @@ class LeadContractController extends Controller
             $this->formatContract($contract->fresh()->load('assignee:id,name,email,avatar')),
             'Contract signed successfully.'
         );
-    }
-
-    public function destroy(Request $request, Lead $lead, Contract $contract): JsonResponse
-    {
-        abort_unless($request->user()?->canAny(['delete_contracts', 'manage_contracts']), 403, 'Unauthorized');
-        $this->assertBelongsToLead($contract, $lead);
-
-        $contract->delete();
-
-        return ApiResponse::success(null, 'Contract deleted successfully.');
     }
 
     // ─── Private ─────────────────────────────────────────────────────────────

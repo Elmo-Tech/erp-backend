@@ -8,6 +8,7 @@ use App\Enums\LeadStatus;
 use App\Modules\Lead\Models\Contract;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Models\Quotation;
+use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -44,7 +45,7 @@ class SalesPermissionParityTest extends TestCase
         $deleter = $this->userWithPermissions(['delete_leads']);
 
         $this->actingAs($deleter, 'sanctum')
-            ->deleteJson("/api/v1/leads/{$leadId}")
+            ->deleteJson("/api/v1/leads/{$leadId}/pipeline")
             ->assertOk();
 
         $this->assertSoftDeleted('leads', ['id' => $leadId]);
@@ -53,15 +54,21 @@ class SalesPermissionParityTest extends TestCase
     public function test_manage_leads_remains_an_umbrella_for_lead_and_quotation_actions(): void
     {
         $user = $this->userWithPermissions(['manage_leads']);
-        $lead = $this->lead();
+        $lead = $this->lead(['stage' => LeadStage::PROPOSAL]);
+        $this->completedMeeting($lead);
 
         $this->actingAs($user, 'sanctum')
-            ->postJson("/api/v1/leads/{$lead->id}/quotations", [
-                'creation_type' => DocumentCreationType::SKIPPED->value,
-                'skip_reason' => 'Permission contract test.',
-                'currency' => 'USD',
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::QUOTATION->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::QUOTATION->value,
+                    'type' => 'quotation',
+                    'creation_type' => DocumentCreationType::SKIPPED->value,
+                    'skip_reason' => 'Permission contract test.',
+                    'currency' => 'USD',
+                ]],
             ])
-            ->assertCreated();
+            ->assertOk();
 
         $this->actingAs($user, 'sanctum')
             ->getJson("/api/v1/leads/{$lead->id}/quotations")
@@ -172,7 +179,7 @@ class SalesPermissionParityTest extends TestCase
             ->assertJsonCount(1, 'data.projects');
     }
 
-    public function test_quotation_permissions_are_granular_and_nested_scope_is_enforced(): void
+    public function test_quotation_pipeline_permissions_are_granular_and_nested_scope_is_enforced(): void
     {
         $firstLead = $this->lead();
         $secondLead = $this->lead(['title' => 'Other lead']);
@@ -180,44 +187,44 @@ class SalesPermissionParityTest extends TestCase
         $editor = $this->userWithPermissions(['edit_quotations']);
 
         $this->actingAs($editor, 'sanctum')
-            ->patchJson("/api/v1/leads/{$firstLead->id}/quotations/{$quotation->id}", [
+            ->patchJson("/api/v1/leads/{$firstLead->id}/pipeline/quotations/{$quotation->id}", [
                 'status' => 'accepted',
             ])
             ->assertOk();
 
         $this->actingAs($editor, 'sanctum')
-            ->patchJson("/api/v1/leads/{$secondLead->id}/quotations/{$quotation->id}", [
+            ->patchJson("/api/v1/leads/{$secondLead->id}/pipeline/quotations/{$quotation->id}", [
                 'status' => 'rejected',
             ])
             ->assertNotFound();
 
         $this->actingAs($editor, 'sanctum')
             ->deleteJson("/api/v1/leads/{$firstLead->id}/quotations/{$quotation->id}")
-            ->assertForbidden();
+            ->assertNotFound();
 
         $this->assertSame('accepted', $quotation->fresh()->status->value);
 
-        $deleter = $this->userWithPermissions(['delete_quotations']);
-
-        $this->actingAs($deleter, 'sanctum')
-            ->deleteJson("/api/v1/leads/{$firstLead->id}/quotations/{$quotation->id}")
-            ->assertOk();
-
-        $this->assertSoftDeleted('quotations', ['id' => $quotation->id]);
+        $this->assertDatabaseHas('quotations', ['id' => $quotation->id, 'deleted_at' => null]);
     }
 
     public function test_create_and_view_quotation_permissions_are_independent(): void
     {
-        $lead = $this->lead();
-        $creator = $this->userWithPermissions(['create_quotations']);
+        $lead = $this->lead(['stage' => LeadStage::PROPOSAL]);
+        $this->completedMeeting($lead);
+        $creator = $this->userWithPermissions(['edit_leads', 'create_quotations']);
 
         $this->actingAs($creator, 'sanctum')
-            ->postJson("/api/v1/leads/{$lead->id}/quotations", [
-                'creation_type' => DocumentCreationType::SKIPPED->value,
-                'skip_reason' => 'Permission contract test.',
-                'currency' => 'USD',
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::QUOTATION->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::QUOTATION->value,
+                    'type' => 'quotation',
+                    'creation_type' => DocumentCreationType::SKIPPED->value,
+                    'skip_reason' => 'Permission contract test.',
+                    'currency' => 'USD',
+                ]],
             ])
-            ->assertCreated();
+            ->assertOk();
 
         $this->actingAs($creator, 'sanctum')
             ->getJson("/api/v1/leads/{$lead->id}/quotations")
@@ -231,33 +238,27 @@ class SalesPermissionParityTest extends TestCase
             ->assertJsonCount(1, 'data');
     }
 
-    public function test_contract_sign_and_delete_use_separate_permissions_and_preserve_lifecycle(): void
+    public function test_contract_sign_is_a_pipeline_action_and_delete_is_not_public(): void
     {
         $lead = $this->lead();
         $contract = $this->contract($lead);
         $signer = $this->userWithPermissions(['sign_contracts']);
 
         $this->actingAs($signer, 'sanctum')
-            ->postJson("/api/v1/leads/{$lead->id}/contracts/{$contract->id}/sign")
+            ->postJson("/api/v1/leads/{$lead->id}/pipeline/contracts/{$contract->id}/sign")
             ->assertOk()
             ->assertJsonPath('data.status', 'signed');
 
         $this->actingAs($signer, 'sanctum')
-            ->postJson("/api/v1/leads/{$lead->id}/contracts/{$contract->id}/sign")
+            ->postJson("/api/v1/leads/{$lead->id}/pipeline/contracts/{$contract->id}/sign")
             ->assertOk()
             ->assertJsonPath('data.status', 'signed');
 
         $this->actingAs($signer, 'sanctum')
             ->deleteJson("/api/v1/leads/{$lead->id}/contracts/{$contract->id}")
-            ->assertForbidden();
+            ->assertNotFound();
 
-        $deleter = $this->userWithPermissions(['delete_contracts']);
-
-        $this->actingAs($deleter, 'sanctum')
-            ->deleteJson("/api/v1/leads/{$lead->id}/contracts/{$contract->id}")
-            ->assertOk();
-
-        $this->assertSoftDeleted('contracts', ['id' => $contract->id]);
+        $this->assertDatabaseHas('contracts', ['id' => $contract->id, 'deleted_at' => null]);
     }
 
     public function test_manage_contracts_is_an_umbrella_with_nested_lead_scope(): void
@@ -266,51 +267,56 @@ class SalesPermissionParityTest extends TestCase
         $lead = $this->lead();
         $foreignLead = $this->lead(['title' => 'Foreign lead']);
 
-        $response = $this->actingAs($manager, 'sanctum')
-            ->postJson("/api/v1/leads/{$lead->id}/contracts", [
-                'creation_type' => DocumentCreationType::SKIPPED->value,
-                'skip_reason' => 'Permission contract test.',
-                'contract_model' => 'standard',
-            ])
-            ->assertCreated();
-
-        $contractId = $response->json('data.id');
+        $contractId = $this->contract($lead)->id;
 
         $this->actingAs($manager, 'sanctum')
-            ->postJson("/api/v1/leads/{$foreignLead->id}/contracts/{$contractId}/sign")
+            ->postJson("/api/v1/leads/{$foreignLead->id}/pipeline/contracts/{$contractId}/sign")
             ->assertNotFound();
 
         $this->actingAs($manager, 'sanctum')
-            ->postJson("/api/v1/leads/{$lead->id}/contracts/{$contractId}/sign")
+            ->postJson("/api/v1/leads/{$lead->id}/pipeline/contracts/{$contractId}/sign")
             ->assertOk();
 
         $this->actingAs($manager, 'sanctum')
             ->deleteJson("/api/v1/leads/{$lead->id}/contracts/{$contractId}")
-            ->assertOk();
+            ->assertNotFound();
 
-        $this->assertSoftDeleted('contracts', ['id' => $contractId]);
+        $this->assertDatabaseHas('contracts', ['id' => $contractId, 'deleted_at' => null]);
     }
 
     public function test_create_contracts_cannot_mark_a_contract_signed_without_sign_permission(): void
     {
-        $creator = $this->userWithPermissions(['create_contracts']);
-        $lead = $this->lead();
+        $creator = $this->userWithPermissions(['edit_leads', 'create_contracts']);
+        $lead = $this->preparedContractLead();
 
         $this->actingAs($creator, 'sanctum')
-            ->postJson("/api/v1/leads/{$lead->id}/contracts", [
-                'creation_type' => DocumentCreationType::SKIPPED->value,
-                'skip_reason' => 'Permission contract test.',
-                'contract_model' => 'standard',
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::CONTRACT->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::CONTRACT->value,
+                    'type' => 'contract',
+                    'creation_type' => DocumentCreationType::SKIPPED->value,
+                    'skip_reason' => 'Permission contract test.',
+                    'contract_model' => 'standard',
+                ]],
             ])
-            ->assertCreated()
-            ->assertJsonPath('data.status', 'draft');
+            ->assertOk();
+
+        $this->assertDatabaseHas('contracts', ['lead_id' => $lead->id, 'status' => 'draft']);
+
+        $signedLead = $this->preparedContractLead('Signed permission lead');
 
         $this->actingAs($creator, 'sanctum')
-            ->postJson("/api/v1/leads/{$lead->id}/contracts", [
-                'creation_type' => DocumentCreationType::SKIPPED->value,
-                'skip_reason' => 'Permission contract test.',
-                'contract_model' => 'standard',
-                'status' => 'signed',
+            ->postJson("/api/v1/leads/{$signedLead->id}/stage", [
+                'new_stage' => LeadStage::CONTRACT->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::CONTRACT->value,
+                    'type' => 'contract',
+                    'creation_type' => DocumentCreationType::SKIPPED->value,
+                    'skip_reason' => 'Permission contract test.',
+                    'contract_model' => 'standard',
+                    'status' => 'signed',
+                ]],
             ])
             ->assertForbidden();
 
@@ -344,6 +350,31 @@ class SalesPermissionParityTest extends TestCase
             'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
             'contract_model' => 'standard',
         ]);
+    }
+
+    private function completedMeeting(Lead $lead): void
+    {
+        Meeting::create([
+            'model_id' => $lead->id,
+            'model_type' => Lead::class,
+            'status' => 'completed',
+            'title' => 'Discovery',
+            'scheduled_at' => now(),
+        ]);
+    }
+
+    private function preparedContractLead(string $title = 'Contract permission lead'): Lead
+    {
+        $lead = $this->lead(['title' => $title, 'stage' => LeadStage::QUOTATION]);
+        $this->completedMeeting($lead);
+        Quotation::create([
+            'lead_id' => $lead->id,
+            'status' => 'accepted',
+            'creation_type' => DocumentCreationType::SKIPPED->value,
+            'currency' => 'USD',
+        ]);
+
+        return $lead;
     }
 
     /**
