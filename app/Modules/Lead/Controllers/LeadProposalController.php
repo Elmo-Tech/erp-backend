@@ -5,12 +5,14 @@ namespace App\Modules\Lead\Controllers;
 use App\Enums\ProposalStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Modules\Lead\Actions\StoreLeadDocumentFileAction;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Models\Proposal;
 use App\Modules\Lead\Requests\StoreLeadProposalRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 /**
  * Manages proposals attached directly to a lead from the Details Page.
@@ -21,6 +23,10 @@ use Illuminate\Validation\Rule;
  */
 class LeadProposalController extends Controller
 {
+    public function __construct(
+        private readonly StoreLeadDocumentFileAction $storeDocumentFile,
+    ) {}
+
     /**
      * List all proposals for a lead.
      *
@@ -50,17 +56,25 @@ class LeadProposalController extends Controller
     public function store(StoreLeadProposalRequest $request, Lead $lead): JsonResponse
     {
         $data = $request->validated();
+        $fileAttributes = $request->hasFile('upload_file')
+            ? $this->storeDocumentFile->execute($lead, $request->file('upload_file'), 'proposal')
+            : [];
 
-        $proposal = Proposal::create([
-            'lead_id' => $lead->id,
-            'client_id' => $lead->client_id,
-            'project_id' => null,
-            'status' => $data['status'] ?? ProposalStatus::DRAFT->value,
-            'creation_type' => $data['creation_type'],
-            'skip_reason' => $data['skip_reason'] ?? null,
-            'assigned_to' => $data['assigned_to'] ?? null,
-            'file_path' => $data['file_path'] ?? null,
-        ]);
+        try {
+            $proposal = Proposal::create(array_merge([
+                'lead_id' => $lead->id,
+                'client_id' => $lead->client_id,
+                'project_id' => null,
+                'status' => $data['status'] ?? ProposalStatus::DRAFT->value,
+                'creation_type' => $data['creation_type'],
+                'skip_reason' => $data['skip_reason'] ?? null,
+                'assigned_to' => $data['assigned_to'] ?? null,
+            ], $fileAttributes));
+        } catch (Throwable $exception) {
+            $this->storeDocumentFile->delete($fileAttributes['file_path'] ?? null);
+
+            throw $exception;
+        }
 
         $proposal->load('assignee:id,name,email,avatar');
 
@@ -81,7 +95,6 @@ class LeadProposalController extends Controller
         $data = $request->validate([
             'status' => ['sometimes', 'string', Rule::in(ProposalStatus::values())],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
-            'file_path' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $proposal->update($data);
@@ -102,8 +115,16 @@ class LeadProposalController extends Controller
             'status' => $p->status->value,
             'creation_type' => $p->creation_type->value,
             'skip_reason' => $p->skip_reason,
-            'file_path' => $p->file_path,
+            'file_path' => $p->file_path ? route('leads.documents.download', [
+                'lead' => $p->lead_id,
+                'documentType' => 'proposal',
+                'documentId' => $p->id,
+            ]) : null,
+            'file_name' => $p->file_name,
+            'file_mime_type' => $p->file_mime_type,
+            'file_size' => $p->file_size,
             'assigned_to' => $p->assigned_to,
+            'personal_task_id' => $p->personal_task_id,
             'assignee' => $p->assignee ? [
                 'id' => $p->assignee->id,
                 'name' => $p->assignee->name,

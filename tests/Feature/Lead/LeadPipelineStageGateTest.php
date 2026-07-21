@@ -11,6 +11,8 @@ use App\Modules\Lead\Models\Quotation;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -134,6 +136,96 @@ class LeadPipelineStageGateTest extends TestCase
 
         $this->assertSame(LeadStage::NEW_LEAD, $lead->fresh()->stage);
         $this->assertDatabaseCount('meetings', 0);
+    }
+
+    public function test_task_stage_result_creates_a_visible_personal_follow_up_task(): void
+    {
+        $user = $this->userWithPermissions(['manage_leads']);
+        $lead = $this->lead();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::MEETING->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::MEETING->value,
+                    'type' => 'proposal',
+                    'creation_type' => DocumentCreationType::TASK->value,
+                    'assigned_to' => $user->id,
+                    'due_date' => '2026-08-01',
+                    'notes' => 'Prepare the discovery agenda.',
+                ]],
+            ])
+            ->assertOk();
+
+        $taskId = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/personal-tasks')
+            ->assertOk()
+            ->assertJsonPath('data.tasks.0.title', 'Lead: Enterprise CRM — Meeting')
+            ->assertJsonPath('data.tasks.0.description', 'Prepare the discovery agenda.')
+            ->assertJsonPath('data.tasks.0.dueDate', '2026-08-01')
+            ->json('data.tasks.0.taskId');
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/leads/{$lead->id}/proposals")
+            ->assertOk()
+            ->assertJsonPath('data.0.creation_type', DocumentCreationType::TASK->value)
+            ->assertJsonPath('data.0.personal_task_id', $taskId);
+    }
+
+    public function test_task_stage_result_requires_an_assignee_and_due_date(): void
+    {
+        $user = $this->userWithPermissions(['manage_leads']);
+        $lead = $this->lead();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::MEETING->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::MEETING->value,
+                    'type' => 'proposal',
+                    'creation_type' => DocumentCreationType::TASK->value,
+                ]],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'stage_results.0.assigned_to',
+                'stage_results.0.due_date',
+            ]);
+
+        $this->assertSame(LeadStage::NEW_LEAD, $lead->fresh()->stage);
+        $this->assertDatabaseCount('personal_tasks', 0);
+        $this->assertDatabaseCount('proposals', 0);
+    }
+
+    public function test_direct_upload_stage_result_is_available_through_an_authorized_download(): void
+    {
+        Storage::fake('local');
+        $user = $this->userWithPermissions(['manage_leads']);
+        $lead = $this->lead();
+
+        $this->actingAs($user, 'sanctum')
+            ->post("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::MEETING->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::MEETING->value,
+                    'type' => 'proposal',
+                    'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+                    'upload_file' => UploadedFile::fake()->createWithContent('discovery-proposal.pdf', '%PDF-private-content'),
+                ]],
+            ], ['Accept' => 'application/json'])
+            ->assertOk();
+
+        $downloadUrl = $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/leads/{$lead->id}/proposals")
+            ->assertOk()
+            ->assertJsonPath('data.0.file_name', 'discovery-proposal.pdf')
+            ->json('data.0.file_path');
+
+        $this->actingAs($user, 'sanctum')
+            ->get($downloadUrl)
+            ->assertOk()
+            ->assertHeader('content-disposition', 'attachment; filename=discovery-proposal.pdf')
+            ->assertStreamedContent('%PDF-private-content');
     }
 
     public function test_jump_to_won_cannot_bypass_required_business_evidence(): void

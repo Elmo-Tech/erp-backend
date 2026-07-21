@@ -8,9 +8,13 @@ use App\Modules\Lead\Models\Contract;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Models\Proposal;
 use App\Modules\Lead\Models\Quotation;
+use App\Modules\PersonalTasks\Models\PersonalTask;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+use Throwable;
 
 /**
  * Processes a drag-and-drop pipeline stage update.
@@ -25,6 +29,10 @@ use InvalidArgumentException;
  */
 class ProcessLeadStageUpdateAction
 {
+    public function __construct(
+        private readonly StoreLeadDocumentFileAction $storeDocumentFile,
+    ) {}
+
     /**
      * Execute the pipeline stage update.
      *
@@ -34,11 +42,13 @@ class ProcessLeadStageUpdateAction
      *
      * Expected shape of each $stageResults item:
      * [
-     *   'type'          => 'proposal' | 'quotation' | 'contract',   // required
-     *   'creation_type' => 'task' | 'direct_upload' | 'skipped',    // required
+     *   'stage'         => 'meeting' | 'proposal' | 'quotation' | 'contract',
+     *   'type'          => 'proposal' | 'quotation' | 'contract',
+     *   'creation_type' => 'task' | 'direct_upload' | 'skipped',
      *   'skip_reason'   => string|null,
      *   'assigned_to'   => int|null,
-     *   'file_path'     => string|null,
+     *   'due_date'      => string|null,
+     *   'upload_file'   => UploadedFile|null,
      *   'status'        => string|null,   // defaults to 'draft'
      *
      *   // Quotation-only
@@ -66,20 +76,28 @@ class ProcessLeadStageUpdateAction
      */
     public function execute(int $leadId, LeadStage $newStage, array $stageResults): Lead
     {
-        return DB::transaction(function () use ($leadId, $newStage, $stageResults) {
-            /** @var Lead $lead */
-            $lead = Lead::findOrFail($leadId);
+        $storedPaths = [];
 
-            foreach ($stageResults as $index => $result) {
-                $this->validateResult($result, $index);
-                $this->createDocument($lead, $result);
-            }
+        try {
+            return DB::transaction(function () use ($leadId, $newStage, $stageResults, &$storedPaths) {
+                /** @var Lead $lead */
+                $lead = Lead::findOrFail($leadId);
 
-            $lead->stage = $newStage;
-            $lead->save();
+                foreach ($stageResults as $index => $result) {
+                    $this->validateResult($result, $index);
+                    $this->createDocument($lead, $result, $storedPaths);
+                }
 
-            return $lead->fresh();
-        });
+                $lead->stage = $newStage;
+                $lead->save();
+
+                return $lead->fresh();
+            });
+        } catch (Throwable $exception) {
+            Storage::disk('local')->delete($storedPaths);
+
+            throw $exception;
+        }
     }
 
     // ─── Private Helpers ─────────────────────────────────────────────────────
@@ -123,13 +141,40 @@ class ProcessLeadStageUpdateAction
      *
      * @param  array<string, mixed>  $result
      */
-    private function createDocument(Lead $lead, array $result): void
+    private function createDocument(Lead $lead, array $result, array &$storedPaths): void
     {
+        if ($result['creation_type'] === DocumentCreationType::TASK->value) {
+            $result['personal_task_id'] = $this->createPersonalTask($lead, $result)->id;
+        }
+
+        if (($result['upload_file'] ?? null) instanceof UploadedFile) {
+            $fileAttributes = $this->storeDocumentFile->execute($lead, $result['upload_file'], $result['type']);
+            $result = array_merge($result, $fileAttributes);
+            $storedPaths[] = $fileAttributes['file_path'];
+        }
+
         match ($result['type']) {
             'proposal' => $this->createProposal($lead, $result),
             'quotation' => $this->createQuotation($lead, $result),
             'contract' => $this->createContract($lead, $result),
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function createPersonalTask(Lead $lead, array $data): PersonalTask
+    {
+        $stage = LeadStage::from($data['stage']);
+
+        return PersonalTask::create([
+            'user_id' => $data['assigned_to'],
+            'title' => "Lead: {$lead->title} — {$stage->label()}",
+            'description' => $data['notes'] ?? null,
+            'status' => 'todo',
+            'priority' => 'medium',
+            'due_date' => $data['due_date'],
+        ]);
     }
 
     /**
@@ -145,7 +190,11 @@ class ProcessLeadStageUpdateAction
             'creation_type' => $data['creation_type'],
             'skip_reason' => $data['skip_reason'] ?? null,
             'assigned_to' => $data['assigned_to'] ?? null,
+            'personal_task_id' => $data['personal_task_id'] ?? null,
             'file_path' => $data['file_path'] ?? null,
+            'file_name' => $data['file_name'] ?? null,
+            'file_mime_type' => $data['file_mime_type'] ?? null,
+            'file_size' => $data['file_size'] ?? null,
         ]);
     }
 
@@ -162,7 +211,11 @@ class ProcessLeadStageUpdateAction
             'creation_type' => $data['creation_type'],
             'skip_reason' => $data['skip_reason'] ?? null,
             'assigned_to' => $data['assigned_to'] ?? null,
+            'personal_task_id' => $data['personal_task_id'] ?? null,
             'file_path' => $data['file_path'] ?? null,
+            'file_name' => $data['file_name'] ?? null,
+            'file_mime_type' => $data['file_mime_type'] ?? null,
+            'file_size' => $data['file_size'] ?? null,
             'currency' => $data['currency'] ?? 'USD',
             'base_price' => $data['base_price'] ?? null,
             'commission_type' => $data['commission_type'] ?? null,
@@ -184,7 +237,11 @@ class ProcessLeadStageUpdateAction
             'creation_type' => $data['creation_type'],
             'skip_reason' => $data['skip_reason'] ?? null,
             'assigned_to' => $data['assigned_to'] ?? null,
+            'personal_task_id' => $data['personal_task_id'] ?? null,
             'file_path' => $data['file_path'] ?? null,
+            'file_name' => $data['file_name'] ?? null,
+            'file_mime_type' => $data['file_mime_type'] ?? null,
+            'file_size' => $data['file_size'] ?? null,
             'contract_model' => $data['contract_model'] ?? 'standard',
             'development_days' => $data['development_days'] ?? null,
             'review_days' => $data['review_days'] ?? null,

@@ -62,6 +62,35 @@ class ProjectFileController extends Controller
         ], 'Project sales documents retrieved successfully');
     }
 
+    public function downloadSalesDocument(Project $project, string $category, int $documentId): JsonResponse|StreamedResponse
+    {
+        $this->authorize('view', $project);
+
+        $model = match ($category) {
+            'proposal' => Proposal::class,
+            'quotation' => Quotation::class,
+            'contract' => Contract::class,
+            default => null,
+        };
+
+        if ($model === null) {
+            return ApiResponse::error('Sales document not found.', 404);
+        }
+
+        $document = $model::query()
+            ->where('project_id', $project->id)
+            ->findOrFail($documentId);
+
+        if (! $document->file_path || ! Storage::disk('local')->exists($document->file_path)) {
+            return ApiResponse::error('Document file not found.', 404);
+        }
+
+        return Storage::disk('local')->download(
+            $document->file_path,
+            $document->file_name ?: basename($document->file_path)
+        );
+    }
+
     public function store(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
@@ -163,10 +192,14 @@ class ProjectFileController extends Controller
         return $documents->map(fn ($document) => [
             'documentId' => "{$category}:{$document->id}",
             'projectId' => $document->project_id,
-            'name' => ucfirst($category)." #{$document->id}",
+            'name' => $document->file_name ?: ucfirst($category)." #{$document->id}",
             'category' => $category,
             'status' => $document->status?->value ?? (string) $document->status,
-            'filePath' => $document->file_path,
+            'fileUrl' => $document->file_path ? route('projects.sales-documents.download', [
+                'project' => $document->project_id,
+                'category' => $category,
+                'documentId' => $document->id,
+            ]) : null,
             'createdAt' => $document->created_at,
         ]);
     }

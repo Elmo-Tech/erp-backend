@@ -6,6 +6,7 @@ use App\Enums\ContractModel;
 use App\Enums\ContractStatus;
 use App\Enums\DocumentCreationType;
 use App\Modules\Client\Models\Client;
+use App\Modules\PersonalTasks\Models\PersonalTask;
 use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
@@ -22,7 +23,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property DocumentCreationType $creation_type
  * @property string|null $skip_reason
  * @property int|null $assigned_to
+ * @property int|null $personal_task_id
  * @property string|null $file_path
+ * @property string|null $file_name
+ * @property string|null $file_mime_type
+ * @property int|null $file_size
  * @property ContractModel $contract_model
  * @property int|null $development_days
  * @property int|null $review_days
@@ -47,7 +52,11 @@ class Contract extends Model
         'creation_type',
         'skip_reason',
         'assigned_to',
+        'personal_task_id',
         'file_path',
+        'file_name',
+        'file_mime_type',
+        'file_size',
         'contract_model',
         'development_days',
         'review_days',
@@ -88,6 +97,7 @@ class Contract extends Model
             'subscription_start_date' => 'date',
             'payment_stages' => 'array',
             'addons' => 'array',
+            'file_size' => 'integer',
         ];
     }
 
@@ -111,5 +121,10 @@ class Contract extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function personalTask(): BelongsTo
+    {
+        return $this->belongsTo(PersonalTask::class);
     }
 }

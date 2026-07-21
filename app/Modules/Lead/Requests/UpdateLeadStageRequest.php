@@ -59,7 +59,8 @@ class UpdateLeadStageRequest extends FormRequest
             ],
             'stage_results.*.status' => ['nullable', 'string', 'max:50'],
             'stage_results.*.assigned_to' => ['nullable', 'integer', 'exists:users,id'],
-            'stage_results.*.file_path' => ['nullable', 'string', 'max:1000'],
+            'stage_results.*.due_date' => ['nullable', 'date'],
+            'stage_results.*.upload_file' => ['nullable', 'file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:51200'],
             'stage_results.*.notes' => ['nullable', 'string', 'max:5000'],
 
             // ── Meeting-specific ──────────────────────────────────────────────
@@ -148,12 +149,29 @@ class UpdateLeadStageRequest extends FormRequest
 
                 $stage = $stageEvidence['stage'] ?? null;
                 $type = $stageEvidence['type'] ?? null;
+                $creationType = $stageEvidence['creation_type'] ?? null;
 
                 if (is_string($stage) && is_string($type) && ($expectedTypes[$stage] ?? null) !== $type) {
                     $validator->errors()->add(
                         "stage_results.{$index}.type",
                         "Document type does not match the completed {$stage} stage."
                     );
+                }
+
+                if ($creationType === DocumentCreationType::TASK->value) {
+                    if (empty($stageEvidence['assigned_to'])) {
+                        $validator->errors()->add("stage_results.{$index}.assigned_to", 'An assignee is required when creating a task.');
+                    }
+
+                    if (empty($stageEvidence['due_date'])) {
+                        $validator->errors()->add("stage_results.{$index}.due_date", 'A due date is required when creating a task.');
+                    }
+                }
+
+                $usesTemplate = ($stageEvidence['proposal_source'] ?? null) === 'use_template';
+
+                if ($creationType === DocumentCreationType::DIRECT_UPLOAD->value && ! $usesTemplate && ! $this->hasFile("stage_results.{$index}.upload_file")) {
+                    $validator->errors()->add("stage_results.{$index}.upload_file", 'A document file is required for direct upload.');
                 }
             }
         }];

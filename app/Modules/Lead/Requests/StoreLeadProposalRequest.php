@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 /**
  * Validates a direct-creation proposal for a lead.
@@ -29,7 +30,13 @@ class StoreLeadProposalRequest extends FormRequest
             'creation_type' => ['required', 'string', 'in:direct_upload,task,skipped'],
             'skip_reason' => ['nullable', 'string', 'max:500'],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
-            'file_path' => ['nullable', 'string', 'max:1000'],
+            'upload_file' => [
+                Rule::requiredIf(fn () => $this->input('creation_type') === 'direct_upload' && $this->input('proposal_source') !== 'use_template'),
+                'nullable',
+                'file',
+                'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg',
+                'max:51200',
+            ],
             'notes' => ['nullable', 'string', 'max:5000'],
             'status' => ['nullable', 'string', 'max:50'],
 

@@ -57,7 +57,8 @@ class SalesPermissionParityTest extends TestCase
 
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/v1/leads/{$lead->id}/quotations", [
-                'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+                'creation_type' => DocumentCreationType::SKIPPED->value,
+                'skip_reason' => 'Permission contract test.',
                 'currency' => 'USD',
             ])
             ->assertCreated();
@@ -79,7 +80,8 @@ class SalesPermissionParityTest extends TestCase
                 'stage_results' => [[
                     'stage' => LeadStage::QUOTATION->value,
                     'type' => 'quotation',
-                    'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+                    'creation_type' => DocumentCreationType::SKIPPED->value,
+                    'skip_reason' => 'Permission contract test.',
                     'currency' => 'USD',
                 ]],
             ])
@@ -211,7 +213,8 @@ class SalesPermissionParityTest extends TestCase
 
         $this->actingAs($creator, 'sanctum')
             ->postJson("/api/v1/leads/{$lead->id}/quotations", [
-                'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+                'creation_type' => DocumentCreationType::SKIPPED->value,
+                'skip_reason' => 'Permission contract test.',
                 'currency' => 'USD',
             ])
             ->assertCreated();
@@ -265,7 +268,8 @@ class SalesPermissionParityTest extends TestCase
 
         $response = $this->actingAs($manager, 'sanctum')
             ->postJson("/api/v1/leads/{$lead->id}/contracts", [
-                'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+                'creation_type' => DocumentCreationType::SKIPPED->value,
+                'skip_reason' => 'Permission contract test.',
                 'contract_model' => 'standard',
             ])
             ->assertCreated();
@@ -294,7 +298,8 @@ class SalesPermissionParityTest extends TestCase
 
         $this->actingAs($creator, 'sanctum')
             ->postJson("/api/v1/leads/{$lead->id}/contracts", [
-                'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+                'creation_type' => DocumentCreationType::SKIPPED->value,
+                'skip_reason' => 'Permission contract test.',
                 'contract_model' => 'standard',
             ])
             ->assertCreated()
@@ -302,7 +307,8 @@ class SalesPermissionParityTest extends TestCase
 
         $this->actingAs($creator, 'sanctum')
             ->postJson("/api/v1/leads/{$lead->id}/contracts", [
-                'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+                'creation_type' => DocumentCreationType::SKIPPED->value,
+                'skip_reason' => 'Permission contract test.',
                 'contract_model' => 'standard',
                 'status' => 'signed',
             ])

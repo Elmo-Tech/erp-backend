@@ -60,6 +60,8 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
 
         Route::get('projects/{project}/sales-documents', [ProjectFileController::class, 'salesDocuments'])
             ->name('projects.sales-documents.index');
+        Route::get('projects/{project}/sales-documents/{category}/{documentId}/download', [ProjectFileController::class, 'downloadSalesDocument'])
+            ->name('projects.sales-documents.download');
 
         Route::get('projects/{project}/files/{file}', [ProjectFileController::class, 'show'])
             ->middleware('permission:view_project_files|manage_project_files|access_client_portal')

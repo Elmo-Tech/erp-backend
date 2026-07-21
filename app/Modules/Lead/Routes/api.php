@@ -3,6 +3,7 @@
 use App\Modules\Lead\Controllers\LeadContractController;
 use App\Modules\Lead\Controllers\LeadController;
 use App\Modules\Lead\Controllers\LeadConversionController;
+use App\Modules\Lead\Controllers\LeadDocumentDownloadController;
 use App\Modules\Lead\Controllers\LeadPipelineController;
 use App\Modules\Lead\Controllers\LeadProposalController;
 use App\Modules\Lead\Controllers\LeadQuotationController;
@@ -47,6 +48,8 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::post('leads/{lead}/convert', [LeadConversionController::class, 'convert'])
         ->middleware('permission:convert_leads|manage_leads')
         ->name('leads.convert');
+    Route::get('leads/{lead}/documents/{documentType}/{documentId}/download', [LeadDocumentDownloadController::class, 'download'])
+        ->name('leads.documents.download');
 
     Route::middleware('permission:manage_leads')->group(function () {
         Route::post('leads/{lead}/proposals', [LeadProposalController::class,  'store'])->name('leads.proposals.store');

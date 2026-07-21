@@ -6,12 +6,14 @@ use App\Enums\ContractModel;
 use App\Enums\ContractStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Modules\Lead\Actions\StoreLeadDocumentFileAction;
 use App\Modules\Lead\Models\Contract;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Requests\StoreLeadContractRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 /**
  * Manages contracts attached directly to a lead from the Details Page.
@@ -22,6 +24,10 @@ use Illuminate\Validation\Rule;
  */
 class LeadContractController extends Controller
 {
+    public function __construct(
+        private readonly StoreLeadDocumentFileAction $storeDocumentFile,
+    ) {}
+
     /**
      * List all contracts for a lead.
      *
@@ -55,39 +61,47 @@ class LeadContractController extends Controller
         if (($data['status'] ?? null) === ContractStatus::SIGNED->value) {
             abort_unless($request->user()->canAny(['sign_contracts', 'manage_contracts']), 403, 'Unauthorized');
         }
+        $fileAttributes = $request->hasFile('upload_file')
+            ? $this->storeDocumentFile->execute($lead, $request->file('upload_file'), 'contract')
+            : [];
 
-        $contract = Contract::create([
-            'lead_id' => $lead->id,
-            'client_id' => $lead->client_id,
-            'project_id' => null,
-            'status' => $data['status'] ?? ContractStatus::DRAFT->value,
-            'creation_type' => $data['creation_type'],
-            'skip_reason' => $data['skip_reason'] ?? null,
-            'assigned_to' => $data['assigned_to'] ?? null,
-            'file_path' => $data['file_path'] ?? null,
-            'contract_model' => $data['contract_model'] ?? ContractModel::STANDARD->value,
-            'development_days' => $data['development_days'] ?? null,
-            'review_days' => $data['review_days'] ?? null,
-            'testing_days' => $data['testing_days'] ?? null,
-            'delay_penalty' => $data['delay_penalty'] ?? null,
-            'source_code_handover' => $data['source_code_handover'] ?? false,
-            'execution_start_date' => $data['execution_start_date'] ?? null,
-            'working_days_per_week' => $data['working_days_per_week'] ?? null,
-            // Standard
-            'currency' => $data['currency'] ?? null,
-            'total_amount' => $data['total_amount'] ?? null,
-            'payment_stages' => $data['payment_stages'] ?? null,
-            // SaaS
-            'setup_fee' => $data['setup_fee'] ?? null,
-            'recurring_fee' => $data['recurring_fee'] ?? null,
-            'billing_cycle' => $data['billing_cycle'] ?? null,
-            'subscription_start_date' => $data['subscription_start_date'] ?? null,
-            'apply_promo' => $data['apply_promo'] ?? false,
-            'promo_discount' => $data['promo_discount'] ?? null,
-            'addons' => $data['addons'] ?? null,
-            // Shared
-            'notes' => $data['notes'] ?? null,
-        ]);
+        try {
+            $contract = Contract::create(array_merge([
+                'lead_id' => $lead->id,
+                'client_id' => $lead->client_id,
+                'project_id' => null,
+                'status' => $data['status'] ?? ContractStatus::DRAFT->value,
+                'creation_type' => $data['creation_type'],
+                'skip_reason' => $data['skip_reason'] ?? null,
+                'assigned_to' => $data['assigned_to'] ?? null,
+                'contract_model' => $data['contract_model'] ?? ContractModel::STANDARD->value,
+                'development_days' => $data['development_days'] ?? null,
+                'review_days' => $data['review_days'] ?? null,
+                'testing_days' => $data['testing_days'] ?? null,
+                'delay_penalty' => $data['delay_penalty'] ?? null,
+                'source_code_handover' => $data['source_code_handover'] ?? false,
+                'execution_start_date' => $data['execution_start_date'] ?? null,
+                'working_days_per_week' => $data['working_days_per_week'] ?? null,
+                // Standard
+                'currency' => $data['currency'] ?? null,
+                'total_amount' => $data['total_amount'] ?? null,
+                'payment_stages' => $data['payment_stages'] ?? null,
+                // SaaS
+                'setup_fee' => $data['setup_fee'] ?? null,
+                'recurring_fee' => $data['recurring_fee'] ?? null,
+                'billing_cycle' => $data['billing_cycle'] ?? null,
+                'subscription_start_date' => $data['subscription_start_date'] ?? null,
+                'apply_promo' => $data['apply_promo'] ?? false,
+                'promo_discount' => $data['promo_discount'] ?? null,
+                'addons' => $data['addons'] ?? null,
+                // Shared
+                'notes' => $data['notes'] ?? null,
+            ], $fileAttributes));
+        } catch (Throwable $exception) {
+            $this->storeDocumentFile->delete($fileAttributes['file_path'] ?? null);
+
+            throw $exception;
+        }
 
         $contract->load('assignee:id,name,email,avatar');
 
@@ -109,7 +123,6 @@ class LeadContractController extends Controller
         $data = $request->validate([
             'status' => ['sometimes', 'string', Rule::in(ContractStatus::values())],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
-            'file_path' => ['nullable', 'string', 'max:1000'],
         ]);
 
         if (($data['status'] ?? null) === ContractStatus::SIGNED->value) {
@@ -165,7 +178,14 @@ class LeadContractController extends Controller
             'status' => $c->status->value,
             'creation_type' => $c->creation_type->value,
             'skip_reason' => $c->skip_reason,
-            'file_path' => $c->file_path,
+            'file_path' => $c->file_path ? route('leads.documents.download', [
+                'lead' => $c->lead_id,
+                'documentType' => 'contract',
+                'documentId' => $c->id,
+            ]) : null,
+            'file_name' => $c->file_name,
+            'file_mime_type' => $c->file_mime_type,
+            'file_size' => $c->file_size,
             'contract_model' => $c->contract_model?->value,
             'development_days' => $c->development_days,
             'review_days' => $c->review_days,
@@ -189,6 +209,7 @@ class LeadContractController extends Controller
             // Shared
             'notes' => $c->notes,
             'assigned_to' => $c->assigned_to,
+            'personal_task_id' => $c->personal_task_id,
             'assignee' => $c->assignee ? [
                 'id' => $c->assignee->id,
                 'name' => $c->assignee->name,

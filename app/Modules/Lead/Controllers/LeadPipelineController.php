@@ -60,13 +60,11 @@ class LeadPipelineController extends Controller
         }
 
         $updatedLead = DB::transaction(function () use ($action, $lead, $meetingService, $newStage, $request, $scheduledMeeting, $stageResults) {
-            $updatedLead = $action->execute($lead->id, $newStage, $stageResults);
-
             if (is_array($scheduledMeeting)) {
                 $meetingService->scheduleMeeting($lead, $this->meetingPayload($scheduledMeeting), $request->user());
             }
 
-            return $updatedLead;
+            return $action->execute($lead->id, $newStage, $stageResults);
         });
 
         return ApiResponse::success(

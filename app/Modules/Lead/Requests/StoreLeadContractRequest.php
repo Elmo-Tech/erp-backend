@@ -31,7 +31,7 @@ class StoreLeadContractRequest extends FormRequest
             'creation_type' => ['required', 'string', 'in:direct_upload,task,skipped'],
             'skip_reason' => ['nullable', 'string', 'max:500'],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
-            'file_path' => ['nullable', 'string', 'max:1000'],
+            'upload_file' => ['required_if:creation_type,direct_upload', 'nullable', 'file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:51200'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'status' => ['nullable', 'string', Rule::enum(ContractStatus::class)],
 
