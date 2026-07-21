@@ -12,6 +12,7 @@ use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -20,6 +21,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int|null $project_id
  * @property ProposalStatus $status
  * @property DocumentCreationType $creation_type
+ * @property string|null $proposal_source
+ * @property int|null $template_id
+ * @property Carbon|null $validity_date
+ * @property string|null $notes
  * @property string|null $skip_reason
  * @property int|null $assigned_to
  * @property int|null $personal_task_id
@@ -40,6 +45,10 @@ class Proposal extends Model
         'project_id',
         'status',
         'creation_type',
+        'proposal_source',
+        'template_id',
+        'validity_date',
+        'notes',
         'skip_reason',
         'assigned_to',
         'personal_task_id',
@@ -56,6 +65,8 @@ class Proposal extends Model
         return [
             'status' => ProposalStatus::class,
             'creation_type' => DocumentCreationType::class,
+            'template_id' => 'integer',
+            'validity_date' => 'date',
             'file_size' => 'integer',
         ];
     }

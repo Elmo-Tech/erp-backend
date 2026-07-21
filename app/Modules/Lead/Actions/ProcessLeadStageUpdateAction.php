@@ -4,6 +4,7 @@ namespace App\Modules\Lead\Actions;
 
 use App\Enums\DocumentCreationType;
 use App\Enums\LeadStage;
+use App\Enums\ProposalTemplate;
 use App\Modules\Lead\Models\Contract;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Models\Proposal;
@@ -31,6 +32,7 @@ class ProcessLeadStageUpdateAction
 {
     public function __construct(
         private readonly StoreLeadDocumentFileAction $storeDocumentFile,
+        private readonly GenerateLeadProposalPdfAction $generateProposalPdf,
     ) {}
 
     /**
@@ -50,6 +52,9 @@ class ProcessLeadStageUpdateAction
      *   'due_date'      => string|null,
      *   'upload_file'   => UploadedFile|null,
      *   'status'        => string|null,   // defaults to 'draft'
+     *   'proposal_source' => 'upload_new' | 'use_template' | null,
+     *   'template_id'     => int|null,
+     *   'validity_date'   => string|null,
      *
      *   // Quotation-only
      *   'currency'        => string|null,
@@ -147,8 +152,9 @@ class ProcessLeadStageUpdateAction
             $result['personal_task_id'] = $this->createPersonalTask($lead, $result)->id;
         }
 
-        if (($result['upload_file'] ?? null) instanceof UploadedFile) {
-            $fileAttributes = $this->storeDocumentFile->execute($lead, $result['upload_file'], $result['type']);
+        $fileAttributes = $this->documentFileAttributes($lead, $result);
+
+        if ($fileAttributes !== []) {
             $result = array_merge($result, $fileAttributes);
             $storedPaths[] = $fileAttributes['file_path'];
         }
@@ -158,6 +164,28 @@ class ProcessLeadStageUpdateAction
             'quotation' => $this->createQuotation($lead, $result),
             'contract' => $this->createContract($lead, $result),
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $stageEvidence
+     * @return array{file_path: string, file_name: string, file_mime_type: string|null, file_size: int}|array{}
+     */
+    private function documentFileAttributes(Lead $lead, array $stageEvidence): array
+    {
+        if ($stageEvidence['type'] === 'proposal'
+            && $stageEvidence['creation_type'] === DocumentCreationType::DIRECT_UPLOAD->value
+            && ($stageEvidence['proposal_source'] ?? null) === 'use_template') {
+            return $this->generateProposalPdf->execute(
+                $lead,
+                ProposalTemplate::from((int) $stageEvidence['template_id']),
+                $stageEvidence['validity_date'],
+                $stageEvidence['notes'] ?? null,
+            );
+        }
+
+        return ($stageEvidence['upload_file'] ?? null) instanceof UploadedFile
+            ? $this->storeDocumentFile->execute($lead, $stageEvidence['upload_file'], $stageEvidence['type'])
+            : [];
     }
 
     /**
@@ -188,6 +216,10 @@ class ProcessLeadStageUpdateAction
             'project_id' => null, // not yet assigned at this stage
             'status' => $data['status'] ?? 'draft',
             'creation_type' => $data['creation_type'],
+            'proposal_source' => $data['proposal_source'] ?? null,
+            'template_id' => $data['template_id'] ?? null,
+            'validity_date' => $data['validity_date'] ?? null,
+            'notes' => $data['notes'] ?? null,
             'skip_reason' => $data['skip_reason'] ?? null,
             'assigned_to' => $data['assigned_to'] ?? null,
             'personal_task_id' => $data['personal_task_id'] ?? null,

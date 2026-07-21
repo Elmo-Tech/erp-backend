@@ -228,6 +228,43 @@ class LeadPipelineStageGateTest extends TestCase
             ->assertStreamedContent('%PDF-private-content');
     }
 
+    public function test_template_stage_result_generates_a_downloadable_proposal_pdf(): void
+    {
+        Storage::fake('local');
+        $user = $this->userWithPermissions(['manage_leads']);
+        $lead = $this->lead(['stage' => LeadStage::MEETING]);
+        $this->completedMeeting($lead);
+        $validityDate = now()->addMonth()->toDateString();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::PROPOSAL->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::PROPOSAL->value,
+                    'type' => 'proposal',
+                    'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+                    'proposal_source' => 'use_template',
+                    'template_id' => 3,
+                    'validity_date' => $validityDate,
+                    'notes' => 'Annual subscription with guided onboarding.',
+                ]],
+            ])
+            ->assertOk();
+
+        $downloadUrl = $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/leads/{$lead->id}/proposals")
+            ->assertOk()
+            ->assertJsonPath('data.0.template_id', 3)
+            ->assertJsonPath('data.0.file_mime_type', 'application/pdf')
+            ->json('data.0.file_path');
+
+        $download = $this->actingAs($user, 'sanctum')
+            ->get($downloadUrl)
+            ->assertOk();
+
+        $this->assertStringStartsWith('%PDF-', $download->streamedContent());
+    }
+
     public function test_jump_to_won_cannot_bypass_required_business_evidence(): void
     {
         $user = $this->userWithPermissions(['manage_leads', 'manage_contracts']);

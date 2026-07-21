@@ -3,8 +3,10 @@
 namespace App\Modules\Lead\Controllers;
 
 use App\Enums\ProposalStatus;
+use App\Enums\ProposalTemplate;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Modules\Lead\Actions\GenerateLeadProposalPdfAction;
 use App\Modules\Lead\Actions\StoreLeadDocumentFileAction;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Models\Proposal;
@@ -25,6 +27,7 @@ class LeadProposalController extends Controller
 {
     public function __construct(
         private readonly StoreLeadDocumentFileAction $storeDocumentFile,
+        private readonly GenerateLeadProposalPdfAction $generateProposalPdf,
     ) {}
 
     /**
@@ -55,20 +58,22 @@ class LeadProposalController extends Controller
      */
     public function store(StoreLeadProposalRequest $request, Lead $lead): JsonResponse
     {
-        $data = $request->validated();
-        $fileAttributes = $request->hasFile('upload_file')
-            ? $this->storeDocumentFile->execute($lead, $request->file('upload_file'), 'proposal')
-            : [];
+        $proposalInput = $request->validated();
+        $fileAttributes = $this->proposalFileAttributes($request, $lead, $proposalInput);
 
         try {
             $proposal = Proposal::create(array_merge([
                 'lead_id' => $lead->id,
                 'client_id' => $lead->client_id,
                 'project_id' => null,
-                'status' => $data['status'] ?? ProposalStatus::DRAFT->value,
-                'creation_type' => $data['creation_type'],
-                'skip_reason' => $data['skip_reason'] ?? null,
-                'assigned_to' => $data['assigned_to'] ?? null,
+                'status' => $proposalInput['status'] ?? ProposalStatus::DRAFT->value,
+                'creation_type' => $proposalInput['creation_type'],
+                'proposal_source' => $proposalInput['proposal_source'] ?? null,
+                'template_id' => $proposalInput['template_id'] ?? null,
+                'validity_date' => $proposalInput['validity_date'] ?? null,
+                'notes' => $proposalInput['notes'] ?? null,
+                'skip_reason' => $proposalInput['skip_reason'] ?? null,
+                'assigned_to' => $proposalInput['assigned_to'] ?? null,
             ], $fileAttributes));
         } catch (Throwable $exception) {
             $this->storeDocumentFile->delete($fileAttributes['file_path'] ?? null);
@@ -114,6 +119,10 @@ class LeadProposalController extends Controller
             'id' => $p->id,
             'status' => $p->status->value,
             'creation_type' => $p->creation_type->value,
+            'proposal_source' => $p->proposal_source,
+            'template_id' => $p->template_id,
+            'validity_date' => $p->validity_date?->toDateString(),
+            'notes' => $p->notes,
             'skip_reason' => $p->skip_reason,
             'file_path' => $p->file_path ? route('leads.documents.download', [
                 'lead' => $p->lead_id,
@@ -141,5 +150,25 @@ class LeadProposalController extends Controller
         if ((int) $proposal->lead_id !== (int) $lead->id) {
             abort(404, 'Proposal not found for this lead.');
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $proposalInput
+     * @return array{file_path: string, file_name: string, file_mime_type: string|null, file_size: int}|array{}
+     */
+    private function proposalFileAttributes(StoreLeadProposalRequest $request, Lead $lead, array $proposalInput): array
+    {
+        if ($proposalInput['creation_type'] === 'direct_upload' && ($proposalInput['proposal_source'] ?? null) === 'use_template') {
+            return $this->generateProposalPdf->execute(
+                $lead,
+                ProposalTemplate::from((int) $proposalInput['template_id']),
+                $proposalInput['validity_date'],
+                $proposalInput['notes'] ?? null,
+            );
+        }
+
+        return $request->hasFile('upload_file')
+            ? $this->storeDocumentFile->execute($lead, $request->file('upload_file'), 'proposal')
+            : [];
     }
 }

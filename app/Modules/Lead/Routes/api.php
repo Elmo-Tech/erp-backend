@@ -6,10 +6,15 @@ use App\Modules\Lead\Controllers\LeadConversionController;
 use App\Modules\Lead\Controllers\LeadDocumentDownloadController;
 use App\Modules\Lead\Controllers\LeadPipelineController;
 use App\Modules\Lead\Controllers\LeadProposalController;
+use App\Modules\Lead\Controllers\LeadProposalTemplateController;
 use App\Modules\Lead\Controllers\LeadQuotationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
+    Route::get('lead-proposal-templates', [LeadProposalTemplateController::class, 'index'])
+        ->middleware('permission:view_leads|manage_leads')
+        ->name('leads.proposal-templates.index');
+
     /*
     |--------------------------------------------------------------------------
     | Lead Pipeline Routes

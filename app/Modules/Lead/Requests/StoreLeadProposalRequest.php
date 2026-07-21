@@ -2,6 +2,7 @@
 
 namespace App\Modules\Lead\Requests;
 
+use App\Enums\ProposalTemplate;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -41,9 +42,24 @@ class StoreLeadProposalRequest extends FormRequest
             'status' => ['nullable', 'string', 'max:50'],
 
             // Proposal-specific
-            'proposal_source' => ['nullable', 'string', 'in:upload_new,use_template'],
-            'template_id' => ['nullable', 'integer', 'min:1'],
-            'validity_date' => ['nullable', 'date'],
+            'proposal_source' => [
+                Rule::prohibitedIf(fn () => $this->filled('proposal_source') && $this->input('creation_type') !== 'direct_upload'),
+                'nullable',
+                'string',
+                'in:upload_new,use_template',
+            ],
+            'template_id' => [
+                Rule::prohibitedIf(fn () => $this->filled('template_id') && $this->input('proposal_source') !== 'use_template'),
+                Rule::requiredIf(fn () => $this->input('proposal_source') === 'use_template'),
+                'nullable',
+                Rule::enum(ProposalTemplate::class),
+            ],
+            'validity_date' => [
+                Rule::requiredIf(fn () => $this->input('proposal_source') === 'use_template'),
+                'nullable',
+                'date',
+                'after_or_equal:today',
+            ],
         ];
     }
 

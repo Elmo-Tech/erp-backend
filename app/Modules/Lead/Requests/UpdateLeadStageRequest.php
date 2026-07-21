@@ -4,6 +4,7 @@ namespace App\Modules\Lead\Requests;
 
 use App\Enums\DocumentCreationType;
 use App\Enums\LeadStage;
+use App\Enums\ProposalTemplate;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -76,8 +77,8 @@ class UpdateLeadStageRequest extends FormRequest
 
             // ── Proposal-specific ─────────────────────────────────────────────
             'stage_results.*.proposal_source' => ['nullable', 'string', 'in:upload_new,use_template'],
-            'stage_results.*.template_id' => ['nullable', 'integer', 'min:1'],
-            'stage_results.*.validity_date' => ['nullable', 'date'],
+            'stage_results.*.template_id' => ['nullable', Rule::enum(ProposalTemplate::class)],
+            'stage_results.*.validity_date' => ['nullable', 'date', 'after_or_equal:today'],
 
             // ── Quotation-specific ────────────────────────────────────────────
             'stage_results.*.currency' => ['nullable', 'string', 'max:10'],
@@ -134,47 +135,102 @@ class UpdateLeadStageRequest extends FormRequest
      */
     public function after(): array
     {
-        return [function (Validator $validator): void {
-            $expectedTypes = [
-                LeadStage::MEETING->value => 'proposal',
-                LeadStage::PROPOSAL->value => 'proposal',
-                LeadStage::QUOTATION->value => 'quotation',
-                LeadStage::CONTRACT->value => 'contract',
-            ];
+        return [fn (Validator $validator) => $this->validateStageEvidence($validator)];
+    }
 
-            foreach ((array) $this->input('stage_results', []) as $index => $stageEvidence) {
-                if (! is_array($stageEvidence)) {
-                    continue;
-                }
+    private function validateStageEvidence(Validator $validator): void
+    {
+        $expectedTypes = [
+            LeadStage::MEETING->value => 'proposal',
+            LeadStage::PROPOSAL->value => 'proposal',
+            LeadStage::QUOTATION->value => 'quotation',
+            LeadStage::CONTRACT->value => 'contract',
+        ];
 
-                $stage = $stageEvidence['stage'] ?? null;
-                $type = $stageEvidence['type'] ?? null;
-                $creationType = $stageEvidence['creation_type'] ?? null;
-
-                if (is_string($stage) && is_string($type) && ($expectedTypes[$stage] ?? null) !== $type) {
-                    $validator->errors()->add(
-                        "stage_results.{$index}.type",
-                        "Document type does not match the completed {$stage} stage."
-                    );
-                }
-
-                if ($creationType === DocumentCreationType::TASK->value) {
-                    if (empty($stageEvidence['assigned_to'])) {
-                        $validator->errors()->add("stage_results.{$index}.assigned_to", 'An assignee is required when creating a task.');
-                    }
-
-                    if (empty($stageEvidence['due_date'])) {
-                        $validator->errors()->add("stage_results.{$index}.due_date", 'A due date is required when creating a task.');
-                    }
-                }
-
-                $usesTemplate = ($stageEvidence['proposal_source'] ?? null) === 'use_template';
-
-                if ($creationType === DocumentCreationType::DIRECT_UPLOAD->value && ! $usesTemplate && ! $this->hasFile("stage_results.{$index}.upload_file")) {
-                    $validator->errors()->add("stage_results.{$index}.upload_file", 'A document file is required for direct upload.');
-                }
+        foreach ((array) $this->input('stage_results', []) as $index => $stageEvidence) {
+            if (is_array($stageEvidence)) {
+                $this->validateStageResult($validator, $index, $stageEvidence, $expectedTypes);
             }
-        }];
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $stageEvidence
+     * @param  array<string, string>  $expectedTypes
+     */
+    private function validateStageResult(Validator $validator, int|string $index, array $stageEvidence, array $expectedTypes): void
+    {
+        $stage = $stageEvidence['stage'] ?? null;
+        $type = $stageEvidence['type'] ?? null;
+        $creationType = $stageEvidence['creation_type'] ?? null;
+
+        if (is_string($stage) && is_string($type) && ($expectedTypes[$stage] ?? null) !== $type) {
+            $validator->errors()->add("stage_results.{$index}.type", "Document type does not match the completed {$stage} stage.");
+        }
+
+        $this->validateTaskEvidence($validator, $index, $stageEvidence);
+        $usesTemplate = $this->usesProposalTemplate($stageEvidence, $type, $creationType);
+        $this->validateTemplateEvidence($validator, $index, $stageEvidence);
+
+        if ($creationType === DocumentCreationType::DIRECT_UPLOAD->value && ! $usesTemplate && ! $this->hasFile("stage_results.{$index}.upload_file")) {
+            $validator->errors()->add("stage_results.{$index}.upload_file", 'A document file is required for direct upload.');
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $stageEvidence
+     */
+    private function validateTaskEvidence(Validator $validator, int|string $index, array $stageEvidence): void
+    {
+        if (($stageEvidence['creation_type'] ?? null) !== DocumentCreationType::TASK->value) {
+            return;
+        }
+
+        if (empty($stageEvidence['assigned_to'])) {
+            $validator->errors()->add("stage_results.{$index}.assigned_to", 'An assignee is required when creating a task.');
+        }
+
+        if (empty($stageEvidence['due_date'])) {
+            $validator->errors()->add("stage_results.{$index}.due_date", 'A due date is required when creating a task.');
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $stageEvidence
+     */
+    private function usesProposalTemplate(array $stageEvidence, mixed $type, mixed $creationType): bool
+    {
+        return $type === 'proposal'
+            && $creationType === DocumentCreationType::DIRECT_UPLOAD->value
+            && ($stageEvidence['proposal_source'] ?? null) === 'use_template';
+    }
+
+    /**
+     * @param  array<string, mixed>  $stageEvidence
+     */
+    private function validateTemplateEvidence(Validator $validator, int|string $index, array $stageEvidence): void
+    {
+        $usesTemplate = $this->usesProposalTemplate(
+            $stageEvidence,
+            $stageEvidence['type'] ?? null,
+            $stageEvidence['creation_type'] ?? null,
+        );
+
+        if (($stageEvidence['proposal_source'] ?? null) === 'use_template' && ! $usesTemplate) {
+            $validator->errors()->add("stage_results.{$index}.proposal_source", 'Templates can only be used for direct proposal creation.');
+        }
+
+        if (! empty($stageEvidence['template_id']) && ($stageEvidence['proposal_source'] ?? null) !== 'use_template') {
+            $validator->errors()->add("stage_results.{$index}.template_id", 'A template can only be selected when using a proposal template.');
+        }
+
+        if ($usesTemplate && empty($stageEvidence['template_id'])) {
+            $validator->errors()->add("stage_results.{$index}.template_id", 'A proposal template is required.');
+        }
+
+        if ($usesTemplate && empty($stageEvidence['validity_date'])) {
+            $validator->errors()->add("stage_results.{$index}.validity_date", 'A validity date is required.');
+        }
     }
 
     protected function failedValidation(Validator $validator): void
