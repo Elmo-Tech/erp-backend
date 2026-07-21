@@ -8,13 +8,16 @@ use App\Modules\HR\Models\EmployeeProfile;
 use App\Modules\HR\Requests\StoreEmployeeProfileRequest;
 use App\Modules\HR\Requests\UpdateEmployeeProfileRequest;
 use App\Modules\HR\Resources\EmployeeProfileResource;
+use App\Modules\Settings\Models\User;
+use App\Modules\Settings\Policies\UserAdministrationPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class EmployeeProfileController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private readonly UserAdministrationPolicy $administrationPolicy
+    ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
 
@@ -24,7 +27,7 @@ class EmployeeProfileController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_employees'), 403, 'Unauthorized');
+        abort_unless($request->user()->hasAnyPermission(['view_employees', 'manage_employees']), 403);
 
         $profiles = EmployeeProfile::with(['user:id,name,email,avatar', 'shift:id,name'])
             ->orderByDesc('created_at')
@@ -41,7 +44,12 @@ class EmployeeProfileController extends Controller
      */
     public function store(StoreEmployeeProfileRequest $request): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_employees'), 403, 'Unauthorized');
+        $target = User::query()->findOrFail($request->integer('user_id'));
+        $this->administrationPolicy->authorizeEmployeeMutation(
+            $request->user(),
+            $target,
+            'create_employees'
+        );
 
         $profile = EmployeeProfile::create($request->validated());
         $profile->load(['user:id,name,email,avatar', 'shift:id,name']);
@@ -58,7 +66,7 @@ class EmployeeProfileController extends Controller
      */
     public function show(Request $request, EmployeeProfile $employeeProfile): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_employees'), 403, 'Unauthorized');
+        abort_unless($request->user()->hasAnyPermission(['view_employees', 'manage_employees']), 403);
 
         $employeeProfile->load(['user:id,name,email,avatar', 'shift:id,name,start_time,end_time,working_days,grace_period_minutes']);
 
@@ -73,7 +81,11 @@ class EmployeeProfileController extends Controller
      */
     public function update(UpdateEmployeeProfileRequest $request, EmployeeProfile $employeeProfile): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_employees'), 403, 'Unauthorized');
+        $this->administrationPolicy->authorizeEmployeeMutation(
+            $request->user(),
+            $employeeProfile->user,
+            'edit_employees'
+        );
 
         $employeeProfile->update($request->validated());
         $employeeProfile->load(['user:id,name,email,avatar', 'shift:id,name']);
@@ -89,7 +101,11 @@ class EmployeeProfileController extends Controller
      */
     public function destroy(Request $request, EmployeeProfile $employeeProfile): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_employees'), 403, 'Unauthorized');
+        $this->administrationPolicy->authorizeEmployeeMutation(
+            $request->user(),
+            $employeeProfile->user,
+            'delete_employees'
+        );
 
         $employeeProfile->delete();
 

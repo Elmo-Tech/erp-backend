@@ -2,10 +2,12 @@
 
 namespace App\Modules\Lead\Requests;
 
+use App\Enums\ContractStatus;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 /**
  * Validates a direct-creation contract for a lead.
@@ -31,7 +33,7 @@ class StoreLeadContractRequest extends FormRequest
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
             'file_path' => ['nullable', 'string', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:5000'],
-            'status' => ['nullable', 'string', 'max:50'],
+            'status' => ['nullable', 'string', Rule::enum(ContractStatus::class)],
 
             // Contract base fields
             'contract_model' => ['nullable', 'string', 'in:standard,saas_subscription'],

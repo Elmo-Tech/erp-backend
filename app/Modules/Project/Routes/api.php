@@ -214,7 +214,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
             ->name('projects.tasks.store');
     });
 
-    Route::middleware('permission:edit_tasks|manage_tasks|work_on_tasks|manage_all_projects')->group(function () {
+    Route::middleware('permission:edit_tasks|change_task_status|complete_tasks|reopen_tasks|manage_tasks|work_on_tasks|manage_all_projects')->group(function () {
         Route::put('projects/{project}/tasks/{task}', [ProjectTaskController::class, 'update'])
             ->name('projects.tasks.update');
 
@@ -227,27 +227,27 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
             ->name('projects.tasks.destroy');
     });
 
-    Route::middleware('permission:edit_tasks|manage_tasks|manage_all_projects')->group(function () {
+    Route::middleware('permission:complete_tasks|manage_tasks|manage_all_projects')->group(function () {
         Route::post('projects/{project}/tasks/{task}/complete', [ProjectTaskController::class, 'complete'])
             ->name('projects.tasks.complete');
     });
 
     // ── Task Deliverables ─────────────────────────────────────────────────────
-    Route::middleware('permission:create_project_task_deliverables|manage_deliverables|manage_all_projects')->group(function () {
+    Route::middleware('permission:create_project_task_deliverables|manage_deliverables|manage_tasks|manage_all_projects')->group(function () {
         Route::post(
             'projects/{project}/tasks/{task}/deliverables',
             [ProjectTaskDeliverableController::class, 'store']
         )->name('projects.tasks.deliverables.store');
     });
 
-    Route::middleware('permission:work_on_tasks|edit_tasks|manage_tasks|manage_all_projects')->group(function () {
+    Route::middleware('permission:toggle_project_task_deliverables|work_on_tasks|manage_deliverables|manage_tasks|manage_all_projects')->group(function () {
         Route::patch(
             'projects/{project}/tasks/{task}/deliverables/{deliverable}/toggle',
             [ProjectTaskDeliverableController::class, 'toggle']
         )->name('projects.tasks.deliverables.toggle');
     });
 
-    Route::middleware('permission:edit_project_task_deliverables|manage_deliverables|manage_all_projects')->group(function () {
+    Route::middleware('permission:edit_project_task_deliverables|manage_deliverables|manage_tasks|manage_all_projects')->group(function () {
         Route::put(
             'projects/{project}/tasks/{task}/deliverables/{deliverable}',
             [ProjectTaskDeliverableController::class, 'update']
@@ -259,7 +259,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         )->name('projects.tasks.deliverables.patch');
     });
 
-    Route::middleware('permission:delete_project_task_deliverables|manage_deliverables|manage_all_projects')->group(function () {
+    Route::middleware('permission:delete_project_task_deliverables|manage_deliverables|manage_tasks|manage_all_projects')->group(function () {
         Route::delete(
             'projects/{project}/tasks/{task}/deliverables/{deliverable}',
             [ProjectTaskDeliverableController::class, 'destroy']

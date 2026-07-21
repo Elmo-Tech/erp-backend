@@ -105,7 +105,7 @@ class UserManagementController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        if (! auth()->user()->can('manage_users')) {
+        if (! auth()->user()->hasAnyPermission(['view_users', 'manage_users'])) {
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 
@@ -251,7 +251,7 @@ class UserManagementController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        if (! auth()->user()->can('manage_users')) {
+        if (! auth()->user()->hasAnyPermission(['view_users', 'manage_users'])) {
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 
@@ -456,7 +456,7 @@ class UserManagementController extends Controller
      */
     public function toggleStatus(int $id): JsonResponse
     {
-        if (! auth()->user()->can('manage_users')) {
+        if (! auth()->user()->can('toggle_user_status')) {
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 

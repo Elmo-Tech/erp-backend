@@ -3,6 +3,8 @@
 namespace Tests\Feature\HR;
 
 use App\Modules\Attendance\Models\Attendance;
+use App\Modules\HR\Models\EmployeeProfile;
+use App\Modules\HR\Models\PayrollTransaction;
 use App\Modules\PersonalTasks\Models\PersonalTask;
 use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
@@ -95,6 +97,72 @@ class EmployeeReportControllerTest extends TestCase
             ->assertJsonPath('data.attendanceDays.0.expectedWorkedMinutes', 480)
             ->assertJsonPath('data.attendanceDays.0.stoppedMinutes', 105)
             ->assertJsonPath('data.attendanceDays.0.workedHours', 3);
+    }
+
+    public function test_performance_viewer_receives_operational_data_without_salary_data(): void
+    {
+        $viewer = $this->userWithPermissions(['view_employee_performance']);
+        $employee = User::factory()->create();
+        EmployeeProfile::create([
+            'user_id' => $employee->id,
+            'base_salary' => 8000,
+            'hourly_rate' => 50,
+            'join_date' => '2025-01-01',
+        ]);
+        PayrollTransaction::create([
+            'user_id' => $employee->id,
+            'amount' => 500,
+            'type' => 'manual_bonus',
+            'reason' => 'Sensitive bonus',
+            'transaction_date' => '2026-06-15',
+        ]);
+
+        $this->actingAs($viewer, 'sanctum')
+            ->getJson("/api/v1/hr/employee-report/{$employee->id}?month=6&year=2026")
+            ->assertOk()
+            ->assertJsonPath('data.summary.pointsBalance', 0)
+            ->assertJsonMissingPath('data.summary.netSalary')
+            ->assertJsonMissingPath('data.financialBreakdown')
+            ->assertJsonMissingPath('data.manualTransactions');
+    }
+
+    public function test_salary_permission_adds_financial_report_sections(): void
+    {
+        $viewer = $this->userWithPermissions([
+            'view_employee_performance',
+            'view_employee_salary',
+        ]);
+        $employee = User::factory()->create();
+        EmployeeProfile::create([
+            'user_id' => $employee->id,
+            'base_salary' => 8000,
+            'hourly_rate' => 50,
+            'join_date' => '2025-01-01',
+        ]);
+        PayrollTransaction::create([
+            'user_id' => $employee->id,
+            'amount' => 500,
+            'type' => 'manual_bonus',
+            'reason' => 'Visible bonus',
+            'transaction_date' => '2026-06-15',
+        ]);
+
+        $this->actingAs($viewer, 'sanctum')
+            ->getJson("/api/v1/hr/employee-report/{$employee->id}?month=6&year=2026")
+            ->assertOk()
+            ->assertJsonPath('data.summary.netSalary', 8500)
+            ->assertJsonPath('data.financialBreakdown.baseSalary', 8000)
+            ->assertJsonPath('data.manualTransactions.0.amount', 500);
+    }
+
+    public function test_salary_permission_alone_cannot_open_performance_report(): void
+    {
+        $salaryViewer = $this->userWithPermissions(['view_employee_salary']);
+        $employee = User::factory()->create();
+
+        $this->actingAs($salaryViewer, 'sanctum')
+            ->getJson("/api/v1/hr/employee-report/{$employee->id}")
+            ->assertForbidden();
     }
 
     /**

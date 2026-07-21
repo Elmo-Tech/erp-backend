@@ -9,7 +9,10 @@ class StoreEmployeeProfileRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $actor = $this->user();
+
+        return $actor?->hasAnyPermission(['create_employees', 'manage_employees'])
+            && $actor->hasAnyPermission(['view_employee_salary', 'manage_employees']);
     }
 
     public function rules(): array

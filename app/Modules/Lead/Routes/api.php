@@ -14,48 +14,65 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     | Lead Pipeline Routes
     |--------------------------------------------------------------------------
     |
-    | view_leads   — read-only access (list, show)
-    | manage_leads — write access (create, stage updates, conversion, delete)
+    | Granular action permissions are accepted alongside the manage_* umbrellas.
     |
     | The {lead} segment uses Laravel's implicit route model binding.
     |
     */
 
-    // ── Read-only — requires view_leads ──────────────────────────────────────
-    Route::middleware('permission:view_leads')->group(function () {
+    Route::middleware('permission:view_leads|manage_leads')->group(function () {
         Route::get('leads', [LeadController::class, 'index'])->name('leads.index');
         Route::get('leads/{lead}', [LeadController::class, 'show'])->name('leads.show');
 
-        // Sub-resource lists (read-only)
         Route::get('leads/{lead}/proposals', [LeadProposalController::class,  'index'])->name('leads.proposals.index');
-        Route::get('leads/{lead}/quotations', [LeadQuotationController::class, 'index'])->name('leads.quotations.index');
-        Route::get('leads/{lead}/contracts', [LeadContractController::class,  'index'])->name('leads.contracts.index');
     });
 
-    // ── Write — requires manage_leads ─────────────────────────────────────────
+    Route::get('leads/{lead}/quotations', [LeadQuotationController::class, 'index'])
+        ->middleware('permission:view_quotations|manage_leads')
+        ->name('leads.quotations.index');
+    Route::get('leads/{lead}/contracts', [LeadContractController::class, 'index'])
+        ->middleware('permission:view_contracts|manage_contracts')
+        ->name('leads.contracts.index');
+
+    Route::post('leads', [LeadController::class, 'store'])
+        ->middleware('permission:create_leads|manage_leads')
+        ->name('leads.store');
+    Route::delete('leads/{lead}', [LeadController::class, 'destroy'])
+        ->middleware('permission:delete_leads|manage_leads')
+        ->name('leads.destroy');
+
+    Route::post('leads/{lead}/stage', [LeadPipelineController::class, 'updateStage'])
+        ->middleware('permission:edit_leads|manage_leads')
+        ->name('leads.stage.update');
+    Route::post('leads/{lead}/convert', [LeadConversionController::class, 'convert'])
+        ->middleware('permission:convert_leads|manage_leads')
+        ->name('leads.convert');
+
     Route::middleware('permission:manage_leads')->group(function () {
-        // Create a new lead (drops into the "new" column)
-        Route::post('leads', [LeadController::class, 'store'])
-            ->name('leads.store');
-
-        // Advance a lead to a new pipeline stage (drag-and-drop commit)
-        Route::post('leads/{lead}/stage', [LeadPipelineController::class, 'updateStage'])
-            ->name('leads.stage.update');
-
-        // Convert a won lead into a Client + Project
-        Route::post('leads/{lead}/convert', [LeadConversionController::class, 'convert'])
-            ->name('leads.convert');
-
-        // ── Direct creation from the Lead Details Page ────────────────────────
-        // These endpoints accept the EXACT same payload shape as the pipeline's
-        // stage_results[*] entries, so the frontend reuses the same form tabs
-        // and payload mapper without any changes.
         Route::post('leads/{lead}/proposals', [LeadProposalController::class,  'store'])->name('leads.proposals.store');
-        Route::post('leads/{lead}/quotations', [LeadQuotationController::class, 'store'])->name('leads.quotations.store');
-        Route::post('leads/{lead}/contracts', [LeadContractController::class,  'store'])->name('leads.contracts.store');
-
         Route::patch('leads/{lead}/proposals/{proposal}', [LeadProposalController::class, 'update'])->name('leads.proposals.patch');
-        Route::patch('leads/{lead}/quotations/{quotation}', [LeadQuotationController::class, 'update'])->name('leads.quotations.patch');
-        Route::patch('leads/{lead}/contracts/{contract}', [LeadContractController::class, 'update'])->name('leads.contracts.patch');
     });
+
+    Route::post('leads/{lead}/quotations', [LeadQuotationController::class, 'store'])
+        ->middleware('permission:create_quotations|manage_leads')
+        ->name('leads.quotations.store');
+    Route::patch('leads/{lead}/quotations/{quotation}', [LeadQuotationController::class, 'update'])
+        ->middleware('permission:edit_quotations|manage_leads')
+        ->name('leads.quotations.patch');
+    Route::delete('leads/{lead}/quotations/{quotation}', [LeadQuotationController::class, 'destroy'])
+        ->middleware('permission:delete_quotations|manage_leads')
+        ->name('leads.quotations.destroy');
+
+    Route::post('leads/{lead}/contracts', [LeadContractController::class, 'store'])
+        ->middleware('permission:create_contracts|manage_contracts')
+        ->name('leads.contracts.store');
+    Route::patch('leads/{lead}/contracts/{contract}', [LeadContractController::class, 'update'])
+        ->middleware('permission:edit_contracts|manage_contracts')
+        ->name('leads.contracts.patch');
+    Route::post('leads/{lead}/contracts/{contract}/sign', [LeadContractController::class, 'sign'])
+        ->middleware('permission:sign_contracts|manage_contracts')
+        ->name('leads.contracts.sign');
+    Route::delete('leads/{lead}/contracts/{contract}', [LeadContractController::class, 'destroy'])
+        ->middleware('permission:delete_contracts|manage_contracts')
+        ->name('leads.contracts.destroy');
 });

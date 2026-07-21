@@ -9,7 +9,16 @@ class UpdateEmployeeProfileRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $actor = $this->user();
+
+        if (! $actor?->hasAnyPermission(['edit_employees', 'manage_employees'])) {
+            return false;
+        }
+
+        $salaryFields = array_intersect(array_keys($this->all()), ['base_salary', 'hourly_rate']);
+
+        return $salaryFields === []
+            || $actor->hasAnyPermission(['view_employee_salary', 'manage_employees']);
     }
 
     public function rules(): array

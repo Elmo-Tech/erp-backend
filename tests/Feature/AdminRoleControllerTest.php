@@ -75,6 +75,24 @@ class AdminRoleControllerTest extends TestCase
             ]);
     }
 
+    public function test_view_roles_can_open_the_role_and_permission_matrix(): void
+    {
+        $this->regularUser->givePermissionTo(Permission::findOrCreate('view_roles', 'web'));
+        $role = Role::where('name', 'test-role')->firstOrFail();
+
+        $this->actingAs($this->regularUser, 'sanctum')
+            ->getJson('/api/v1/admin/roles')
+            ->assertOk();
+
+        $this->actingAs($this->regularUser, 'sanctum')
+            ->getJson("/api/v1/admin/roles/{$role->id}")
+            ->assertOk();
+
+        $this->actingAs($this->regularUser, 'sanctum')
+            ->getJson('/api/v1/admin/permissions')
+            ->assertOk();
+    }
+
     public function test_show_returns_single_role_for_authorized_user(): void
     {
         $role = Role::where('name', 'test-role')->first();
@@ -126,6 +144,23 @@ class AdminRoleControllerTest extends TestCase
             ]);
 
         $this->assertDatabaseHas('roles', ['name' => 'new-test-role']);
+    }
+
+    public function test_create_roles_can_create_a_role_within_the_permission_ceiling(): void
+    {
+        $this->regularUser->givePermissionTo([
+            Permission::findOrCreate('create_roles', 'web'),
+            Permission::findOrCreate('test_permission', 'web'),
+        ]);
+
+        $this->actingAs($this->regularUser, 'sanctum')
+            ->postJson('/api/v1/admin/roles', [
+                'name' => 'granular-create-role',
+                'permissions' => ['test_permission'],
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('roles', ['name' => 'granular-create-role']);
     }
 
     public function test_store_validates_role_name_uniqueness(): void
@@ -190,7 +225,46 @@ class AdminRoleControllerTest extends TestCase
         $this->assertDatabaseHas('roles', ['id' => $role->id, 'name' => 'updated-test-role']);
     }
 
-    public function test_update_prevents_modifying_system_roles(): void
+    public function test_edit_roles_can_update_a_role_within_the_permission_ceiling(): void
+    {
+        $this->regularUser->givePermissionTo([
+            Permission::findOrCreate('edit_roles', 'web'),
+            Permission::findOrCreate('test_permission', 'web'),
+        ]);
+        $role = Role::create(['name' => 'granular-edit-role']);
+
+        $this->actingAs($this->regularUser, 'sanctum')
+            ->putJson("/api/v1/admin/roles/{$role->id}", [
+                'name' => 'granular-edited-role',
+                'permissions' => ['test_permission'],
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('roles', [
+            'id' => $role->id,
+            'name' => 'granular-edited-role',
+        ]);
+    }
+
+    public function test_create_roles_does_not_allow_role_updates(): void
+    {
+        $this->regularUser->givePermissionTo(Permission::findOrCreate('create_roles', 'web'));
+        $role = Role::create(['name' => 'update-boundary-role']);
+
+        $this->actingAs($this->regularUser, 'sanctum')
+            ->putJson("/api/v1/admin/roles/{$role->id}", [
+                'name' => 'unauthorized-update',
+                'permissions' => [],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('roles', [
+            'id' => $role->id,
+            'name' => 'update-boundary-role',
+        ]);
+    }
+
+    public function test_update_requires_protected_role_capability_for_system_roles(): void
     {
         $adminRole = Role::where('name', 'admin')->first();
 
@@ -203,8 +277,7 @@ class AdminRoleControllerTest extends TestCase
             ->withHeaders(['Accept-Language' => 'en'])
             ->putJson("/api/v1/admin/roles/{$adminRole->id}", $updateData);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['role']);
+        $response->assertForbidden();
 
         $this->assertDatabaseHas('roles', [
             'id' => $adminRole->id,
@@ -228,6 +301,31 @@ class AdminRoleControllerTest extends TestCase
             ]);
 
         $this->assertDatabaseMissing('roles', ['id' => $role->id]);
+    }
+
+    public function test_delete_roles_can_delete_a_subordinate_role(): void
+    {
+        $this->regularUser->givePermissionTo(Permission::findOrCreate('delete_roles', 'web'));
+        $role = Role::create(['name' => 'granular-delete-role']);
+
+        $this->actingAs($this->regularUser, 'sanctum')
+            ->deleteJson("/api/v1/admin/roles/{$role->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('roles', ['id' => $role->id]);
+    }
+
+    public function test_delete_roles_cannot_delete_a_peer_administrative_role(): void
+    {
+        $this->regularUser->givePermissionTo(Permission::findOrCreate('delete_roles', 'web'));
+        $role = Role::create(['name' => 'peer-administrative-role']);
+        $role->givePermissionTo(Permission::findOrCreate('manage_roles', 'web'));
+
+        $this->actingAs($this->regularUser, 'sanctum')
+            ->deleteJson("/api/v1/admin/roles/{$role->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('roles', ['id' => $role->id]);
     }
 
     public function test_destroy_prevents_deleting_protected_roles(): void

@@ -11,7 +11,7 @@ class StoreUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage_users') ?? false;
+        return $this->user()?->hasAnyPermission(['create_users', 'manage_users']) ?? false;
     }
 
     public function rules(): array

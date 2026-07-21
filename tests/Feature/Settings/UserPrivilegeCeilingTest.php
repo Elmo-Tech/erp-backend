@@ -143,9 +143,57 @@ class UserPrivilegeCeilingTest extends TestCase
         $this->assertSame(0, $ordinaryUser->permissions()->count());
     }
 
-    public function test_protected_role_cannot_be_renamed_or_permission_mutated(): void
+    public function test_manage_roles_alone_cannot_mutate_a_protected_role(): void
     {
         $actor = $this->userWithPermissions(['manage_roles']);
+        $protectedRole = Role::findOrCreate('dev', 'web');
+        $protectedRole->givePermissionTo(Permission::findOrCreate('view_tasks', 'web'));
+        Permission::findOrCreate('create_tasks', 'web');
+
+        Sanctum::actingAs($actor);
+
+        $this->putJson("/api/v1/admin/roles/{$protectedRole->id}", [
+            'name' => 'dev',
+            'permissions' => ['view_tasks', 'create_tasks'],
+        ])->assertForbidden();
+
+        $protectedRole->refresh();
+        $this->assertSame('dev', $protectedRole->name);
+        $this->assertTrue($protectedRole->hasPermissionTo('view_tasks'));
+        $this->assertFalse($protectedRole->hasPermissionTo('create_tasks'));
+    }
+
+    public function test_founder_capabilities_can_sync_permissions_for_a_protected_dev_role(): void
+    {
+        $actor = $this->userWithPermissions([
+            'edit_roles',
+            'manage_protected_users',
+            'view_tasks',
+            'create_tasks',
+        ]);
+        $devRole = Role::findOrCreate('dev', 'web');
+        $devRole->givePermissionTo(Permission::findOrCreate('view_tasks', 'web'));
+
+        Sanctum::actingAs($actor);
+
+        $this->putJson("/api/v1/admin/roles/{$devRole->id}", [
+            'name' => 'dev',
+            'permissions' => ['view_tasks', 'create_tasks'],
+        ])->assertOk();
+
+        $devRole->refresh();
+        $this->assertSame('dev', $devRole->name);
+        $this->assertTrue($devRole->hasPermissionTo('view_tasks'));
+        $this->assertTrue($devRole->hasPermissionTo('create_tasks'));
+    }
+
+    public function test_protected_role_name_cannot_be_changed_by_founder_capabilities(): void
+    {
+        $actor = $this->userWithPermissions([
+            'manage_roles',
+            'manage_protected_users',
+            'view_tasks',
+        ]);
         $protectedRole = Role::findOrCreate('admin', 'web');
         $protectedRole->givePermissionTo(Permission::findOrCreate('view_tasks', 'web'));
 
@@ -153,12 +201,81 @@ class UserPrivilegeCeilingTest extends TestCase
 
         $this->putJson("/api/v1/admin/roles/{$protectedRole->id}", [
             'name' => 'renamed-admin',
-            'permissions' => [],
-        ])->assertUnprocessable();
+            'permissions' => ['view_tasks'],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['name']);
 
         $protectedRole->refresh();
         $this->assertSame('admin', $protectedRole->name);
         $this->assertTrue($protectedRole->hasPermissionTo('view_tasks'));
+    }
+
+    public function test_protected_role_sync_preserves_the_privilege_ceiling(): void
+    {
+        $actor = $this->userWithPermissions(['manage_roles', 'manage_protected_users']);
+        $devRole = Role::findOrCreate('dev', 'web');
+
+        Sanctum::actingAs($actor);
+
+        $this->putJson("/api/v1/admin/roles/{$devRole->id}", [
+            'permissions' => ['manage_protected_users'],
+        ])->assertForbidden();
+
+        $this->assertFalse($devRole->fresh()->hasPermissionTo('manage_protected_users'));
+    }
+
+    public function test_founder_role_cannot_lose_critical_administration_permissions(): void
+    {
+        $founderRole = Role::findOrCreate('founder', 'web');
+        $founderRole->givePermissionTo([
+            Permission::findOrCreate('manage_roles', 'web'),
+            Permission::findOrCreate('manage_protected_users', 'web'),
+        ]);
+        $founder = User::factory()->create();
+        $founder->assignRole($founderRole);
+
+        Sanctum::actingAs($founder);
+
+        $this->putJson("/api/v1/admin/roles/{$founderRole->id}", [
+            'permissions' => ['manage_roles'],
+        ])->assertForbidden();
+
+        $founderRole->refresh();
+        $this->assertTrue($founderRole->hasPermissionTo('manage_roles'));
+        $this->assertTrue($founderRole->hasPermissionTo('manage_protected_users'));
+    }
+
+    public function test_existing_session_profile_reflects_protected_role_permission_sync(): void
+    {
+        $founder = $this->userWithPermissions([
+            'manage_roles',
+            'manage_protected_users',
+            'view_tasks',
+            'create_tasks',
+        ]);
+        $developer = User::factory()->create();
+        $devRole = Role::findOrCreate('dev', 'web');
+        $devRole->givePermissionTo(Permission::findOrCreate('view_tasks', 'web'));
+        $developer->assignRole($devRole);
+
+        $founderToken = $founder->createToken('founder-session')->plainTextToken;
+        $developerToken = $developer->createToken('developer-session')->plainTextToken;
+
+        $this->withToken($founderToken)
+            ->putJson("/api/v1/admin/roles/{$devRole->id}", [
+                'permissions' => ['view_tasks', 'create_tasks'],
+            ])->assertOk();
+
+        auth()->forgetGuards();
+
+        $this->withToken($developerToken)
+            ->getJson('/api/v1/auth/profile')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonFragment([
+                'permissionName' => 'create_tasks',
+                'access' => true,
+            ]);
     }
 
     public function test_role_manager_cannot_create_a_role_above_their_permission_ceiling(): void

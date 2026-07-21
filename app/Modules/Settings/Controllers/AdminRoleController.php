@@ -18,6 +18,14 @@ class AdminRoleController extends Controller
 {
     private const PROTECTED_ROLE_NAMES = ['founder', 'admin', 'pmo', 'techdev', 'dev', 'client'];
 
+    private const ROLE_VIEW_PERMISSIONS = [
+        'view_roles',
+        'create_roles',
+        'edit_roles',
+        'delete_roles',
+        'manage_roles',
+    ];
+
     public function __construct(
         private LogClientAuditAction $auditLogService,
         private UserAdministrationPolicy $administrationPolicy,
@@ -32,7 +40,7 @@ class AdminRoleController extends Controller
      *     operationId="getAdminRoles",
      *     tags={"Admin Roles"},
      *     summary="List all roles with permissions",
-     *     description="Retrieve all roles with their assigned permissions. Requires manage_roles permission.",
+     *     description="Retrieve all roles with their assigned permissions. Requires a role-management permission.",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -102,7 +110,7 @@ class AdminRoleController extends Controller
     public function index(): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(self::ROLE_VIEW_PERMISSIONS)) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -132,7 +140,7 @@ class AdminRoleController extends Controller
      *     operationId="getAdminRole",
      *     tags={"Admin Roles"},
      *     summary="Get single role with permissions",
-     *     description="Retrieve a specific role with its assigned permissions. Requires manage_roles permission.",
+     *     description="Retrieve a specific role with its assigned permissions. Requires a role-management permission.",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -218,7 +226,7 @@ class AdminRoleController extends Controller
     public function show(int $role): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(self::ROLE_VIEW_PERMISSIONS)) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -250,7 +258,7 @@ class AdminRoleController extends Controller
      *     operationId="createAdminRole",
      *     tags={"Admin Roles"},
      *     summary="Create new role",
-     *     description="Create a new role with specified permissions. Requires manage_roles permission.",
+     *     description="Create a new role with specified permissions. Requires create_roles or manage_roles.",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -360,7 +368,7 @@ class AdminRoleController extends Controller
     public function store(StoreRoleRequest $request): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(['create_roles', 'manage_roles'])) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -414,7 +422,7 @@ class AdminRoleController extends Controller
      *     operationId="updateAdminRole",
      *     tags={"Admin Roles"},
      *     summary="Update role permissions",
-     *     description="Update role name and permissions. Cannot update protected roles (founder, admin, pmo, techdev, dev, client). Requires manage_roles permission.",
+     *     description="Update a custom role with edit_roles or manage_roles. Protected role names are immutable and their permissions additionally require manage_protected_users.",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -481,20 +489,20 @@ class AdminRoleController extends Controller
      *
      *     @OA\Response(
      *         response=422,
-     *         description="Validation error or protected role",
+     *         description="Validation error or protected role rename",
      *
      *         @OA\JsonContent(
      *
      *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Cannot update protected role"),
+     *             @OA\Property(property="message", type="string", example="Cannot rename protected role"),
      *             @OA\Property(
      *                 property="errors",
      *                 type="object",
      *                 @OA\Property(
-     *                     property="role",
+     *                     property="name",
      *                     type="array",
      *
-     *                     @OA\Items(type="string", example="This role is protected and cannot be modified")
+     *                     @OA\Items(type="string", example="Protected role names cannot be changed")
      *                 )
      *             )
      *         )
@@ -537,51 +545,55 @@ class AdminRoleController extends Controller
     public function update(UpdateRoleRequest $request, int $role): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(['edit_roles', 'manage_roles'])) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
         try {
             $roleModel = Role::findOrFail($role);
+            $validatedData = $request->validated();
 
             if ($this->isProtectedRole($roleModel)) {
-                return ApiResponse::validationError(
-                    ['role' => ['This role is protected and cannot be modified']],
-                    'Cannot modify protected role'
+                $requestedPermissions = $validatedData['permissions']
+                    ?? $roleModel->permissions()->pluck('name')->all();
+
+                $this->administrationPolicy->authorizeProtectedRolePermissionMutation(
+                    $request->user(),
+                    $roleModel,
+                    $requestedPermissions
+                );
+
+                if (isset($validatedData['name']) && $validatedData['name'] !== $roleModel->name) {
+                    return ApiResponse::validationError(
+                        ['name' => ['Protected role names cannot be changed']],
+                        'Cannot rename protected role'
+                    );
+                }
+            } else {
+                $this->administrationPolicy->authorizeRoleMutation(
+                    $request->user(),
+                    $roleModel,
+                    $validatedData['permissions'] ?? []
                 );
             }
 
-            // Protected roles can only be modified by users with manage_roles permission.
-            // The manage_roles check above already gates this endpoint, so any user
-            // who reaches here is authorised to edit ALL roles — including system ones.
-            // (The old hard-block has been removed so the Founder can manage every role.)
-
-            $validatedData = $request->validated();
-            $this->administrationPolicy->authorizeRoleMutation(
-                $request->user(),
-                $roleModel,
-                $validatedData['permissions'] ?? []
-            );
-
-            // Store old data for audit log
             $oldData = [
                 'name' => $roleModel->name,
                 'permissions' => $roleModel->permissions->pluck('name')->toArray(),
             ];
 
-            // Update the role
             if (isset($validatedData['name'])) {
                 $roleModel->update([
                     'name' => $validatedData['name'],
                 ]);
             }
 
-            // Update permissions
             if (isset($validatedData['permissions'])) {
                 $roleModel->syncPermissions($validatedData['permissions']);
             }
 
-            // Log the action
+            $roleModel->load('permissions');
+
             $this->auditLogService->log(
                 'update_role_permissions',
                 $roleModel,
@@ -589,13 +601,10 @@ class AdminRoleController extends Controller
                     'old_data' => $oldData,
                     'new_data' => [
                         'name' => $roleModel->name,
-                        'permissions' => $validatedData['permissions'] ?? [],
+                        'permissions' => $roleModel->permissions->pluck('name')->toArray(),
                     ],
                 ]
             );
-
-            // Load permissions for response
-            $roleModel->load('permissions');
 
             $roleData = [
                 'id' => $roleModel->id,
@@ -622,7 +631,7 @@ class AdminRoleController extends Controller
      *     operationId="deleteAdminRole",
      *     tags={"Admin Roles"},
      *     summary="Delete role",
-     *     description="Delete a role. Cannot delete protected roles (founder, admin, pmo, techdev, dev, client). Requires manage_roles permission.",
+     *     description="Delete a role with delete_roles or manage_roles. Protected roles (founder, admin, pmo, techdev, dev, client) cannot be deleted.",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -712,7 +721,7 @@ class AdminRoleController extends Controller
     public function destroy(int $role): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(['delete_roles', 'manage_roles'])) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -726,6 +735,8 @@ class AdminRoleController extends Controller
                     'Cannot delete protected role'
                 );
             }
+
+            $this->administrationPolicy->authorizeRoleDeletion(auth()->user(), $roleModel);
 
             // Store role data for audit log
             $roleData = [
@@ -763,7 +774,7 @@ class AdminRoleController extends Controller
      *     operationId="getAdminPermissions",
      *     tags={"Admin Roles"},
      *     summary="List all permissions",
-     *     description="Retrieve all available permissions in the system. Requires manage_roles permission.",
+     *     description="Retrieve all available permissions in the system. Requires a role-management permission.",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -827,7 +838,7 @@ class AdminRoleController extends Controller
     public function permissions(): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(self::ROLE_VIEW_PERMISSIONS)) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -881,6 +892,7 @@ class AdminRoleController extends Controller
             'create_users' => 'User Management',
             'edit_users' => 'User Management',
             'delete_users' => 'User Management',
+            'toggle_user_status' => 'User Management',
             'assign_user_roles' => 'User Management',
             'reset_user_credentials' => 'User Management',
             'manage_protected_users' => 'User Management',
@@ -934,6 +946,9 @@ class AdminRoleController extends Controller
             'edit_tasks' => 'Task Management',
             'delete_tasks' => 'Task Management',
             'assign_tasks' => 'Task Management',
+            'change_task_status' => 'Task Management',
+            'complete_tasks' => 'Task Management',
+            'reopen_tasks' => 'Task Management',
             'view_internal_notes' => 'Task Management',
             'create_internal_notes' => 'Task Management',
             'work_on_tasks' => 'Task Management',
@@ -941,6 +956,7 @@ class AdminRoleController extends Controller
             'create_project_task_deliverables' => 'Task Deliverables',
             'edit_project_task_deliverables' => 'Task Deliverables',
             'delete_project_task_deliverables' => 'Task Deliverables',
+            'toggle_project_task_deliverables' => 'Task Deliverables',
 
             // ── Sales — Leads ────────────────────────────────────────────────
             'manage_leads' => 'Sales — Leads',
@@ -1003,6 +1019,7 @@ class AdminRoleController extends Controller
             'view_employees' => 'Employee Management',
             'create_employees' => 'Employee Management',
             'edit_employees' => 'Employee Management',
+            'delete_employees' => 'Employee Management',
             'view_employee_salary' => 'Employee Management',
             'view_employee_performance' => 'Employee Management',
 
@@ -1066,11 +1083,12 @@ class AdminRoleController extends Controller
             'resolve_blockers' => 'Resolve escalated blockers in visible projects',
 
             // ── User Management ──────────────────────────────────────────────
-            'manage_users' => 'Full user management (create, edit, delete, toggle status)',
+            'manage_users' => 'User directory, creation, and profile editing',
             'view_users' => 'View user list and profiles',
             'create_users' => 'Create new user accounts',
             'edit_users' => 'Edit existing user accounts',
             'delete_users' => 'Delete user accounts',
+            'toggle_user_status' => 'Activate or deactivate user accounts',
             'assign_user_roles' => 'Assign roles within the actor privilege ceiling',
             'reset_user_credentials' => 'Reset credentials for lower-privilege users',
             'manage_protected_users' => 'Manage protected lower-tier administrative accounts',
@@ -1118,12 +1136,15 @@ class AdminRoleController extends Controller
             'view_project_history' => 'View project change history and audit trail',
 
             // ── Task Management ──────────────────────────────────────────────
-            'manage_tasks' => 'Full task management capabilities',
+            'manage_tasks' => 'Full task management inside assigned projects',
             'view_tasks' => 'View task list and details',
             'create_tasks' => 'Create new tasks',
-            'edit_tasks' => 'Edit existing tasks',
+            'edit_tasks' => 'Edit task metadata',
             'delete_tasks' => 'Delete tasks',
             'assign_tasks' => 'Assign tasks to team members',
+            'change_task_status' => 'Move tasks between non-terminal workflow statuses',
+            'complete_tasks' => 'Mark tasks as done',
+            'reopen_tasks' => 'Reopen completed tasks',
             'view_internal_notes' => 'View internal (private) task notes',
             'create_internal_notes' => 'Create internal (private) notes',
             'work_on_tasks' => 'Work on and update assigned tasks',
@@ -1131,6 +1152,7 @@ class AdminRoleController extends Controller
             'create_project_task_deliverables' => 'Create task deliverables',
             'edit_project_task_deliverables' => 'Edit task deliverables',
             'delete_project_task_deliverables' => 'Delete task deliverables',
+            'toggle_project_task_deliverables' => 'Mark task deliverables complete or incomplete',
 
             // ── Sales — Leads ────────────────────────────────────────────────
             'manage_leads' => 'Full lead management capabilities',
@@ -1193,6 +1215,7 @@ class AdminRoleController extends Controller
             'view_employees' => 'View employee list and profiles',
             'create_employees' => 'Create new employee records',
             'edit_employees' => 'Edit employee records',
+            'delete_employees' => 'Delete employee records',
             'view_employee_salary' => 'View employee salary information',
             'view_employee_performance' => 'View employee performance evaluations',
 

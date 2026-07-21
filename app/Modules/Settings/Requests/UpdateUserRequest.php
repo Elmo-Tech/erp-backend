@@ -12,7 +12,26 @@ class UpdateUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage_users') ?? false;
+        $actor = $this->user();
+
+        if ($actor === null) {
+            return false;
+        }
+
+        $fields = array_keys($this->all());
+        $hasOrdinaryFields = array_intersect($fields, ['name', 'email', 'skills']) !== [];
+        $hasPassword = in_array('password', $fields, true);
+        $hasRoles = in_array('roles', $fields, true);
+        $hasStatus = in_array('isActive', $fields, true);
+
+        if (! $hasOrdinaryFields && ! $hasPassword && ! $hasRoles && ! $hasStatus) {
+            return false;
+        }
+
+        return (! $hasOrdinaryFields || $actor->hasAnyPermission(['edit_users', 'manage_users']))
+            && (! $hasPassword || $actor->can('reset_user_credentials'))
+            && (! $hasRoles || $actor->can('assign_user_roles'))
+            && (! $hasStatus || $actor->can('toggle_user_status'));
     }
 
     public function rules(): array

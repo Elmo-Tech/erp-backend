@@ -30,9 +30,12 @@ class LeadPipelineController extends Controller
         ProcessLeadStageUpdateAction $action,
         MeetingService $meetingService
     ): JsonResponse {
+        abort_unless($request->user()?->canAny(['edit_leads', 'manage_leads']), 403, 'Unauthorized');
+
         $newStage = LeadStage::from($request->validated('new_stage'));
         $stageResults = $request->validated('stage_results');
         $scheduledMeeting = $request->validated('scheduled_meeting');
+        $this->authorizeStageResults($request, $stageResults);
 
         if ($response = $this->validateStageGate($lead, $newStage)) {
             return $response;
@@ -70,6 +73,26 @@ class LeadPipelineController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $stageResults
+     */
+    private function authorizeStageResults(UpdateLeadStageRequest $request, array $stageResults): void
+    {
+        foreach ($stageResults as $stageResult) {
+            $permissions = match ($stageResult['type']) {
+                'quotation' => ['create_quotations', 'manage_leads'],
+                'contract' => ['create_contracts', 'manage_contracts'],
+                default => ['manage_leads'],
+            };
+
+            abort_unless($request->user()?->canAny($permissions), 403, 'Unauthorized');
+
+            if ($stageResult['type'] === 'contract' && ($stageResult['status'] ?? null) === 'signed') {
+                abort_unless($request->user()->canAny(['sign_contracts', 'manage_contracts']), 403, 'Unauthorized');
+            }
+        }
     }
 
     private function hasCompletedMeeting(Lead $lead): bool

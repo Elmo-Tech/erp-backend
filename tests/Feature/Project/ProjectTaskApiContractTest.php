@@ -70,6 +70,7 @@ class ProjectTaskApiContractTest extends TestCase
             'assigneeId',
             'isInBacklog',
             'totalLoggedMinutes',
+            'allowedActions',
             'assignee',
             'milestone',
             'deliverables',

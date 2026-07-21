@@ -4,12 +4,15 @@ namespace App\Modules\Finance\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Modules\Client\Models\Client;
 use App\Modules\Finance\Actions\CalculateInvoiceTotalsAction;
 use App\Modules\Finance\Models\FinanceInvoice;
 use App\Modules\Finance\Models\Subscription;
 use App\Modules\Finance\Requests\StoreFinanceInvoiceRequest;
 use App\Modules\Finance\Requests\UpdateFinanceInvoiceRequest;
 use App\Modules\Finance\Resources\FinanceInvoiceResource;
+use App\Modules\Project\Models\Project;
+use App\Policies\FinanceInvoicePolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +21,7 @@ class FinanceInvoiceController extends Controller
 {
     public function __construct(
         private readonly CalculateInvoiceTotalsAction $calculateTotals,
+        private readonly FinanceInvoicePolicy $invoicePolicy,
     ) {}
 
     /**
@@ -25,9 +29,12 @@ class FinanceInvoiceController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
+        $this->authorize('viewAny', FinanceInvoice::class);
 
-        $query = FinanceInvoice::with(['client', 'project'])->latest();
+        $query = FinanceInvoice::query()
+            ->visibleTo($request->user())
+            ->with(['client', 'project'])
+            ->latest();
 
         // Filter by client when the caller passes ?client_id=X (e.g. Client Ledger tab)
         $clientId = $request->input('client_id', $request->input('clientId'));
@@ -64,9 +71,15 @@ class FinanceInvoiceController extends Controller
      */
     public function store(StoreFinanceInvoiceRequest $request): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
+        $this->authorize('create', FinanceInvoice::class);
 
         $data = $request->validated();
+        $this->authorizeTarget($request, $data);
+
+        if (($data['status'] ?? null) === 'sent') {
+            abort_unless($request->user()->canAny(['send_invoices', 'manage_invoices']), 403, 'Unauthorized');
+        }
+
         $items = $data['items'];
 
         $totals = $this->calculateTotals->execute(
@@ -120,9 +133,9 @@ class FinanceInvoiceController extends Controller
     /**
      * GET /finance/invoices/{invoice}
      */
-    public function show(Request $request, FinanceInvoice $invoice): JsonResponse
+    public function show(FinanceInvoice $invoice): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
+        $this->authorize('view', $invoice);
 
         $invoice->load(['client', 'project', 'items']);
 
@@ -137,9 +150,14 @@ class FinanceInvoiceController extends Controller
      */
     public function update(UpdateFinanceInvoiceRequest $request, FinanceInvoice $invoice): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
+        $this->authorize('update', $invoice);
 
         $data = $request->validated();
+        $this->authorizeTarget($request, $data, $invoice);
+
+        if (($data['status'] ?? null) === 'sent' && $invoice->status !== 'sent') {
+            $this->authorize('send', $invoice);
+        }
 
         // Re-calculate totals if items or financial fields are being updated
         $items = $data['items'] ?? null;
@@ -213,13 +231,50 @@ class FinanceInvoiceController extends Controller
     /**
      * DELETE /finance/invoices/{invoice}
      */
-    public function destroy(Request $request, FinanceInvoice $invoice): JsonResponse
+    public function destroy(FinanceInvoice $invoice): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_invoices'), 403, 'Unauthorized');
+        $this->authorize('delete', $invoice);
 
         $invoice->delete();
 
         return ApiResponse::success(null, 'Invoice deleted successfully');
+    }
+
+    public function send(FinanceInvoice $invoice): JsonResponse
+    {
+        $this->authorize('send', $invoice);
+
+        if ($invoice->status !== 'sent') {
+            abort_unless($invoice->status === 'draft', 422, 'Only draft invoices can be sent.');
+            $invoice->update(['status' => 'sent']);
+        }
+
+        return ApiResponse::success(
+            new FinanceInvoiceResource($invoice->fresh(['client', 'project', 'items'])),
+            'Invoice sent successfully'
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function authorizeTarget(
+        Request $request,
+        array $data,
+        ?FinanceInvoice $invoice = null
+    ): void {
+        $clientId = (int) ($data['clientId'] ?? $invoice?->client_id);
+        $projectId = array_key_exists('projectId', $data)
+            ? $data['projectId']
+            : $invoice?->project_id;
+        $client = Client::query()->findOrFail($clientId);
+        $project = $projectId === null ? null : Project::query()->findOrFail((int) $projectId);
+
+        abort_unless(
+            $this->invoicePolicy->canAccessTarget($request->user(), $client, $project),
+            403,
+            'Unauthorized'
+        );
     }
 
     private function syncSubscription(FinanceInvoice $invoice): void

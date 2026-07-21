@@ -53,6 +53,7 @@ class AuthRefreshControllerTest extends TestCase
             ->withHeader('Cookie', 'auth_token='.rawurlencode($newToken))
             ->getJson('/api/v1/auth/profile')
             ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
             ->assertJsonPath('data.profile.email', 'refresh@example.com');
     }
 

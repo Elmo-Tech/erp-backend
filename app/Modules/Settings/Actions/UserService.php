@@ -51,6 +51,8 @@ class UserService
      */
     public function createUser(User $actor, array $data): User
     {
+        $this->administrationPolicy->authorizeCreate($actor);
+
         if (! empty($data['roles'])) {
             $this->administrationPolicy->authorizeRoleAssignment($actor, null, $data['roles']);
         }
@@ -63,7 +65,11 @@ class UserService
      */
     public function updateUser(User $actor, User $user, array $data): User
     {
-        $this->administrationPolicy->authorizeManageTarget($actor, $user);
+        $ordinaryFields = array_intersect(array_keys($data), ['name', 'email', 'skills']);
+
+        if ($ordinaryFields !== [] || $data === []) {
+            $this->administrationPolicy->authorizeUpdate($actor, $user);
+        }
 
         if (isset($data['password'])) {
             $this->administrationPolicy->authorizePasswordReset($actor, $user);
@@ -71,6 +77,10 @@ class UserService
 
         if (isset($data['roles'])) {
             $this->administrationPolicy->authorizeRoleAssignment($actor, $user, $data['roles']);
+        }
+
+        if (array_key_exists('isActive', $data)) {
+            $this->administrationPolicy->authorizeStatusToggle($actor, $user);
         }
 
         $shouldRevokeTokens = isset($data['password'])
@@ -169,7 +179,7 @@ class UserService
      */
     public function toggleUserStatus(User $actor, User $user): User
     {
-        $this->administrationPolicy->authorizeManageTarget($actor, $user);
+        $this->administrationPolicy->authorizeStatusToggle($actor, $user);
         $oldStatus = $user->is_active;
         $user->is_active = ! $user->is_active;
         $user->save();

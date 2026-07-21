@@ -2,7 +2,6 @@
 
 namespace App\Modules\Project\Controllers;
 
-use App\Enums\ProjectRole;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\HR\Actions\EvaluateQABugPointsAction;
@@ -153,6 +152,11 @@ class ProjectTaskController extends Controller
         $this->authorize('view', $project);
         $this->authorize('create', [ProjectTask::class, $project]);
         $data = $request->validated();
+
+        if (($data['status'] ?? null) === ExecutionTaskStatus::DONE->value) {
+            $this->authorize('complete', [ProjectTask::class, $project]);
+        }
+
         $this->relationshipValidator->validate($request->user(), $project, $data);
 
         $task = $project->executionTasks()->create([
@@ -213,69 +217,36 @@ class ProjectTaskController extends Controller
     /**
      * PATCH /projects/{project}/tasks/{task}
      *
-     * SECURITY: Policy enforces that only the assignee (work_on_tasks) or a
-     * project manager/tech_lead (edit_tasks) or global admin may update a task.
-     *
-     * CRITICAL WORKFLOW ENFORCEMENT:
-     *   - ONLY users with manage_deliverables, manage_all_projects, OR project manager role
-     *     can mark a task as "done" (completed).
-     *   - Regular assignees CANNOT directly set status to "done". Their ceiling is "in_review".
-     *   - If an assignee tries to set status to "done", return 403 with clear message.
+     * SECURITY: Metadata and lifecycle transitions are authorized separately.
+     * edit_tasks cannot be used to bypass complete/reopen/status capabilities.
      */
     public function update(UpdateProjectTaskRequest $request, Project $project, ProjectTask $task): JsonResponse
     {
         $this->authorize('view', $project);
         $this->assertBelongsToProject($task, $project);
-        $this->authorize('update', $task);
 
         $data = $request->validated();
         $user = $request->user();
 
-        if ($this->containsMetadataUpdate($data) && ! $this->canEditTaskMetadata($user)) {
-            return ApiResponse::error(
-                'You do not have permission to edit task details.',
-                403
-            );
+        if ($this->containsMetadataUpdate($data)) {
+            $this->authorize('update', $task);
+        }
+
+        $oldStatus = $task->status;
+        $targetStatus = $data['status'] ?? null;
+
+        if ($targetStatus !== null && $targetStatus !== $oldStatus->value) {
+            if ($targetStatus === ExecutionTaskStatus::DONE->value) {
+                $this->authorize('complete', $task);
+            } elseif ($oldStatus === ExecutionTaskStatus::DONE) {
+                $this->authorize('reopen', $task);
+            } else {
+                $this->authorize('changeStatus', [$task, $targetStatus]);
+            }
         }
 
         $this->relationshipValidator->validate($user, $project, $data);
 
-        // ── CRITICAL: "COMPLETED" STATUS GUARD ────────────────────────────────
-        // If the user is trying to set status to "done", verify they have the authority.
-        // ONLY these users can mark tasks as completed:
-        //   1. manage_all_projects (global admin bypass)
-        //   2. manage_deliverables (deliverable managers)
-        //   3. manage_tasks (task managers)
-        //   4. Project manager or tech_lead role
-        //
-        // Regular assignees (developers, QA without special permissions) CANNOT
-        // mark tasks as "done". They must use "in_review" instead.
-        if (isset($data['status']) && $data['status'] === ExecutionTaskStatus::DONE->value) {
-            // Global bypass permissions
-            if ($user->can('manage_all_projects') || $user->can('manage_deliverables') || $user->can('manage_tasks')) {
-                // Allowed — proceed
-            } else {
-                // Check if user is project manager or tech_lead
-                $member = $project->members()->where('user_id', $user->id)->first();
-                $projectRole = $member?->role instanceof ProjectRole
-                    ? $member->role->value
-                    : (string) ($member?->role ?? '');
-
-                $isManagerLevel = in_array($projectRole, [
-                    ProjectRole::MANAGER->value,
-                    ProjectRole::TECH_LEAD->value,
-                ], true);
-
-                if (! $isManagerLevel) {
-                    return ApiResponse::error(
-                        'You cannot mark tasks as completed directly. Please use "In Review" status instead.',
-                        403
-                    );
-                }
-            }
-        }
-
-        $oldStatus = $task->status;
         $oldAssignee = $task->assignee_id;
 
         $updateData = [];
@@ -430,12 +401,5 @@ class ProjectTaskController extends Controller
         ];
 
         return array_intersect_key($data, $metadataFields) !== [];
-    }
-
-    private function canEditTaskMetadata(User $user): bool
-    {
-        return $user->can('manage_all_projects')
-            || $user->can('manage_tasks')
-            || $user->can('edit_tasks');
     }
 }

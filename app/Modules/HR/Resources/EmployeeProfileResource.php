@@ -13,12 +13,17 @@ class EmployeeProfileResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $canViewSalary = $request->user()?->hasAnyPermission([
+            'view_employee_salary',
+            'manage_employees',
+        ]) ?? false;
+
         return [
             'id' => $this->id,
             'userId' => $this->user_id,
             'shiftId' => $this->shift_id,
-            'baseSalary' => $this->base_salary,
-            'hourlyRate' => $this->hourly_rate,
+            'baseSalary' => $this->when($canViewSalary, $this->base_salary),
+            'hourlyRate' => $this->when($canViewSalary, $this->hourly_rate),
             'joinDate' => $this->join_date?->toDateString(),
             'user' => $this->whenLoaded('user', fn () => [
                 'id' => $this->user->id,

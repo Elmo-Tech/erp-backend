@@ -10,7 +10,6 @@ use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTaskDeliverable;
 use App\Modules\Project\Requests\StoreTaskDeliverableRequest;
 use App\Modules\Project\Resources\ProjectTaskDeliverableResource;
-use App\Modules\Settings\Models\User;
 use Illuminate\Http\JsonResponse;
 
 class ProjectTaskDeliverableController extends Controller
@@ -64,12 +63,7 @@ class ProjectTaskDeliverableController extends Controller
         $this->assertTaskBelongsToProject($task, $project);
         $this->assertDeliverableBelongsToTask($deliverable, $task);
 
-        if (! $this->canEditDeliverables($request->user())) {
-            return ApiResponse::error(
-                'You do not have permission to edit deliverables.',
-                403
-            );
-        }
+        $this->authorize('editDeliverable', $task);
 
         $oldTitle = $deliverable->title;
         $deliverable->update(['title' => $request->validated()['title']]);
@@ -95,9 +89,10 @@ class ProjectTaskDeliverableController extends Controller
      */
     public function toggle(Project $project, ProjectTask $task, ProjectTaskDeliverable $deliverable): JsonResponse
     {
+        $this->authorize('view', $project);
         $this->assertTaskBelongsToProject($task, $project);
         $this->assertDeliverableBelongsToTask($deliverable, $task);
-        $this->authorize('execute', $task);
+        $this->authorize('toggleDeliverable', $task);
 
         $oldStatus = $deliverable->is_completed;
         $deliverable->update(['is_completed' => ! $deliverable->is_completed]);
@@ -126,17 +121,9 @@ class ProjectTaskDeliverableController extends Controller
     public function destroy(Project $project, ProjectTask $task, ProjectTaskDeliverable $deliverable): JsonResponse
     {
         $this->authorize('view', $project);
-        $user = request()->user();
-
-        if (! $this->canDeleteDeliverables($user)) {
-            return ApiResponse::error(
-                'You do not have permission to delete deliverables.',
-                403
-            );
-        }
-
         $this->assertTaskBelongsToProject($task, $project);
         $this->assertDeliverableBelongsToTask($deliverable, $task);
+        $this->authorize('deleteDeliverable', $task);
 
         $deliverable->delete();
 
@@ -157,26 +144,5 @@ class ProjectTaskDeliverableController extends Controller
         if ($deliverable->task_id !== $task->id) {
             abort(404, 'Deliverable not found for this task.');
         }
-    }
-
-    private function canEditDeliverables(?User $user): bool
-    {
-        return $this->hasDeliverablePermission($user, 'edit_project_task_deliverables');
-    }
-
-    private function canDeleteDeliverables(?User $user): bool
-    {
-        return $this->hasDeliverablePermission($user, 'delete_project_task_deliverables');
-    }
-
-    private function hasDeliverablePermission(?User $user, string $permission): bool
-    {
-        if ($user === null) {
-            return false;
-        }
-
-        return $user->can('manage_all_projects')
-            || $user->can('manage_deliverables')
-            || $user->can($permission);
     }
 }

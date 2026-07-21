@@ -86,6 +86,7 @@ class AuthSessionLifecycleTest extends TestCase
         $manager = User::factory()->create(['is_active' => true]);
         $permission = Permission::findOrCreate('manage_users', 'web');
         $manager->givePermissionTo($permission);
+        $manager->givePermissionTo(Permission::findOrCreate('toggle_user_status', 'web'));
 
         $target = User::factory()->create(['is_active' => true]);
         $target->createToken('browser');
@@ -106,6 +107,7 @@ class AuthSessionLifecycleTest extends TestCase
         $manager = User::factory()->create(['is_active' => true]);
         $permission = Permission::findOrCreate('manage_users', 'web');
         $manager->givePermissionTo($permission);
+        $manager->givePermissionTo(Permission::findOrCreate('toggle_user_status', 'web'));
 
         $target = User::factory()->create(['is_active' => true]);
         $target->createToken('browser');

@@ -342,7 +342,8 @@ class AuthController extends Controller
             'profile' => new LoginProfileResource($user),
             'role' => $user->roles->first()->name ?? 'guest',
             'permissions' => $this->userPermissionService->getUserPermissions($user) ?? [],
-        ], 'Profile retrieved successfully');
+        ], 'Profile retrieved successfully')
+            ->header('Cache-Control', 'no-store, private');
     }
 
     #[OA\Put(

@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  * All business logic (hashing, role sync, audit logging) lives in UserService.
  * This controller is the HTTP adapter only: authorize → delegate → respond.
  *
- * Permission guard: manage_users (PBAC — never role-based checks).
+ * Permission guards are action-specific, with manage_users as the CRUD umbrella.
  */
 class UserController extends Controller
 {
@@ -35,7 +35,7 @@ class UserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_users'), 403, 'Unauthorized');
+        abort_unless($request->user()->hasAnyPermission(['view_users', 'manage_users']), 403);
 
         $users = $this->userService->getUsers([
             'perPage' => $request->integer('perPage', 15),
@@ -56,8 +56,6 @@ class UserController extends Controller
      */
     public function store(StoreUserRequest $request): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_users'), 403, 'Unauthorized');
-
         return DB::transaction(function () use ($request): JsonResponse {
             $user = $this->userService->createUser($request->user(), $request->validated());
 
@@ -74,7 +72,7 @@ class UserController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_users'), 403, 'Unauthorized');
+        abort_unless($request->user()->hasAnyPermission(['view_users', 'manage_users']), 403);
 
         $user = $this->userService->getUserById($id);
 
@@ -97,8 +95,6 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, int $id): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_users'), 403, 'Unauthorized');
-
         $user = $this->userService->getUserById($id);
 
         if ($user === null) {

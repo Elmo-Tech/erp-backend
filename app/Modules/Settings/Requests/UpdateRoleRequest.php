@@ -100,20 +100,6 @@ class UpdateRoleRequest extends FormRequest
     }
 
     /**
-     * Prepare the data for validation.
-     */
-    protected function prepareForValidation(): void
-    {
-        // Convert camelCase to snake_case for database compatibility if needed
-        // In this case, we keep the role name as provided since it's a user-defined identifier
-
-        // Ensure permissions array is not null
-        if (! $this->has('permissions')) {
-            $this->merge(['permissions' => []]);
-        }
-    }
-
-    /**
      * Configure the validator instance.
      *
      * @param  \Illuminate\Validation\Validator  $validator

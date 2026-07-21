@@ -89,7 +89,7 @@ class PointTransactionController extends Controller
             abort(403, 'Compensation-bearing point awards require a different target user.');
         }
 
-        if ($user->can('manage_points') || $user->can('manage_user_points')) {
+        if ($user->can('manage_points')) {
             return;
         }
 

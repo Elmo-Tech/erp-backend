@@ -26,8 +26,10 @@ class LeadQuotationController extends Controller
      *
      * GET /api/v1/leads/{lead}/quotations
      */
-    public function index(Lead $lead): JsonResponse
+    public function index(Request $request, Lead $lead): JsonResponse
     {
+        abort_unless($request->user()?->canAny(['view_quotations', 'manage_leads']), 403, 'Unauthorized');
+
         $quotations = $lead->quotations()
             ->with('assignee:id,name,email,avatar')
             ->orderByDesc('created_at')
@@ -45,6 +47,8 @@ class LeadQuotationController extends Controller
      */
     public function store(StoreLeadQuotationRequest $request, Lead $lead): JsonResponse
     {
+        abort_unless($request->user()?->canAny(['create_quotations', 'manage_leads']), 403, 'Unauthorized');
+
         $data = $request->validated();
 
         $quotation = Quotation::create([
@@ -77,6 +81,7 @@ class LeadQuotationController extends Controller
      */
     public function update(Request $request, Lead $lead, Quotation $quotation): JsonResponse
     {
+        abort_unless($request->user()?->canAny(['edit_quotations', 'manage_leads']), 403, 'Unauthorized');
         $this->assertBelongsToLead($quotation, $lead);
 
         $data = $request->validate([
@@ -92,6 +97,16 @@ class LeadQuotationController extends Controller
             $this->formatQuotation($quotation),
             'Quotation updated successfully.'
         );
+    }
+
+    public function destroy(Request $request, Lead $lead, Quotation $quotation): JsonResponse
+    {
+        abort_unless($request->user()?->canAny(['delete_quotations', 'manage_leads']), 403, 'Unauthorized');
+        $this->assertBelongsToLead($quotation, $lead);
+
+        $quotation->delete();
+
+        return ApiResponse::success(null, 'Quotation deleted successfully.');
     }
 
     // ─── Private ─────────────────────────────────────────────────────────────

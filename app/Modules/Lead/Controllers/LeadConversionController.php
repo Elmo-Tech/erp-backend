@@ -9,6 +9,7 @@ use App\Modules\Lead\Actions\ConvertLeadToClientProjectAction;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Project\Models\Project;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class LeadConversionController extends Controller
 {
@@ -22,9 +23,12 @@ class LeadConversionController extends Controller
      * redirect to the project detail page immediately.
      */
     public function convert(
+        Request $request,
         Lead $lead,
         ConvertLeadToClientProjectAction $action
     ): JsonResponse {
+        abort_unless($request->user()?->canAny(['convert_leads', 'manage_leads']), 403, 'Unauthorized');
+
         $result = $action->execute($lead);
 
         /** @var Client $client */

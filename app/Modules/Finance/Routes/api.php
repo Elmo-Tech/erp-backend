@@ -7,25 +7,27 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
 
     // ── Finance Invoices ──────────────────────────────────────────────────────
-    Route::middleware('permission:manage_invoices')->group(function () {
-        Route::get('finance/invoices', [FinanceInvoiceController::class, 'index'])
-            ->name('finance.invoices.index');
-
-        Route::post('finance/invoices', [FinanceInvoiceController::class, 'store'])
-            ->name('finance.invoices.store');
-
-        Route::get('finance/invoices/{invoice}', [FinanceInvoiceController::class, 'show'])
-            ->name('finance.invoices.show');
-
-        Route::put('finance/invoices/{invoice}', [FinanceInvoiceController::class, 'update'])
-            ->name('finance.invoices.update');
-
-        Route::patch('finance/invoices/{invoice}', [FinanceInvoiceController::class, 'update'])
-            ->name('finance.invoices.patch');
-
-        Route::delete('finance/invoices/{invoice}', [FinanceInvoiceController::class, 'destroy'])
-            ->name('finance.invoices.destroy');
-    });
+    Route::get('finance/invoices', [FinanceInvoiceController::class, 'index'])
+        ->middleware('permission:view_invoices|manage_invoices')
+        ->name('finance.invoices.index');
+    Route::post('finance/invoices', [FinanceInvoiceController::class, 'store'])
+        ->middleware('permission:create_invoices|manage_invoices')
+        ->name('finance.invoices.store');
+    Route::get('finance/invoices/{invoice}', [FinanceInvoiceController::class, 'show'])
+        ->middleware('permission:view_invoices|manage_invoices')
+        ->name('finance.invoices.show');
+    Route::put('finance/invoices/{invoice}', [FinanceInvoiceController::class, 'update'])
+        ->middleware('permission:edit_invoices|manage_invoices')
+        ->name('finance.invoices.update');
+    Route::patch('finance/invoices/{invoice}', [FinanceInvoiceController::class, 'update'])
+        ->middleware('permission:edit_invoices|manage_invoices')
+        ->name('finance.invoices.patch');
+    Route::post('finance/invoices/{invoice}/send', [FinanceInvoiceController::class, 'send'])
+        ->middleware('permission:send_invoices|manage_invoices')
+        ->name('finance.invoices.send');
+    Route::delete('finance/invoices/{invoice}', [FinanceInvoiceController::class, 'destroy'])
+        ->middleware('permission:delete_invoices|manage_invoices')
+        ->name('finance.invoices.destroy');
 
     // ── SaaS Subscriptions ────────────────────────────────────────────────────
     Route::middleware('permission:manage_subscriptions')->group(function () {

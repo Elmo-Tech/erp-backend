@@ -2,9 +2,8 @@
 
 namespace App\Policies;
 
-use App\Enums\ProjectRole;
+use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\Project;
-use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Settings\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
@@ -12,25 +11,26 @@ use Illuminate\Auth\Access\HandlesAuthorization;
 /**
  * TaskPolicy — Strict ABAC/PBAC for project execution tasks.
  *
- * CRITICAL SECURITY RULES:
- *   1. manage_all_projects → unrestricted bypass for ALL actions.
- *   2. Task updates/execution → ONLY the exact assignee (assignee_id === user.id)
- *      OR a manager-level user (manage_tasks, edit_tasks, or project manager/tech_lead).
- *   3. Deliverable management → ONLY users with manage_deliverables permission.
- *   4. NO "protected role" restrictions. PMOs CAN be assigned tasks.
+ * Task actions compose an exact capability with project membership. Only
+ * manage_all_projects crosses project boundaries.
  *
  * Permission matrix:
  *   manage_all_projects  → unrestricted access to every action.
- *   manage_tasks         → can create, edit, delete tasks in any visible project.
- *   create_tasks         → can create tasks in any visible project.
- *   edit_tasks           → can edit task metadata in any visible project.
- *   work_on_tasks        → can update status/deliverables on tasks where assignee_id === user.id.
- *   delete_tasks         → can delete tasks if project manager/tech_lead OR manage_all_projects.
- *   manage_deliverables  → can add/edit/delete deliverables on any task.
+ *   manage_tasks         → umbrella for task actions inside assigned projects.
+ *   create/edit/delete   → exact metadata actions inside assigned projects.
+ *   change/complete/reopen → exact lifecycle actions inside assigned projects.
+ *   work_on_tasks        → assignee execution through in_review only.
+ *   manage_deliverables  → umbrella for deliverable actions inside assigned projects.
  */
 class TaskPolicy
 {
     use HandlesAuthorization;
+
+    /** @var array<string, bool> */
+    private array $projectMembershipCache = [];
+
+    /** @var array<int, Project> */
+    private array $projectCache = [];
 
     // ─────────────────────────────────────────────────────────────────────────
     // viewAny — can the user see the task list for a project?
@@ -51,63 +51,36 @@ class TaskPolicy
     // ─────────────────────────────────────────────────────────────────────────
     // create — can the user add tasks/milestones to a project?
     //
-    // Rules:
-    //   1. manage_all_projects OR manage_tasks → always allowed.
-    //   2. create_tasks → allowed after the parent project visibility check.
+    // Rules: manage_all_projects bypasses scope; manage_tasks/create_tasks
+    // require project membership.
     // ─────────────────────────────────────────────────────────────────────────
     public function create(User $user, Project $project): bool
     {
-        if ($user->can('manage_all_projects') || $user->can('manage_tasks')) {
-            return true;
-        }
-
-        return $user->can('create_tasks');
+        return $this->hasScopedPermission($user, $project, 'create_tasks');
     }
 
     public function createDeliverable(User $user, Project|ProjectTask $subject): bool
     {
-        return $user->can('manage_all_projects')
-            || $user->can('manage_deliverables')
-            || $user->can('create_project_task_deliverables');
+        return $this->hasScopedDeliverablePermission(
+            $user,
+            $subject,
+            'create_project_task_deliverables'
+        );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // update — can the user edit a task's metadata (title, description, status)?
-    //
-    // STRICT RULES:
-    //   1. manage_all_projects OR manage_tasks → always allowed.
-    //   2. edit_tasks → allowed after the parent project visibility check.
-    //   3. work_on_tasks + task.assignee_id === user.id → allowed (own task only).
-    //   4. Everyone else → DENIED.
-    //
-    // CRITICAL: Only the EXACT assignee can update their own task. No one else.
+    // update — task metadata only. Status transitions use dedicated abilities.
     // ─────────────────────────────────────────────────────────────────────────
     public function update(User $user, ProjectTask $task): bool
     {
-        if ($user->can('manage_all_projects') || $user->can('manage_tasks')) {
-            return true;
-        }
-
-        if ($user->can('edit_tasks')) {
-            return true;
-        }
-
-        // STRICT: Assignee can update their own task (status transitions, etc.)
-        // This is the ONLY way a developer/QA can update a task.
-        if ($user->can('work_on_tasks') && (int) $task->assignee_id === $user->id) {
-            return true;
-        }
-
-        return false;
+        return $this->hasScopedPermission($user, $task, 'edit_tasks');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // delete — can the user delete a task?
     //
-    // Rules:
-    //   1. manage_all_projects OR manage_tasks → always allowed.
-    //   2. delete_tasks + project membership role of manager/tech_lead → allowed.
-    //   3. Everyone else → DENIED.
+    // Rules: manage_all_projects bypasses scope; manage_tasks/delete_tasks
+    // require project membership.
     // ─────────────────────────────────────────────────────────────────────────
     public function delete(User $user, ProjectTask|Project $task): bool
     {
@@ -115,15 +88,7 @@ class TaskPolicy
             return $user->can('manage_all_projects') || $user->can('delete_milestones');
         }
 
-        if ($user->can('manage_all_projects')) {
-            return true;
-        }
-
-        if ($user->can('delete_tasks')) {
-            return true;
-        }
-
-        return ($user->can('manage_tasks') || $user->can('edit_tasks')) && $this->isProjectManager($user, $task->project);
+        return $this->hasScopedPermission($user, $task, 'delete_tasks');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -137,69 +102,154 @@ class TaskPolicy
     // ─────────────────────────────────────────────────────────────────────────
     public function execute(User $user, ProjectTask $task): bool
     {
-        if ($user->can('manage_all_projects') || $user->can('manage_tasks')) {
+        if ($user->can('manage_all_projects')) {
             return true;
         }
 
-        // Project managers/tech leads can also execute tasks
-        if ($user->can('edit_tasks') && $this->isProjectManager($user, $task->project)) {
-            return true;
+        if (! $this->isProjectMember($user, $this->projectFor($task))) {
+            return false;
         }
 
-        // STRICT: Only the assigned user may execute
-        return (int) $task->assignee_id === $user->id;
+        return $user->can('manage_tasks') || (int) $task->assignee_id === $user->id;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // complete — can the user mark a task as DONE?
     //
-    // Developers cannot call /complete directly — their ceiling is in_review.
-    // QA, managers, tech leads, and global admins may complete tasks.
+    // complete — exact terminal transition capability.
     // ─────────────────────────────────────────────────────────────────────────
-    public function complete(User $user, ProjectTask $task): bool
+    public function complete(User $user, Project|ProjectTask $subject): bool
     {
-        if ($user->can('manage_all_projects') || $user->can('manage_tasks')) {
+        return $this->hasScopedPermission($user, $subject, 'complete_tasks');
+    }
+
+    public function reopen(User $user, ProjectTask $task): bool
+    {
+        if ($task->status !== ExecutionTaskStatus::DONE) {
+            return false;
+        }
+
+        return $this->hasScopedPermission($user, $task, 'reopen_tasks');
+    }
+
+    public function changeStatus(User $user, ProjectTask $task, ?string $targetStatus = null): bool
+    {
+        if ($task->status === ExecutionTaskStatus::DONE || $targetStatus === ExecutionTaskStatus::DONE->value) {
+            return false;
+        }
+
+        if ($this->hasScopedPermission($user, $task, 'change_task_status')) {
             return true;
         }
 
-        $project = $task->project;
-        $member = $project->members()->where('user_id', $user->id)->first();
-        $role = $member instanceof ProjectMember ? $member->role->value : '';
-
-        // Developers cannot complete tasks directly
-        if ($role === ProjectRole::DEVELOPER->value) {
+        if (! $this->isProjectMember($user, $this->projectFor($task))
+            || ! $user->can('work_on_tasks')
+            || (int) $task->assignee_id !== $user->id) {
             return false;
         }
 
-        // QA, manager, tech_lead, designer with edit_tasks permission
-        return $user->can('edit_tasks');
+        return $targetStatus === null || in_array($targetStatus, [
+            ExecutionTaskStatus::BACKLOG->value,
+            ExecutionTaskStatus::TO_DO->value,
+            ExecutionTaskStatus::IN_PROGRESS->value,
+            ExecutionTaskStatus::IN_REVIEW->value,
+        ], true);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Returns true if the user holds a manager-level role in the project.
-     * Manager-level roles: manager, tech_lead.
-     */
-    protected function isProjectManager(User $user, ?Project $project): bool
+    public function editDeliverable(User $user, ProjectTask $task): bool
     {
-        if ($project === null) {
-            return false;
+        return $this->hasScopedDeliverablePermission(
+            $user,
+            $task,
+            'edit_project_task_deliverables'
+        );
+    }
+
+    public function deleteDeliverable(User $user, ProjectTask $task): bool
+    {
+        return $this->hasScopedDeliverablePermission(
+            $user,
+            $task,
+            'delete_project_task_deliverables'
+        );
+    }
+
+    public function toggleDeliverable(User $user, ProjectTask $task): bool
+    {
+        if ($this->hasScopedDeliverablePermission(
+            $user,
+            $task,
+            'toggle_project_task_deliverables'
+        )) {
+            return true;
         }
 
-        $member = $project->members()->where('user_id', $user->id)->first();
+        return $this->isProjectMember($user, $this->projectFor($task))
+            && $user->can('work_on_tasks')
+            && (int) $task->assignee_id === $user->id;
+    }
 
-        if (! $member instanceof ProjectMember) {
-            return false;
+    /** @return array<string, bool> */
+    public function allowedActions(User $user, ProjectTask $task): array
+    {
+        return [
+            'edit' => $this->update($user, $task),
+            'delete' => $this->delete($user, $task),
+            'changeStatus' => $this->changeStatus($user, $task),
+            'complete' => $task->status !== ExecutionTaskStatus::DONE && $this->complete($user, $task),
+            'reopen' => $this->reopen($user, $task),
+            'createDeliverable' => $this->createDeliverable($user, $task),
+            'editDeliverable' => $this->editDeliverable($user, $task),
+            'deleteDeliverable' => $this->deleteDeliverable($user, $task),
+            'toggleDeliverable' => $this->toggleDeliverable($user, $task),
+        ];
+    }
+
+    private function hasScopedPermission(User $user, Project|ProjectTask $subject, string $permission): bool
+    {
+        if ($user->can('manage_all_projects')) {
+            return true;
         }
 
-        $role = $member->role->value;
+        $project = $this->projectFor($subject);
 
-        return in_array($role, [
-            ProjectRole::MANAGER->value,
-            ProjectRole::TECH_LEAD->value,
-        ], true);
+        return $this->isProjectMember($user, $project)
+            && ($user->can('manage_tasks') || $user->can($permission));
+    }
+
+    private function hasScopedDeliverablePermission(User $user, Project|ProjectTask $subject, string $permission): bool
+    {
+        if ($user->can('manage_all_projects')) {
+            return true;
+        }
+
+        $project = $this->projectFor($subject);
+
+        return $this->isProjectMember($user, $project)
+            && ($user->can('manage_tasks')
+                || $user->can('manage_deliverables')
+                || $user->can($permission));
+    }
+
+    private function projectFor(Project|ProjectTask $subject): Project
+    {
+        if ($subject instanceof Project) {
+            return $subject;
+        }
+
+        if ($subject->relationLoaded('project')) {
+            return $subject->getRelation('project');
+        }
+
+        return $this->projectCache[$subject->project_id]
+            ??= Project::query()->findOrFail($subject->project_id);
+    }
+
+    private function isProjectMember(User $user, Project $project): bool
+    {
+        $key = "{$user->id}:{$project->id}";
+
+        return $this->projectMembershipCache[$key]
+            ??= $project->members()->where('user_id', $user->id)->exists();
     }
 }

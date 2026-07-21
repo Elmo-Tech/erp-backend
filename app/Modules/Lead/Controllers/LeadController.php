@@ -24,6 +24,8 @@ class LeadController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        abort_unless($request->user()?->canAny(['view_leads', 'manage_leads']), 403, 'Unauthorized');
+
         $query = Lead::query()
             ->addSelect([
                 'has_completed_meeting' => Meeting::query()
@@ -99,8 +101,10 @@ class LeadController extends Controller
      * The assignee relationship is eager-loaded so the details page can display
      * the assigned user's name and avatar without a second request.
      */
-    public function show(Lead $lead): JsonResponse
+    public function show(Request $request, Lead $lead): JsonResponse
     {
+        abort_unless($request->user()?->canAny(['view_leads', 'manage_leads']), 403, 'Unauthorized');
+
         $lead->load('assignee:id,name,email,avatar');
 
         return ApiResponse::success(
@@ -149,6 +153,8 @@ class LeadController extends Controller
      */
     public function store(StoreLeadRequest $request): JsonResponse
     {
+        abort_unless($request->user()?->canAny(['create_leads', 'manage_leads']), 403, 'Unauthorized');
+
         $validated = $request->validated();
 
         $lead = Lead::create([
@@ -158,7 +164,7 @@ class LeadController extends Controller
             'source' => $validated['source'] ?? null,
             'expected_budget' => $validated['expected_budget'] ?? null,
             'notes' => $validated['notes'] ?? null,
-            'assigned_to' => $validated['account_manager_id'] ?? $request->user()?->id,
+            'assigned_to' => $validated['account_manager_id'] ?? $request->user()->id,
             // Store contact details in metadata until the lead is converted
             'metadata' => array_filter([
                 'company_name' => $validated['company_name'] ?? null,
@@ -187,6 +193,15 @@ class LeadController extends Controller
             'Lead created successfully.',
             201
         );
+    }
+
+    public function destroy(Request $request, Lead $lead): JsonResponse
+    {
+        abort_unless($request->user()?->canAny(['delete_leads', 'manage_leads']), 403, 'Unauthorized');
+
+        $lead->delete();
+
+        return ApiResponse::success(null, 'Lead deleted successfully.');
     }
 
     private function hasCompletedMeeting(Lead $lead): bool

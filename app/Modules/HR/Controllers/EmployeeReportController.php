@@ -26,7 +26,7 @@ use Illuminate\Support\Carbon;
  * Returns a comprehensive breakdown of an employee's attendance, points,
  * deliverables, and financial summary for a given calendar month.
  *
- * Permission: manage_employees
+ * Permission: view_employee_performance or manage_employees
  */
 class EmployeeReportController extends Controller
 {
@@ -37,7 +37,15 @@ class EmployeeReportController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        abort_if(! $request->user()->can('manage_employees'), 403, 'Unauthorized');
+        abort_unless(
+            $request->user()->hasAnyPermission(['view_employee_performance', 'manage_employees']),
+            403
+        );
+
+        $canViewSalary = $request->user()->hasAnyPermission([
+            'view_employee_salary',
+            'manage_employees',
+        ]);
 
         $user = User::with(['roles:id,name', 'employeeProfile'])->findOrFail($id);
         $user->resetGraceDaysIfNewMonth();
@@ -238,10 +246,13 @@ class EmployeeReportController extends Controller
             'lateDays' => $lateDays,
             'absentDays' => $absentDays,
             'presentDays' => $presentDays,
-            'netSalary' => $netSalary,
         ];
 
-        return ApiResponse::success([
+        if ($canViewSalary) {
+            $summary['netSalary'] = $netSalary;
+        }
+
+        $responseData = [
             'employee' => [
                 'id' => $user->id,
                 'name' => $user->name ?? '',
@@ -261,8 +272,13 @@ class EmployeeReportController extends Controller
             'attendanceDays' => $attendanceDays,
             'pointLedger' => $pointLedger,
             'deliverableDays' => $deliverableDays,
-            'financialBreakdown' => $financialBreakdown,
-            'manualTransactions' => $manualTransactionsData,
-        ], 'Employee report retrieved successfully');
+        ];
+
+        if ($canViewSalary) {
+            $responseData['financialBreakdown'] = $financialBreakdown;
+            $responseData['manualTransactions'] = $manualTransactionsData;
+        }
+
+        return ApiResponse::success($responseData, 'Employee report retrieved successfully');
     }
 }

@@ -20,7 +20,7 @@ class FinanceInvoiceProjectIntegrityTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $user = User::factory()->create();
-        $user->givePermissionTo('manage_invoices');
+        $user->givePermissionTo(['manage_invoices', 'view_clients']);
 
         $selectedClient = Client::factory()->create();
         $otherClient = Client::factory()->create();
@@ -45,7 +45,7 @@ class FinanceInvoiceProjectIntegrityTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $user = User::factory()->create();
-        $user->givePermissionTo('manage_invoices');
+        $user->givePermissionTo(['manage_invoices', 'view_clients']);
 
         $selectedClient = Client::factory()->create();
         $otherClient = Client::factory()->create();
@@ -77,7 +77,7 @@ class FinanceInvoiceProjectIntegrityTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $user = User::factory()->create();
-        $user->givePermissionTo('manage_invoices');
+        $user->givePermissionTo(['manage_invoices', 'view_clients']);
 
         $client = Client::factory()->create();
 

@@ -4,6 +4,8 @@ namespace App\Modules\Finance\Models;
 
 use App\Modules\Client\Models\Client;
 use App\Modules\Project\Models\Project;
+use App\Modules\Settings\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -68,6 +70,31 @@ class FinanceInvoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(FinanceInvoiceItem::class, 'invoice_id');
+    }
+
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->can('access_client_portal')) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $visibilityQuery) use ($user): void {
+            if ($user->canAny(['view_clients', 'manage_clients'])) {
+                $visibilityQuery->whereNull('project_id');
+            } else {
+                $visibilityQuery->whereRaw('1 = 0');
+            }
+
+            if ($user->canAny(['view_all_projects', 'manage_all_projects'])) {
+                $visibilityQuery->orWhereNotNull('project_id');
+
+                return;
+            }
+
+            $visibilityQuery->orWhereHas('project.members', function (Builder $memberQuery) use ($user): void {
+                $memberQuery->where('user_id', $user->id);
+            });
+        });
     }
 
     // -------------------------------------------------------------------------

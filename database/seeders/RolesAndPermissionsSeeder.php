@@ -128,6 +128,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'create_project_task_deliverables',
             'edit_project_task_deliverables',
             'delete_project_task_deliverables',
+            'toggle_project_task_deliverables',
 
             // ── Dashboard ────────────────────────────────────────────────────
             'view_my_workspace',
@@ -149,6 +150,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'create_users',
             'edit_users',
             'delete_users',
+            'toggle_user_status',
 
             // ── Role & Permission Management (granular) ──────────────────────
             'view_roles',
@@ -197,6 +199,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit_tasks',
             'delete_tasks',
             'assign_tasks',
+            'change_task_status',
+            'complete_tasks',
+            'reopen_tasks',
             'view_internal_notes',
             'create_internal_notes',
             'work_on_tasks',
@@ -263,6 +268,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_employees',
             'create_employees',
             'edit_employees',
+            'delete_employees',
             'view_employee_salary',
             'view_employee_performance',
 

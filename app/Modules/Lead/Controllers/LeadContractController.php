@@ -27,8 +27,10 @@ class LeadContractController extends Controller
      *
      * GET /api/v1/leads/{lead}/contracts
      */
-    public function index(Lead $lead): JsonResponse
+    public function index(Request $request, Lead $lead): JsonResponse
     {
+        abort_unless($request->user()?->canAny(['view_contracts', 'manage_contracts']), 403, 'Unauthorized');
+
         $contracts = $lead->contracts()
             ->with('assignee:id,name,email,avatar')
             ->orderByDesc('created_at')
@@ -46,7 +48,13 @@ class LeadContractController extends Controller
      */
     public function store(StoreLeadContractRequest $request, Lead $lead): JsonResponse
     {
+        abort_unless($request->user()?->canAny(['create_contracts', 'manage_contracts']), 403, 'Unauthorized');
+
         $data = $request->validated();
+
+        if (($data['status'] ?? null) === ContractStatus::SIGNED->value) {
+            abort_unless($request->user()->canAny(['sign_contracts', 'manage_contracts']), 403, 'Unauthorized');
+        }
 
         $contract = Contract::create([
             'lead_id' => $lead->id,
@@ -95,6 +103,7 @@ class LeadContractController extends Controller
      */
     public function update(Request $request, Lead $lead, Contract $contract): JsonResponse
     {
+        abort_unless($request->user()?->canAny(['edit_contracts', 'manage_contracts']), 403, 'Unauthorized');
         $this->assertBelongsToLead($contract, $lead);
 
         $data = $request->validate([
@@ -103,6 +112,10 @@ class LeadContractController extends Controller
             'file_path' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        if (($data['status'] ?? null) === ContractStatus::SIGNED->value) {
+            abort_unless($request->user()->canAny(['sign_contracts', 'manage_contracts']), 403, 'Unauthorized');
+        }
+
         $contract->update($data);
         $contract->load('assignee:id,name,email,avatar');
 
@@ -110,6 +123,37 @@ class LeadContractController extends Controller
             $this->formatContract($contract),
             'Contract updated successfully.'
         );
+    }
+
+    public function sign(Request $request, Lead $lead, Contract $contract): JsonResponse
+    {
+        abort_unless($request->user()?->canAny(['sign_contracts', 'manage_contracts']), 403, 'Unauthorized');
+        $this->assertBelongsToLead($contract, $lead);
+
+        if ($contract->status !== ContractStatus::SIGNED) {
+            abort_unless(
+                in_array($contract->status, [ContractStatus::DRAFT, ContractStatus::SENT], true),
+                422,
+                'Only draft or sent contracts can be signed.'
+            );
+
+            $contract->update(['status' => ContractStatus::SIGNED]);
+        }
+
+        return ApiResponse::success(
+            $this->formatContract($contract->fresh()->load('assignee:id,name,email,avatar')),
+            'Contract signed successfully.'
+        );
+    }
+
+    public function destroy(Request $request, Lead $lead, Contract $contract): JsonResponse
+    {
+        abort_unless($request->user()?->canAny(['delete_contracts', 'manage_contracts']), 403, 'Unauthorized');
+        $this->assertBelongsToLead($contract, $lead);
+
+        $contract->delete();
+
+        return ApiResponse::success(null, 'Contract deleted successfully.');
     }
 
     // ─── Private ─────────────────────────────────────────────────────────────

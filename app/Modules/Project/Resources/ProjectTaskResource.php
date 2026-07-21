@@ -2,6 +2,7 @@
 
 namespace App\Modules\Project\Resources;
 
+use App\Policies\TaskPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,6 +25,7 @@ class ProjectTaskResource extends JsonResource
             'assigneeId' => $this->assignee_id,
             'isInBacklog' => $this->isInBacklog(),
             'totalLoggedMinutes' => $this->totalLoggedMinutes(),
+            'allowedActions' => $this->allowedActions($request),
 
             // Eager-loaded relations — only present when explicitly loaded
             'assignee' => $this->whenLoaded('assignee', fn () => [
@@ -50,5 +52,27 @@ class ProjectTaskResource extends JsonResource
             'createdAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),
         ];
+    }
+
+    /** @return array<string, bool> */
+    private function allowedActions(Request $request): array
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return [
+                'edit' => false,
+                'delete' => false,
+                'changeStatus' => false,
+                'complete' => false,
+                'reopen' => false,
+                'createDeliverable' => false,
+                'editDeliverable' => false,
+                'deleteDeliverable' => false,
+                'toggleDeliverable' => false,
+            ];
+        }
+
+        return app(TaskPolicy::class)->allowedActions($user, $this->resource);
     }
 }
