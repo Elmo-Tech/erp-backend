@@ -37,13 +37,18 @@ class LeadPipelineStageGateTest extends TestCase
     public function test_quotation_stage_allows_a_completed_lead_meeting(): void
     {
         $user = $this->userWithPermissions(['manage_leads']);
-        $lead = $this->lead();
+        $lead = $this->lead(['stage' => LeadStage::PROPOSAL]);
         $this->completedMeeting($lead);
 
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/v1/leads/{$lead->id}/stage", [
                 'new_stage' => LeadStage::QUOTATION->value,
-                'stage_results' => [],
+                'stage_results' => [[
+                    'stage' => LeadStage::QUOTATION->value,
+                    'type' => 'quotation',
+                    'creation_type' => DocumentCreationType::SKIPPED->value,
+                    'skip_reason' => 'Client requested a direct contract discussion.',
+                ]],
             ])
             ->assertOk();
 
@@ -83,6 +88,201 @@ class LeadPipelineStageGateTest extends TestCase
         $this->assertSame(LeadStage::MEETING, $lead->fresh()->stage);
     }
 
+    public function test_meeting_permission_denial_does_not_advance_the_lead(): void
+    {
+        $user = $this->userWithPermissions(['edit_leads']);
+        $lead = $this->lead();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::MEETING->value,
+                'stage_results' => [],
+                'scheduled_meeting' => [
+                    'meeting_type' => 'discovery',
+                    'date' => '2026-07-25',
+                    'time' => '10:30',
+                    'location_type' => 'online',
+                    'internal_attendees' => [(string) $user->id],
+                    'external_attendees' => [],
+                ],
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(LeadStage::NEW_LEAD, $lead->fresh()->stage);
+        $this->assertDatabaseCount('meetings', 0);
+    }
+
+    public function test_invalid_meeting_attendee_does_not_advance_the_lead(): void
+    {
+        $user = $this->userWithPermissions(['manage_leads', 'schedule_meetings']);
+        $lead = $this->lead();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::MEETING->value,
+                'stage_results' => [],
+                'scheduled_meeting' => [
+                    'meeting_type' => 'discovery',
+                    'date' => '2026-07-25',
+                    'time' => '10:30',
+                    'location_type' => 'online',
+                    'internal_attendees' => ['999999'],
+                    'external_attendees' => [],
+                ],
+            ])
+            ->assertUnprocessable();
+
+        $this->assertSame(LeadStage::NEW_LEAD, $lead->fresh()->stage);
+        $this->assertDatabaseCount('meetings', 0);
+    }
+
+    public function test_jump_to_won_cannot_bypass_required_business_evidence(): void
+    {
+        $user = $this->userWithPermissions(['manage_leads', 'manage_contracts']);
+        $lead = $this->lead();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::WON->value,
+                'stage_results' => [
+                    [
+                        'stage' => LeadStage::MEETING->value,
+                        'type' => 'proposal',
+                        'creation_type' => DocumentCreationType::SKIPPED->value,
+                        'skip_reason' => 'No meeting evidence exists.',
+                    ],
+                    [
+                        'stage' => LeadStage::PROPOSAL->value,
+                        'type' => 'proposal',
+                        'creation_type' => DocumentCreationType::SKIPPED->value,
+                        'skip_reason' => 'No proposal evidence exists.',
+                    ],
+                    [
+                        'stage' => LeadStage::QUOTATION->value,
+                        'type' => 'quotation',
+                        'creation_type' => DocumentCreationType::SKIPPED->value,
+                        'skip_reason' => 'No quotation evidence exists.',
+                    ],
+                    [
+                        'stage' => LeadStage::CONTRACT->value,
+                        'type' => 'contract',
+                        'creation_type' => DocumentCreationType::SKIPPED->value,
+                        'skip_reason' => 'No contract evidence exists.',
+                    ],
+                ],
+            ])
+            ->assertUnprocessable();
+
+        $this->assertSame(LeadStage::NEW_LEAD, $lead->fresh()->stage);
+        $this->assertDatabaseCount('proposals', 0);
+        $this->assertDatabaseCount('quotations', 0);
+        $this->assertDatabaseCount('contracts', 0);
+    }
+
+    public function test_forward_jump_accepts_explicit_evidence_for_every_crossed_stage(): void
+    {
+        $user = $this->userWithPermissions(['manage_leads']);
+        $lead = $this->lead(['stage' => LeadStage::MEETING]);
+        $this->completedMeeting($lead);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::QUOTATION->value,
+                'stage_results' => [
+                    [
+                        'stage' => LeadStage::PROPOSAL->value,
+                        'type' => 'proposal',
+                        'creation_type' => DocumentCreationType::SKIPPED->value,
+                        'skip_reason' => 'The client supplied their own scope.',
+                    ],
+                    [
+                        'stage' => LeadStage::QUOTATION->value,
+                        'type' => 'quotation',
+                        'creation_type' => DocumentCreationType::SKIPPED->value,
+                        'skip_reason' => 'Pricing was approved outside the system.',
+                    ],
+                ],
+            ])
+            ->assertOk();
+
+        $this->assertSame(LeadStage::QUOTATION, $lead->fresh()->stage);
+        $this->assertDatabaseCount('proposals', 1);
+        $this->assertDatabaseCount('quotations', 1);
+    }
+
+    public function test_pipeline_rejects_backward_stage_moves(): void
+    {
+        $user = $this->userWithPermissions(['edit_leads']);
+        $activeLead = $this->lead(['stage' => LeadStage::PROPOSAL]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$activeLead->id}/stage", [
+                'new_stage' => LeadStage::MEETING->value,
+                'stage_results' => [],
+            ])
+            ->assertUnprocessable();
+
+        $this->assertSame(LeadStage::PROPOSAL, $activeLead->fresh()->stage);
+    }
+
+    public function test_pipeline_rejects_moves_from_a_terminal_stage(): void
+    {
+        $user = $this->userWithPermissions(['edit_leads']);
+        $wonLead = $this->lead(['stage' => LeadStage::WON]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$wonLead->id}/stage", [
+                'new_stage' => LeadStage::LOST->value,
+                'stage_results' => [],
+            ])
+            ->assertUnprocessable();
+
+        $this->assertSame(LeadStage::WON, $wonLead->fresh()->stage);
+    }
+
+    public function test_edit_leads_permission_cannot_mark_a_lead_as_won_without_convert_permission(): void
+    {
+        $user = $this->userWithPermissions(['edit_leads']);
+        $lead = $this->lead(['stage' => LeadStage::CONTRACT]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::WON->value,
+                'stage_results' => [],
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(LeadStage::CONTRACT, $lead->fresh()->stage);
+    }
+
+    public function test_stage_evidence_cannot_claim_a_different_document_type(): void
+    {
+        $user = $this->userWithPermissions(['manage_leads']);
+        $lead = $this->lead(['stage' => LeadStage::QUOTATION]);
+
+        Quotation::create([
+            'lead_id' => $lead->id,
+            'status' => 'accepted',
+            'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+            'currency' => 'USD',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::CONTRACT->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::CONTRACT->value,
+                    'type' => 'proposal',
+                    'creation_type' => DocumentCreationType::SKIPPED->value,
+                    'skip_reason' => 'Mismatched evidence must not bypass contract permission.',
+                ]],
+            ])
+            ->assertUnprocessable();
+
+        $this->assertSame(LeadStage::QUOTATION, $lead->fresh()->stage);
+        $this->assertDatabaseCount('proposals', 0);
+    }
+
     public function test_contract_stage_requires_an_accepted_proposal_or_quotation(): void
     {
         $user = $this->userWithPermissions(['manage_leads']);
@@ -108,8 +308,9 @@ class LeadPipelineStageGateTest extends TestCase
 
     public function test_contract_stage_allows_an_accepted_quotation(): void
     {
-        $user = $this->userWithPermissions(['manage_leads']);
+        $user = $this->userWithPermissions(['manage_leads', 'create_contracts']);
         $lead = $this->lead(['stage' => LeadStage::QUOTATION]);
+        $this->completedMeeting($lead);
 
         Quotation::create([
             'lead_id' => $lead->id,
@@ -121,7 +322,12 @@ class LeadPipelineStageGateTest extends TestCase
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/v1/leads/{$lead->id}/stage", [
                 'new_stage' => LeadStage::CONTRACT->value,
-                'stage_results' => [],
+                'stage_results' => [[
+                    'stage' => LeadStage::CONTRACT->value,
+                    'type' => 'contract',
+                    'creation_type' => DocumentCreationType::SKIPPED->value,
+                    'skip_reason' => 'Contract will be recorded externally.',
+                ]],
             ])
             ->assertOk();
 

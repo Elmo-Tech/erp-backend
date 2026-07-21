@@ -5,6 +5,7 @@ namespace App\Modules\Lead\Models;
 use App\Enums\LeadStage;
 use App\Enums\LeadStatus;
 use App\Modules\Client\Models\Client;
+use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property LeadStatus $status
  * @property int|null $assigned_to
  * @property int|null $client_id
+ * @property int|null $converted_project_id
  */
 class Lead extends Model
 {
@@ -38,6 +40,7 @@ class Lead extends Model
         'expected_close_date',
         'assigned_to',
         'client_id',
+        'converted_project_id',
         'notes',
         'metadata',
         'created_by',
@@ -71,6 +74,11 @@ class Lead extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class, 'client_id');
+    }
+
+    public function convertedProject(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'converted_project_id');
     }
 
     /**

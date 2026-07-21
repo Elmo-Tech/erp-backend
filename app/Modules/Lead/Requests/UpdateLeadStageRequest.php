@@ -33,12 +33,18 @@ class UpdateLeadStageRequest extends FormRequest
             'scheduled_meeting.location_type' => ['nullable', 'string', 'in:online,client_site,our_office,office,other'],
             'scheduled_meeting.location_details' => ['nullable', 'string', 'max:1000'],
             'scheduled_meeting.internal_attendees' => ['nullable', 'array'],
-            'scheduled_meeting.internal_attendees.*' => ['string'],
+            'scheduled_meeting.internal_attendees.*' => ['integer', 'exists:users,id'],
             'scheduled_meeting.external_attendees' => ['nullable', 'array'],
             'scheduled_meeting.external_attendees.*' => ['string'],
             'scheduled_meeting.notes' => ['nullable', 'string', 'max:5000'],
 
             // ── Each stage result entry ───────────────────────────────────────
+            'stage_results.*.stage' => ['required', 'string', Rule::in([
+                LeadStage::MEETING->value,
+                LeadStage::PROPOSAL->value,
+                LeadStage::QUOTATION->value,
+                LeadStage::CONTRACT->value,
+            ])],
             'stage_results.*.type' => ['required', 'string', Rule::in($documentTypes)],
             'stage_results.*.creation_type' => ['required', 'string', Rule::in($creationTypes)],
             'stage_results.*.skip_reason' => [
@@ -63,7 +69,7 @@ class UpdateLeadStageRequest extends FormRequest
             'stage_results.*.location_type' => ['nullable', 'string', 'in:online,client_site,our_office,other'],
             'stage_results.*.location_details' => ['nullable', 'string', 'max:1000'],
             'stage_results.*.internal_attendees' => ['nullable', 'array'],
-            'stage_results.*.internal_attendees.*' => ['string'],
+            'stage_results.*.internal_attendees.*' => ['integer', 'exists:users,id'],
             'stage_results.*.external_attendees' => ['nullable', 'array'],
             'stage_results.*.external_attendees.*' => ['string'],
 
@@ -112,6 +118,7 @@ class UpdateLeadStageRequest extends FormRequest
             'new_stage.Illuminate\Validation\Rules\Enum' => 'The provided stage is not a valid pipeline stage.',
             'stage_results.present' => 'The stage_results field must be present (use an empty array if none).',
             'stage_results.*.type.required' => 'Each stage result must specify a document type.',
+            'stage_results.*.stage.required' => 'Each stage result must specify the pipeline stage it completes.',
             'stage_results.*.type.in' => 'Document type must be one of: proposal, quotation, contract.',
             'stage_results.*.creation_type.required' => 'Each stage result must specify a creation type.',
             'stage_results.*.creation_type.in' => 'Creation type must be one of: task, direct_upload, skipped.',
@@ -119,6 +126,37 @@ class UpdateLeadStageRequest extends FormRequest
             'scheduled_meeting.date.required_with' => 'Meeting date is required.',
             'scheduled_meeting.time.required_with' => 'Meeting time is required.',
         ];
+    }
+
+    /**
+     * @return array<int, callable>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $expectedTypes = [
+                LeadStage::MEETING->value => 'proposal',
+                LeadStage::PROPOSAL->value => 'proposal',
+                LeadStage::QUOTATION->value => 'quotation',
+                LeadStage::CONTRACT->value => 'contract',
+            ];
+
+            foreach ((array) $this->input('stage_results', []) as $index => $stageEvidence) {
+                if (! is_array($stageEvidence)) {
+                    continue;
+                }
+
+                $stage = $stageEvidence['stage'] ?? null;
+                $type = $stageEvidence['type'] ?? null;
+
+                if (is_string($stage) && is_string($type) && ($expectedTypes[$stage] ?? null) !== $type) {
+                    $validator->errors()->add(
+                        "stage_results.{$index}.type",
+                        "Document type does not match the completed {$stage} stage."
+                    );
+                }
+            }
+        }];
     }
 
     protected function failedValidation(Validator $validator): void

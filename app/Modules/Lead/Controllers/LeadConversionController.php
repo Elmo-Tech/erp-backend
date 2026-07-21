@@ -2,12 +2,14 @@
 
 namespace App\Modules\Lead\Controllers;
 
+use App\Enums\LeadStage;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Client\Models\Client;
 use App\Modules\Lead\Actions\ConvertLeadToClientProjectAction;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Project\Models\Project;
+use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -29,7 +31,17 @@ class LeadConversionController extends Controller
     ): JsonResponse {
         abort_unless($request->user()?->canAny(['convert_leads', 'manage_leads']), 403, 'Unauthorized');
 
-        $result = $action->execute($lead);
+        if ($lead->stage !== LeadStage::WON) {
+            $message = 'Only won leads can be converted.';
+
+            return ApiResponse::error($message, 422, ['stage' => [$message]]);
+        }
+
+        try {
+            $result = $action->execute($lead);
+        } catch (DomainException $exception) {
+            return ApiResponse::error($exception->getMessage(), 422);
+        }
 
         /** @var Client $client */
         /** @var Project $project */

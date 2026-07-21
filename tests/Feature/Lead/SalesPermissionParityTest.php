@@ -71,12 +71,13 @@ class SalesPermissionParityTest extends TestCase
     public function test_edit_leads_cannot_create_embedded_sales_documents_without_document_permission(): void
     {
         $editor = $this->userWithPermissions(['edit_leads']);
-        $lead = $this->lead();
+        $lead = $this->lead(['stage' => LeadStage::PROPOSAL]);
 
         $this->actingAs($editor, 'sanctum')
             ->postJson("/api/v1/leads/{$lead->id}/stage", [
-                'new_stage' => LeadStage::MEETING->value,
+                'new_stage' => LeadStage::QUOTATION->value,
                 'stage_results' => [[
+                    'stage' => LeadStage::QUOTATION->value,
                     'type' => 'quotation',
                     'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
                     'currency' => 'USD',
@@ -90,7 +91,7 @@ class SalesPermissionParityTest extends TestCase
     public function test_convert_leads_permission_converts_without_granting_other_lead_actions(): void
     {
         $converter = $this->userWithPermissions(['convert_leads']);
-        $lead = $this->lead();
+        $lead = $this->lead(['stage' => LeadStage::WON]);
 
         $this->actingAs($converter, 'sanctum')
             ->postJson("/api/v1/leads/{$lead->id}/convert")
@@ -102,6 +103,71 @@ class SalesPermissionParityTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame(LeadStatus::ARCHIVED, $lead->fresh()->status);
+    }
+
+    public function test_lead_cannot_be_converted_before_it_is_won(): void
+    {
+        $converter = $this->userWithPermissions(['convert_leads']);
+        $lead = $this->lead();
+
+        $this->actingAs($converter, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/convert")
+            ->assertUnprocessable();
+
+        $this->assertSame(LeadStatus::ACTIVE, $lead->fresh()->status);
+        $this->assertNull($lead->fresh()->client_id);
+    }
+
+    public function test_conversion_preserves_lead_company_and_primary_contact_data(): void
+    {
+        $converter = $this->userWithPermissions(['convert_leads', 'view_clients']);
+        $lead = $this->lead([
+            'stage' => LeadStage::WON,
+            'metadata' => [
+                'company_name' => 'Acme LLC',
+                'contact_name' => 'Mona Ali',
+                'primary_email' => 'mona@acme.test',
+                'primary_phone' => '+201001234567',
+            ],
+        ]);
+
+        $clientId = $this->actingAs($converter, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/convert")
+            ->assertOk()
+            ->json('data.client_id');
+
+        $this->actingAs($converter, 'sanctum')
+            ->getJson("/api/v1/clients/{$clientId}")
+            ->assertOk()
+            ->assertJsonPath('data.companyName', 'Acme LLC')
+            ->assertJsonPath('data.primaryEmail', 'mona@acme.test')
+            ->assertJsonPath('data.primaryPhone', '+201001234567')
+            ->assertJsonPath('data.contacts.0.displayName', 'Mona Ali')
+            ->assertJsonPath('data.contacts.0.email', 'mona@acme.test')
+            ->assertJsonPath('data.contacts.0.phone', '+201001234567')
+            ->assertJsonPath('data.contacts.0.isPrimary', true);
+    }
+
+    public function test_repeated_conversion_returns_the_original_client_and_project(): void
+    {
+        $converter = $this->userWithPermissions(['convert_leads', 'view_clients', 'view_projects']);
+        $lead = $this->lead(['stage' => LeadStage::WON]);
+
+        $first = $this->actingAs($converter, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/convert")
+            ->assertOk();
+
+        $second = $this->actingAs($converter, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/convert")
+            ->assertOk();
+
+        $this->assertSame($first->json('data.client_id'), $second->json('data.client_id'));
+        $this->assertSame($first->json('data.project_id'), $second->json('data.project_id'));
+
+        $this->actingAs($converter, 'sanctum')
+            ->getJson('/api/v1/clients/'.$first->json('data.client_id').'/projects')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.projects');
     }
 
     public function test_quotation_permissions_are_granular_and_nested_scope_is_enforced(): void

@@ -5,6 +5,7 @@ namespace App\Modules\Lead\Actions;
 use App\Enums\ClientStatus;
 use App\Enums\ContractModel;
 use App\Enums\ContractStatus;
+use App\Enums\LeadStage;
 use App\Enums\LeadStatus;
 use App\Enums\QuotationStatus;
 use App\Modules\Client\Models\Client;
@@ -16,9 +17,9 @@ use App\Modules\Lead\Models\Quotation;
 use App\Modules\Project\Enums\ProjectStatus;
 use App\Modules\Project\Models\Project;
 use Carbon\Carbon;
+use DomainException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use RuntimeException;
 
 /**
  * ConvertLeadToClientProjectAction
@@ -31,8 +32,8 @@ use RuntimeException;
  * Edge cases handled:
  *  - No contract on the lead → project is created with a zero budget
  *    and no deadline (graceful degradation, not a hard failure).
- *  - Lead already has a client_id → the existing client is reused and
- *    only the project is created (idempotent re-run safety).
+ *  - Lead already has a client_id → the existing client is reused.
+ *  - Lead already has a converted_project_id → the original conversion is returned.
  *  - SaaS contract model → budget is derived from recurring_fee;
  *    Standard model → budget is derived from total_amount or final_total.
  *
@@ -44,40 +45,40 @@ class ConvertLeadToClientProjectAction
      * @param  Lead  $lead  The lead that has just been moved to "won".
      * @return array{client: Client, project: Project}
      *
-     * @throws RuntimeException If the lead is already converted (has a project).
+     * @throws DomainException If the lead cannot be converted safely.
      */
     public function execute(Lead $lead): array
     {
         return DB::transaction(function () use ($lead) {
+            /** @var Lead $lead */
+            $lead = Lead::query()->lockForUpdate()->findOrFail($lead->id);
 
-            // ── 1. Resolve or create the Client ──────────────────────────────
+            if ($lead->converted_project_id) {
+                $project = Project::query()->with('client')->findOrFail($lead->converted_project_id);
+
+                return [
+                    'client' => $project->client,
+                    'project' => $project,
+                ];
+            }
+
+            if ($lead->stage !== LeadStage::WON) {
+                throw new DomainException('Only won leads can be converted.');
+            }
+
+            if ($lead->status === LeadStatus::ARCHIVED) {
+                throw new DomainException('This lead was already converted, but its original project link is unavailable.');
+            }
 
             $client = $this->resolveClient($lead);
-
-            // ── 2. Fetch the most relevant Contract ──────────────────────────
-
             $contract = $this->resolveContract($lead);
-
-            // ── 3. Create the Project ─────────────────────────────────────────
-
             $project = $this->createProject($lead, $client, $contract);
-
-            // ── 4. Migrate all sales documents ────────────────────────────────
-
             $this->migrateDocuments($lead, $client, $project);
-
-            // ── 5. Create finance records from the winning billing document ──
-
             $this->createFinanceRecords($lead, $client, $project, $contract);
-
-            // ── 6. Reparent polymorphic activity from Lead to Client ─────────
-
             $this->reparentPolymorphicRecords($lead, $client);
-
-            // ── 7. Archive the Lead and link it to the new client ─────────────
-
             $lead->status = LeadStatus::ARCHIVED;
             $lead->client_id = $client->id;
+            $lead->converted_project_id = $project->id;
             $lead->save();
 
             return [
@@ -109,28 +110,53 @@ class ConvertLeadToClientProjectAction
             return $existing;
         }
 
-        // Parse a display name from the lead title.
-        // Lead titles are typically "Company – Contact" or just "Company".
-        $displayName = $lead->title;
+        $leadMetadata = $lead->metadata ?? [];
+        $companyName = $this->metadataString($leadMetadata, 'company_name') ?: $lead->title;
+        $contactName = $this->metadataString($leadMetadata, 'contact_name');
+        $primaryEmail = $this->metadataString($leadMetadata, 'primary_email');
+        $primaryPhone = $this->metadataString($leadMetadata, 'primary_phone');
 
-        return Client::create(array_filter([
+        $client = Client::create(array_filter([
             'type' => 'company',
-            'display_name' => $displayName,
-            'company_name' => $displayName,
-            'primary_email' => null,   // Lead model has no email field; extend if needed
+            'display_name' => $companyName,
+            'company_name' => $companyName,
+            'primary_email' => $primaryEmail,
+            'primary_phone' => $primaryPhone,
             'source' => $lead->source ?? null,
             'lead_temperature' => $lead->lead_temperature ?? null,
             'expected_budget' => $lead->expected_budget ?? null,
+            'expected_close_date' => $lead->expected_close_date?->toDateString(),
             'account_manager_id' => $lead->assigned_to ?? null,
             'notes' => $lead->notes ?? null,
             'lifecycle_stage' => 'client',
             'status' => ClientStatus::ACTIVE->value,
             'became_client_at' => now()->toDateTimeString(),
-            'metadata' => array_filter([
+            'metadata' => array_filter(array_merge($leadMetadata, [
                 'converted_from_lead_id' => $lead->id,
                 'original_lead_title' => $lead->title,
-            ]),
-        ], fn ($v) => $v !== null));
+            ]), fn ($metadataEntry) => $metadataEntry !== null && $metadataEntry !== ''),
+        ], fn ($clientAttribute) => $clientAttribute !== null));
+
+        if ($contactName || $primaryEmail || $primaryPhone) {
+            $client->contacts()->create(array_filter([
+                'display_name' => $contactName ?: $companyName,
+                'email' => $primaryEmail,
+                'phone' => $primaryPhone,
+                'is_primary' => true,
+            ], fn ($contactAttribute) => $contactAttribute !== null && $contactAttribute !== ''));
+        }
+
+        return $client;
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function metadataString(array $metadata, string $key): ?string
+    {
+        $metadataValue = $metadata[$key] ?? null;
+
+        return is_string($metadataValue) && trim($metadataValue) !== '' ? trim($metadataValue) : null;
     }
 
     /**

@@ -12,9 +12,14 @@ use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Meetings\Services\MeetingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class LeadPipelineController extends Controller
 {
+    private const PIPELINE_ORDER = ['new_lead', 'contacted', 'meeting', 'proposal', 'quotation', 'contract', 'won'];
+
+    private const INTERACTIVE_STAGES = ['meeting', 'proposal', 'quotation', 'contract'];
+
     /**
      * Update the pipeline stage of a lead.
      *
@@ -35,19 +40,34 @@ class LeadPipelineController extends Controller
         $newStage = LeadStage::from($request->validated('new_stage'));
         $stageResults = $request->validated('stage_results');
         $scheduledMeeting = $request->validated('scheduled_meeting');
+
+        if ($newStage === LeadStage::WON) {
+            abort_unless($request->user()?->canAny(['convert_leads', 'manage_leads']), 403, 'Unauthorized');
+        }
+
         $this->authorizeStageResults($request, $stageResults);
+
+        if (is_array($scheduledMeeting)) {
+            abort_unless($request->user()?->can('schedule_meetings'), 403, 'Unauthorized');
+        }
 
         if ($response = $this->validateStageGate($lead, $newStage)) {
             return $response;
         }
 
-        $updatedLead = $action->execute($lead->id, $newStage, $stageResults);
-
-        if (is_array($scheduledMeeting)) {
-            abort_if(! $request->user()?->can('schedule_meetings'), 403, 'Unauthorized');
-
-            $meetingService->scheduleMeeting($lead, $this->meetingPayload($scheduledMeeting), $request->user());
+        if ($response = $this->validateTransition($lead, $newStage, $stageResults, $scheduledMeeting)) {
+            return $response;
         }
+
+        $updatedLead = DB::transaction(function () use ($action, $lead, $meetingService, $newStage, $request, $scheduledMeeting, $stageResults) {
+            $updatedLead = $action->execute($lead->id, $newStage, $stageResults);
+
+            if (is_array($scheduledMeeting)) {
+                $meetingService->scheduleMeeting($lead, $this->meetingPayload($scheduledMeeting), $request->user());
+            }
+
+            return $updatedLead;
+        });
 
         return ApiResponse::success(
             [
@@ -60,19 +80,87 @@ class LeadPipelineController extends Controller
 
     private function validateStageGate(Lead $lead, LeadStage $newStage): ?JsonResponse
     {
-        if (in_array($newStage, [LeadStage::PROPOSAL, LeadStage::QUOTATION], true) && ! $this->hasCompletedMeeting($lead)) {
+        $requiresMeeting = in_array($newStage, [LeadStage::PROPOSAL, LeadStage::QUOTATION, LeadStage::CONTRACT, LeadStage::WON], true);
+
+        if ($requiresMeeting && ! $this->hasCompletedMeeting($lead)) {
             $message = 'Cannot advance: Complete the meeting and add notes first.';
 
             return ApiResponse::error($message, 422, ['stage' => [$message]]);
         }
 
-        if ($newStage === LeadStage::CONTRACT && ! $this->hasAcceptedProposalOrQuotation($lead)) {
+        $requiresAcceptedDocument = in_array($newStage, [LeadStage::CONTRACT, LeadStage::WON], true);
+
+        if ($requiresAcceptedDocument && ! $this->hasAcceptedProposalOrQuotation($lead)) {
             $message = 'Cannot advance: An accepted proposal or quotation is required first.';
 
             return ApiResponse::error($message, 422, ['stage' => [$message]]);
         }
 
         return null;
+    }
+
+    /**
+     * Reject backward/terminal moves and require explicit results for every
+     * interactive stage crossed by a forward jump.
+     *
+     * @param  array<int, array<string, mixed>>  $stageResults
+     * @param  array<string, mixed>|null  $scheduledMeeting
+     */
+    private function validateTransition(Lead $lead, LeadStage $newStage, array $stageResults, ?array $scheduledMeeting): ?JsonResponse
+    {
+        $currentStage = $lead->stage;
+
+        if (in_array($currentStage, [LeadStage::WON, LeadStage::LOST], true)) {
+            $message = 'Cannot move a lead after it reaches a terminal stage.';
+
+            return ApiResponse::error($message, 422, ['stage' => [$message]]);
+        }
+
+        if ($newStage === LeadStage::LOST) {
+            return null;
+        }
+
+        $currentIndex = array_search($currentStage->value, self::PIPELINE_ORDER, true);
+        $newIndex = array_search($newStage->value, self::PIPELINE_ORDER, true);
+
+        if ($currentIndex === false || $newIndex === false || $newIndex <= $currentIndex) {
+            $message = 'Lead stages can only move forward.';
+
+            return ApiResponse::error($message, 422, ['stage' => [$message]]);
+        }
+
+        $missingStages = $this->missingStageEvidence(
+            $currentIndex,
+            $newIndex,
+            $stageResults,
+            is_array($scheduledMeeting)
+        );
+
+        if ($missingStages !== []) {
+            $labels = implode(', ', array_map(fn (string $stage) => LeadStage::from($stage)->label(), $missingStages));
+            $message = "Cannot advance: complete or explicitly skip these stages first: {$labels}.";
+
+            return ApiResponse::error($message, 422, ['stage_results' => [$message]]);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $stageResults
+     * @return array<int, string>
+     */
+    private function missingStageEvidence(int $currentIndex, int $newIndex, array $stageResults, bool $meetingScheduled): array
+    {
+        $crossedStages = array_slice(self::PIPELINE_ORDER, $currentIndex + 1, $newIndex - $currentIndex);
+        $requiredStages = array_values(array_intersect($crossedStages, self::INTERACTIVE_STAGES));
+        $completedStages = collect($stageResults)->pluck('stage')->filter()->all();
+
+        if ($meetingScheduled) {
+            $completedStages[] = LeadStage::MEETING->value;
+        }
+
+        return array_values(array_diff($requiredStages, $completedStages));
     }
 
     /**
