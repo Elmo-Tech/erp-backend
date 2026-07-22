@@ -2,6 +2,7 @@
 
 namespace App\Modules\Lead\Controllers;
 
+use App\Enums\DocumentCreationType;
 use App\Enums\ProposalStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
@@ -37,6 +38,7 @@ class LeadProposalController extends Controller
     public function update(Request $request, Lead $lead, Proposal $proposal): JsonResponse
     {
         $this->assertBelongsToLead($proposal, $lead);
+        abort_if($proposal->creation_type === DocumentCreationType::TASK, 422, 'Task placeholders do not have a document status.');
 
         $data = $request->validate([
             'status' => ['sometimes', 'string', Rule::in(ProposalStatus::values())],

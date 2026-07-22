@@ -2,6 +2,7 @@
 
 namespace App\Modules\Lead\Controllers;
 
+use App\Enums\DocumentCreationType;
 use App\Enums\LeadStage;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
@@ -10,6 +11,8 @@ use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Requests\UpdateLeadStageRequest;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Meetings\Services\MeetingService;
+use App\Modules\PersonalTasks\Models\PersonalTask;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +22,14 @@ class LeadPipelineController extends Controller
     private const PIPELINE_ORDER = ['new_lead', 'contacted', 'meeting', 'proposal', 'quotation', 'contract', 'won'];
 
     private const INTERACTIVE_STAGES = ['meeting', 'proposal', 'quotation', 'contract'];
+
+    public function readiness(Lead $lead): JsonResponse
+    {
+        return ApiResponse::success(
+            $this->currentDocumentTaskState($lead),
+            'Lead pipeline readiness retrieved successfully.'
+        );
+    }
 
     /**
      * Update the pipeline stage of a lead.
@@ -42,20 +53,28 @@ class LeadPipelineController extends Controller
         $scheduledMeeting = $request->validated('scheduled_meeting');
 
         if ($newStage === LeadStage::WON) {
-            abort_unless($request->user()?->canAny(['convert_leads', 'manage_leads']), 403, 'Unauthorized');
+            abort_unless($request->user()->canAny(['convert_leads', 'manage_leads']), 403, 'Unauthorized');
         }
 
         $this->authorizeStageResults($request, $stageResults);
 
         if (is_array($scheduledMeeting)) {
-            abort_unless($request->user()?->can('schedule_meetings'), 403, 'Unauthorized');
+            abort_unless($request->user()->can('schedule_meetings'), 403, 'Unauthorized');
         }
 
-        if ($response = $this->validateStageGate($lead, $newStage)) {
+        if ($newStage === $lead->stage) {
+            if ($response = $this->validateDocumentTaskFulfillment($lead, $stageResults)) {
+                return $response;
+            }
+        } elseif ($response = $this->validateCurrentDocumentTaskBeforeAdvance($lead)) {
             return $response;
         }
 
-        if ($response = $this->validateTransition($lead, $newStage, $stageResults, $scheduledMeeting)) {
+        if ($newStage !== $lead->stage && ($response = $this->validateStageGate($lead, $newStage))) {
+            return $response;
+        }
+
+        if ($newStage !== $lead->stage && ($response = $this->validateTransition($lead, $newStage, $stageResults, $scheduledMeeting))) {
             return $response;
         }
 
@@ -95,6 +114,122 @@ class LeadPipelineController extends Controller
         }
 
         return null;
+    }
+
+    /** @param array<int, array<string, mixed>> $stageResults */
+    private function validateDocumentTaskFulfillment(Lead $lead, array $stageResults): ?JsonResponse
+    {
+        $documentTaskState = $this->currentDocumentTaskState($lead);
+        $documentType = $documentTaskState['document_type'];
+
+        if ($documentType === null || ! $documentTaskState['has_task'] || $documentTaskState['has_document']) {
+            $message = 'No completed document task is waiting for an upload in this stage.';
+
+            return ApiResponse::error($message, 422, ['stage_results' => [$message]]);
+        }
+
+        if ($documentTaskState['task_status'] !== 'done') {
+            return $this->documentTaskError("Complete the {$documentType} task before uploading its file.");
+        }
+
+        $isDirectUpload = count($stageResults) === 1
+            && ($stageResults[0]['stage'] ?? null) === $lead->stage->value
+            && ($stageResults[0]['creation_type'] ?? null) === DocumentCreationType::DIRECT_UPLOAD->value;
+
+        if (! $isDirectUpload) {
+            return $this->documentTaskError("Upload the {$documentType} file to complete this task.");
+        }
+
+        return null;
+    }
+
+    private function validateCurrentDocumentTaskBeforeAdvance(Lead $lead): ?JsonResponse
+    {
+        $documentTaskState = $this->currentDocumentTaskState($lead);
+
+        if (! $documentTaskState['has_task'] || $documentTaskState['has_document']) {
+            return null;
+        }
+
+        $documentType = $documentTaskState['document_type'];
+        if ($documentTaskState['task_status'] !== 'done') {
+            return $this->documentTaskError("Complete the {$documentType} task before moving forward.");
+        }
+
+        return $this->documentTaskError("Upload the {$documentType} file before moving forward.");
+    }
+
+    private function documentTaskError(string $message): JsonResponse
+    {
+        return ApiResponse::error("Cannot advance: {$message}", 422, ['stage_results' => [$message]]);
+    }
+
+    /**
+     * @return array{stage: string, document_type: string|null, has_task: bool, task_status: string|null, has_document: bool, task_must_be_completed: bool, requires_document_upload: bool}
+     */
+    private function currentDocumentTaskState(Lead $lead): array
+    {
+        $documentType = $this->documentTypeForStage($lead->stage);
+        $documents = $this->documentsForStage($lead, $lead->stage);
+
+        if ($documentType === null || $documents === null) {
+            return [
+                'stage' => $lead->stage->value,
+                'document_type' => null,
+                'has_task' => false,
+                'task_status' => null,
+                'has_document' => false,
+                'task_must_be_completed' => false,
+                'requires_document_upload' => false,
+            ];
+        }
+
+        $taskDocument = $documents
+            ->where('creation_type', DocumentCreationType::TASK->value)
+            ->whereNotNull('personal_task_id')
+            ->with('personalTask:id,status')
+            ->latest('id')
+            ->first();
+        $uploadedDocuments = $this->documentsForStage($lead, $lead->stage)
+            ?->where('creation_type', DocumentCreationType::DIRECT_UPLOAD->value)
+            ->whereNotNull('file_path');
+        if ($taskDocument !== null) {
+            $uploadedDocuments?->where('id', '>', $taskDocument->getKey());
+        }
+        $hasDocument = $uploadedDocuments?->exists() ?? false;
+        $personalTask = $taskDocument?->getRelation('personalTask');
+        $taskStatus = $personalTask instanceof PersonalTask ? (string) $personalTask->getAttribute('status') : null;
+        $hasTask = $taskDocument !== null;
+
+        return [
+            'stage' => $lead->stage->value,
+            'document_type' => $documentType,
+            'has_task' => $hasTask,
+            'task_status' => $taskStatus,
+            'has_document' => $hasDocument,
+            'task_must_be_completed' => $hasTask && ! $hasDocument && $taskStatus !== 'done',
+            'requires_document_upload' => $hasTask && ! $hasDocument && $taskStatus === 'done',
+        ];
+    }
+
+    private function documentTypeForStage(LeadStage $stage): ?string
+    {
+        return match ($stage) {
+            LeadStage::PROPOSAL => 'proposal',
+            LeadStage::QUOTATION => 'quotation',
+            LeadStage::CONTRACT => 'contract',
+            default => null,
+        };
+    }
+
+    private function documentsForStage(Lead $lead, LeadStage $stage): ?HasMany
+    {
+        return match ($stage) {
+            LeadStage::PROPOSAL => $lead->proposals(),
+            LeadStage::QUOTATION => $lead->quotations(),
+            LeadStage::CONTRACT => $lead->contracts(),
+            default => null,
+        };
     }
 
     /**

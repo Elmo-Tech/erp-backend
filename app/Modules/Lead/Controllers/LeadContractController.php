@@ -3,6 +3,7 @@
 namespace App\Modules\Lead\Controllers;
 
 use App\Enums\ContractStatus;
+use App\Enums\DocumentCreationType;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Lead\Models\Contract;
@@ -40,6 +41,7 @@ class LeadContractController extends Controller
     {
         abort_unless($request->user()?->canAny(['edit_contracts', 'manage_contracts']), 403, 'Unauthorized');
         $this->assertBelongsToLead($contract, $lead);
+        abort_if($contract->creation_type === DocumentCreationType::TASK, 422, 'Task placeholders do not have a document status.');
 
         $data = $request->validate([
             'status' => ['sometimes', 'string', Rule::in(ContractStatus::values())],
@@ -63,6 +65,7 @@ class LeadContractController extends Controller
     {
         abort_unless($request->user()?->canAny(['sign_contracts', 'manage_contracts']), 403, 'Unauthorized');
         $this->assertBelongsToLead($contract, $lead);
+        abort_if($contract->creation_type === DocumentCreationType::TASK, 422, 'Task placeholders cannot be signed.');
 
         if ($contract->status !== ContractStatus::SIGNED) {
             abort_unless(

@@ -5,14 +5,17 @@ namespace Tests\Feature\Lead;
 use App\Enums\DocumentCreationType;
 use App\Enums\LeadStage;
 use App\Enums\LeadStatus;
+use App\Modules\Lead\Models\Contract;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Models\Proposal;
 use App\Modules\Lead\Models\Quotation;
 use App\Modules\Meetings\Models\Meeting;
+use App\Modules\PersonalTasks\Models\PersonalTask;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -195,6 +198,121 @@ class LeadPipelineStageGateTest extends TestCase
         $this->assertSame(LeadStage::NEW_LEAD, $lead->fresh()->stage);
         $this->assertDatabaseCount('personal_tasks', 0);
         $this->assertDatabaseCount('proposals', 0);
+    }
+
+    #[DataProvider('documentTaskStageProvider')]
+    public function test_completed_document_task_requires_its_file_before_advancing(
+        LeadStage $currentStage,
+        LeadStage $nextStage,
+        string $documentType
+    ): void {
+        $user = $this->userWithPermissions(['manage_leads', 'manage_contracts']);
+        $lead = $this->lead(['stage' => $currentStage]);
+        $this->completedMeeting($lead);
+        $task = PersonalTask::create([
+            'user_id' => $user->id,
+            'title' => "Prepare {$documentType}",
+            'status' => 'done',
+            'priority' => 'medium',
+            'due_date' => now()->toDateString(),
+            'completed_at' => now(),
+        ]);
+
+        $this->createDocumentTask($lead, $task, $documentType);
+        $this->createAcceptedProposalWhenRequired($lead, $currentStage);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => $nextStage->value,
+                'stage_results' => $this->destinationStageEvidence($nextStage),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', "Cannot advance: Upload the {$documentType} file before moving forward.");
+
+        $this->assertSame($currentStage, $lead->fresh()->stage);
+    }
+
+    public static function documentTaskStageProvider(): array
+    {
+        return [
+            'proposal task' => [LeadStage::PROPOSAL, LeadStage::QUOTATION, 'proposal'],
+            'quotation task' => [LeadStage::QUOTATION, LeadStage::CONTRACT, 'quotation'],
+            'contract task' => [LeadStage::CONTRACT, LeadStage::WON, 'contract'],
+        ];
+    }
+
+    public function test_completed_proposal_task_can_be_fulfilled_by_upload_without_advancing_the_lead(): void
+    {
+        Storage::fake('local');
+        $user = $this->userWithPermissions(['manage_leads']);
+        $lead = $this->lead(['stage' => LeadStage::PROPOSAL]);
+        $task = PersonalTask::create([
+            'user_id' => $user->id,
+            'title' => 'Prepare proposal',
+            'status' => 'done',
+            'priority' => 'medium',
+            'due_date' => now()->toDateString(),
+            'completed_at' => now(),
+        ]);
+        $this->createDocumentTask($lead, $task, 'proposal');
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/leads/{$lead->id}/pipeline/readiness")
+            ->assertOk()
+            ->assertJsonPath('data.task_status', 'done')
+            ->assertJsonPath('data.requires_document_upload', true);
+
+        $this->actingAs($user, 'sanctum')
+            ->post("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::PROPOSAL->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::PROPOSAL->value,
+                    'type' => 'proposal',
+                    'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+                    'proposal_source' => 'upload_new',
+                    'validity_date' => now()->addMonth()->toDateString(),
+                    'upload_file' => UploadedFile::fake()->createWithContent('completed-proposal.pdf', '%PDF-1.4 proposal'),
+                ]],
+            ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.stage', LeadStage::PROPOSAL->value);
+
+        $this->assertSame(LeadStage::PROPOSAL, $lead->fresh()->stage);
+        $this->assertDatabaseHas('proposals', [
+            'lead_id' => $lead->id,
+            'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+            'file_name' => 'completed-proposal.pdf',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/leads/{$lead->id}/pipeline/readiness")
+            ->assertOk()
+            ->assertJsonPath('data.has_document', true)
+            ->assertJsonPath('data.requires_document_upload', false);
+    }
+
+    public function test_open_document_task_must_be_completed_before_advancing(): void
+    {
+        $user = $this->userWithPermissions(['manage_leads']);
+        $lead = $this->lead(['stage' => LeadStage::PROPOSAL]);
+        $task = PersonalTask::create([
+            'user_id' => $user->id,
+            'title' => 'Prepare proposal',
+            'status' => 'in_progress',
+            'priority' => 'medium',
+            'due_date' => now()->toDateString(),
+        ]);
+        $this->createDocumentTask($lead, $task, 'proposal');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::QUOTATION->value,
+                'stage_results' => $this->destinationStageEvidence(LeadStage::QUOTATION),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Cannot advance: Complete the proposal task before moving forward.');
+
+        $this->assertSame(LeadStage::PROPOSAL, $lead->fresh()->stage);
     }
 
     public function test_direct_upload_stage_result_is_available_through_an_authorized_download(): void
@@ -507,6 +625,57 @@ class LeadPipelineStageGateTest extends TestCase
             'outcome_summary' => 'Qualified budget and stakeholders.',
             'completed_at' => now(),
         ]);
+    }
+
+    private function createDocumentTask(Lead $lead, PersonalTask $task, string $documentType): void
+    {
+        $attributes = [
+            'lead_id' => $lead->id,
+            'status' => 'draft',
+            'creation_type' => DocumentCreationType::TASK->value,
+            'personal_task_id' => $task->id,
+        ];
+
+        match ($documentType) {
+            'proposal' => Proposal::create($attributes),
+            'quotation' => Quotation::create([...$attributes, 'currency' => 'USD']),
+            'contract' => Contract::create([...$attributes, 'contract_model' => 'standard']),
+        };
+    }
+
+    private function createAcceptedProposalWhenRequired(Lead $lead, LeadStage $currentStage): void
+    {
+        if ($currentStage === LeadStage::PROPOSAL) {
+            return;
+        }
+
+        Proposal::create([
+            'lead_id' => $lead->id,
+            'status' => 'accepted',
+            'creation_type' => DocumentCreationType::DIRECT_UPLOAD->value,
+            'file_path' => 'lead-documents/accepted-proposal.pdf',
+            'file_name' => 'accepted-proposal.pdf',
+        ]);
+    }
+
+    /** @return array<int, array<string, string>> */
+    private function destinationStageEvidence(LeadStage $nextStage): array
+    {
+        return match ($nextStage) {
+            LeadStage::QUOTATION => [[
+                'stage' => LeadStage::QUOTATION->value,
+                'type' => 'quotation',
+                'creation_type' => DocumentCreationType::SKIPPED->value,
+                'skip_reason' => 'Destination evidence for the regression scenario.',
+            ]],
+            LeadStage::CONTRACT => [[
+                'stage' => LeadStage::CONTRACT->value,
+                'type' => 'contract',
+                'creation_type' => DocumentCreationType::SKIPPED->value,
+                'skip_reason' => 'Destination evidence for the regression scenario.',
+            ]],
+            default => [],
+        };
     }
 
     /**

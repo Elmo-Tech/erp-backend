@@ -7,6 +7,7 @@ use App\Enums\LeadStage;
 use App\Enums\LeadStatus;
 use App\Modules\Lead\Models\Contract;
 use App\Modules\Lead\Models\Lead;
+use App\Modules\Lead\Models\Proposal;
 use App\Modules\Lead\Models\Quotation;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -88,6 +89,49 @@ class LeadKanbanAuthorityTest extends TestCase
             ->assertOk();
 
         $this->assertSoftDeleted('leads', ['id' => $lead->id]);
+    }
+
+    public function test_task_placeholders_cannot_receive_document_lifecycle_updates(): void
+    {
+        $user = $this->userWithPermissions(['manage_leads', 'manage_contracts']);
+        $lead = $this->lead();
+        $proposal = Proposal::create([
+            'lead_id' => $lead->id,
+            'status' => 'draft',
+            'creation_type' => DocumentCreationType::TASK->value,
+        ]);
+        $quotation = Quotation::create([
+            'lead_id' => $lead->id,
+            'status' => 'draft',
+            'creation_type' => DocumentCreationType::TASK->value,
+            'currency' => 'USD',
+        ]);
+        $contract = Contract::create([
+            'lead_id' => $lead->id,
+            'status' => 'draft',
+            'creation_type' => DocumentCreationType::TASK->value,
+            'contract_model' => 'standard',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson("/api/v1/leads/{$lead->id}/pipeline/proposals/{$proposal->id}", ['status' => 'accepted'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Task placeholders do not have a document status.');
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson("/api/v1/leads/{$lead->id}/pipeline/quotations/{$quotation->id}", ['status' => 'accepted'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Task placeholders do not have a document status.');
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson("/api/v1/leads/{$lead->id}/pipeline/contracts/{$contract->id}", ['status' => 'approved'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Task placeholders do not have a document status.');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/pipeline/contracts/{$contract->id}/sign")
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Task placeholders cannot be signed.');
     }
 
     private function lead(): Lead

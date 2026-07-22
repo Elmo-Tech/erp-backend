@@ -2,6 +2,7 @@
 
 namespace App\Modules\Lead\Controllers;
 
+use App\Enums\DocumentCreationType;
 use App\Enums\QuotationStatus;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
@@ -40,6 +41,7 @@ class LeadQuotationController extends Controller
     {
         abort_unless($request->user()?->canAny(['edit_quotations', 'manage_leads']), 403, 'Unauthorized');
         $this->assertBelongsToLead($quotation, $lead);
+        abort_if($quotation->creation_type === DocumentCreationType::TASK, 422, 'Task placeholders do not have a document status.');
 
         $data = $request->validate([
             'status' => ['sometimes', 'string', Rule::in(QuotationStatus::values())],

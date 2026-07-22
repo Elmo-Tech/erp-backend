@@ -50,6 +50,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::post('leads/{lead}/stage', [LeadPipelineController::class, 'updateStage'])
         ->middleware('permission:edit_leads|manage_leads')
         ->name('leads.stage.update');
+    Route::get('leads/{lead}/pipeline/readiness', [LeadPipelineController::class, 'readiness'])
+        ->middleware('permission:edit_leads|manage_leads')
+        ->name('leads.pipeline.readiness');
     Route::post('leads/{lead}/convert', [LeadConversionController::class, 'convert'])
         ->middleware('permission:convert_leads|manage_leads')
         ->name('leads.convert');
