@@ -6,6 +6,7 @@ enum TaskStatus: string
 {
     case TODO = 'todo';
     case IN_PROGRESS = 'in_progress';
+    case ON_HOLD = 'on_hold';
     case REVIEW = 'review';
     case TESTING = 'testing';
     case COMPLETED = 'completed';
@@ -18,6 +19,7 @@ enum TaskStatus: string
         return match ($this) {
             self::TODO => 'To Do',
             self::IN_PROGRESS => 'In Progress',
+            self::ON_HOLD => 'On Hold',
             self::REVIEW => 'Review',
             self::TESTING => 'Testing',
             self::COMPLETED => 'Completed',
@@ -36,6 +38,7 @@ enum TaskStatus: string
         $allStatuses = [
             self::TODO,
             self::IN_PROGRESS,
+            self::ON_HOLD,
             self::REVIEW,
             self::TESTING,
             self::COMPLETED,
@@ -69,6 +72,7 @@ enum TaskStatus: string
         return [
             self::TODO,
             self::IN_PROGRESS,
+            self::ON_HOLD,
             self::REVIEW,
             self::TESTING,
             self::COMPLETED,

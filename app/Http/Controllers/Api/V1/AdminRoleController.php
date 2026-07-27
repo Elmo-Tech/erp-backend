@@ -6,16 +6,20 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Admin\StoreRoleRequest;
 use App\Http\Requests\V1\Admin\UpdateRoleRequest;
+use App\Policies\UserAdministrationPolicy;
 use App\Services\Client\AuditLogService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use OpenApi\Annotations as OA;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class AdminRoleController extends Controller
 {
     public function __construct(
-        private AuditLogService $auditLogService
+        private AuditLogService $auditLogService,
+        private UserAdministrationPolicy $administrationPolicy,
     ) {
         // Apply middleware using Laravel 12 approach
         $this->middleware(['auth:sanctum', 'locale']);
@@ -120,6 +124,8 @@ class AdminRoleController extends Controller
                 $rolesData,
                 'Roles retrieved successfully'
             );
+        } catch (HttpExceptionInterface $e) {
+            throw $e;
         } catch (\Exception $e) {
             return ApiResponse::error(
                 'Failed to retrieve roles: '.$e->getMessage(),
@@ -241,8 +247,10 @@ class AdminRoleController extends Controller
                 $roleData,
                 'Role retrieved successfully'
             );
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return ApiResponse::notFound('Role not found');
+        } catch (HttpExceptionInterface $e) {
+            throw $e;
         } catch (\Exception $e) {
             return ApiResponse::error(
                 'Failed to retrieve role: '.$e->getMessage(),
@@ -373,6 +381,10 @@ class AdminRoleController extends Controller
 
         try {
             $validatedData = $request->validated();
+            $this->administrationPolicy->authorizeRoleCreation(
+                $request->user(),
+                $validatedData['permissions'] ?? []
+            );
 
             // Create the role
             $role = Role::create([
@@ -410,6 +422,8 @@ class AdminRoleController extends Controller
                 'Role created successfully',
                 201
             );
+        } catch (HttpExceptionInterface $e) {
+            throw $e;
         } catch (\Exception $e) {
             return ApiResponse::error(
                 'Failed to create role: '.$e->getMessage(),
@@ -554,15 +568,12 @@ class AdminRoleController extends Controller
         try {
             $roleModel = Role::findOrFail($role);
 
-            // Check if role is protected
-            if (in_array($roleModel->name, ['admin', 'client', 'super-admin'])) {
-                return ApiResponse::validationError(
-                    ['role' => ['This role is protected and cannot be modified']],
-                    'Cannot update protected role'
-                );
-            }
-
             $validatedData = $request->validated();
+            $this->administrationPolicy->authorizeRoleMutation(
+                $request->user(),
+                $roleModel,
+                $validatedData['permissions'] ?? $roleModel->permissions->pluck('name')->all()
+            );
 
             // Store old data for audit log
             $oldData = [
@@ -612,8 +623,10 @@ class AdminRoleController extends Controller
                 $roleData,
                 'Role updated successfully'
             );
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return ApiResponse::notFound('Role not found');
+        } catch (HttpExceptionInterface $e) {
+            throw $e;
         } catch (\Exception $e) {
             return ApiResponse::error(
                 'Failed to update role: '.$e->getMessage(),
@@ -725,13 +738,7 @@ class AdminRoleController extends Controller
         try {
             $roleModel = Role::findOrFail($role);
 
-            // Check if role is protected
-            if (in_array($roleModel->name, ['admin', 'client', 'super-admin'])) {
-                return ApiResponse::validationError(
-                    ['role' => ['This role is protected and cannot be deleted']],
-                    'Cannot delete protected role'
-                );
-            }
+            $this->administrationPolicy->authorizeRoleDeletion(request()->user(), $roleModel);
 
             // Store role data for audit log
             $roleData = [
@@ -753,8 +760,10 @@ class AdminRoleController extends Controller
                 null,
                 'Role deleted successfully'
             );
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return ApiResponse::notFound('Role not found');
+        } catch (HttpExceptionInterface $e) {
+            throw $e;
         } catch (\Exception $e) {
             return ApiResponse::error(
                 'Failed to delete role: '.$e->getMessage(),
@@ -901,6 +910,10 @@ class AdminRoleController extends Controller
             'edit_projects' => 'Project Management',
             'delete_projects' => 'Project Management',
             'approve_project_ui' => 'Project Management',
+            'view_all_projects' => 'Project Management',
+            'manage_all_projects' => 'Project Management',
+            'manage_project_workflows' => 'Project Management',
+            'manage_workflow_templates' => 'Project Management',
 
             // Project Members
             'manage_project_members' => 'Project Members',
@@ -1039,6 +1052,10 @@ class AdminRoleController extends Controller
             'edit_projects' => 'Edit existing projects',
             'delete_projects' => 'Delete projects',
             'approve_project_ui' => 'Approve UI/UX deliverables',
+            'view_all_projects' => 'View every project without being assigned',
+            'manage_all_projects' => 'Manage every project without being assigned',
+            'manage_project_workflows' => 'Configure workflow stages for accessible projects',
+            'manage_workflow_templates' => 'Create reusable project workflow templates',
 
             // Project Members
             'manage_project_members' => 'Full project member management',

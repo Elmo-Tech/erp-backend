@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 /**
@@ -35,6 +36,7 @@ class TimeTrackingTaskStatusIntegrationTest extends TestCase
         $project = Project::factory()->create([
             'client_id' => $client->id,
         ]);
+        $this->allowTaskTimer($user, $project);
 
         // Create a TODO task without start_date
         $task = Task::factory()->create([
@@ -104,6 +106,7 @@ class TimeTrackingTaskStatusIntegrationTest extends TestCase
         $project = Project::factory()->create([
             'client_id' => $client->id,
         ]);
+        $this->allowTaskTimer($user, $project);
 
         $existingStartDate = Carbon::parse('2025-01-01');
 
@@ -149,6 +152,7 @@ class TimeTrackingTaskStatusIntegrationTest extends TestCase
         $project = Project::factory()->create([
             'client_id' => $client->id,
         ]);
+        $this->allowTaskTimer($user, $project);
 
         // Create a REVIEW task without start_date
         $task = Task::factory()->create([
@@ -176,5 +180,17 @@ class TimeTrackingTaskStatusIntegrationTest extends TestCase
 
         // Verify start_date was set to today (since it was null)
         $this->assertEquals(Carbon::now('Africa/Cairo')->toDateString(), $task->start_date->toDateString());
+    }
+
+    private function allowTaskTimer(User $user, Project $project): void
+    {
+        $user->givePermissionTo([
+            Permission::findOrCreate('view_tasks', 'web'),
+            Permission::findOrCreate('start_timer', 'web'),
+        ]);
+        $project->members()->create([
+            'user_id' => $user->id,
+            'role' => 'member',
+        ]);
     }
 }

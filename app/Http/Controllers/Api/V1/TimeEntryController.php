@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Contracts\Trackable;
+use App\Enums\TimerStopReason;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\TimeEntries\StartTimerRequest;
@@ -10,10 +11,13 @@ use App\Http\Requests\V1\TimeEntries\StopTimerRequest;
 use App\Http\Resources\V1\TimeEntries\TimeEntryCollection;
 use App\Http\Resources\V1\TimeEntries\TimeEntryResource;
 use App\Models\Lead;
+use App\Models\Project;
 use App\Models\Quotation;
 use App\Models\Task;
 use App\Models\TimeEntry;
+use App\Services\Projects\ProjectAccess;
 use App\Services\Sales\TimeTrackingService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
@@ -23,7 +27,8 @@ use Spatie\QueryBuilder\QueryBuilder;
 class TimeEntryController extends Controller
 {
     public function __construct(
-        private TimeTrackingService $timeTrackingService
+        private TimeTrackingService $timeTrackingService,
+        private ProjectAccess $projectAccess
     ) {
         // Apply middleware using Laravel 12 approach
         $this->middleware(['auth:sanctum', 'locale']);
@@ -319,6 +324,18 @@ class TimeEntryController extends Controller
                 return ApiResponse::error('Entity does not support time tracking', 400);
             }
 
+            if ($trackable instanceof Task) {
+                $trackable->loadMissing('project');
+                $project = $trackable->project;
+                if (
+                    ! $project instanceof Project
+                    || ! $this->projectAccess->canViewTasks($user, $project)
+                    || ! $user->can('start_timer')
+                ) {
+                    return ApiResponse::forbidden('You do not have permission to track time for this task.');
+                }
+            }
+
             // Start the timer
             $timeEntry = $this->timeTrackingService->startTimer($user, $trackable);
 
@@ -420,6 +437,121 @@ class TimeEntryController extends Controller
         } catch (\RuntimeException $e) {
             return ApiResponse::error($e->getMessage(), 400);
         }
+    }
+
+    public function heartbeat(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'timeEntryId' => ['required', 'integer'],
+            'sessionId' => ['required', 'uuid'],
+        ]);
+
+        try {
+            $timeEntry = $this->timeTrackingService->heartbeat(
+                $request->user(),
+                (int) $data['timeEntryId'],
+                $data['sessionId']
+            );
+
+            return ApiResponse::success(
+                new TimeEntryResource($timeEntry->load('trackable')),
+                'Timer heartbeat accepted'
+            );
+        } catch (\RuntimeException $exception) {
+            return ApiResponse::error($exception->getMessage(), 409);
+        }
+    }
+
+    public function pause(Request $request): JsonResponse
+    {
+        try {
+            $timeEntry = $this->timeTrackingService->pauseTimer($request->user());
+
+            return ApiResponse::success(
+                new TimeEntryResource($timeEntry->load('trackable')),
+                'Timer paused successfully'
+            );
+        } catch (\RuntimeException $exception) {
+            return ApiResponse::error($exception->getMessage(), 400);
+        }
+    }
+
+    public function hold(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        try {
+            $timeEntry = $this->timeTrackingService->holdTimer(
+                $request->user(),
+                $data['reason']
+            );
+
+            return ApiResponse::success(
+                new TimeEntryResource($timeEntry->load('trackable')),
+                'Task placed on hold and timer stopped'
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), 422);
+        } catch (\RuntimeException $exception) {
+            return ApiResponse::error($exception->getMessage(), 400);
+        }
+    }
+
+    public function end(Request $request): JsonResponse
+    {
+        try {
+            $timeEntry = $this->timeTrackingService->stopTimer(
+                $request->user(),
+                TimerStopReason::END
+            );
+
+            return ApiResponse::success(
+                new TimeEntryResource($timeEntry->load('trackable')),
+                'Timer ended successfully'
+            );
+        } catch (\RuntimeException $exception) {
+            return ApiResponse::error($exception->getMessage(), 400);
+        }
+    }
+
+    public function resume(Request $request, int $id): JsonResponse
+    {
+        $previousEntry = TimeEntry::query()->find($id);
+
+        if ($previousEntry === null) {
+            return ApiResponse::notFound('Time entry not found');
+        }
+
+        try {
+            $timeEntry = $this->timeTrackingService->resumeTimer(
+                $request->user(),
+                $previousEntry
+            );
+
+            return ApiResponse::success(
+                new TimeEntryResource($timeEntry->load('trackable')),
+                'Timer resumed successfully',
+                201
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), 422);
+        } catch (\RuntimeException $exception) {
+            return ApiResponse::error($exception->getMessage(), 400);
+        }
+    }
+
+    public function resumable(Request $request): JsonResponse
+    {
+        $timeEntry = $this->timeTrackingService->getLatestResumableTimer($request->user());
+
+        return ApiResponse::success(
+            $timeEntry
+                ? new TimeEntryResource($timeEntry->load('trackable'))
+                : null,
+            $timeEntry ? 'Resumable timer retrieved successfully' : 'No resumable timer found'
+        );
     }
 
     /**
@@ -593,8 +725,8 @@ class TimeEntryController extends Controller
 
         // If start and end time provided but no duration, calculate it
         if (isset($updateData['start_time']) && isset($updateData['end_time']) && ! isset($updateData['duration_minutes'])) {
-            $start = \Carbon\Carbon::parse($updateData['start_time']);
-            $end = \Carbon\Carbon::parse($updateData['end_time']);
+            $start = Carbon::parse($updateData['start_time']);
+            $end = Carbon::parse($updateData['end_time']);
             $updateData['duration_minutes'] = (int) floor($start->diffInSeconds($end) / 60);
         }
 
@@ -848,7 +980,10 @@ class TimeEntryController extends Controller
 
         // Stop the timer using the service
         $timerUser = $timeEntry->user;
-        $stoppedTimer = $this->timeTrackingService->stopTimer($timerUser);
+        $stoppedTimer = $this->timeTrackingService->stopTimer(
+            $timerUser,
+            TimerStopReason::ADMIN_STOP
+        );
 
         return ApiResponse::success(
             [

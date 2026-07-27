@@ -2,6 +2,7 @@
 
 use App\Jobs\CheckQuotationExpiryJob;
 use App\Jobs\CheckSubscriptionRenewalJob;
+use App\Jobs\GenerateRecurringTasksJob;
 use App\Jobs\MarkOverdueInvoicesJob;
 use App\Jobs\SendActivityRemindersJob;
 use App\Jobs\SendExpiryWarningsJob;
@@ -20,7 +21,7 @@ if (! config('simplification.enabled')) {
 }
 
 // Generate recurring tasks daily at 00:05 (after midnight)
-Schedule::job(new \App\Jobs\GenerateRecurringTasksJob)
+Schedule::job(new GenerateRecurringTasksJob)
     ->dailyAt('00:05')
     ->withoutOverlapping()
     ->onOneServer();
@@ -61,5 +62,10 @@ if (! config('simplification.enabled')) {
 // Reset grace days for all employees on the 1st of every month at 00:01
 Schedule::command('attendance:reset-grace-days')
     ->monthlyOn(1, '00:01')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('time-entries:expire-stale')
+    ->everyMinute()
     ->withoutOverlapping()
     ->onOneServer();

@@ -10,6 +10,7 @@ use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -216,6 +217,7 @@ class ClientScopePropertyTest extends TestCase
                 // Create admin user
                 $admin = User::factory()->create();
                 $admin->assignRole('admin');
+                $admin->givePermissionTo(Permission::findOrCreate('view_all_projects', 'web'));
 
                 // Test admin can see all projects
                 Auth::login($admin);

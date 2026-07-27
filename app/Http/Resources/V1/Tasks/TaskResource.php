@@ -79,6 +79,19 @@ class TaskResource extends JsonResource
 
             // Internal notes - only for authorized users
             'internalReviewerNotes' => $canViewInternal ? ($this->internal_reviewer_notes ?? '') : null,
+            'holdReason' => $this->hold_reason,
+            'isPipelineTask' => (bool) $this->is_pipeline_task,
+            'pipelinePosition' => (int) $this->pipeline_position,
+            'workflowStageId' => $this->workflow_stage_id,
+            'workflowStage' => $this->whenLoaded('workflowStage', fn () => [
+                'stageId' => $this->workflowStage->id,
+                'name' => $this->workflowStage->name,
+                'slug' => $this->workflowStage->slug,
+                'color' => $this->workflowStage->color,
+                'category' => $this->workflowStage->category,
+                'position' => $this->workflowStage->position,
+                'isTerminal' => $this->workflowStage->is_terminal,
+            ]),
 
             // Relationships
             'assignee' => $this->whenLoaded('assignee', fn () => $this->assignee ? [

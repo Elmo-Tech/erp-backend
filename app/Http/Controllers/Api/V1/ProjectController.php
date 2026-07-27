@@ -137,6 +137,8 @@ class ProjectController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Project::class);
+
         $user = $request->user();
 
         $projects = QueryBuilder::for(Project::class)
@@ -246,6 +248,8 @@ class ProjectController extends Controller
      */
     public function store(StoreProjectRequest $request): JsonResponse
     {
+        $this->authorize('create', Project::class);
+
         return DB::transaction(function () use ($request) {
             $data = $request->validated();
 
@@ -336,6 +340,8 @@ class ProjectController extends Controller
      */
     public function show(Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         return ApiResponse::success(
             new ProjectResource($project->load(['client', 'quotation', 'members.user', 'files'])),
             'Project retrieved successfully'
@@ -432,6 +438,8 @@ class ProjectController extends Controller
      */
     public function update(UpdateProjectRequest $request, Project $project): JsonResponse
     {
+        $this->authorize('update', $project);
+
         return DB::transaction(function () use ($request, $project) {
             $data = $request->validated();
             $reason = $data['reason'] ?? null;
@@ -563,6 +571,8 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project): JsonResponse
     {
+        $this->authorize('delete', $project);
+
         $project->delete();
 
         return ApiResponse::success(
@@ -642,6 +652,8 @@ class ProjectController extends Controller
      */
     public function storeDirect(StoreDirectProjectRequest $request): JsonResponse
     {
+        $this->authorize('create', Project::class);
+
         return DB::transaction(function () use ($request) {
             $data = $request->validated();
 
@@ -743,6 +755,8 @@ class ProjectController extends Controller
      */
     public function convert(ConvertQuotationRequest $request): JsonResponse
     {
+        $this->authorize('create', Project::class);
+
         return DB::transaction(function () use ($request) {
             $data = $request->validated();
 
@@ -844,6 +858,8 @@ class ProjectController extends Controller
      */
     public function approveUI(Project $project): JsonResponse
     {
+        $this->authorize('approveUI', $project);
+
         // Validate project is in UI/UX phase
         if ($project->status !== ProjectStatus::UI_UX) {
             return ApiResponse::error('Project is not in UI/UX phase', 400);
@@ -1077,6 +1093,8 @@ class ProjectController extends Controller
      */
     public function pinned(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Project::class);
+
         $user = $request->user();
         $pinnedProjects = $user->pinnedProjects()
             ->with(['client', 'quotation'])
@@ -1164,6 +1182,8 @@ class ProjectController extends Controller
      */
     public function pin(Request $request, Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $user = $request->user();
 
         // Check if already pinned
@@ -1255,6 +1275,8 @@ class ProjectController extends Controller
      */
     public function unpin(Request $request, Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         $user = $request->user();
 
         // Check if not pinned

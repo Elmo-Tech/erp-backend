@@ -4951,12 +4951,6 @@ parameters:
 			path: app/Services/Sales/TimeTrackingService.php
 
 		-
-			message: '#^Cannot call method diffInSeconds\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/Sales/TimeTrackingService.php
-
-		-
 			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\TaskStatus\:\:TODO will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1

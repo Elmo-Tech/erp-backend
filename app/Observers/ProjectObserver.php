@@ -10,6 +10,7 @@ use App\Notifications\ProjectStatusChangedNotification;
 use App\Services\AuditService;
 use App\Services\BillingService;
 use App\Services\Projects\ProjectHistoryService;
+use App\Services\Projects\ProjectWorkflowService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -36,8 +37,14 @@ class ProjectObserver
     public function __construct(
         private ProjectHistoryService $historyService,
         private BillingService $billingService,
-        private AuditService $auditService
+        private AuditService $auditService,
+        private ProjectWorkflowService $workflowService
     ) {}
+
+    public function created(Project $project): void
+    {
+        $this->workflowService->ensureProjectWorkflow($project);
+    }
 
     /**
      * Handle the Project "updating" event.

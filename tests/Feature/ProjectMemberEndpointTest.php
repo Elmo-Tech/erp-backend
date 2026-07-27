@@ -19,6 +19,7 @@ class ProjectMemberEndpointTest extends TestCase
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $admin = User::factory()->create();
         $admin->assignRole($adminRole);
+        $admin->givePermissionTo(Permission::findOrCreate('view_all_projects', 'web'));
         $member = User::factory()->create();
         $project = Project::factory()->create();
         $project->members()->create(['user_id' => $member->id, 'role' => 'member']);
@@ -36,7 +37,10 @@ class ProjectMemberEndpointTest extends TestCase
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $admin = User::factory()->create();
         $admin->assignRole($adminRole);
-        $admin->givePermissionTo('view_project_history');
+        $admin->givePermissionTo([
+            Permission::findOrCreate('view_all_projects', 'web'),
+            'view_project_history',
+        ]);
         $member = User::factory()->create(['name' => 'Team User']);
         $project = Project::factory()->create([
             'google_drive_folder_id' => 'folder-123',

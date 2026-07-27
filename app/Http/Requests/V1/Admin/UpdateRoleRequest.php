@@ -3,7 +3,9 @@
 namespace App\Http\Requests\V1\Admin;
 
 use App\Helpers\ApiResponse;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
@@ -23,7 +25,7 @@ class UpdateRoleRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -85,7 +87,7 @@ class UpdateRoleRequest extends FormRequest
      *
      * @return void
      *
-     * @throws \Illuminate\Http\Exceptions\HttpResponseException
+     * @throws HttpResponseException
      */
     protected function failedValidation(Validator $validator)
     {
@@ -102,13 +104,7 @@ class UpdateRoleRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        // Convert camelCase to snake_case for database compatibility if needed
-        // In this case, we keep the role name as provided since it's a user-defined identifier
-
-        // Ensure permissions array is not null
-        if (! $this->has('permissions')) {
-            $this->merge(['permissions' => []]);
-        }
+        //
     }
 
     /**
@@ -125,16 +121,6 @@ class UpdateRoleRequest extends FormRequest
             try {
                 $role = Role::findOrFail($roleId);
 
-                // Prevent updating protected roles
-                if (in_array($role->name, ['admin', 'client', 'super-admin'])) {
-                    $validator->errors()->add(
-                        'role',
-                        'This role is protected and cannot be modified.'
-                    );
-
-                    return; // Exit early if role is protected
-                }
-
                 // Additional validation: Check if all provided permissions exist
                 if ($this->has('permissions') && is_array($this->permissions)) {
                     $existingPermissions = Permission::pluck('name')->toArray();
@@ -148,18 +134,21 @@ class UpdateRoleRequest extends FormRequest
                     }
                 }
 
-                // Prevent renaming to protected role names (unless it's already that name)
-                // Only check if name is provided
+                // Protected role permissions may be changed by the dedicated
+                // backend privilege, but protected role names are immutable.
                 if ($this->has('name') && $this->name) {
                     $protectedNames = ['admin', 'client', 'super-admin'];
-                    if (in_array($this->name, $protectedNames) && $role->name !== $this->name) {
+                    if (
+                        (in_array($role->name, $protectedNames, true) && $this->name !== $role->name)
+                        || (in_array($this->name, $protectedNames, true) && $role->name !== $this->name)
+                    ) {
                         $validator->errors()->add(
                             'name',
                             'Cannot rename role to a protected name. Protected names: '.implode(', ', $protectedNames)
                         );
                     }
                 }
-            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            } catch (ModelNotFoundException $e) {
                 $validator->errors()->add(
                     'role',
                     'The specified role does not exist.'

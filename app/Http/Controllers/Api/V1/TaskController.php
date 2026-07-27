@@ -18,8 +18,10 @@ use App\Http\Resources\V1\Tasks\TaskAssigneeResource;
 use App\Http\Resources\V1\Tasks\TaskCollection;
 use App\Http\Resources\V1\Tasks\TaskResource;
 use App\Http\Resources\V1\Tasks\TaskTestScenarioResource;
+use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskTestScenario;
+use App\Services\Projects\ProjectAccess;
 use App\Services\Tasks\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,12 +37,22 @@ use OpenApi\Annotations as OA;
 class TaskController extends Controller
 {
     public function __construct(
-        private TaskService $taskService
+        private TaskService $taskService,
+        private ProjectAccess $projectAccess
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
         $this->middleware(function ($request, $next) {
-            if ($request->user()?->hasRole('client')) {
+            if ($request->user()?->client()->exists()) {
                 return ApiResponse::error(__('messages.unauthorized'), 403);
+            }
+
+            $task = $request->route('task');
+            if ($task instanceof Task) {
+                $task->loadMissing('project');
+                $project = $task->project;
+                if ($project instanceof Project && ! $this->projectAccess->canView($request->user(), $project)) {
+                    return ApiResponse::forbidden('You do not have access to this task project.');
+                }
             }
 
             return $next($request);
@@ -738,6 +750,9 @@ class TaskController extends Controller
      */
     public function projectTasks(Request $request, int $projectId): JsonResponse
     {
+        $project = Project::withoutGlobalScopes()->findOrFail($projectId);
+        abort_unless($this->projectAccess->canViewTasks($request->user(), $project), 403);
+
         $perPage = $request->get('perPage', 15);
         $tasks = $this->taskService->getTasksForProject($projectId, $perPage);
 
@@ -1181,6 +1196,9 @@ class TaskController extends Controller
      */
     public function pointsSummary(int $projectId): JsonResponse
     {
+        $project = Project::withoutGlobalScopes()->findOrFail($projectId);
+        abort_unless($this->projectAccess->canViewTasks(request()->user(), $project), 403);
+
         if (config('simplification.enabled')) {
             return ApiResponse::forbidden('Points are disabled in the simplified ERP version.');
         }

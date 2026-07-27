@@ -7,7 +7,10 @@ use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Helpers\ApiResponse;
+use App\Models\Project;
 use App\Models\Task;
+use App\Services\Projects\ProjectAccess;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -29,8 +32,15 @@ class StoreTaskRequest extends FormRequest
         $user = $this->user();
         $taskType = $this->input('type', TaskType::MAIN->value);
 
-        // Admin and Super Admin can create any task type
-        if ($user->hasRole(['admin', 'super-admin'])) {
+        $projectId = $this->input('projectId');
+        if ($projectId !== null) {
+            $project = Project::withoutGlobalScopes()->find($projectId);
+            if (! $project || ! app(ProjectAccess::class)->canView($user, $project)) {
+                return false;
+            }
+        }
+
+        if ($user->can('manage_tasks')) {
             return true;
         }
 
@@ -48,7 +58,7 @@ class StoreTaskRequest extends FormRequest
      *
      * Requirements: 1.5, 8.1
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

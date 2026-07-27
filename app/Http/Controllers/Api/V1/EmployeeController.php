@@ -8,6 +8,7 @@ use App\Http\Requests\V1\HR\StoreEmployeeRequest;
 use App\Http\Requests\V1\HR\UpdateEmployeeRequest;
 use App\Http\Resources\V1\HR\EmployeeCollection;
 use App\Http\Resources\V1\HR\EmployeeResource;
+use App\Policies\UserAdministrationPolicy;
 use App\Services\HR\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,8 +22,10 @@ use Illuminate\Support\Facades\DB;
  */
 class EmployeeController extends Controller
 {
-    public function __construct(private EmployeeService $employeeService)
-    {
+    public function __construct(
+        private EmployeeService $employeeService,
+        private UserAdministrationPolicy $administrationPolicy
+    ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
 
@@ -69,10 +72,20 @@ class EmployeeController extends Controller
      */
     public function store(StoreEmployeeRequest $request): JsonResponse
     {
+        $data = $request->validated();
+
+        if (! empty($data['role'])) {
+            $this->administrationPolicy->authorizeEmployeeRoleAssignment(
+                $request->user(),
+                null,
+                $data['role']
+            );
+        }
+
         try {
             DB::beginTransaction();
 
-            $employee = $this->employeeService->createEmployee($request->validated());
+            $employee = $this->employeeService->createEmployee($data);
 
             DB::commit();
 
@@ -135,10 +148,21 @@ class EmployeeController extends Controller
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
+        $data = $request->validated();
+        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+
+        if (! empty($data['role'])) {
+            $this->administrationPolicy->authorizeEmployeeRoleAssignment(
+                $request->user(),
+                $employee,
+                $data['role']
+            );
+        }
+
         try {
             DB::beginTransaction();
 
-            $employee = $this->employeeService->updateEmployee($employee, $request->validated());
+            $employee = $this->employeeService->updateEmployee($employee, $data);
 
             DB::commit();
 
@@ -203,6 +227,8 @@ class EmployeeController extends Controller
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
+        $this->administrationPolicy->authorizeEmployeeMutation(request()->user(), $employee);
+
         $employee = $this->employeeService->deactivateEmployee($employee);
 
         return ApiResponse::success(
@@ -230,6 +256,8 @@ class EmployeeController extends Controller
         if (! $employee) {
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
+
+        $this->administrationPolicy->authorizeEmployeeMutation(request()->user(), $employee);
 
         $employee = $this->employeeService->activateEmployee($employee);
 

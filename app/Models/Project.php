@@ -8,12 +8,14 @@ use App\Enums\ProjectStatus;
 use App\Scopes\ClientScope;
 use App\Scopes\TeamMemberScope;
 use App\Traits\HasCreatedUpdatedBy;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -22,12 +24,12 @@ use Illuminate\Support\Facades\Cache;
  * @property string $title
  * @property ProjectStatus|null $status
  * @property float|int|string|null $budget
- * @property \Illuminate\Support\Carbon|null $deadline
- * @property \Illuminate\Support\Carbon|null $ui_approved_at
- * @property \Illuminate\Support\Carbon|null $created_at
+ * @property Carbon|null $deadline
+ * @property Carbon|null $ui_approved_at
+ * @property Carbon|null $created_at
  * @property-read Client $client
- * @property-read \Illuminate\Database\Eloquent\Collection<int, Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, ProjectMember> $members
+ * @property-read Collection<int, Invoice> $invoices
+ * @property-read Collection<int, ProjectMember> $members
  */
 class Project extends Model implements Trackable
 {
@@ -71,8 +73,8 @@ class Project extends Model implements Trackable
     protected function casts(): array
     {
         return [
-            'status' => DynamicStatusCast::class . ':project_status',
-            'previous_status' => DynamicStatusCast::class . ':project_status',
+            'status' => DynamicStatusCast::class.':project_status',
+            'previous_status' => DynamicStatusCast::class.':project_status',
             'budget' => 'decimal:2',
             'deadline' => 'date',
             'ui_approved_at' => 'datetime',
@@ -150,6 +152,25 @@ class Project extends Model implements Trackable
     public function members(): HasMany
     {
         return $this->hasMany(ProjectMember::class);
+    }
+
+    /**
+     * @return HasMany<ProjectWorkflowStage, $this>
+     */
+    public function workflowStages(): HasMany
+    {
+        return $this->hasMany(ProjectWorkflowStage::class)
+            ->orderBy('position');
+    }
+
+    /**
+     * @return HasMany<Task, $this>
+     */
+    public function pipelineTasks(): HasMany
+    {
+        return $this->tasks()
+            ->where('is_pipeline_task', true)
+            ->orderBy('pipeline_position');
     }
 
     /**

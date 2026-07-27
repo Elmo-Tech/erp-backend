@@ -27,6 +27,9 @@ class Task extends Model implements Trackable
 
     protected $fillable = [
         'project_id',
+        'workflow_stage_id',
+        'is_pipeline_task',
+        'pipeline_position',
         'parent_id',
         'assigned_to',
         'title',
@@ -43,6 +46,7 @@ class Task extends Model implements Trackable
         'estimated_hours',
         'total_time_spent',
         'internal_reviewer_notes',
+        'hold_reason',
         'reopen_count',
         'completed_at',
         'delay_days',
@@ -72,12 +76,19 @@ class Task extends Model implements Trackable
             'sprint_number' => 'integer',
             'occurrence_number' => 'integer',
             'is_recurring_instance' => 'boolean',
+            'is_pipeline_task' => 'boolean',
+            'pipeline_position' => 'integer',
         ];
     }
 
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function workflowStage(): BelongsTo
+    {
+        return $this->belongsTo(ProjectWorkflowStage::class, 'workflow_stage_id');
     }
 
     public function parent(): BelongsTo
@@ -137,6 +148,13 @@ class Task extends Model implements Trackable
     public function primaryAssignees(): HasMany
     {
         return $this->assignees()->where('is_primary', true);
+    }
+
+    public function priorityValue(): string
+    {
+        $priority = $this->getAttribute('priority');
+
+        return $priority instanceof TaskPriority ? $priority->value : (string) $priority;
     }
 
     /**

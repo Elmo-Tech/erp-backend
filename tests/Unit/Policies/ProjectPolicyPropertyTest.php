@@ -8,6 +8,7 @@ use App\Policies\ProjectPolicy;
 use Eris\Generator;
 use Eris\TestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -27,8 +28,18 @@ class ProjectPolicyPropertyTest extends TestCase
 
         // Create roles if they don't exist
         Role::firstOrCreate(['name' => 'client']);
-        Role::firstOrCreate(['name' => 'admin']);
-        Role::firstOrCreate(['name' => 'super-admin']);
+        $projectPermissions = collect([
+            'view_all_projects',
+            'manage_all_projects',
+            'manage_projects',
+            'create_projects',
+            'edit_projects',
+            'delete_projects',
+            'approve_project_ui',
+        ])->map(fn (string $name) => Permission::findOrCreate($name, 'web'));
+
+        Role::firstOrCreate(['name' => 'admin'])->syncPermissions($projectPermissions);
+        Role::firstOrCreate(['name' => 'super-admin'])->syncPermissions($projectPermissions);
         Role::firstOrCreate(['name' => 'employee']);
     }
 

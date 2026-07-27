@@ -18,9 +18,13 @@ use App\Observers\TaskDeliverableObserver;
 use App\Observers\TaskObserver;
 use App\Observers\TaskTestScenarioObserver;
 use App\Observers\TimeEntryObserver;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,6 +41,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('api', function (Request $request): Limit {
+            $identity = $request->user()?->getAuthIdentifier() ?? $request->ip();
+
+            return Limit::perMinute(300)->by((string) $identity);
+        });
+
+        RateLimiter::for('login', function (Request $request): Limit {
+            $identity = Str::lower(trim((string) $request->input('email')));
+
+            return Limit::perMinute(10)->by($identity.'|'.$request->ip());
+        });
+
         // Force HTTPS URLs in production
         if (config('app.env') === 'production' || request()->isSecure()) {
             URL::forceScheme('https');

@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Hash;
 
 class EmployeeService
 {
+    public function __construct(
+        private readonly SalaryRateCalculator $salaryRateCalculator
+    ) {}
+
     /**
      * Get all employees with pagination.
      * Shows all users except those with client role only.
@@ -64,17 +68,20 @@ class EmployeeService
      */
     public function createEmployee(array $data): User
     {
+        $workHoursPerDay = (float) ($data['workHoursPerDay'] ?? 8);
+        $salary = isset($data['salary']) ? (float) $data['salary'] : null;
+
         $employee = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'is_employee' => true,
             'is_active' => $data['isActive'] ?? true,
-            'salary' => $data['salary'] ?? null,
-            'work_hours_per_day' => $data['workHoursPerDay'] ?? 8,
+            'salary' => $salary,
+            'work_hours_per_day' => $workHoursPerDay,
             'work_start_time' => $data['workStartTime'] ?? '10:00:00',
             'grace_days_allowed' => $data['graceDaysAllowed'] ?? 5,
-            'internal_hourly_cost' => $data['internalHourlyCost'] ?? null,
+            'internal_hourly_cost' => $this->salaryRateCalculator->hourlyRate($salary, $workHoursPerDay),
             'specialization' => $data['specialization'] ?? null,
             'skills' => $data['skills'] ?? [],
         ]);
@@ -102,7 +109,6 @@ class EmployeeService
             'workHoursPerDay' => 'work_hours_per_day',
             'workStartTime' => 'work_start_time',
             'graceDaysAllowed' => 'grace_days_allowed',
-            'internalHourlyCost' => 'internal_hourly_cost',
             'specialization' => 'specialization',
             'skills' => 'skills',
             'avatar' => 'avatar',
@@ -112,6 +118,14 @@ class EmployeeService
             if (array_key_exists($camel, $data)) {
                 $updateData[$snake] = $data[$camel];
             }
+        }
+
+        if (array_key_exists('salary', $data) || array_key_exists('workHoursPerDay', $data)) {
+            $salary = array_key_exists('salary', $data)
+                ? ($data['salary'] !== null ? (float) $data['salary'] : null)
+                : ($employee->salary !== null ? (float) $employee->salary : null);
+            $workHoursPerDay = (float) ($data['workHoursPerDay'] ?? $employee->work_hours_per_day ?? 8);
+            $updateData['internal_hourly_cost'] = $this->salaryRateCalculator->hourlyRate($salary, $workHoursPerDay);
         }
 
         if (! empty($data['password'])) {
@@ -158,7 +172,10 @@ class EmployeeService
         // Calculate deduction amount
         $deductionAmount = 0;
         if ($employee->salary && $totalDeductionMinutes > 0) {
-            $hourlyRate = $employee->salary / (30 * $employee->work_hours_per_day);
+            $hourlyRate = $this->salaryRateCalculator->hourlyRate(
+                (float) $employee->salary,
+                (float) $employee->work_hours_per_day
+            ) ?? 0;
             $deductionAmount = ($totalDeductionMinutes / 60) * $hourlyRate;
         }
 

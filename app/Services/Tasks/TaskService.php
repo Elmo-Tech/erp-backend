@@ -30,6 +30,9 @@ class TaskService
 
         // Apply user specialization filtering if user is authenticated
         $user = auth()->user();
+        if ($user) {
+            $this->applyProjectVisibility($query, $user);
+        }
         if ($user && $user->specialization) {
             $query->visibleToUser($user);
         }
@@ -112,6 +115,7 @@ class TaskService
             ->whereHas('assignees', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
+        $this->applyProjectVisibility($query, $user);
         // Removed whereNull('parent_id') to get ALL tasks where user is assigned
 
         // Apply user specialization filtering
@@ -150,6 +154,7 @@ class TaskService
     {
         return Task::query()
             ->where('project_id', $projectId)
+            ->where('is_pipeline_task', false)
             ->whereNull('parent_id')
             ->with([
                 'assignee',
@@ -165,6 +170,27 @@ class TaskService
             ])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
+    }
+
+    private function applyProjectVisibility($query, User $user): void
+    {
+        if ($user->can('view_all_projects')) {
+            return;
+        }
+
+        $query->where(function ($visibilityQuery) use ($user): void {
+            $visibilityQuery
+                ->whereHas('project.members', fn ($memberQuery) => $memberQuery->where('user_id', $user->id))
+                ->orWhere(function ($unscopedQuery) use ($user): void {
+                    $unscopedQuery
+                        ->whereNull('project_id')
+                        ->where(function ($ownershipQuery) use ($user): void {
+                            $ownershipQuery
+                                ->where('assigned_to', $user->id)
+                                ->orWhere('created_by', $user->id);
+                        });
+                });
+        });
     }
 
     /**

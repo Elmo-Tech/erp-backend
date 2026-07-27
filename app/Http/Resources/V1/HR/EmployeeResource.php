@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V1\HR;
 
 use App\Models\User;
+use App\Services\HR\SalaryRateCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -38,7 +39,9 @@ class EmployeeResource extends JsonResource
         $employee = $this->resource;
         $user = $request->user();
         $simplifiedMode = (bool) config('simplification.enabled');
-        $canViewSalary = ! $simplifiedMode && $user && $user->can('view_employee_salary');
+        $canViewSalary = ! $simplifiedMode
+            && $user
+            && $user->hasAnyPermission(['view_employee_salary', 'manage_employees']);
         $roleName = $employee->roles->pluck('name')->first() ?? '';
         $graceDaysAllowed = $employee->grace_days_allowed ?? 0;
         $graceDaysUsed = $employee->grace_days_used ?? 0;
@@ -54,6 +57,8 @@ class EmployeeResource extends JsonResource
 
             // Work schedule
             'workHoursPerDay' => (int) ($employee->work_hours_per_day ?? 0),
+            'monthlyWorkHours' => app(SalaryRateCalculator::class)
+                ->monthlyWorkHours((float) ($employee->work_hours_per_day ?? 0)),
             'workStartTime' => $employee->work_start_time,
             'expectedClockOut' => $employee->expected_clock_out,
 

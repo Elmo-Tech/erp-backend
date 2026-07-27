@@ -13,23 +13,28 @@ use App\Http\Controllers\Api\V1\ChangeRequestController;
 use App\Http\Controllers\Api\V1\Client\ClientInvoiceController;
 use App\Http\Controllers\Api\V1\Client\ClientProjectController;
 use App\Http\Controllers\Api\V1\ClientController;
+use App\Http\Controllers\Api\V1\ClientPortalAccessController;
 use App\Http\Controllers\Api\V1\CodeReviewController;
 use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\EnumController;
-use App\Http\Controllers\Api\V1\LookupOptionController;
-use App\Http\Controllers\Api\V1\TagController;
-use App\Http\Controllers\Api\V1\Financial\AccountController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\GlobalSearchController;
 use App\Http\Controllers\Api\V1\GoogleDriveController;
 use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\HR\DeductionTypeController;
+use App\Http\Controllers\Api\V1\HR\EmployeeDeductionController;
+use App\Http\Controllers\Api\V1\HR\EmployeeRewardController;
+use App\Http\Controllers\Api\V1\HR\RewardTypeController;
+use App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController;
 use App\Http\Controllers\Api\V1\InnovationLogController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LeadController;
+use App\Http\Controllers\Api\V1\LeadConversionController;
 use App\Http\Controllers\Api\V1\LeadHistoryController;
+use App\Http\Controllers\Api\V1\LookupOptionController;
 use App\Http\Controllers\Api\V1\MilestoneController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PerformanceEvaluationController;
@@ -37,16 +42,22 @@ use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectFileController;
 use App\Http\Controllers\Api\V1\ProjectHistoryController;
 use App\Http\Controllers\Api\V1\ProjectMemberController;
+use App\Http\Controllers\Api\V1\ProjectPipelineController;
 use App\Http\Controllers\Api\V1\ProjectWikiController;
 use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\QuotationController;
+use App\Http\Controllers\Api\V1\RecurringTaskController;
 use App\Http\Controllers\Api\V1\SalesAnalyticsController;
 use App\Http\Controllers\Api\V1\SalesDashboardController;
+use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TaskDeliverableController;
+use App\Http\Controllers\Api\V1\TaskDependencyController;
+use App\Http\Controllers\Api\V1\TaskTemplateController;
 use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\UserPointsController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -64,7 +75,7 @@ use Illuminate\Support\Facades\Route;
 // Broadcasting Auth Route (for WebSocket authentication)
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
-Route::prefix('v1')->group(function () {
+Route::prefix('v1')->middleware('throttle:api')->group(function () {
     // Health check endpoint
     Route::get('/health', HealthController::class)->name('api.v1.health');
 
@@ -72,9 +83,8 @@ Route::prefix('v1')->group(function () {
     // Security: Rate limiting applied to prevent brute force attacks
     // Registration is disabled by default - use admin panel to create users
     Route::prefix('auth')->group(function () {
-        // Login with rate limiting (5 attempts per minute)
         Route::post('login', [AuthController::class, 'login'])
-            ->middleware('throttle:5,1')
+            ->middleware('throttle:login')
             ->name('auth.login');
 
         // Registration disabled for security - users created via admin panel
@@ -111,8 +121,8 @@ Route::prefix('v1')->group(function () {
         Route::put('leads/{lead}/meetings/{meeting}', [LeadController::class, 'updateMeeting'])->name('leads.update-meeting');
 
         // Lead Conversion Routes
-        Route::get('leads/{lead}/can-convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'canConvert'])->name('leads.can-convert');
-        Route::post('leads/{lead}/convert', [\App\Http\Controllers\Api\V1\LeadConversionController::class, 'convert'])->name('leads.convert');
+        Route::get('leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert'])->name('leads.can-convert');
+        Route::post('leads/{lead}/convert', [LeadConversionController::class, 'convert'])->name('leads.convert');
 
         // Activity Management Routes
         Route::apiResource('activities', ActivityController::class);
@@ -142,9 +152,9 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('clients', ClientController::class);
 
     // Client Portal Access Routes
-    Route::post('clients/{client}/portal-access', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'create'])->name('clients.portal-access.create');
-    Route::delete('clients/{client}/portal-access', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'revoke'])->name('clients.portal-access.revoke');
-    Route::post('clients/{client}/portal-access/reset-password', [\App\Http\Controllers\Api\V1\ClientPortalAccessController::class, 'resetPassword'])->name('clients.portal-access.reset-password');
+    Route::post('clients/{client}/portal-access', [ClientPortalAccessController::class, 'create'])->name('clients.portal-access.create');
+    Route::delete('clients/{client}/portal-access', [ClientPortalAccessController::class, 'revoke'])->name('clients.portal-access.revoke');
+    Route::post('clients/{client}/portal-access/reset-password', [ClientPortalAccessController::class, 'resetPassword'])->name('clients.portal-access.reset-password');
 
     // Proposal Management Routes (Technical Proposals)
     Route::middleware('simplified.disabled:proposals')->group(function () {
@@ -242,6 +252,12 @@ Route::prefix('v1')->group(function () {
 
     // Time Entry Routes
     Route::post('time-entries/start', [TimeEntryController::class, 'start'])->name('time-entries.start');
+    Route::post('time-entries/heartbeat', [TimeEntryController::class, 'heartbeat'])->name('time-entries.heartbeat');
+    Route::post('time-entries/pause', [TimeEntryController::class, 'pause'])->name('time-entries.pause');
+    Route::post('time-entries/hold', [TimeEntryController::class, 'hold'])->name('time-entries.hold');
+    Route::post('time-entries/end', [TimeEntryController::class, 'end'])->name('time-entries.end');
+    Route::post('time-entries/{id}/resume', [TimeEntryController::class, 'resume'])->name('time-entries.resume');
+    Route::get('time-entries/resumable', [TimeEntryController::class, 'resumable'])->name('time-entries.resumable');
     Route::post('time-entries/stop', [TimeEntryController::class, 'stop'])->name('time-entries.stop');
     Route::get('time-entries', [TimeEntryController::class, 'index'])->name('time-entries.index');
     Route::get('time-entries/active', [TimeEntryController::class, 'active'])->name('time-entries.active');
@@ -273,6 +289,14 @@ Route::prefix('v1')->group(function () {
     // All routes have auth:sanctum and locale middleware applied in controllers
 
     // Project CRUD Routes
+    Route::get('workflow-templates', [ProjectPipelineController::class, 'templates'])->name('workflow-templates.index');
+    Route::post('workflow-templates', [ProjectPipelineController::class, 'storeTemplate'])->name('workflow-templates.store');
+    Route::get('projects/{project}/pipeline', [ProjectPipelineController::class, 'show'])->name('projects.pipeline.show');
+    Route::post('projects/{project}/pipeline/tasks', [ProjectPipelineController::class, 'storeTask'])->name('projects.pipeline.tasks.store');
+    Route::patch('projects/{project}/pipeline/tasks/{task}/stage', [ProjectPipelineController::class, 'moveTask'])->name('projects.pipeline.tasks.move');
+    Route::put('projects/{project}/pipeline/stages', [ProjectPipelineController::class, 'updateStages'])->name('projects.pipeline.stages.update');
+    Route::post('projects/{project}/pipeline/templates/{template}', [ProjectPipelineController::class, 'applyTemplate'])->name('projects.pipeline.templates.apply');
+
     Route::apiResource('projects', ProjectController::class);
 
     // Pinned Projects Routes
@@ -323,17 +347,17 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('tasks', TaskController::class);
 
     // Task Dependencies Routes
-    Route::get('tasks/{task}/dependencies', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'index'])->name('tasks.dependencies.index');
-    Route::post('tasks/{task}/dependencies', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'store'])->name('tasks.dependencies.store');
-    Route::delete('task-dependencies/{dependency}', [\App\Http\Controllers\Api\V1\TaskDependencyController::class, 'destroy'])->name('task-dependencies.destroy');
+    Route::get('tasks/{task}/dependencies', [TaskDependencyController::class, 'index'])->name('tasks.dependencies.index');
+    Route::post('tasks/{task}/dependencies', [TaskDependencyController::class, 'store'])->name('tasks.dependencies.store');
+    Route::delete('task-dependencies/{dependency}', [TaskDependencyController::class, 'destroy'])->name('task-dependencies.destroy');
 
     // Task Templates Routes
-    Route::apiResource('task-templates', \App\Http\Controllers\Api\V1\TaskTemplateController::class);
-    Route::post('task-templates/{template}/instantiate', [\App\Http\Controllers\Api\V1\TaskTemplateController::class, 'instantiate'])->name('task-templates.instantiate');
+    Route::apiResource('task-templates', TaskTemplateController::class);
+    Route::post('task-templates/{template}/instantiate', [TaskTemplateController::class, 'instantiate'])->name('task-templates.instantiate');
 
     // Recurring Tasks Routes
-    Route::apiResource('recurring-tasks', \App\Http\Controllers\Api\V1\RecurringTaskController::class);
-    Route::post('recurring-tasks/{config}/generate', [\App\Http\Controllers\Api\V1\RecurringTaskController::class, 'generate'])->name('recurring-tasks.generate');
+    Route::apiResource('recurring-tasks', RecurringTaskController::class);
+    Route::post('recurring-tasks/{config}/generate', [RecurringTaskController::class, 'generate'])->name('recurring-tasks.generate');
 
     // Task Status Update Route (flexible status transitions)
     Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
@@ -513,17 +537,17 @@ Route::prefix('v1')->group(function () {
 
     // User Points Management Routes
     Route::prefix('user-points')->middleware('simplified.disabled:points')->group(function () {
-        Route::get('/transaction-types', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'getTransactionTypes'])->name('user-points.transaction-types');
-        Route::get('/', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'index'])->name('user-points.index');
-        Route::post('/add', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'addPoints'])->name('user-points.add');
-        Route::post('/deduct', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'deductPoints'])->name('user-points.deduct');
-        Route::post('/set', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'setPoints'])->name('user-points.set');
-        Route::get('/history/{userId}', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'history'])->name('user-points.history');
-        Route::get('/unified-history/{userId}', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'getUnifiedHistory'])->name('user-points.unified-history');
-        Route::delete('/transaction/{transactionId}', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'deleteTransaction'])->name('user-points.delete-transaction');
-        Route::get('/leaderboard', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'leaderboard'])->name('user-points.leaderboard');
-        Route::get('/statistics', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'statistics'])->name('user-points.statistics');
-        Route::get('/report', [\App\Http\Controllers\Api\V1\UserPointsController::class, 'report'])->name('user-points.report');
+        Route::get('/transaction-types', [UserPointsController::class, 'getTransactionTypes'])->name('user-points.transaction-types');
+        Route::get('/', [UserPointsController::class, 'index'])->name('user-points.index');
+        Route::post('/add', [UserPointsController::class, 'addPoints'])->name('user-points.add');
+        Route::post('/deduct', [UserPointsController::class, 'deductPoints'])->name('user-points.deduct');
+        Route::post('/set', [UserPointsController::class, 'setPoints'])->name('user-points.set');
+        Route::get('/history/{userId}', [UserPointsController::class, 'history'])->name('user-points.history');
+        Route::get('/unified-history/{userId}', [UserPointsController::class, 'getUnifiedHistory'])->name('user-points.unified-history');
+        Route::delete('/transaction/{transactionId}', [UserPointsController::class, 'deleteTransaction'])->name('user-points.delete-transaction');
+        Route::get('/leaderboard', [UserPointsController::class, 'leaderboard'])->name('user-points.leaderboard');
+        Route::get('/statistics', [UserPointsController::class, 'statistics'])->name('user-points.statistics');
+        Route::get('/report', [UserPointsController::class, 'report'])->name('user-points.report');
     });
 
     // Enum Routes
@@ -572,31 +596,31 @@ Route::prefix('v1')->group(function () {
     // HR Deductions & Rewards Routes
     Route::prefix('hr')->middleware(['auth:sanctum', 'locale'])->group(function () {
         // Deduction Types Routes
-        Route::apiResource('deduction-types', \App\Http\Controllers\Api\V1\HR\DeductionTypeController::class)->middleware('simplified.disabled:advanced_deductions');
+        Route::apiResource('deduction-types', DeductionTypeController::class)->middleware('simplified.disabled:advanced_deductions');
 
         // Reward Types Routes
-        Route::apiResource('reward-types', \App\Http\Controllers\Api\V1\HR\RewardTypeController::class)->middleware('simplified.disabled:rewards');
-        Route::post('reward-types/{reward_type}/calculate', [\App\Http\Controllers\Api\V1\HR\RewardTypeController::class, 'calculate'])->middleware('simplified.disabled:rewards')->name('hr.reward-types.calculate');
+        Route::apiResource('reward-types', RewardTypeController::class)->middleware('simplified.disabled:rewards');
+        Route::post('reward-types/{reward_type}/calculate', [RewardTypeController::class, 'calculate'])->middleware('simplified.disabled:rewards')->name('hr.reward-types.calculate');
 
         // Employee Deductions Routes
-        Route::apiResource('employee-deductions', \App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class)->middleware('simplified.disabled:advanced_deductions');
-        Route::post('employee-deductions/{employeeDeduction}/approve', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'approve'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.approve');
-        Route::post('employee-deductions/{employeeDeduction}/reject', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'reject'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.reject');
-        Route::get('employee-deductions-summary', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'summary'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.summary');
-        Route::post('employee-deductions/bulk-from-attendance', [\App\Http\Controllers\Api\V1\HR\EmployeeDeductionController::class, 'bulkFromAttendance'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.bulk-from-attendance');
+        Route::apiResource('employee-deductions', EmployeeDeductionController::class)->middleware('simplified.disabled:advanced_deductions');
+        Route::post('employee-deductions/{employeeDeduction}/approve', [EmployeeDeductionController::class, 'approve'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.approve');
+        Route::post('employee-deductions/{employeeDeduction}/reject', [EmployeeDeductionController::class, 'reject'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.reject');
+        Route::get('employee-deductions-summary', [EmployeeDeductionController::class, 'summary'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.summary');
+        Route::post('employee-deductions/bulk-from-attendance', [EmployeeDeductionController::class, 'bulkFromAttendance'])->middleware('simplified.disabled:advanced_deductions')->name('hr.employee-deductions.bulk-from-attendance');
 
         // Employee Rewards Routes
-        Route::apiResource('employee-rewards', \App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class)->middleware('simplified.disabled:rewards');
-        Route::post('employee-rewards/{employeeReward}/approve', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'approve'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.approve');
-        Route::post('employee-rewards/{employeeReward}/reject', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'reject'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.reject');
-        Route::post('employee-rewards/{employeeReward}/mark-paid', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'markAsPaid'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.mark-paid');
-        Route::get('employee-rewards-summary', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'summary'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.summary');
-        Route::post('employee-rewards/from-points', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'fromPoints'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.from-points');
-        Route::post('employee-rewards/bulk-from-evaluation', [\App\Http\Controllers\Api\V1\HR\EmployeeRewardController::class, 'bulkFromEvaluation'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.bulk-from-evaluation');
+        Route::apiResource('employee-rewards', EmployeeRewardController::class)->middleware('simplified.disabled:rewards');
+        Route::post('employee-rewards/{employeeReward}/approve', [EmployeeRewardController::class, 'approve'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.approve');
+        Route::post('employee-rewards/{employeeReward}/reject', [EmployeeRewardController::class, 'reject'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.reject');
+        Route::post('employee-rewards/{employeeReward}/mark-paid', [EmployeeRewardController::class, 'markAsPaid'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.mark-paid');
+        Route::get('employee-rewards-summary', [EmployeeRewardController::class, 'summary'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.summary');
+        Route::post('employee-rewards/from-points', [EmployeeRewardController::class, 'fromPoints'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.from-points');
+        Route::post('employee-rewards/bulk-from-evaluation', [EmployeeRewardController::class, 'bulkFromEvaluation'])->middleware('simplified.disabled:rewards')->name('hr.employee-rewards.bulk-from-evaluation');
 
         // Salary Adjustments Routes
-        Route::get('salary-adjustments', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'index'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.index');
-        Route::get('salary-adjustments/{salaryAdjustment}', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'show'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.show');
-        Route::get('salary-adjustments-payroll-summary', [\App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController::class, 'payrollSummary'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.payroll-summary');
+        Route::get('salary-adjustments', [SalaryAdjustmentController::class, 'index'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.index');
+        Route::get('salary-adjustments/{salaryAdjustment}', [SalaryAdjustmentController::class, 'show'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.show');
+        Route::get('salary-adjustments-payroll-summary', [SalaryAdjustmentController::class, 'payrollSummary'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.payroll-summary');
     });
 });

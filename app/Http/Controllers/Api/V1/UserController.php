@@ -8,6 +8,7 @@ use App\Http\Requests\V1\Admin\StoreUserRequest;
 use App\Http\Requests\V1\Admin\UpdateUserRequest;
 use App\Http\Resources\V1\Admin\UserCollection;
 use App\Http\Resources\V1\Admin\UserResource;
+use App\Policies\UserAdministrationPolicy;
 use App\Services\Admin\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,8 @@ use OpenApi\Annotations as OA;
 class UserController extends Controller
 {
     public function __construct(
-        private UserService $userService
+        private UserService $userService,
+        private UserAdministrationPolicy $administrationPolicy,
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -175,10 +177,18 @@ class UserController extends Controller
      */
     public function store(StoreUserRequest $request): JsonResponse
     {
+        $actor = $request->user();
+        $data = $request->validated();
+        $this->administrationPolicy->authorizeCreate($actor);
+
+        if (! empty($data['roles'])) {
+            $this->administrationPolicy->authorizeRoleAssignment($actor, null, $data['roles']);
+        }
+
         try {
             DB::beginTransaction();
 
-            $user = $this->userService->createUser($request->validated());
+            $user = $this->userService->createUser($data);
 
             DB::commit();
 
@@ -324,10 +334,21 @@ class UserController extends Controller
             return ApiResponse::notFound(__('messages.user_not_found'));
         }
 
+        $actor = $request->user();
+        $data = $request->validated();
+
+        if (isset($data['roles'])) {
+            $this->administrationPolicy->authorizeRoleAssignment($actor, $user, $data['roles']);
+        } elseif (isset($data['isActive'])) {
+            $this->administrationPolicy->authorizeStatusToggle($actor, $user);
+        } else {
+            $this->administrationPolicy->authorizeManageTarget($actor, $user);
+        }
+
         try {
             DB::beginTransaction();
 
-            $user = $this->userService->updateUser($user, $request->validated());
+            $user = $this->userService->updateUser($user, $data);
 
             DB::commit();
 
@@ -400,6 +421,8 @@ class UserController extends Controller
             return ApiResponse::error(__('messages.cannot_delete_self'), 400);
         }
 
+        $this->administrationPolicy->authorizeDelete(request()->user(), $user);
+
         try {
             DB::beginTransaction();
 
@@ -470,6 +493,8 @@ class UserController extends Controller
         if (! $user) {
             return ApiResponse::notFound(__('messages.user_not_found'));
         }
+
+        $this->administrationPolicy->authorizeStatusToggle(request()->user(), $user);
 
         try {
             DB::beginTransaction();
@@ -564,6 +589,12 @@ class UserController extends Controller
         if (! $user) {
             return ApiResponse::notFound(__('messages.user_not_found'));
         }
+
+        $this->administrationPolicy->authorizeRoleAssignment(
+            $request->user(),
+            $user,
+            $request->input('roles')
+        );
 
         try {
             DB::beginTransaction();

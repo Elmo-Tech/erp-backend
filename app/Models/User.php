@@ -140,6 +140,11 @@ class User extends Authenticatable
         return $query->where('is_employee', false);
     }
 
+    public function projectMemberships(): HasMany
+    {
+        return $this->hasMany(ProjectMember::class);
+    }
+
     /**
      * Calculate expected clock-out time based on work hours
      */

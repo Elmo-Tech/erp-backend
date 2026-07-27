@@ -7,7 +7,10 @@ use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Helpers\ApiResponse;
+use App\Models\Project;
 use App\Models\Task;
+use App\Services\Projects\ProjectAccess;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -22,7 +25,6 @@ class UpdateTaskRequest extends FormRequest
      * - edit_main_tasks: Can edit main tasks
      * - edit_weekly_tasks: Can edit weekly tasks
      * - edit_subtasks: Can edit subtasks
-     * - Admin/Super Admin: Can edit any task type (bypass permission check)
      */
     public function authorize(): bool
     {
@@ -33,8 +35,13 @@ class UpdateTaskRequest extends FormRequest
             return false;
         }
 
-        // Admin and Super Admin can edit any task type
-        if ($user->hasRole(['admin', 'super-admin'])) {
+        $task->loadMissing('project');
+        $project = $task->project;
+        if ($project instanceof Project && ! app(ProjectAccess::class)->canView($user, $project)) {
+            return false;
+        }
+
+        if ($user->can('manage_tasks')) {
             return true;
         }
 
@@ -52,7 +59,7 @@ class UpdateTaskRequest extends FormRequest
      *
      * Requirements: 1.5, 8.1
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
