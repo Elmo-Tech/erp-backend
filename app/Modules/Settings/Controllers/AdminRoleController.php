@@ -925,6 +925,8 @@ class AdminRoleController extends Controller
             'manage_project_settings' => 'Project Management',
             'manage_change_requests' => 'Project Management',
             'delete_change_requests' => 'Project Management',
+            'manage_project_workflows' => 'Project Workflow',
+            'manage_workflow_templates' => 'Project Workflow',
 
             // ── Project Members ──────────────────────────────────────────────
             'manage_project_members' => 'Project Members',
@@ -1121,6 +1123,8 @@ class AdminRoleController extends Controller
             'manage_project_settings' => 'Manage project-level settings',
             'manage_change_requests' => 'Create and manage change requests',
             'delete_change_requests' => 'Delete change requests',
+            'manage_project_workflows' => 'Configure workflow stages inside assigned projects',
+            'manage_workflow_templates' => 'Create and maintain reusable project workflow templates',
 
             // ── Project Members ──────────────────────────────────────────────
             'manage_project_members' => 'Full project member management',

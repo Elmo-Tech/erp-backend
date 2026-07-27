@@ -14,9 +14,11 @@ enum ExecutionTaskStatus: string
     case BACKLOG = 'backlog';
     case TO_DO = 'to_do';
     case IN_PROGRESS = 'in_progress';
+    case ON_HOLD = 'on_hold';
     case IN_REVIEW = 'in_review';
     case QA = 'qa';
     case DONE = 'done';
+    case CANCELLED = 'cancelled';
 
     public function label(): string
     {
@@ -24,9 +26,11 @@ enum ExecutionTaskStatus: string
             self::BACKLOG => 'Backlog',
             self::TO_DO => 'To Do',
             self::IN_PROGRESS => 'In Progress',
+            self::ON_HOLD => 'On Hold',
             self::IN_REVIEW => 'In Review',
             self::QA => 'QA',
             self::DONE => 'Done',
+            self::CANCELLED => 'Cancelled',
         };
     }
 
@@ -49,9 +53,11 @@ enum ExecutionTaskStatus: string
             self::BACKLOG,
             self::TO_DO,
             self::IN_PROGRESS,
+            self::ON_HOLD,
             self::IN_REVIEW,
             self::QA,
             self::DONE,
+            self::CANCELLED,
         ];
     }
 }

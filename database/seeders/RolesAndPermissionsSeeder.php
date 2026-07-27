@@ -177,6 +177,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage_change_requests',
             'delete_change_requests',
             'delete_milestones',
+            'manage_project_workflows',
+            'manage_workflow_templates',
 
             // ── Project Members ──────────────────────────────────────────────
             'manage_project_members',
@@ -407,6 +409,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_project_members', 'add_project_members', 'remove_project_members',
                 'view_project_files', 'upload_project_files',
                 'view_project_history',
+                'manage_project_workflows', 'manage_workflow_templates',
                 'manage_tasks', 'view_tasks', 'view_task_control', 'create_tasks', 'edit_tasks',
                 'delete_tasks', 'assign_tasks', 'view_internal_notes', 'create_internal_notes',
                 'manage_wiki', 'view_wiki', 'create_wiki', 'edit_wiki',
@@ -441,6 +444,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_project_members', 'add_project_members', 'remove_project_members',
                 'view_project_files', 'upload_project_files',
                 'view_project_history',
+                'manage_project_workflows',
                 'manage_tasks', 'view_tasks', 'view_task_control', 'create_tasks', 'edit_tasks',
                 'delete_tasks', 'assign_tasks', 'view_internal_notes', 'create_internal_notes', 'work_on_tasks',
                 'view_wiki', 'create_wiki', 'edit_wiki', 'view_encrypted_content',

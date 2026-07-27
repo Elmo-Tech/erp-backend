@@ -7,6 +7,7 @@ use App\Modules\PersonalTasks\Models\PersonalTimeEntry;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
+use App\Modules\Project\Services\ProjectWorkflowService;
 use App\Modules\Settings\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -28,6 +29,7 @@ class ToggleTaskTimerAction
 {
     public function __construct(
         private readonly AttendanceService $attendanceService,
+        private readonly ProjectWorkflowService $workflows,
     ) {}
 
     /**
@@ -145,10 +147,14 @@ class ToggleTaskTimerAction
 
     private function moveTaskIntoProgressWhenStarting(ProjectTask $task): void
     {
-        if (! in_array($task->status, [ExecutionTaskStatus::TO_DO, ExecutionTaskStatus::BACKLOG], true)) {
+        if (! in_array($task->status, [
+            ExecutionTaskStatus::TO_DO,
+            ExecutionTaskStatus::BACKLOG,
+            ExecutionTaskStatus::ON_HOLD,
+        ], true)) {
             return;
         }
 
-        $task->forceFill(['status' => ExecutionTaskStatus::IN_PROGRESS])->save();
+        $this->workflows->moveTaskToStatus($task, ExecutionTaskStatus::IN_PROGRESS);
     }
 }

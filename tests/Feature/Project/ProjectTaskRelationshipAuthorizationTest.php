@@ -47,6 +47,24 @@ class ProjectTaskRelationshipAuthorizationTest extends TestCase
         $this->assertDatabaseCount('project_tasks', 0);
     }
 
+    public function test_direct_task_create_allows_safe_self_assignment_without_assignment_capability(): void
+    {
+        [$actor, $project] = $this->projectActor(['create_tasks']);
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/tasks", [
+                'title' => 'Self-assigned task',
+                'assigneeIds' => [$actor->id],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.assigneeId', $actor->id);
+
+        $this->assertDatabaseHas('project_tasks', [
+            'project_id' => $project->id,
+            'assignee_id' => $actor->id,
+        ]);
+    }
+
     public function test_direct_task_create_rejects_a_nonmember_assignee(): void
     {
         [$actor, $project] = $this->projectActor(['create_tasks', 'assign_tasks']);

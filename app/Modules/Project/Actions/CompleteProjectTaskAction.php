@@ -5,6 +5,7 @@ namespace App\Modules\Project\Actions;
 use App\Modules\HR\Actions\EvaluateTaskDeadlinePointsAction;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\ProjectTask;
+use App\Modules\Project\Services\ProjectWorkflowService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -26,6 +27,7 @@ class CompleteProjectTaskAction
         private readonly UpdateMilestoneProgressAction $updateMilestoneProgress,
         private readonly ProjectHistoryAction $historyAction,
         private readonly EvaluateTaskDeadlinePointsAction $evaluateDeadlinePoints,
+        private readonly ProjectWorkflowService $workflows,
     ) {}
 
     /**
@@ -47,7 +49,7 @@ class CompleteProjectTaskAction
         // ── Atomic update + side-effect ───────────────────────────────────────
         DB::transaction(function () use ($task) {
             $oldStatus = $task->status;
-            $task->update(['status' => ExecutionTaskStatus::DONE]);
+            $this->workflows->moveTaskToStatus($task, ExecutionTaskStatus::DONE);
 
             // Refresh so the cast returns the enum value, not the raw string.
             $task->refresh();

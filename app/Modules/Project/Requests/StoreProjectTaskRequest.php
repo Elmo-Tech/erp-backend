@@ -29,6 +29,10 @@ class StoreProjectTaskRequest extends FormRequest
             'startDate' => ['nullable', 'date'],
             'dueDate' => ['nullable', 'date'],
             'assigneeId' => ['nullable', 'integer', 'exists:users,id'],
+            'assigneeIds' => ['nullable', 'array', 'max:20'],
+            'assigneeIds.*' => ['integer', 'distinct', 'exists:users,id'],
+            'workflowStageId' => ['nullable', 'integer', 'exists:project_workflow_stages,id'],
+            'coverImage' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 
@@ -39,6 +43,7 @@ class StoreProjectTaskRequest extends FormRequest
             'milestoneId.exists' => 'The selected milestone does not exist.',
             // REMOVED: parentId validation message - subtasks are no longer supported
             'assigneeId.exists' => 'The selected assignee does not exist.',
+            'assigneeIds.*.exists' => 'One of the selected assignees does not exist.',
             'estimatedHours.numeric' => 'Estimated hours must be a number.',
         ];
     }

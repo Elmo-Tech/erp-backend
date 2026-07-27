@@ -33,6 +33,8 @@ use Illuminate\Support\Carbon;
  * @property-read Client $client
  * @property-read Collection<int, Invoice> $invoices
  * @property-read Collection<int, ProjectMember> $members
+ * @property-read Collection<int, ProjectTask> $executionTasks
+ * @property-read Collection<int, ProjectWorkflowStage> $workflowStages
  */
 class Project extends Model
 {
@@ -169,9 +171,16 @@ class Project extends Model
      * Execution-layer tasks (project_tasks table).
      * Distinct from tasks() which points to App\Modules\Task\Models\Task.
      */
+    /** @return HasMany<ProjectTask, $this> */
     public function executionTasks(): HasMany
     {
         return $this->hasMany(ProjectTask::class);
+    }
+
+    /** @return HasMany<ProjectWorkflowStage, $this> */
+    public function workflowStages(): HasMany
+    {
+        return $this->hasMany(ProjectWorkflowStage::class)->orderBy('position');
     }
 
     /**

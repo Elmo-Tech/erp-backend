@@ -213,6 +213,9 @@ class ProjectTaskActionAuthorizationTest extends TestCase
             ->assertJsonPath('data.allowedActions', [
                 'edit' => true,
                 'delete' => false,
+                'execute' => false,
+                'startTimer' => false,
+                'stopTimer' => false,
                 'changeStatus' => false,
                 'complete' => true,
                 'reopen' => false,

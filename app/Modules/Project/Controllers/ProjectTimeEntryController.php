@@ -5,11 +5,13 @@ namespace App\Modules\Project\Controllers;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Project\Actions\ToggleTaskTimerAction;
+use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTimeEntry;
 use App\Modules\Project\Requests\StoreManualTimeEntryRequest;
 use App\Modules\Project\Resources\ProjectTimeEntryResource;
+use App\Modules\Project\Services\ProjectWorkflowService;
 use App\Modules\Settings\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +20,7 @@ class ProjectTimeEntryController extends Controller
 {
     public function __construct(
         private readonly ToggleTaskTimerAction $toggleTimer,
+        private readonly ProjectWorkflowService $workflows,
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -95,6 +98,65 @@ class ProjectTimeEntryController extends Controller
             new ProjectTimeEntryResource($entry),
             $isStopped ? 'Timer stopped' : 'Timer started'
         );
+    }
+
+    public function lifecycle(Project $project, ProjectTask $task): JsonResponse
+    {
+        $this->authorize('view', $project);
+        $this->assertTaskBelongsToProject($task, $project);
+        $this->authorize('execute', $task);
+
+        $validated = request()->validate([
+            'action' => ['required', 'string', 'in:start,hold,resume,end'],
+        ]);
+        $user = request()->user();
+
+        if (in_array($validated['action'], ['start', 'resume'], true)) {
+            abort_unless(
+                $user->can('start_timer') || $user->can('manage_time_entries'),
+                403,
+                'Unauthorized'
+            );
+            $entry = $this->toggleTimer->startForUser($task, $user);
+            $entry->load('user:id,name,avatar');
+
+            return ApiResponse::success([
+                'action' => $validated['action'],
+                'timeEntry' => new ProjectTimeEntryResource($entry),
+            ], $validated['action'] === 'resume' ? 'Timer resumed' : 'Timer started');
+        }
+
+        abort_unless(
+            $user->can('stop_timer') || $user->can('manage_time_entries'),
+            403,
+            'Unauthorized'
+        );
+
+        if ($validated['action'] === 'hold') {
+            $this->authorize('changeStatus', [$task, ExecutionTaskStatus::ON_HOLD->value]);
+        }
+
+        $entry = ProjectTimeEntry::query()
+            ->where('task_id', $task->id)
+            ->where('user_id', $user->id)
+            ->whereNull('end_time')
+            ->latest('start_time')
+            ->first();
+        if ($entry === null) {
+            abort(422, 'No running timer was found for this task.');
+        }
+        $entry = $this->toggleTimer->stop($entry);
+
+        if ($validated['action'] === 'hold') {
+            $this->workflows->moveTaskToStatus($task, ExecutionTaskStatus::ON_HOLD);
+        }
+
+        $entry->load('user:id,name,avatar');
+
+        return ApiResponse::success([
+            'action' => $validated['action'],
+            'timeEntry' => new ProjectTimeEntryResource($entry),
+        ], $validated['action'] === 'hold' ? 'Task placed on hold' : 'Timer ended');
     }
 
     public function startForUser(Project $project, ProjectTask $task): JsonResponse
@@ -250,7 +312,7 @@ class ProjectTimeEntryController extends Controller
         );
 
         abort_unless(
-            (int) $task->assignee_id === $target->id,
+            $task->isAssignedTo($target),
             403,
             'Target user is not assigned to this task.'
         );

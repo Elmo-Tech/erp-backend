@@ -110,7 +110,7 @@ class TaskPolicy
             return false;
         }
 
-        return $user->can('manage_tasks') || (int) $task->assignee_id === $user->id;
+        return $user->can('manage_tasks') || $task->isAssignedTo($user);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -144,7 +144,7 @@ class TaskPolicy
 
         if (! $this->isProjectMember($user, $this->projectFor($task))
             || ! $user->can('work_on_tasks')
-            || (int) $task->assignee_id !== $user->id) {
+            || ! $task->isAssignedTo($user)) {
             return false;
         }
 
@@ -152,6 +152,7 @@ class TaskPolicy
             ExecutionTaskStatus::BACKLOG->value,
             ExecutionTaskStatus::TO_DO->value,
             ExecutionTaskStatus::IN_PROGRESS->value,
+            ExecutionTaskStatus::ON_HOLD->value,
             ExecutionTaskStatus::IN_REVIEW->value,
         ], true);
     }
@@ -186,15 +187,22 @@ class TaskPolicy
 
         return $this->isProjectMember($user, $this->projectFor($task))
             && $user->can('work_on_tasks')
-            && (int) $task->assignee_id === $user->id;
+            && $task->isAssignedTo($user);
     }
 
     /** @return array<string, bool> */
     public function allowedActions(User $user, ProjectTask $task): array
     {
+        $canExecute = $this->execute($user, $task);
+
         return [
             'edit' => $this->update($user, $task),
             'delete' => $this->delete($user, $task),
+            'execute' => $canExecute,
+            'startTimer' => $canExecute
+                && ($user->can('start_timer') || $user->can('manage_time_entries')),
+            'stopTimer' => $canExecute
+                && ($user->can('stop_timer') || $user->can('manage_time_entries')),
             'changeStatus' => $this->changeStatus($user, $task),
             'complete' => $task->status !== ExecutionTaskStatus::DONE && $this->complete($user, $task),
             'reopen' => $this->reopen($user, $task),

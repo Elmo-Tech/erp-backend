@@ -11,6 +11,8 @@ use App\Modules\Project\Controllers\ProjectTaskDeliverableController;
 use App\Modules\Project\Controllers\ProjectTimeEntryController;
 use App\Modules\Project\Controllers\ProjectTimelineController;
 use App\Modules\Project\Controllers\ProjectWikiController;
+use App\Modules\Project\Controllers\ProjectWorkflowController;
+use App\Modules\Project\Controllers\WorkflowTemplateController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
@@ -41,8 +43,15 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
         Route::get('projects/time-entries/active', [ProjectTimeEntryController::class, 'active'])
             ->name('projects.time-entries.active');
 
+        Route::get('projects/workflow-templates', [WorkflowTemplateController::class, 'index'])
+            ->middleware('permission:manage_project_workflows|manage_workflow_templates|manage_all_projects')
+            ->name('projects.workflow-templates.index');
+
         Route::get('projects/{project}', [ProjectController::class, 'show'])
             ->name('projects.show');
+
+        Route::get('projects/{project}/workflow', [ProjectWorkflowController::class, 'show'])
+            ->name('projects.workflow.show');
 
         Route::post('projects/{project}/pin', [ProjectController::class, 'pin'])
             ->name('projects.pin');
@@ -222,6 +231,16 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
 
         Route::patch('projects/{project}/tasks/{task}', [ProjectTaskController::class, 'update'])
             ->name('projects.tasks.patch');
+
+        Route::patch('projects/{project}/tasks/{task}/move', [ProjectWorkflowController::class, 'moveTask'])
+            ->name('projects.tasks.move');
+    });
+
+    Route::middleware('permission:edit_tasks|manage_tasks|manage_all_projects')->group(function () {
+        Route::post('projects/{project}/tasks/{task}/cover', [ProjectTaskController::class, 'uploadCover'])
+            ->name('projects.tasks.cover.store');
+        Route::delete('projects/{project}/tasks/{task}/cover', [ProjectTaskController::class, 'deleteCover'])
+            ->name('projects.tasks.cover.destroy');
     });
 
     Route::middleware('permission:delete_tasks|manage_tasks|manage_all_projects')->group(function () {
@@ -274,6 +293,27 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'locale'])->group(function () {
             'projects/{project}/tasks/{task}/time-entries/toggle',
             [ProjectTimeEntryController::class, 'toggle']
         )->name('projects.tasks.time-entries.toggle');
+
+        Route::post(
+            'projects/{project}/tasks/{task}/time-entries/lifecycle',
+            [ProjectTimeEntryController::class, 'lifecycle']
+        )->name('projects.tasks.time-entries.lifecycle');
+    });
+
+    Route::middleware('permission:manage_project_workflows|manage_all_projects')->group(function () {
+        Route::put('projects/{project}/workflow', [ProjectWorkflowController::class, 'update'])
+            ->name('projects.workflow.update');
+        Route::post('projects/{project}/workflow/apply-template', [ProjectWorkflowController::class, 'applyTemplate'])
+            ->name('projects.workflow.apply-template');
+    });
+
+    Route::middleware('permission:manage_workflow_templates')->group(function () {
+        Route::post('projects/workflow-templates', [WorkflowTemplateController::class, 'store'])
+            ->name('projects.workflow-templates.store');
+        Route::put('projects/workflow-templates/{workflowTemplate}', [WorkflowTemplateController::class, 'update'])
+            ->name('projects.workflow-templates.update');
+        Route::delete('projects/workflow-templates/{workflowTemplate}', [WorkflowTemplateController::class, 'destroy'])
+            ->name('projects.workflow-templates.destroy');
     });
 
     Route::middleware('permission:log_time|manage_time_entries')->group(function () {

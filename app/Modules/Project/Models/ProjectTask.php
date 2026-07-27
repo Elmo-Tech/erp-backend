@@ -6,8 +6,10 @@ use App\Modules\Gamification\Models\PointTransaction;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Settings\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -21,7 +23,14 @@ use Illuminate\Support\Carbon;
  * a different bounded context).
  *
  * @property ExecutionTaskStatus $status
+ * @property int $id
+ * @property int $project_id
+ * @property int|null $workflow_stage_id
+ * @property int $pipeline_position
+ * @property string|null $cover_image_path
  * @property-read Project|null $project
+ * @property-read Collection<int, User> $assignees
+ * @property-read ProjectWorkflowStage|null $workflowStage
  */
 class ProjectTask extends Model
 {
@@ -35,7 +44,10 @@ class ProjectTask extends Model
         'parent_id',
         'title',
         'description',
+        'cover_image_path',
         'status',
+        'workflow_stage_id',
+        'pipeline_position',
         'priority',
         'estimated_hours',
         'start_date',
@@ -48,6 +60,7 @@ class ProjectTask extends Model
         return [
             'status' => ExecutionTaskStatus::class,
             'estimated_hours' => 'decimal:2',
+            'pipeline_position' => 'integer',
             'start_date' => 'date',
             'due_date' => 'date',
         ];
@@ -93,9 +106,30 @@ class ProjectTask extends Model
     /**
      * The user assigned to this task.
      */
+    /** @return BelongsTo<User, $this> */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assignee_id');
+    }
+
+    /** @return BelongsToMany<User, $this> */
+    public function assignees(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'project_task_assignees',
+            'project_task_id',
+            'user_id'
+        )
+            ->withPivot('position')
+            ->withTimestamps()
+            ->orderBy('project_task_assignees.position');
+    }
+
+    /** @return BelongsTo<ProjectWorkflowStage, $this> */
+    public function workflowStage(): BelongsTo
+    {
+        return $this->belongsTo(ProjectWorkflowStage::class, 'workflow_stage_id');
     }
 
     /**
@@ -131,11 +165,17 @@ class ProjectTask extends Model
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->can('manage_all_projects')) {
+        if ($user->can('manage_all_projects') || $user->can('view_all_projects')) {
             return $query;
         }
 
-        $query->where('assignee_id', $user->id);
+        if (! $user->can('manage_tasks')) {
+            $query->where(function (Builder $assigneeQuery) use ($user): void {
+                $assigneeQuery
+                    ->where('assignee_id', $user->id)
+                    ->orWhereHas('assignees', fn (Builder $query): Builder => $query->whereKey($user->id));
+            });
+        }
 
         return $query->whereHas('project', function (Builder $projectQuery) use ($user): void {
             if ($user->can('access_client_portal')) {
@@ -144,12 +184,10 @@ class ProjectTask extends Model
                 return;
             }
 
-            if (! $user->can('view_all_projects')) {
-                $projectQuery->whereHas(
-                    'members',
-                    fn (Builder $memberQuery) => $memberQuery->where('user_id', $user->id)
-                );
-            }
+            $projectQuery->whereHas(
+                'members',
+                fn (Builder $memberQuery) => $memberQuery->where('user_id', $user->id)
+            );
         });
     }
 
@@ -181,6 +219,19 @@ class ProjectTask extends Model
     public function isDone(): bool
     {
         return $this->status === ExecutionTaskStatus::DONE;
+    }
+
+    public function isAssignedTo(User $user): bool
+    {
+        if ((int) $this->assignee_id === $user->id) {
+            return true;
+        }
+
+        if ($this->relationLoaded('assignees')) {
+            return $this->assignees->contains('id', $user->id);
+        }
+
+        return $this->assignees()->whereKey($user->id)->exists();
     }
 
     /**

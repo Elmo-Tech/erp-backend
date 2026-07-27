@@ -29,6 +29,9 @@ class UpdateProjectTaskRequest extends FormRequest
             'startDate' => ['nullable', 'date'],
             'dueDate' => ['nullable', 'date'],
             'assigneeId' => ['nullable', 'integer', 'exists:users,id'],
+            'assigneeIds' => ['nullable', 'array', 'max:20'],
+            'assigneeIds.*' => ['integer', 'distinct', 'exists:users,id'],
+            'workflowStageId' => ['nullable', 'integer', 'exists:project_workflow_stages,id'],
         ];
     }
 

@@ -11,12 +11,18 @@ use App\Modules\Project\Actions\ProjectHistoryAction;
 use App\Modules\Project\Enums\ExecutionTaskStatus;
 use App\Modules\Project\Models\Project;
 use App\Modules\Project\Models\ProjectTask;
+use App\Modules\Project\Models\ProjectWorkflowStage;
 use App\Modules\Project\Requests\StoreProjectTaskRequest;
 use App\Modules\Project\Requests\UpdateProjectTaskRequest;
 use App\Modules\Project\Resources\ProjectTaskResource;
+use App\Modules\Project\Services\ProjectTaskAssigneeService;
 use App\Modules\Project\Services\ProjectTaskRelationshipValidator;
+use App\Modules\Project\Services\ProjectWorkflowService;
 use App\Modules\Settings\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ProjectTaskController extends Controller
@@ -26,6 +32,8 @@ class ProjectTaskController extends Controller
         private readonly ProjectHistoryAction $historyAction,
         private readonly EvaluateQABugPointsAction $evaluateQABugPoints,
         private readonly ProjectTaskRelationshipValidator $relationshipValidator,
+        private readonly ProjectTaskAssigneeService $assignees,
+        private readonly ProjectWorkflowService $workflows,
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
     }
@@ -50,7 +58,7 @@ class ProjectTaskController extends Controller
         $query = ProjectTask::query()
             ->where('project_id', $project->id)
             ->visibleTo($user)
-            ->with(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
+            ->with($this->taskRelations());
         // REMOVED: subtasks.assignee - subtasks are no longer supported
 
         $request = request();
@@ -75,7 +83,14 @@ class ProjectTaskController extends Controller
         }
 
         if (! empty($filter['assigneeId'])) {
-            $query->where('assignee_id', (int) $filter['assigneeId']);
+            $query->where(function ($assigneeQuery) use ($filter): void {
+                $assigneeQuery
+                    ->where('assignee_id', (int) $filter['assigneeId'])
+                    ->orWhereHas(
+                        'assignees',
+                        fn ($query) => $query->whereKey((int) $filter['assigneeId'])
+                    );
+            });
         }
 
         if (! empty($filter['search'])) {
@@ -107,9 +122,19 @@ class ProjectTaskController extends Controller
     public function myActive(): JsonResponse
     {
         $tasks = ProjectTask::query()
-            ->with(['assignee', 'deliverables', 'milestone', 'timeEntries.user', 'project'])
-            ->where('assignee_id', request()->user()->id)
-            ->where('status', '!=', ExecutionTaskStatus::DONE->value)
+            ->with([...$this->taskRelations(), 'project'])
+            ->where(function ($query): void {
+                $query
+                    ->where('assignee_id', request()->user()->id)
+                    ->orWhereHas(
+                        'assignees',
+                        fn ($assigneeQuery) => $assigneeQuery->whereKey(request()->user()->id)
+                    );
+            })
+            ->whereNotIn('status', [
+                ExecutionTaskStatus::DONE->value,
+                ExecutionTaskStatus::CANCELLED->value,
+            ])
             ->orderByRaw('due_date IS NULL, due_date ASC')
             ->orderByDesc('updated_at')
             ->get();
@@ -131,7 +156,7 @@ class ProjectTaskController extends Controller
         }
 
         $tasks = ProjectTask::query()
-            ->with(['assignee', 'deliverables', 'milestone', 'timeEntries.user', 'project.client'])
+            ->with([...$this->taskRelations(), 'project.client'])
             ->orderByRaw('due_date IS NULL, due_date ASC')
             ->orderByDesc('updated_at')
             ->get();
@@ -152,28 +177,42 @@ class ProjectTaskController extends Controller
         $this->authorize('view', $project);
         $this->authorize('create', [ProjectTask::class, $project]);
         $data = $request->validated();
+        $this->workflows->ensureProjectWorkflow($project);
+        $stage = $this->requestedStage($project, $data);
 
-        if (($data['status'] ?? null) === ExecutionTaskStatus::DONE->value) {
+        if ($stage->status === ExecutionTaskStatus::DONE) {
             $this->authorize('complete', [ProjectTask::class, $project]);
         }
 
-        $this->relationshipValidator->validate($request->user(), $project, $data);
+        $this->relationshipValidator->validateDirectTaskCreation($request->user(), $project, $data);
+        $assigneeIds = $this->requestedAssigneeIds($data);
 
-        $task = $project->executionTasks()->create([
-            'milestone_id' => $data['milestoneId'] ?? null,
-            // REMOVED: parent_id - subtasks are no longer supported
-            'title' => $data['title'],
-            'description' => $data['description'] ?? null,
-            'status' => $data['status'] ?? 'to_do',
-            'priority' => $data['priority'] ?? 'medium',
-            'estimated_hours' => $data['estimatedHours'] ?? null,
-            'start_date' => $data['startDate'] ?? null,
-            'due_date' => $data['dueDate'] ?? null,
-            'assignee_id' => $data['assigneeId'] ?? null,
-        ]);
+        $task = DB::transaction(function () use ($request, $project, $data, $stage, $assigneeIds): ProjectTask {
+            $task = $project->executionTasks()->create([
+                'milestone_id' => $data['milestoneId'] ?? null,
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'status' => $stage->status,
+                'workflow_stage_id' => $stage->id,
+                'priority' => $data['priority'] ?? 'medium',
+                'estimated_hours' => $data['estimatedHours'] ?? null,
+                'start_date' => $data['startDate'] ?? null,
+                'due_date' => $data['dueDate'] ?? null,
+            ]);
 
-        // Record activity for task creation
-        $assigneeName = isset($data['assigneeId']) ? User::find($data['assigneeId'])?->name ?? "User #{$data['assigneeId']}" : 'Unassigned';
+            $this->assignees->sync($task, $project, $assigneeIds);
+
+            if ($request->hasFile('coverImage')) {
+                $task->update([
+                    'cover_image_path' => $request->file('coverImage')->store('project-task-covers', 'public'),
+                ]);
+            }
+
+            return $task->refresh();
+        });
+
+        $assignedUsers = $task->assignees()->get();
+        $assigneeName = $assignedUsers->pluck('name')->join(', ') ?: 'Unassigned';
 
         $this->historyAction->recordChange(
             $project,
@@ -183,11 +222,10 @@ class ProjectTaskController extends Controller
             "Task created and assigned to {$assigneeName}"
         );
 
-        $task->load(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
-
-        if ($task->assignee !== null) {
-            $task->assignee->notify(new ProjectTaskAssignedNotification($task));
-        }
+        $task->load($this->taskRelations());
+        $assignedUsers->each(
+            fn (User $assignee) => $assignee->notify(new ProjectTaskAssignedNotification($task))
+        );
 
         return ApiResponse::success(
             new ProjectTaskResource($task),
@@ -205,7 +243,7 @@ class ProjectTaskController extends Controller
         $this->assertBelongsToProject($task, $project);
         $this->authorize('view', $task);
 
-        $task->load(['assignee', 'deliverables', 'timeEntries.user', 'milestone']);
+        $task->load($this->taskRelations());
         // REMOVED: subtasks.assignee, parent - subtasks are no longer supported
 
         return ApiResponse::success(
@@ -233,7 +271,10 @@ class ProjectTaskController extends Controller
         }
 
         $oldStatus = $task->status;
-        $targetStatus = $data['status'] ?? null;
+        $requestedStage = isset($data['workflowStageId'])
+            ? $project->workflowStages()->findOrFail($data['workflowStageId'])
+            : null;
+        $targetStatus = $requestedStage?->status->value ?? ($data['status'] ?? null);
 
         if ($targetStatus !== null && $targetStatus !== $oldStatus->value) {
             if ($targetStatus === ExecutionTaskStatus::DONE->value) {
@@ -245,9 +286,10 @@ class ProjectTaskController extends Controller
             }
         }
 
-        $this->relationshipValidator->validate($user, $project, $data);
+        $this->relationshipValidator->validateDirectTask($user, $project, $data);
 
         $oldAssignee = $task->assignee_id;
+        $oldAssigneeIds = $task->assignees()->pluck('users.id')->all();
 
         $updateData = [];
 
@@ -260,25 +302,46 @@ class ProjectTaskController extends Controller
             'estimatedHours' => 'estimated_hours',
             'startDate' => 'start_date',
             'dueDate' => 'due_date',
-            'assigneeId' => 'assignee_id',
         ] as $requestKey => $column) {
             if (array_key_exists($requestKey, $data)) {
                 $updateData[$column] = $data[$requestKey];
             }
         }
 
-        $task->update($updateData);
+        DB::transaction(function () use (
+            $task,
+            $project,
+            $data,
+            $requestedStage,
+            $updateData
+        ): void {
+            $task->update($updateData);
+
+            if ($requestedStage) {
+                $this->workflows->moveTask(
+                    $task,
+                    $requestedStage,
+                    (int) ($data['position'] ?? $task->pipeline_position)
+                );
+            } elseif (array_key_exists('status', $data)) {
+                $this->workflows->syncTaskStage($task->refresh());
+            }
+
+            if (array_key_exists('assigneeIds', $data) || array_key_exists('assigneeId', $data)) {
+                $this->assignees->sync($task, $project, $this->requestedAssigneeIds($data));
+            }
+        });
 
         $task->refresh();
 
         // Record activity for status changes
-        if (isset($data['status']) && $oldStatus !== $data['status']) {
+        if ($targetStatus !== null && $oldStatus->value !== $targetStatus) {
             $reason = isset($data['reason']) ? $data['reason'] : null;
             $this->historyAction->recordChange(
                 $project,
                 'task_status_changed',
                 $oldStatus,
-                $data['status'],
+                $targetStatus,
                 $reason ?? "Task '{$task->title}' status changed"
             );
 
@@ -289,7 +352,7 @@ class ProjectTaskController extends Controller
             //   qa        → in_progress  (QA tester rejection)
             $fromStatus = $oldStatus->value;
 
-            $toStatus = $data['status'];
+            $toStatus = $targetStatus;
 
             $isQaRejection = in_array($fromStatus, [
                 ExecutionTaskStatus::IN_REVIEW->value,
@@ -302,9 +365,9 @@ class ProjectTaskController extends Controller
         }
 
         // Record activity for assignee changes
-        if (array_key_exists('assigneeId', $data) && $oldAssignee !== $data['assigneeId']) {
+        if (array_key_exists('assigneeIds', $data) || array_key_exists('assigneeId', $data)) {
             $oldAssigneeName = $oldAssignee ? User::find($oldAssignee)?->name ?? "User #{$oldAssignee}" : 'Unassigned';
-            $newAssigneeName = $data['assigneeId'] ? User::find($data['assigneeId'])?->name ?? "User #{$data['assigneeId']}" : 'Unassigned';
+            $newAssigneeName = $task->assignee?->name ?? 'Unassigned';
 
             $this->historyAction->recordChange(
                 $project,
@@ -314,13 +377,13 @@ class ProjectTaskController extends Controller
                 "Task '{$task->title}' reassigned"
             );
 
-            $task->loadMissing('assignee');
-            if ($task->assignee !== null) {
-                $task->assignee->notify(new ProjectTaskAssignedNotification($task));
-            }
+            $task->assignees()
+                ->whereNotIn('users.id', $oldAssigneeIds)
+                ->get()
+                ->each(fn (User $assignee) => $assignee->notify(new ProjectTaskAssignedNotification($task)));
         }
 
-        $task->load(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
+        $task->load($this->taskRelations());
 
         return ApiResponse::success(
             new ProjectTaskResource($task),
@@ -338,6 +401,10 @@ class ProjectTaskController extends Controller
         $this->authorize('view', $project);
         $this->assertBelongsToProject($task, $project);
         $this->authorize('delete', $task);
+
+        if ($task->cover_image_path) {
+            Storage::disk('public')->delete($task->cover_image_path);
+        }
 
         $task->delete();
 
@@ -367,12 +434,49 @@ class ProjectTaskController extends Controller
             );
         }
 
-        $task->load(['assignee', 'deliverables', 'milestone', 'timeEntries.user']);
+        $task->load($this->taskRelations());
 
         return ApiResponse::success(
             new ProjectTaskResource($task),
             'Task marked as done'
         );
+    }
+
+    public function uploadCover(Request $request, Project $project, ProjectTask $task): JsonResponse
+    {
+        $this->authorize('view', $project);
+        $this->assertBelongsToProject($task, $project);
+        $this->authorize('update', $task);
+        $validated = $request->validate([
+            'coverImage' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        if ($task->cover_image_path) {
+            Storage::disk('public')->delete($task->cover_image_path);
+        }
+
+        $task->update([
+            'cover_image_path' => $validated['coverImage']->store('project-task-covers', 'public'),
+        ]);
+        $task->load($this->taskRelations());
+
+        return ApiResponse::success(new ProjectTaskResource($task), 'Task cover updated successfully');
+    }
+
+    public function deleteCover(Project $project, ProjectTask $task): JsonResponse
+    {
+        $this->authorize('view', $project);
+        $this->assertBelongsToProject($task, $project);
+        $this->authorize('update', $task);
+
+        if ($task->cover_image_path) {
+            Storage::disk('public')->delete($task->cover_image_path);
+            $task->update(['cover_image_path' => null]);
+        }
+
+        $task->load($this->taskRelations());
+
+        return ApiResponse::success(new ProjectTaskResource($task), 'Task cover removed successfully');
     }
 
     // -------------------------------------------------------------------------
@@ -398,8 +502,46 @@ class ProjectTaskController extends Controller
             'startDate' => true,
             'dueDate' => true,
             'assigneeId' => true,
+            'assigneeIds' => true,
+            'workflowStageId' => true,
         ];
 
         return array_intersect_key($data, $metadataFields) !== [];
+    }
+
+    /** @param array<string, mixed> $data */
+    private function requestedStage(Project $project, array $data): ProjectWorkflowStage
+    {
+        if (isset($data['workflowStageId'])) {
+            return $project->workflowStages()->findOrFail($data['workflowStageId']);
+        }
+
+        $status = ExecutionTaskStatus::from($data['status'] ?? ExecutionTaskStatus::TO_DO->value);
+
+        return $this->workflows->stageForStatus($project, $status);
+    }
+
+    /** @param array<string, mixed> $data
+     * @return array<int, int>
+     */
+    private function requestedAssigneeIds(array $data): array
+    {
+        if (array_key_exists('assigneeIds', $data)) {
+            return $data['assigneeIds'];
+        }
+
+        return isset($data['assigneeId']) ? [(int) $data['assigneeId']] : [];
+    }
+
+    private function taskRelations(): array
+    {
+        return [
+            'assignee',
+            'assignees',
+            'workflowStage',
+            'deliverables',
+            'milestone',
+            'timeEntries.user',
+        ];
     }
 }

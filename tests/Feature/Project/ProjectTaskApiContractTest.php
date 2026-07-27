@@ -61,6 +61,7 @@ class ProjectTaskApiContractTest extends TestCase
             'milestoneId',
             'title',
             'description',
+            'coverImageUrl',
             'status',
             'statusLabel',
             'priority',
@@ -68,10 +69,15 @@ class ProjectTaskApiContractTest extends TestCase
             'startDate',
             'dueDate',
             'assigneeId',
+            'assigneeIds',
+            'workflowStageId',
+            'pipelinePosition',
             'isInBacklog',
             'totalLoggedMinutes',
             'allowedActions',
             'assignee',
+            'assignees',
+            'workflowStage',
             'milestone',
             'deliverables',
             'timeEntries',
@@ -240,7 +246,7 @@ class ProjectTaskApiContractTest extends TestCase
         ]);
     }
 
-    public function test_project_task_index_scopes_non_global_users_to_their_assigned_tasks(): void
+    public function test_project_task_manager_sees_every_task_inside_their_project(): void
     {
         $user = $this->userWithPermissions(['view_projects', 'view_tasks', 'manage_tasks']);
         $otherUser = User::factory()->create();
@@ -268,9 +274,8 @@ class ProjectTaskApiContractTest extends TestCase
             ->getJson("/api/v1/projects/{$project->id}/tasks");
 
         $response->assertOk()
-            ->assertJsonCount(1, 'data.tasks')
-            ->assertJsonPath('data.tasks.0.taskId', $ownTask->id)
-            ->assertJsonPath('data.tasks.0.title', 'Own task');
+            ->assertJsonCount(2, 'data.tasks')
+            ->assertJsonPath('data.tasks.0.taskId', $ownTask->id);
     }
 
     /**
