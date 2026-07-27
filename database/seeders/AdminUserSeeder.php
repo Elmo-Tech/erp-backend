@@ -101,7 +101,6 @@ class AdminUserSeeder extends Seeder
         'edit_clients',
         'create_client_portal_access',
         'view_projects',
-        'view_all_projects',
         'create_projects',
         'edit_projects',
         'manage_project_members',
@@ -212,12 +211,12 @@ class AdminUserSeeder extends Seeder
 
         $clientRole->syncPermissions(self::existingPermissions(self::CLIENT_PERMISSIONS));
 
-        // Create the default The Tables admin user. Password can be overridden per environment.
+        // Create the default The Tables super-admin user. Password can be overridden per environment.
         $admin = User::firstOrNew(['email' => 'admin@thetables.com']);
         $isNewAdmin = ! $admin->exists;
 
         $admin->forceFill([
-            'name' => 'The Tables (Admin)',
+            'name' => 'The Tables (Super Admin)',
             'email_verified_at' => $admin->email_verified_at ?? now(),
             'is_active' => true,
             'is_employee' => true,
@@ -233,7 +232,7 @@ class AdminUserSeeder extends Seeder
 
         $admin->save();
 
-        $admin->syncRoles(['admin']);
+        $admin->syncRoles(['super-admin']);
 
         $this->seedQaAccount('QA Manager', 'manager@thetables.com', 'manager', [
             'specialization' => UserSpecialization::FULLSTACK->value,

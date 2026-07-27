@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -87,6 +88,7 @@ class SimplifiedRolePermissionsSeederTest extends TestCase
         foreach (['view_clients', 'view_projects', 'manage_tasks', 'view_all_time_entries', 'view_all_attendance', 'view_reports'] as $permission) {
             $this->assertTrue($manager->hasPermissionTo($permission));
         }
+        $this->assertFalse($manager->hasPermissionTo('view_all_projects'));
 
         foreach (['view_projects', 'view_tasks', 'edit_tasks', 'start_timer', 'stop_timer', 'view_attendance'] as $permission) {
             $this->assertTrue($developer->hasPermissionTo($permission));
@@ -128,8 +130,11 @@ class SimplifiedRolePermissionsSeederTest extends TestCase
         ]);
         $this->assertDatabaseHas('users', [
             'email' => 'admin@thetables.com',
-            'name' => 'The Tables (Admin)',
+            'name' => 'The Tables (Super Admin)',
         ]);
+        $defaultAccount = User::where('email', 'admin@thetables.com')->firstOrFail();
+        $this->assertTrue($defaultAccount->hasRole('super-admin'));
+        $this->assertFalse($defaultAccount->hasRole('admin'));
         $this->assertDatabaseMissing('users', ['email' => 'm.saber@elmotech.it']);
     }
 }

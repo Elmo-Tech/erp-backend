@@ -71,6 +71,23 @@ class DashboardController extends Controller
                                     )
                                 ),
                                 new OA\Property(
+                                    property: 'timeline',
+                                    description: 'Upcoming project and task delivery dates',
+                                    type: 'array',
+                                    items: new OA\Items(
+                                        properties: [
+                                            new OA\Property(property: 'id', type: 'string', example: 'task-12'),
+                                            new OA\Property(property: 'entityType', type: 'string', enum: ['project', 'task']),
+                                            new OA\Property(property: 'title', type: 'string', example: 'Build reporting dashboard'),
+                                            new OA\Property(property: 'startDate', type: 'string', format: 'date'),
+                                            new OA\Property(property: 'endDate', type: 'string', format: 'date'),
+                                            new OA\Property(property: 'projectId', type: 'integer', example: 3),
+                                            new OA\Property(property: 'projectName', type: 'string', example: 'ERP rollout'),
+                                        ],
+                                        type: 'object'
+                                    )
+                                ),
+                                new OA\Property(
                                     property: 'recentActivities',
                                     type: 'array',
                                     items: new OA\Items(
@@ -196,6 +213,7 @@ class DashboardController extends Controller
             ],
             'recentProjects' => $recentProjects,
             'recentActivities' => $recentActivities,
+            'timeline' => $this->getDeliveryTimeline(),
         ], 'Dashboard overview retrieved successfully');
     }
 
@@ -407,6 +425,95 @@ class DashboardController extends Controller
                 ];
             })
             ->toArray();
+    }
+
+    /** @return array<int, array<string, int|string>> */
+    private function getDeliveryTimeline(): array
+    {
+        return collect($this->getProjectTimelineEntries())
+            ->concat($this->getTaskTimelineEntries())
+            ->sortBy('endDate')
+            ->take(20)
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * @return array<int, array<string, int|string>>
+     */
+    private function getProjectTimelineEntries(): array
+    {
+        return Project::withoutGlobalScopes()
+            ->select('id', 'title', 'deadline', 'created_at')
+            ->whereNotNull('deadline')
+            ->orderBy('deadline')
+            ->limit(8)
+            ->get()
+            ->map(fn (Project $project) => $this->projectTimelineEntry($project))
+            ->toArray();
+    }
+
+    /**
+     * @return array<int, array<string, int|string>>
+     */
+    private function getTaskTimelineEntries(): array
+    {
+        return Task::query()
+            ->join('projects', 'projects.id', '=', 'tasks.project_id')
+            ->select('tasks.id', 'tasks.project_id', 'tasks.title', 'tasks.start_date', 'tasks.due_date', 'projects.title as project_title')
+            ->whereNotNull('tasks.due_date')
+            ->whereNull('projects.deleted_at')
+            ->orderBy('tasks.due_date')
+            ->limit(12)
+            ->get()
+            ->map(fn (Task $task) => $this->taskTimelineEntry($task))
+            ->toArray();
+    }
+
+    /**
+     * @return array<string, int|string>
+     */
+    private function projectTimelineEntry(Project $project): array
+    {
+        $endDate = $project->deadline->copy()->startOfDay();
+        $startDate = $this->timelineStartDate($project->created_at, $endDate);
+
+        return [
+            'id' => "project-{$project->id}",
+            'entityType' => 'project',
+            'title' => $project->title,
+            'startDate' => $startDate->toDateString(),
+            'endDate' => $endDate->toDateString(),
+            'projectId' => $project->id,
+            'projectName' => $project->title,
+        ];
+    }
+
+    /**
+     * @return array<string, int|string>
+     */
+    private function taskTimelineEntry(Task $task): array
+    {
+        $endDate = Carbon::parse((string) $task->getRawOriginal('due_date'))->startOfDay();
+        $rawStartDate = $task->getRawOriginal('start_date');
+        $startDate = $this->timelineStartDate(is_string($rawStartDate) ? Carbon::parse($rawStartDate) : null, $endDate);
+
+        return [
+            'id' => "task-{$task->id}",
+            'entityType' => 'task',
+            'title' => $task->title,
+            'startDate' => $startDate->toDateString(),
+            'endDate' => $endDate->toDateString(),
+            'projectId' => $task->project_id,
+            'projectName' => (string) $task->getAttribute('project_title'),
+        ];
+    }
+
+    private function timelineStartDate(?Carbon $requestedStartDate, Carbon $endDate): Carbon
+    {
+        $startDate = $requestedStartDate?->copy()->startOfDay() ?? $endDate->copy();
+
+        return $startDate->greaterThan($endDate) ? $endDate->copy() : $startDate;
     }
 
     /**
