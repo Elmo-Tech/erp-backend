@@ -73,4 +73,28 @@ class TimeTrackingLifecycleTest extends TestCase
         $this->assertSame($resumedFromHold->id, $ended->id);
         $this->assertNotSame($started->id, $resumed->id);
     }
+
+    public function test_pipeline_hold_and_resume_move_task_between_workflow_stages(): void
+    {
+        Event::fake([TimerUpdated::class]);
+        $user = User::factory()->create();
+        $project = Project::factory()->create();
+        $backlogStage = $project->workflowStages()->where('category', 'backlog')->firstOrFail();
+        $activeStage = $project->workflowStages()->where('category', 'active')->firstOrFail();
+        $holdStage = $project->workflowStages()->where('category', 'paused')->firstOrFail();
+        $task = Task::factory()->for($project)->create([
+            'workflow_stage_id' => $backlogStage->id,
+            'is_pipeline_task' => true,
+        ]);
+        $service = app(TimeTrackingService::class);
+
+        $service->startTimer($user, $task);
+        $this->assertSame($activeStage->id, $task->fresh()->workflow_stage_id);
+
+        $held = $service->holdTimer($user, 'Waiting for assets');
+        $this->assertSame($holdStage->id, $task->fresh()->workflow_stage_id);
+
+        $service->resumeTimer($user, $held);
+        $this->assertSame($activeStage->id, $task->fresh()->workflow_stage_id);
+    }
 }

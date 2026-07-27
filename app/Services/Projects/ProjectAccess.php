@@ -3,6 +3,7 @@
 namespace App\Services\Projects;
 
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\User;
 
 class ProjectAccess
@@ -73,6 +74,26 @@ class ProjectAccess
     {
         return ($user->can('edit_main_tasks') || $user->can('manage_tasks'))
             && $this->canView($user, $project);
+    }
+
+    public function canDeletePipelineTasks(User $user, Project $project): bool
+    {
+        return ($user->can('delete_tasks') || $user->can('manage_tasks'))
+            && $this->canView($user, $project);
+    }
+
+    public function canManagePipelineTaskCover(User $user, Project $project, Task $task): bool
+    {
+        if (! $this->canView($user, $project)) {
+            return false;
+        }
+
+        if ($user->can('edit_main_tasks') || $user->can('manage_tasks')) {
+            return true;
+        }
+
+        return $user->can('create_main_tasks')
+            && $task->getAttribute('created_by') === $user->id;
     }
 
     public function canManageWorkflow(User $user, Project $project): bool

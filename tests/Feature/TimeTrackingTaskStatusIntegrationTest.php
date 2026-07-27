@@ -182,6 +182,60 @@ class TimeTrackingTaskStatusIntegrationTest extends TestCase
         $this->assertEquals(Carbon::now('Africa/Cairo')->toDateString(), $task->start_date->toDateString());
     }
 
+    public function test_pipeline_assignee_can_start_task_timer(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->create();
+        $this->allowTaskTimer($user, $project);
+        $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+        $task = Task::factory()->for($project)->create([
+            'workflow_stage_id' => $stage->id,
+            'is_pipeline_task' => true,
+            'status' => TaskStatus::TODO,
+        ]);
+        $task->assignees()->create([
+            'user_id' => $user->id,
+            'role' => 'developer',
+            'is_primary' => true,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/time-entries/start', [
+                'trackableId' => $task->id,
+                'trackableType' => 'task',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.trackableId', $task->id);
+
+        $activeStage = $project->workflowStages()->where('category', 'active')->firstOrFail();
+        $this->assertSame($activeStage->id, $task->fresh()->workflow_stage_id);
+    }
+
+    public function test_unassigned_project_member_cannot_start_pipeline_task_timer(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->create();
+        $this->allowTaskTimer($user, $project);
+        $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+        $task = Task::factory()->for($project)->create([
+            'workflow_stage_id' => $stage->id,
+            'is_pipeline_task' => true,
+            'status' => TaskStatus::TODO,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/time-entries/start', [
+                'trackableId' => $task->id,
+                'trackableType' => 'task',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('time_entries', [
+            'user_id' => $user->id,
+            'trackable_id' => $task->id,
+        ]);
+    }
+
     private function allowTaskTimer(User $user, Project $project): void
     {
         $user->givePermissionTo([

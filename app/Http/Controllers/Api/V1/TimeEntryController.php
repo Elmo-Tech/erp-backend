@@ -331,6 +331,7 @@ class TimeEntryController extends Controller
                     ! $project instanceof Project
                     || ! $this->projectAccess->canViewTasks($user, $project)
                     || ! $user->can('start_timer')
+                    || ($trackable->is_pipeline_task && ! $trackable->isAssignedTo($user))
                 ) {
                     return ApiResponse::forbidden('You do not have permission to track time for this task.');
                 }

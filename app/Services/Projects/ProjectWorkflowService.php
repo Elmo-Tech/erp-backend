@@ -15,6 +15,7 @@ use App\Models\WorkflowTemplate;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ProjectWorkflowService
@@ -167,6 +168,91 @@ class ProjectWorkflowService
         return $task->fresh()->load(['assignee', 'assignees.user', 'workflowStage']);
     }
 
+    public function updateTask(Project $project, Task $task, User $actor, array $data): Task
+    {
+        $this->ensurePipelineTaskBelongsToProject($project, $task);
+        $stage = array_key_exists('workflowStageId', $data)
+            ? $project->workflowStages()->findOrFail($data['workflowStageId'])
+            : null;
+        $changesAssignees = array_key_exists('assignedTo', $data)
+            || array_key_exists('assignedUserIds', $data);
+        $assigneeIds = $changesAssignees ? $this->normalizedAssigneeIds($data) : [];
+
+        if ($changesAssignees) {
+            $this->validateAssignees($assigneeIds);
+        }
+
+        DB::transaction(function () use ($project, $task, $actor, $data, $stage, $changesAssignees, $assigneeIds): void {
+            Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $updates = ['updated_by' => $actor->id];
+
+            foreach ([
+                'title' => 'title',
+                'description' => 'description',
+                'dueDate' => 'due_date',
+                'estimatedHours' => 'estimated_hours',
+                'priority' => 'priority',
+            ] as $input => $column) {
+                if (array_key_exists($input, $data)) {
+                    $updates[$column] = $data[$input];
+                }
+            }
+
+            if ($stage instanceof ProjectWorkflowStage) {
+                $updates['workflow_stage_id'] = $stage->id;
+                $updates['status'] = $this->legacyStatusFor($stage);
+                $updates['hold_reason'] = $stage->category === 'paused'
+                    ? ($task->hold_reason ?: 'Moved to On Hold')
+                    : null;
+                $updates['completed_at'] = $stage->category === 'done' ? now() : null;
+            }
+
+            if ($changesAssignees) {
+                $this->addAssigneesToProject($project, $assigneeIds);
+                $updates['assigned_to'] = $assigneeIds[0] ?? null;
+            }
+
+            $task->update($updates);
+
+            if ($changesAssignees) {
+                $task->assignees()->delete();
+                $this->createTaskAssignees($task, $actor, $assigneeIds);
+            }
+        });
+
+        return $task->fresh()->load(['assignee', 'assignees.user', 'workflowStage']);
+    }
+
+    public function deleteTask(Project $project, Task $task): void
+    {
+        $this->ensurePipelineTaskBelongsToProject($project, $task);
+        $this->deleteCoverImageFile($task);
+        $task->delete();
+    }
+
+    public function replaceTaskCover(Project $project, Task $task, string $coverImagePath): Task
+    {
+        $this->ensurePipelineTaskBelongsToProject($project, $task);
+        $previousCoverImagePath = $task->cover_image_path;
+
+        $task->update(['cover_image_path' => $coverImagePath]);
+
+        if ($previousCoverImagePath && $previousCoverImagePath !== $coverImagePath) {
+            Storage::disk('public')->delete($previousCoverImagePath);
+        }
+
+        return $task->fresh()->load(['assignee', 'assignees.user', 'workflowStage']);
+    }
+
+    public function removeTaskCover(Project $project, Task $task): Task
+    {
+        $this->ensurePipelineTaskBelongsToProject($project, $task);
+        $this->deleteCoverImageFile($task);
+        $task->update(['cover_image_path' => null]);
+
+        return $task->fresh()->load(['assignee', 'assignees.user', 'workflowStage']);
+    }
+
     public function replaceProjectStages(Project $project, array $stages): Collection
     {
         return DB::transaction(function () use ($project, $stages): Collection {
@@ -261,6 +347,7 @@ class ProjectWorkflowService
             'workflowStageId' => $task->workflow_stage_id,
             'title' => $task->title,
             'description' => $task->description,
+            'coverImageUrl' => $task->cover_image_url,
             'priority' => $task->priorityValue(),
             'assignedTo' => $task->assigned_to,
             'assignee' => $assignee instanceof User ? [
@@ -330,6 +417,20 @@ class ProjectWorkflowService
                 'updated_at' => $now,
             ], $userIds)
         );
+    }
+
+    private function ensurePipelineTaskBelongsToProject(Project $project, Task $task): void
+    {
+        if (! $task->is_pipeline_task || $task->project_id !== $project->id) {
+            abort(404);
+        }
+    }
+
+    private function deleteCoverImageFile(Task $task): void
+    {
+        if ($task->cover_image_path) {
+            Storage::disk('public')->delete($task->cover_image_path);
+        }
     }
 
     private function legacyStatusFor(ProjectWorkflowStage $stage): TaskStatus

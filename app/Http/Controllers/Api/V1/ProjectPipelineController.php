@@ -103,6 +103,96 @@ class ProjectPipelineController extends Controller
         );
     }
 
+    public function updateTask(
+        Request $request,
+        Project $project,
+        Task $task
+    ): JsonResponse {
+        abort_unless($this->access->canMovePipelineTasks($request->user(), $project), 403);
+
+        $data = $request->validate([
+            'workflowStageId' => ['sometimes', 'required', 'integer'],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['sometimes', 'nullable', 'string'],
+            'assignedTo' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
+            'assignedUserIds' => ['sometimes', 'nullable', 'array', 'max:20'],
+            'assignedUserIds.*' => ['integer', 'distinct', 'exists:users,id'],
+            'dueDate' => ['sometimes', 'nullable', 'date'],
+            'estimatedHours' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'priority' => ['sometimes', 'required', Rule::in(['low', 'medium', 'high', 'urgent'])],
+        ]);
+
+        $changesAssignees = array_key_exists('assignedTo', $data)
+            || array_key_exists('assignedUserIds', $data);
+        abort_if(
+            $changesAssignees && ! $this->access->canAssignPipelineTasks($request->user(), $project),
+            403
+        );
+
+        $task = $this->workflow->updateTask($project, $task, $request->user(), $data);
+
+        return ApiResponse::success(
+            $this->workflow->taskPayload($task),
+            'Pipeline task updated successfully'
+        );
+    }
+
+    public function destroyTask(
+        Request $request,
+        Project $project,
+        Task $task
+    ): JsonResponse {
+        abort_unless($this->access->canDeletePipelineTasks($request->user(), $project), 403);
+
+        $this->workflow->deleteTask($project, $task);
+
+        return ApiResponse::success(null, 'Pipeline task deleted successfully');
+    }
+
+    public function storeTaskCover(
+        Request $request,
+        Project $project,
+        Task $task
+    ): JsonResponse {
+        abort_unless($task->is_pipeline_task && $task->project_id === $project->id, 404);
+        abort_unless($this->access->canManagePipelineTaskCover($request->user(), $project, $task), 403);
+
+        $request->validate([
+            'coverImage' => [
+                'required',
+                'image',
+                'mimes:jpeg,jpg,png,webp',
+                'max:5120',
+                'dimensions:max_width=6000,max_height=6000',
+            ],
+        ]);
+
+        $coverImagePath = $request->file('coverImage')
+            ->store("projects/{$project->id}/tasks/{$task->id}/covers", 'public');
+        $task = $this->workflow->replaceTaskCover($project, $task, $coverImagePath);
+
+        return ApiResponse::success(
+            $this->workflow->taskPayload($task),
+            'Task cover image updated successfully'
+        );
+    }
+
+    public function destroyTaskCover(
+        Request $request,
+        Project $project,
+        Task $task
+    ): JsonResponse {
+        abort_unless($task->is_pipeline_task && $task->project_id === $project->id, 404);
+        abort_unless($this->access->canManagePipelineTaskCover($request->user(), $project, $task), 403);
+
+        $task = $this->workflow->removeTaskCover($project, $task);
+
+        return ApiResponse::success(
+            $this->workflow->taskPayload($task),
+            'Task cover image removed successfully'
+        );
+    }
+
     public function updateStages(Request $request, Project $project): JsonResponse
     {
         abort_unless($this->access->canManageWorkflow($request->user(), $project), 403);

@@ -6,6 +6,8 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -173,6 +175,214 @@ class ProjectPipelineAccessTest extends TestCase
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('assignedUserIds');
+    }
+
+    public function test_authorized_member_can_edit_pipeline_task_and_replace_assignees(): void
+    {
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions([
+            'view_tasks',
+            'create_main_tasks',
+            'edit_main_tasks',
+            'assign_tasks',
+        ]);
+        $assignee = User::factory()->create([
+            'is_employee' => true,
+            'is_active' => true,
+        ]);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $backlog = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+        $review = $project->workflowStages()->where('category', 'review')->firstOrFail();
+
+        $taskId = $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/pipeline/tasks", [
+                'workflowStageId' => $backlog->id,
+                'title' => 'Original task',
+            ])
+            ->assertCreated()
+            ->json('data.taskId');
+
+        $this->actingAs($actor, 'sanctum')
+            ->patchJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$taskId}", [
+                'workflowStageId' => $review->id,
+                'title' => 'Updated task',
+                'description' => 'Updated from the board',
+                'priority' => 'urgent',
+                'assignedUserIds' => [$assignee->id],
+                'dueDate' => '2026-08-15',
+                'estimatedHours' => 6.5,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Updated task')
+            ->assertJsonPath('data.workflowStageId', $review->id)
+            ->assertJsonPath('data.assignees.0.userId', $assignee->id)
+            ->assertJsonPath('data.dueDate', '2026-08-15');
+
+        $this->assertDatabaseHas('tasks', [
+            'id' => $taskId,
+            'workflow_stage_id' => $review->id,
+            'title' => 'Updated task',
+            'assigned_to' => $assignee->id,
+        ]);
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $project->id,
+            'user_id' => $assignee->id,
+        ]);
+    }
+
+    public function test_editing_pipeline_assignees_requires_assignment_permission(): void
+    {
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'edit_main_tasks']);
+        $assignee = User::factory()->create([
+            'is_employee' => true,
+            'is_active' => true,
+        ]);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $backlog = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+        $task = Task::factory()->for($project)->create([
+            'workflow_stage_id' => $backlog->id,
+            'is_pipeline_task' => true,
+        ]);
+
+        $this->actingAs($actor, 'sanctum')
+            ->patchJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$task->id}", [
+                'title' => 'Unauthorized assignment edit',
+                'assignedUserIds' => [$assignee->id],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('task_assignees', [
+            'task_id' => $task->id,
+            'user_id' => $assignee->id,
+        ]);
+    }
+
+    public function test_pipeline_task_delete_requires_permission_and_is_scoped_to_project(): void
+    {
+        $project = Project::factory()->create();
+        $otherProject = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks']);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $otherProject->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+        $task = Task::factory()->for($project)->create([
+            'workflow_stage_id' => $stage->id,
+            'is_pipeline_task' => true,
+        ]);
+
+        $this->actingAs($actor, 'sanctum')
+            ->deleteJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$task->id}")
+            ->assertForbidden();
+
+        $actor->givePermissionTo(Permission::findOrCreate('delete_tasks', 'web'));
+
+        $this->actingAs($actor, 'sanctum')
+            ->deleteJson("/api/v1/projects/{$otherProject->id}/pipeline/tasks/{$task->id}")
+            ->assertNotFound();
+
+        $this->actingAs($actor, 'sanctum')
+            ->deleteJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$task->id}")
+            ->assertOk();
+
+        $this->assertSoftDeleted('tasks', ['id' => $task->id]);
+    }
+
+    public function test_authorized_member_can_replace_pipeline_task_cover(): void
+    {
+        Storage::fake('public');
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'edit_main_tasks']);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+        $task = Task::factory()->for($project)->create([
+            'workflow_stage_id' => $stage->id,
+            'is_pipeline_task' => true,
+            'cover_image_path' => "projects/{$project->id}/tasks/old-cover.jpg",
+        ]);
+        Storage::disk('public')->put($task->cover_image_path, 'old cover');
+
+        $response = $this->actingAs($actor, 'sanctum')
+            ->post("/api/v1/projects/{$project->id}/pipeline/tasks/{$task->id}/cover", [
+                'coverImage' => UploadedFile::fake()->image('cover.jpg', 1200, 675),
+            ])
+            ->assertOk();
+
+        $newCoverPath = Task::findOrFail($task->id)->cover_image_path;
+        Storage::disk('public')->assertExists($newCoverPath);
+        Storage::disk('public')->assertMissing("projects/{$project->id}/tasks/old-cover.jpg");
+        $response->assertJsonPath(
+            'data.coverImageUrl',
+            Storage::disk('public')->url($newCoverPath)
+        );
+    }
+
+    public function test_authorized_member_can_remove_pipeline_task_cover(): void
+    {
+        Storage::fake('public');
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'edit_main_tasks']);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+        $coverPath = "projects/{$project->id}/tasks/cover.jpg";
+        $task = Task::factory()->for($project)->create([
+            'workflow_stage_id' => $stage->id,
+            'is_pipeline_task' => true,
+            'cover_image_path' => $coverPath,
+        ]);
+        Storage::disk('public')->put($coverPath, 'cover');
+
+        $this->actingAs($actor, 'sanctum')
+            ->deleteJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$task->id}/cover")
+            ->assertOk()
+            ->assertJsonPath('data.coverImageUrl', null);
+
+        Storage::disk('public')->assertMissing($coverPath);
+        $this->assertNull(Task::findOrFail($task->id)->cover_image_path);
+    }
+
+    public function test_pipeline_task_cover_requires_edit_permission(): void
+    {
+        Storage::fake('public');
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks']);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+        $task = Task::factory()->for($project)->create([
+            'workflow_stage_id' => $stage->id,
+            'is_pipeline_task' => true,
+        ]);
+
+        $this->actingAs($actor, 'sanctum')
+            ->post("/api/v1/projects/{$project->id}/pipeline/tasks/{$task->id}/cover", [
+                'coverImage' => UploadedFile::fake()->image('cover.jpg'),
+            ])
+            ->assertForbidden();
+
+        $this->assertNull(Task::findOrFail($task->id)->cover_image_path);
+    }
+
+    public function test_pipeline_task_cover_is_scoped_to_project(): void
+    {
+        Storage::fake('public');
+        $project = Project::factory()->create();
+        $otherProject = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'edit_main_tasks']);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $otherProject->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+        $task = Task::factory()->for($project)->create([
+            'workflow_stage_id' => $stage->id,
+            'is_pipeline_task' => true,
+        ]);
+
+        $this->actingAs($actor, 'sanctum')
+            ->post("/api/v1/projects/{$otherProject->id}/pipeline/tasks/{$task->id}/cover", [
+                'coverImage' => UploadedFile::fake()->image('cover.jpg'),
+            ])
+            ->assertNotFound();
+
+        $this->assertNull(Task::findOrFail($task->id)->cover_image_path);
     }
 
     public function test_outsider_cannot_create_a_legacy_task_inside_a_hidden_project(): void

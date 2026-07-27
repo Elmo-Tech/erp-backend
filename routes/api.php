@@ -293,6 +293,10 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::post('workflow-templates', [ProjectPipelineController::class, 'storeTemplate'])->name('workflow-templates.store');
     Route::get('projects/{project}/pipeline', [ProjectPipelineController::class, 'show'])->name('projects.pipeline.show');
     Route::post('projects/{project}/pipeline/tasks', [ProjectPipelineController::class, 'storeTask'])->name('projects.pipeline.tasks.store');
+    Route::patch('projects/{project}/pipeline/tasks/{task}', [ProjectPipelineController::class, 'updateTask'])->name('projects.pipeline.tasks.update');
+    Route::delete('projects/{project}/pipeline/tasks/{task}', [ProjectPipelineController::class, 'destroyTask'])->name('projects.pipeline.tasks.destroy');
+    Route::post('projects/{project}/pipeline/tasks/{task}/cover', [ProjectPipelineController::class, 'storeTaskCover'])->name('projects.pipeline.tasks.cover.store');
+    Route::delete('projects/{project}/pipeline/tasks/{task}/cover', [ProjectPipelineController::class, 'destroyTaskCover'])->name('projects.pipeline.tasks.cover.destroy');
     Route::patch('projects/{project}/pipeline/tasks/{task}/stage', [ProjectPipelineController::class, 'moveTask'])->name('projects.pipeline.tasks.move');
     Route::put('projects/{project}/pipeline/stages', [ProjectPipelineController::class, 'updateStages'])->name('projects.pipeline.stages.update');
     Route::post('projects/{project}/pipeline/templates/{template}', [ProjectPipelineController::class, 'applyTemplate'])->name('projects.pipeline.templates.apply');

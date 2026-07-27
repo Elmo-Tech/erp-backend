@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Task extends Model implements Trackable
 {
@@ -34,6 +35,7 @@ class Task extends Model implements Trackable
         'assigned_to',
         'title',
         'description',
+        'cover_image_path',
         'acceptance_criteria',
         'status',
         'type',
@@ -371,6 +373,13 @@ class Task extends Model implements Trackable
     public function getTrackableDisplayName(): string
     {
         return $this->title;
+    }
+
+    public function getCoverImageUrlAttribute(): ?string
+    {
+        return $this->cover_image_path
+            ? Storage::disk('public')->url($this->cover_image_path)
+            : null;
     }
 
     public function getAllAncestors(): Collection

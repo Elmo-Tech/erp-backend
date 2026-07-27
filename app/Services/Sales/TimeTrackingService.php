@@ -7,6 +7,7 @@ use App\Enums\TaskStatus;
 use App\Enums\TimerStopReason;
 use App\Events\TimerUpdated;
 use App\Models\Attendance;
+use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
@@ -46,7 +47,7 @@ class TimeTrackingService
 
             if ($trackable instanceof Task) {
                 $this->validateTaskCanHaveTimer($trackable);
-                $this->updateTaskOnTimerStart($trackable);
+                $this->updateTaskOnTimerStart($trackable, $resumedFromId !== null);
             }
 
             $this->ensureAttendanceRecord($user);
@@ -93,21 +94,23 @@ class TimeTrackingService
      * Update task status and start_date when timer starts.
      * Changes status from TODO to IN_PROGRESS and sets start_date to today if not set.
      */
-    private function updateTaskOnTimerStart(Task $task): void
+    private function updateTaskOnTimerStart(Task $task, bool $isResume): void
     {
-        $updates = [];
+        $updates = $this->pipelineStageUpdates($task, 'active');
 
-        // Auto-update status from TODO to IN_PROGRESS
-        if ($task->status === TaskStatus::TODO) {
+        if ($task->is_pipeline_task || $task->status === TaskStatus::TODO || $isResume) {
             $updates['status'] = TaskStatus::IN_PROGRESS;
         }
 
-        // Set start_date to today if not already set
         if (is_null($task->start_date)) {
             $updates['start_date'] = Carbon::now('Africa/Cairo')->toDateString();
         }
 
-        // Update task if there are changes
+        if ($isResume || $task->is_pipeline_task) {
+            $updates['hold_reason'] = null;
+            $updates['completed_at'] = null;
+        }
+
         if (! empty($updates)) {
             $task->update($updates);
         }
@@ -200,7 +203,9 @@ class TimeTrackingService
             throw new InvalidArgumentException('Hold is available only for project tasks.');
         }
 
-        $activeTimer->trackable->update([
+        $task = $activeTimer->trackable;
+        $task->update([
+            ...$this->pipelineStageUpdates($task, 'paused'),
             'status' => TaskStatus::ON_HOLD,
             'hold_reason' => $reason,
         ]);
@@ -231,10 +236,7 @@ class TimeTrackingService
         }
 
         if ($previousEntry->trackable instanceof Task) {
-            $previousEntry->trackable->update([
-                'status' => TaskStatus::IN_PROGRESS,
-                'hold_reason' => null,
-            ]);
+            $previousEntry->trackable->update(['hold_reason' => null]);
         }
 
         return $this->startTimer($user, $previousEntry->trackable, $previousEntry->id);
@@ -353,6 +355,31 @@ class TimeTrackingService
         );
 
         return $timeEntry->fresh();
+    }
+
+    private function pipelineStageUpdates(Task $task, string $category): array
+    {
+        if (! $task->is_pipeline_task) {
+            return [];
+        }
+
+        $project = $task->project()->first();
+        if (! $project instanceof Project) {
+            return [];
+        }
+
+        $stage = $project->workflowStages()
+            ->where('category', $category)
+            ->first();
+
+        if ($stage === null || $task->workflow_stage_id === $stage->id) {
+            return [];
+        }
+
+        return [
+            'workflow_stage_id' => $stage->id,
+            'pipeline_position' => ((int) $stage->tasks()->max('pipeline_position')) + 1,
+        ];
     }
 
     private function expireStaleTimer(int $timeEntryId, Carbon $cutoff): bool
