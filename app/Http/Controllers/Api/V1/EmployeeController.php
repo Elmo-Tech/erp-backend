@@ -36,8 +36,8 @@ class EmployeeController extends Controller
      *     tags={"Employees"},
      *     security={{"sanctum":{}}},
      *
-     *     @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
-     *     @OA\Parameter(name="isActive", in="query", @OA\Schema(type="boolean")),
+     *     @OA\Parameter(name="filter[search]", in="query", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="filter[isActive]", in="query", @OA\Schema(type="boolean")),
      *     @OA\Parameter(name="perPage", in="query", @OA\Schema(type="integer", default=15)),
      *
      *     @OA\Response(response=200, description="Success")
@@ -46,9 +46,9 @@ class EmployeeController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filters = [
-            'search' => $request->query('filter.search'),
+            'search' => $request->input('filter.search'),
             'isActive' => $request->has('filter.isActive')
-                ? filter_var($request->query('filter.isActive'), FILTER_VALIDATE_BOOLEAN)
+                ? filter_var($request->input('filter.isActive'), FILTER_VALIDATE_BOOLEAN)
                 : null,
         ];
 

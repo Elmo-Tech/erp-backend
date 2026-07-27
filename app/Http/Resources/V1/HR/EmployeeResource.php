@@ -39,8 +39,7 @@ class EmployeeResource extends JsonResource
         $employee = $this->resource;
         $user = $request->user();
         $simplifiedMode = (bool) config('simplification.enabled');
-        $canViewSalary = ! $simplifiedMode
-            && $user
+        $canViewSalary = $user
             && $user->hasAnyPermission(['view_employee_salary', 'manage_employees']);
         $roleName = $employee->roles->pluck('name')->first() ?? '';
         $graceDaysAllowed = $employee->grace_days_allowed ?? 0;
