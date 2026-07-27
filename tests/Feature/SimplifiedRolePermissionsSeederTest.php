@@ -59,6 +59,7 @@ class SimplifiedRolePermissionsSeederTest extends TestCase
             foreach ($hiddenPermissions as $permission) {
                 if (! Permission::where('name', $permission)->exists()) {
                     $this->assertDatabaseMissing('permissions', ['name' => $permission]);
+
                     continue;
                 }
 
@@ -69,7 +70,17 @@ class SimplifiedRolePermissionsSeederTest extends TestCase
             }
         }
 
-        foreach (['manage_users', 'manage_roles', 'manage_clients', 'manage_projects', 'manage_tasks', 'manage_attendance', 'view_admin_stats'] as $permission) {
+        foreach ([
+            'manage_users',
+            'assign_user_roles',
+            'manage_roles',
+            'manage_clients',
+            'manage_projects',
+            'manage_project_workflows',
+            'manage_tasks',
+            'manage_attendance',
+            'view_admin_stats',
+        ] as $permission) {
             $this->assertTrue($admin->hasPermissionTo($permission));
         }
 
@@ -82,7 +93,39 @@ class SimplifiedRolePermissionsSeederTest extends TestCase
         }
 
         $this->assertSame(['view_dashboard', 'view_own_projects'], $client->permissions->pluck('name')->sort()->values()->all());
-        $this->assertTrue($superAdmin->hasPermissionTo('manage_users'));
+        foreach ([
+            'manage_users',
+            'manage_roles',
+            'assign_user_roles',
+            'manage_protected_users',
+            'manage_project_workflows',
+            'manage_workflow_templates',
+        ] as $permission) {
+            $this->assertTrue($superAdmin->hasPermissionTo($permission));
+        }
+
+        $this->assertFalse($admin->hasPermissionTo('manage_protected_users'));
+        $this->assertFalse($admin->hasPermissionTo('manage_workflow_templates'));
+        $this->assertDatabaseHas('workflow_templates', [
+            'name' => 'Standard Delivery Workflow',
+            'is_default' => true,
+        ]);
+        $this->assertDatabaseCount('workflow_template_stages', 7);
+        $this->assertDatabaseHas('lookup_options', [
+            'type' => 'task_status',
+            'value' => 'on_hold',
+            'is_active' => true,
+        ]);
+        $this->assertDatabaseHas('lookup_options', [
+            'type' => 'specialization',
+            'value' => 'backend',
+            'is_active' => true,
+        ]);
+        $this->assertDatabaseHas('lookup_options', [
+            'type' => 'task_category',
+            'value' => 'general',
+            'is_active' => true,
+        ]);
         $this->assertDatabaseHas('users', [
             'email' => 'admin@thetables.com',
             'name' => 'The Tables (Admin)',
