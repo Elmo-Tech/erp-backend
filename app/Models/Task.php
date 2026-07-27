@@ -116,6 +116,9 @@ class Task extends Model implements Trackable
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    /**
+     * @return HasMany<TaskAssignee, $this>
+     */
     public function assignees(): HasMany
     {
         return $this->hasMany(TaskAssignee::class);

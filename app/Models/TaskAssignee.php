@@ -37,9 +37,7 @@ class TaskAssignee extends Model
         return $this->belongsTo(Task::class);
     }
 
-    /**
-     * Get the assigned user.
-     */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

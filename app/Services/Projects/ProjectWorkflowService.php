@@ -6,8 +6,10 @@ use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Models\Project;
+use App\Models\ProjectMember;
 use App\Models\ProjectWorkflowStage;
 use App\Models\Task;
+use App\Models\TaskAssignee;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
 use Carbon\Carbon;
@@ -59,7 +61,7 @@ class ProjectWorkflowService
         $this->ensureProjectWorkflow($project);
 
         $stages = $project->workflowStages()
-            ->with(['tasks' => fn ($query) => $query->with(['assignee', 'workflowStage'])])
+            ->with(['tasks' => fn ($query) => $query->with(['assignee', 'assignees.user', 'workflowStage'])])
             ->get();
 
         return [
@@ -74,7 +76,8 @@ class ProjectWorkflowService
     public function createTask(Project $project, User $actor, array $data): Task
     {
         $stage = $project->workflowStages()->findOrFail($data['workflowStageId']);
-        $this->validateAssignee($project, $data['assignedTo'] ?? null);
+        $data['assignedUserIds'] = $this->normalizedAssigneeIds($data);
+        $this->validateAssignees($data['assignedUserIds']);
 
         return DB::transaction(
             fn (): Task => $this->persistTask($project, $stage, $actor, $data)
@@ -89,6 +92,9 @@ class ProjectWorkflowService
     ): Task {
         ProjectWorkflowStage::query()->whereKey($stage->id)->lockForUpdate()->firstOrFail();
         $position = ((int) $stage->tasks()->max('pipeline_position')) + 1;
+        $assigneeIds = $data['assignedUserIds'];
+
+        $this->addAssigneesToProject($project, $assigneeIds);
 
         $task = Task::query()->create([
             'project_id' => $project->id,
@@ -98,7 +104,7 @@ class ProjectWorkflowService
             'parent_id' => null,
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
-            'assigned_to' => $data['assignedTo'] ?? null,
+            'assigned_to' => $assigneeIds[0] ?? null,
             'due_date' => $data['dueDate'] ?? null,
             'estimated_hours' => $data['estimatedHours'] ?? null,
             'priority' => $data['priority'] ?? TaskPriority::MEDIUM->value,
@@ -108,22 +114,22 @@ class ProjectWorkflowService
             'updated_by' => $actor->id,
         ]);
 
-        if ($task->assigned_to !== null) {
-            $this->createPrimaryAssignee($task, $actor);
-        }
+        $this->createTaskAssignees($task, $actor, $assigneeIds);
 
-        return $task->load(['assignee', 'workflowStage']);
+        return $task->load(['assignee', 'assignees.user', 'workflowStage']);
     }
 
-    private function createPrimaryAssignee(Task $task, User $actor): void
+    private function createTaskAssignees(Task $task, User $actor, array $userIds): void
     {
-        $task->assignees()->create([
-            'user_id' => $task->assigned_to,
-            'role' => 'developer',
-            'is_primary' => true,
-            'created_by' => $actor->id,
-            'updated_by' => $actor->id,
-        ]);
+        foreach ($userIds as $index => $userId) {
+            $task->assignees()->create([
+                'user_id' => $userId,
+                'role' => 'developer',
+                'is_primary' => $index === 0,
+                'created_by' => $actor->id,
+                'updated_by' => $actor->id,
+            ]);
+        }
     }
 
     public function moveTask(
@@ -158,7 +164,7 @@ class ProjectWorkflowService
             ]);
         });
 
-        return $task->fresh()->load(['assignee', 'workflowStage']);
+        return $task->fresh()->load(['assignee', 'assignees.user', 'workflowStage']);
     }
 
     public function replaceProjectStages(Project $project, array $stages): Collection
@@ -245,6 +251,7 @@ class ProjectWorkflowService
 
     public function taskPayload(Task $task): array
     {
+        $task->loadMissing('assignees.user');
         $assignee = $task->assignee;
         $dueDate = $task->due_date;
 
@@ -261,6 +268,15 @@ class ProjectWorkflowService
                 'name' => $assignee->name,
                 'avatar' => $assignee->avatar,
             ] : null,
+            'assignees' => $task->assignees
+                ->map(fn (TaskAssignee $taskAssignee) => [
+                    'userId' => $taskAssignee->user->id,
+                    'name' => $taskAssignee->user->name,
+                    'avatar' => $taskAssignee->user->avatar,
+                    'isPrimary' => $taskAssignee->is_primary,
+                ])
+                ->values()
+                ->all(),
             'dueDate' => $dueDate ? Carbon::parse($dueDate)->format('Y-m-d') : null,
             'estimatedHours' => $task->estimated_hours !== null ? (float) $task->estimated_hours : null,
             'position' => $task->pipeline_position,
@@ -268,17 +284,52 @@ class ProjectWorkflowService
         ];
     }
 
-    private function validateAssignee(Project $project, ?int $userId): void
+    private function normalizedAssigneeIds(array $data): array
     {
-        if ($userId === null) {
+        $ids = $data['assignedUserIds'] ?? [];
+
+        if ($ids === [] && filled($data['assignedTo'] ?? null)) {
+            $ids = [$data['assignedTo']];
+        }
+
+        return array_values(array_unique(array_map('intval', $ids)));
+    }
+
+    private function validateAssignees(array $userIds): void
+    {
+        if ($userIds === []) {
             return;
         }
 
-        if (! $project->members()->where('user_id', $userId)->exists()) {
+        $activeEmployeeCount = User::query()
+            ->employees()
+            ->where('is_active', true)
+            ->whereKey($userIds)
+            ->count();
+
+        if ($activeEmployeeCount !== count($userIds)) {
             throw ValidationException::withMessages([
-                'assignedTo' => ['The assignee must be a member of this project.'],
+                'assignedUserIds' => ['Every assignee must be an active employee.'],
             ]);
         }
+    }
+
+    private function addAssigneesToProject(Project $project, array $userIds): void
+    {
+        if ($userIds === []) {
+            return;
+        }
+
+        $now = now();
+        ProjectMember::query()->insertOrIgnore(
+            array_map(fn (int $userId) => [
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'role' => 'member',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], $userIds)
+        );
     }
 
     private function legacyStatusFor(ProjectWorkflowStage $stage): TaskStatus

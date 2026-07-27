@@ -52,11 +52,20 @@ class ProjectPipelineController extends Controller
             'workflowStageId' => ['required', 'integer'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'assignedTo' => ['nullable', 'integer'],
+            'assignedTo' => ['nullable', 'integer', 'exists:users,id'],
+            'assignedUserIds' => ['nullable', 'array', 'max:20'],
+            'assignedUserIds.*' => ['integer', 'distinct', 'exists:users,id'],
             'dueDate' => ['nullable', 'date'],
             'estimatedHours' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'urgent'])],
         ]);
+
+        $hasAssignees = filled($data['assignedTo'] ?? null)
+            || ! empty($data['assignedUserIds'] ?? []);
+        abort_if(
+            $hasAssignees && ! $this->access->canAssignPipelineTasks($request->user(), $project),
+            403
+        );
 
         $task = $this->workflow->createTask($project, $request->user(), $data);
 

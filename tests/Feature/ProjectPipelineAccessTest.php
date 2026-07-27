@@ -47,7 +47,8 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_pipeline_task_is_flat_and_legacy_tasks_are_untouched(): void
     {
         $project = Project::factory()->create();
-        $user = $this->userWithPermissions(['view_tasks', 'create_main_tasks']);
+        $user = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'assign_tasks']);
+        $user->update(['is_employee' => true, 'is_active' => true]);
         $project->members()->create(['user_id' => $user->id, 'role' => 'member']);
         $legacyTask = Task::factory()->for($project)->create([
             'is_pipeline_task' => false,
@@ -85,22 +86,93 @@ class ProjectPipelineAccessTest extends TestCase
             ->assertJsonPath('data.tasks.0.taskId', $legacyTask->id);
     }
 
-    public function test_pipeline_task_assignee_must_be_project_member(): void
+    public function test_selected_employees_are_assigned_and_added_to_the_project(): void
+    {
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'assign_tasks']);
+        $employees = User::factory()->count(2)->create([
+            'is_employee' => true,
+            'is_active' => true,
+        ]);
+        foreach ($employees as $employee) {
+            $employee->givePermissionTo(Permission::findOrCreate('view_tasks', 'web'));
+        }
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $backlog = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+
+        $response = $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/pipeline/tasks", [
+                'workflowStageId' => $backlog->id,
+                'title' => 'Direct employee assignment',
+                'assignedUserIds' => $employees->pluck('id')->all(),
+            ])
+            ->assertCreated()
+            ->assertJsonCount(2, 'data.assignees')
+            ->assertJsonPath('data.assignedTo', $employees->first()->id);
+
+        $taskId = $response->json('data.taskId');
+        foreach ($employees as $index => $employee) {
+            $this->assertDatabaseHas('project_members', [
+                'project_id' => $project->id,
+                'user_id' => $employee->id,
+            ]);
+            $this->assertDatabaseHas('task_assignees', [
+                'task_id' => $taskId,
+                'user_id' => $employee->id,
+                'is_primary' => $index === 0,
+            ]);
+        }
+
+        $this->actingAs($employees->first(), 'sanctum')
+            ->getJson("/api/v1/projects/{$project->id}/pipeline")
+            ->assertOk()
+            ->assertJsonPath('data.project.projectId', $project->id);
+    }
+
+    public function test_assigning_pipeline_employees_requires_assignment_permission(): void
     {
         $project = Project::factory()->create();
         $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks']);
-        $outsider = User::factory()->create();
+        $employee = User::factory()->create([
+            'is_employee' => true,
+            'is_active' => true,
+        ]);
         $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $backlog = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
 
         $this->actingAs($actor, 'sanctum')
             ->postJson("/api/v1/projects/{$project->id}/pipeline/tasks", [
                 'workflowStageId' => $backlog->id,
-                'title' => 'Protected assignment',
-                'assignedTo' => $outsider->id,
+                'title' => 'Unauthorized assignment',
+                'assignedUserIds' => [$employee->id],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('project_members', [
+            'project_id' => $project->id,
+            'user_id' => $employee->id,
+        ]);
+    }
+
+    public function test_pipeline_assignees_must_be_active_employees(): void
+    {
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'assign_tasks']);
+        $inactiveEmployee = User::factory()->create([
+            'is_employee' => true,
+            'is_active' => false,
+        ]);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $backlog = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+
+        $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/pipeline/tasks", [
+                'workflowStageId' => $backlog->id,
+                'title' => 'Inactive employee assignment',
+                'assignedUserIds' => [$inactiveEmployee->id],
             ])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors('assignedTo');
+            ->assertJsonValidationErrors('assignedUserIds');
     }
 
     public function test_outsider_cannot_create_a_legacy_task_inside_a_hidden_project(): void

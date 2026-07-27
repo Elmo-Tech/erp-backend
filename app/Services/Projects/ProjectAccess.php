@@ -63,6 +63,12 @@ class ProjectAccess
             && $this->canView($user, $project);
     }
 
+    public function canAssignPipelineTasks(User $user, Project $project): bool
+    {
+        return ($user->can('assign_tasks') || $user->can('manage_tasks'))
+            && $this->canView($user, $project);
+    }
+
     public function canMovePipelineTasks(User $user, Project $project): bool
     {
         return ($user->can('edit_main_tasks') || $user->can('manage_tasks'))
