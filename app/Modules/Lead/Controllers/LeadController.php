@@ -2,6 +2,7 @@
 
 namespace App\Modules\Lead\Controllers;
 
+use App\Enums\DocumentCreationType;
 use App\Enums\LeadStage;
 use App\Enums\LeadStatus;
 use App\Helpers\ApiResponse;
@@ -36,6 +37,8 @@ class LeadController extends Controller
                     ->limit(1),
             ])
             ->withExists([
+                'proposals as has_skipped_meeting_stage' => fn ($proposalQuery) => $proposalQuery
+                    ->where('creation_type', DocumentCreationType::SKIPPED->value),
                 'proposals as has_accepted_proposal' => fn ($proposalQuery) => $proposalQuery->where('status', 'accepted'),
                 'quotations as has_accepted_quotation' => fn ($quotationQuery) => $quotationQuery->where('status', 'accepted'),
             ]);
@@ -82,7 +85,7 @@ class LeadController extends Controller
             'expected_budget' => $lead->expected_budget,
             'source' => $lead->source,
             'assignedTo' => $lead->assigned_to,
-            'hasCompletedMeeting' => (bool) $lead->has_completed_meeting,
+            'hasCompletedMeeting' => (bool) ($lead->has_completed_meeting || $lead->has_skipped_meeting_stage),
             'hasAcceptedProposalOrQuotation' => (bool) ($lead->has_accepted_proposal || $lead->has_accepted_quotation),
             'createdAt' => $lead->created_at?->toISOString(),
             'updatedAt' => $lead->updated_at?->toISOString(),
@@ -122,7 +125,7 @@ class LeadController extends Controller
                 'notes' => $lead->notes,
                 'expected_close_date' => $lead->expected_close_date?->toDateString(),
                 'assignedTo' => $lead->assigned_to,
-                'hasCompletedMeeting' => $this->hasCompletedMeeting($lead),
+                'hasCompletedMeeting' => $lead->hasResolvedMeetingStage(),
                 'hasAcceptedProposalOrQuotation' => $this->hasAcceptedProposalOrQuotation($lead),
                 'assignee' => $lead->assignee ? [
                     'id' => $lead->assignee->id,
@@ -202,15 +205,6 @@ class LeadController extends Controller
         $lead->delete();
 
         return ApiResponse::success(null, 'Lead deleted successfully.');
-    }
-
-    private function hasCompletedMeeting(Lead $lead): bool
-    {
-        return Meeting::query()
-            ->where('model_type', Lead::class)
-            ->where('model_id', $lead->id)
-            ->where('status', 'completed')
-            ->exists();
     }
 
     private function hasAcceptedProposalOrQuotation(Lead $lead): bool

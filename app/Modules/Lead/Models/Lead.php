@@ -2,9 +2,11 @@
 
 namespace App\Modules\Lead\Models;
 
+use App\Enums\DocumentCreationType;
 use App\Enums\LeadStage;
 use App\Enums\LeadStatus;
 use App\Modules\Client\Models\Client;
+use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Project\Models\Project;
 use App\Modules\Settings\Models\User;
 use App\Traits\HasCreatedUpdatedBy;
@@ -22,6 +24,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int|null $assigned_to
  * @property int|null $client_id
  * @property int|null $converted_project_id
+ * @property-read bool $has_skipped_meeting_stage
  */
 class Lead extends Model
 {
@@ -103,5 +106,23 @@ class Lead extends Model
     public function contracts(): HasMany
     {
         return $this->hasMany(Contract::class, 'lead_id');
+    }
+
+    public function hasResolvedMeetingStage(): bool
+    {
+        $hasCompletedMeeting = Meeting::query()
+            ->where('model_type', self::class)
+            ->where('model_id', $this->id)
+            ->where('status', 'completed')
+            ->exists();
+
+        if ($hasCompletedMeeting) {
+            return true;
+        }
+
+        // The current pipeline stores an explicit meeting skip as proposal-shaped evidence.
+        return $this->proposals()
+            ->where('creation_type', DocumentCreationType::SKIPPED->value)
+            ->exists();
     }
 }

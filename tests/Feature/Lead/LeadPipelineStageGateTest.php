@@ -39,6 +39,38 @@ class LeadPipelineStageGateTest extends TestCase
         $this->assertSame(LeadStage::NEW_LEAD, $lead->fresh()->stage);
     }
 
+    public function test_explicitly_skipped_meeting_allows_the_lead_to_advance(): void
+    {
+        $user = $this->userWithPermissions(['manage_leads']);
+        $lead = $this->lead();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::MEETING->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::MEETING->value,
+                    'type' => 'proposal',
+                    'creation_type' => DocumentCreationType::SKIPPED->value,
+                    'skip_reason' => 'The client asked to continue without a meeting.',
+                ]],
+            ])
+            ->assertOk();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/v1/leads/{$lead->id}/stage", [
+                'new_stage' => LeadStage::PROPOSAL->value,
+                'stage_results' => [[
+                    'stage' => LeadStage::PROPOSAL->value,
+                    'type' => 'proposal',
+                    'creation_type' => DocumentCreationType::SKIPPED->value,
+                    'skip_reason' => 'The client supplied the proposal directly.',
+                ]],
+            ])
+            ->assertOk();
+
+        $this->assertSame(LeadStage::PROPOSAL, $lead->fresh()->stage);
+    }
+
     public function test_quotation_stage_allows_a_completed_lead_meeting(): void
     {
         $user = $this->userWithPermissions(['manage_leads']);

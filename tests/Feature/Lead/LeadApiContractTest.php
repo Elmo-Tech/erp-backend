@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Lead;
 
+use App\Enums\DocumentCreationType;
 use App\Enums\LeadStage;
 use App\Enums\LeadStatus;
 use App\Modules\Lead\Models\Lead;
+use App\Modules\Lead\Models\Proposal;
 use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Settings\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -74,5 +76,33 @@ class LeadApiContractTest extends TestCase
         ], array_keys($firstLead));
         $this->assertTrue($firstLead['hasCompletedMeeting']);
         $this->assertLessThanOrEqual(4, count(DB::getQueryLog()));
+    }
+
+    public function test_explicit_meeting_skip_is_reported_as_resolved_pipeline_evidence(): void
+    {
+        $user = User::factory()->create();
+        Permission::findOrCreate('view_leads', 'web');
+        $user->givePermissionTo('view_leads');
+        $lead = Lead::create([
+            'title' => 'Meeting skipped lead',
+            'stage' => LeadStage::MEETING,
+            'status' => LeadStatus::ACTIVE,
+        ]);
+        Proposal::create([
+            'lead_id' => $lead->id,
+            'status' => 'draft',
+            'creation_type' => DocumentCreationType::SKIPPED->value,
+            'skip_reason' => 'The client asked to continue without a meeting.',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson("/api/v1/leads/{$lead->id}")
+            ->assertOk()
+            ->assertJsonPath('data.hasCompletedMeeting', true);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/leads')
+            ->assertOk()
+            ->assertJsonPath('data.0.hasCompletedMeeting', true);
     }
 }

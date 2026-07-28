@@ -9,7 +9,6 @@ use App\Http\Controllers\Controller;
 use App\Modules\Lead\Actions\ProcessLeadStageUpdateAction;
 use App\Modules\Lead\Models\Lead;
 use App\Modules\Lead\Requests\UpdateLeadStageRequest;
-use App\Modules\Meetings\Models\Meeting;
 use App\Modules\Meetings\Services\MeetingService;
 use App\Modules\PersonalTasks\Models\PersonalTask;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -99,7 +98,7 @@ class LeadPipelineController extends Controller
     {
         $requiresMeeting = in_array($newStage, [LeadStage::PROPOSAL, LeadStage::QUOTATION, LeadStage::CONTRACT, LeadStage::WON], true);
 
-        if ($requiresMeeting && ! $this->hasCompletedMeeting($lead)) {
+        if ($requiresMeeting && ! $lead->hasResolvedMeetingStage()) {
             $message = 'Cannot advance: Complete the meeting and add notes first.';
 
             return ApiResponse::error($message, 422, ['stage' => [$message]]);
@@ -314,15 +313,6 @@ class LeadPipelineController extends Controller
                 abort_unless($request->user()->canAny(['sign_contracts', 'manage_contracts']), 403, 'Unauthorized');
             }
         }
-    }
-
-    private function hasCompletedMeeting(Lead $lead): bool
-    {
-        return Meeting::query()
-            ->where('model_type', Lead::class)
-            ->where('model_id', $lead->id)
-            ->where('status', 'completed')
-            ->exists();
     }
 
     private function hasAcceptedProposalOrQuotation(Lead $lead): bool
