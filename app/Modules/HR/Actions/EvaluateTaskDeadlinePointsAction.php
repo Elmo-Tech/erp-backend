@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\Auth;
  *   - If the task has no assignee, evaluation is skipped silently.
  *   - If the task has no resolvable deadline (no due_date, no milestone due_date),
  *     evaluation is skipped silently (no deadline = no penalty/reward).
- *   - On time / early  → +5 points  (TASK_ON_TIME)
- *   - Late             → -5 points  (TASK_LATE)
+ *   - On time / early  → +1 point  (TASK_ON_TIME)
+ *   - Late             → -1 point  (TASK_LATE)
  *
  * Idempotency:
  *   A unique index on (source_type, source_id, type) is not enforced at DB level
@@ -72,14 +72,14 @@ class EvaluateTaskDeadlinePointsAction
         $isOnTime = $now->lte($deadline);
 
         if ($isOnTime) {
-            $points = 5;
             $type = PointTransactionType::TASK_ON_TIME;
             $reason = 'Task completed on time';
         } else {
-            $points = -5;
             $type = PointTransactionType::TASK_LATE;
             $reason = 'Task missed deadline';
         }
+
+        $points = $type->defaultPoints();
 
         // ── Compute running balance ───────────────────────────────────────────
         $currentBalance = (int) PointTransaction::where('user_id', $task->assignee_id)

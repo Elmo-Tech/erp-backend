@@ -18,8 +18,8 @@ use Illuminate\Support\Facades\Auth;
  *   - QA         → IN_PROGRESS  (QA tester rejection)
  *
  * Business rules:
- *   - Assignee (developer) receives -3 points  (BUG_FOUND)
- *   - Auth user (QA tester / reviewer) receives +2 points  (QUALITY_BONUS)
+ *   - Assignee (developer) receives -1 point  (BUG_FOUND)
+ *   - Auth user (QA tester / reviewer) receives +1 point  (QUALITY_BONUS)
  *     If the auth user IS the assignee (self-review edge case), only the
  *     deduction is applied — the bonus is skipped to prevent self-gaming.
  *
@@ -44,15 +44,16 @@ class EvaluateQABugPointsAction
 
         // ── Deduct points from the developer (assignee) ───────────────────────
         $developerBalance = $this->getLatestBalance($task->assignee_id);
+        $developerPoints = PointTransactionType::BUG_FOUND->defaultPoints();
 
         PointTransaction::create([
             'user_id' => $task->assignee_id,
-            'points' => -3,
+            'points' => $developerPoints,
             'type' => PointTransactionType::BUG_FOUND,
             'source_type' => ProjectTask::class,
             'source_id' => $task->id,
             'reason' => 'Task returned by QA with bugs',
-            'balance_after' => $developerBalance - 3,
+            'balance_after' => $developerBalance + $developerPoints,
             'created_by' => $reviewerId,
             'updated_by' => $reviewerId,
         ]);
@@ -61,15 +62,16 @@ class EvaluateQABugPointsAction
         // Skip if the reviewer is the same person as the assignee (self-review guard)
         if ($reviewerId !== null && $reviewerId !== $task->assignee_id) {
             $reviewerBalance = $this->getLatestBalance($reviewerId);
+            $reviewerPoints = PointTransactionType::QUALITY_BONUS->defaultPoints();
 
             PointTransaction::create([
                 'user_id' => $reviewerId,
-                'points' => 2,
+                'points' => $reviewerPoints,
                 'type' => PointTransactionType::QUALITY_BONUS,
                 'source_type' => ProjectTask::class,
                 'source_id' => $task->id,
                 'reason' => 'Bug identified',
-                'balance_after' => $reviewerBalance + 2,
+                'balance_after' => $reviewerBalance + $reviewerPoints,
                 'created_by' => $reviewerId,
                 'updated_by' => $reviewerId,
             ]);

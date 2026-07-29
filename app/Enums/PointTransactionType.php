@@ -45,9 +45,9 @@ enum PointTransactionType: string
             self::DELIVERABLE_APPROVED => 1,
             self::TEST_SCENARIO_VERIFIED => 1,
 
-            // Negative - TASK_LATE is variable based on delay days, others worth -1 point
+            // Negative - all automated events are worth -1 point
             self::BUG_FOUND => -1,
-            self::TASK_LATE => -1, // Default -1, but can be overridden with actual delay days
+            self::TASK_LATE => -1,
             self::CODE_REVIEW_REJECTED => -1,
             self::ATTENDANCE_LATE => -1,
             self::TASK_REOPENED => -1,
