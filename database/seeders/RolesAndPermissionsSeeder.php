@@ -507,7 +507,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // ── Dev ──────────────────────────────────────────────────────────
             // Developer. Task execution, time tracking, limited project
-            // visibility. NO manage_deliverables.
+            // visibility. Can add required deliverables without receiving the
+            // broader edit/delete deliverable-management capabilities.
             'dev' => [
                 'view_my_workspace',
                 'view_dashboard', 'view_dashboard_overview',
@@ -518,6 +519,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_project_files',
                 'view_project_history',
                 'view_tasks', 'work_on_tasks', 'log_time',
+                'create_project_task_deliverables',
                 'view_wiki', 'view_encrypted_content',
                 'view_time_entries', 'start_timer', 'stop_timer',
                 'view_attendance', 'clock_out',

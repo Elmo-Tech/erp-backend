@@ -8,6 +8,7 @@ use App\Modules\Project\Models\ProjectMember;
 use App\Modules\Project\Models\ProjectTask;
 use App\Modules\Project\Models\ProjectTaskDeliverable;
 use App\Modules\Settings\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -123,6 +124,37 @@ class ProjectSubResourceAuthorizationTest extends TestCase
         $this->assertDatabaseHas('project_task_deliverables', [
             'task_id' => $task->id,
             'title' => 'Release checklist',
+        ]);
+    }
+
+    public function test_seeded_developer_role_can_create_a_task_deliverable(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $project = Project::factory()->create();
+        $task = ProjectTask::create([
+            'project_id' => $project->id,
+            'title' => 'Developer task',
+            'status' => 'to_do',
+        ]);
+        $developer = User::factory()->create();
+        $developer->assignRole('dev');
+
+        ProjectMember::create([
+            'project_id' => $project->id,
+            'user_id' => $developer->id,
+            'role' => ProjectRole::DEVELOPER->value,
+        ]);
+
+        $this->actingAs($developer, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/tasks/{$task->id}/deliverables", [
+                'title' => 'Developer release notes',
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('project_task_deliverables', [
+            'task_id' => $task->id,
+            'title' => 'Developer release notes',
         ]);
     }
 

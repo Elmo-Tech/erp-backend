@@ -95,4 +95,34 @@ class RolesAndPermissionsSeederTest extends TestCase
             $this->assertTrue($role->hasPermissionTo('create_internal_notes'), $roleName.' must retain note writes');
         }
     }
+
+    public function test_developer_can_create_task_deliverables_without_full_deliverable_management(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $developer = Role::findByName('dev');
+
+        $this->assertTrue($developer->hasPermissionTo('create_project_task_deliverables'));
+        $this->assertFalse($developer->hasPermissionTo('manage_deliverables'));
+        $this->assertFalse($developer->hasPermissionTo('edit_project_task_deliverables'));
+        $this->assertFalse($developer->hasPermissionTo('delete_project_task_deliverables'));
+    }
+
+    public function test_developer_deliverable_permission_migration_updates_existing_role_and_is_reversible(): void
+    {
+        $developer = Role::firstOrCreate([
+            'name' => 'dev',
+            'guard_name' => 'web',
+        ]);
+        $migration = require database_path('migrations/2026_07_29_000001_grant_task_deliverable_create_to_developer_role.php');
+
+        $migration->up();
+
+        $this->assertTrue($developer->refresh()->hasPermissionTo('create_project_task_deliverables'));
+
+        $migration->down();
+
+        $this->assertFalse($developer->refresh()->hasPermissionTo('create_project_task_deliverables'));
+        $this->assertTrue(Permission::where('name', 'create_project_task_deliverables')->exists());
+    }
 }
