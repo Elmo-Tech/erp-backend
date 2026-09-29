@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -18,10 +19,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float|int|string $amount
  * @property string $currency
  * @property InvoiceStatus $status
- * @property \Illuminate\Support\Carbon $due_date
- * @property \Illuminate\Support\Carbon|null $paid_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $due_date
+ * @property Carbon|null $paid_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  * @property-read Project $project
  */
 class Invoice extends Model
@@ -105,10 +106,16 @@ class Invoice extends Model
             ->orderBy('id', 'desc')
             ->first();
 
-        $sequence = $lastInvoice
-            ? (int) substr($lastInvoice->invoice_number, -6) + 1
-            : 1;
+        $sequence = 0;
 
-        return sprintf('INV-%d-%06d', $year, $sequence);
+        if ($lastInvoice && preg_match('/^INV-\d{4}-(\d{6})$/D', $lastInvoice->invoice_number, $matches)) {
+            $sequence = (int) $matches[1];
+        }
+
+        if ($sequence === 999999) {
+            throw new \RuntimeException("Invoice number sequence exhausted for {$year}.");
+        }
+
+        return sprintf('INV-%04d-%06d', $year, $sequence + 1);
     }
 }

@@ -7,10 +7,9 @@ use App\Models\User;
 use App\Policies\ProjectPolicy;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for ProjectPolicy Authorization
@@ -18,9 +17,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 7: ProjectPolicy Authorization
  * Validates: Requirements 11.2, 11.3, 11.4
  */
-class ProjectPolicyPropertyTest extends TestCase
+class ProjectPolicyPropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     protected function setUp(): void
     {

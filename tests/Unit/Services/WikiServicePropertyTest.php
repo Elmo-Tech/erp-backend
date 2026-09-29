@@ -8,9 +8,8 @@ use App\Models\User;
 use App\Services\Projects\WikiService;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for WikiService
@@ -18,9 +17,9 @@ use Tests\TestCase;
  * Feature: project-management-wiki
  * Tests encryption/decryption functionality for project wikis
  */
-class WikiServicePropertyTest extends TestCase
+class WikiServicePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     private WikiService $wikiService;
 

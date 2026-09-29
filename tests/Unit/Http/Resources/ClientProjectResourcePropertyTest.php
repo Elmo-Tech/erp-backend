@@ -7,8 +7,7 @@ use App\Models\Project;
 use App\Models\User;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for ClientProjectResource Black Box
@@ -16,9 +15,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 3: ClientProjectResource Black Box
  * Validates: Requirements 4.1, 4.2, 4.3, 4.5
  */
-class ClientProjectResourcePropertyTest extends TestCase
+class ClientProjectResourcePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     /**
      * Property 3: ClientProjectResource Black Box

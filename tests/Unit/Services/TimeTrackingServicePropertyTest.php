@@ -11,9 +11,8 @@ use App\Models\User;
 use App\Services\Sales\TimeTrackingService;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for TimeTrackingService
@@ -21,9 +20,9 @@ use Tests\TestCase;
  * Feature: sales-pricing-engine, Property 6: Polymorphic Time Tracking
  * Validates: Requirements 5.3
  */
-class TimeTrackingServicePropertyTest extends TestCase
+class TimeTrackingServicePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     private TimeTrackingService $timeTrackingService;
 

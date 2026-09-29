@@ -5,8 +5,7 @@ namespace Tests\Unit\Models;
 use App\Models\User;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for User Model
@@ -15,9 +14,9 @@ use Tests\TestCase;
  * Feature: phase-0-infrastructure, Property 4: User Internal Cost Visible to Super Admin
  * Validates: Requirements 6.3, 6.4
  */
-class UserPropertyTest extends TestCase
+class UserPropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     /**
      * Property 3: User Internal Cost Hidden by Default

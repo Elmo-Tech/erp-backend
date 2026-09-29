@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class StoreDirectProjectRequest extends FormRequest
 {
@@ -23,6 +24,13 @@ class StoreDirectProjectRequest extends FormRequest
             'budget' => ['required', 'numeric', 'min:0'],
             'deadline' => ['nullable', 'date', 'after:today'],
             'status' => ['nullable', 'string', 'in:draft,active,ui_ux,development,testing,completed,on_hold,cancelled'],
+            'projectTypeId' => [
+                'nullable',
+                'integer',
+                Rule::exists('lookup_options', 'id')->where(fn ($query) => $query
+                    ->where('type', 'project_type')
+                    ->where('is_active', true)),
+            ],
         ];
     }
 

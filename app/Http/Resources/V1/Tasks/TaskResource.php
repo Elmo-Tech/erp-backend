@@ -29,6 +29,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *     @OA\Property(property="totalTimeSpent", type="integer", example=120),
  *     @OA\Property(property="reopenCount", type="integer", example=0),
  *     @OA\Property(property="testCompletionPercentage", type="number", format="float", example=75.5),
+ *     @OA\Property(property="supervisorId", type="integer", nullable=true, example=3),
+ *     @OA\Property(property="supervisor", type="object", nullable=true),
  *     @OA\Property(property="assignee", type="object", nullable=true),
  *     @OA\Property(property="assignees", type="array", @OA\Items(ref="#/components/schemas/TaskAssigneeResource")),
  *     @OA\Property(property="teamAssignees", type="array", @OA\Items(ref="#/components/schemas/TaskAssigneeResource"), description="Available team members from Main Task (for Weekly/Subtasks only)"),
@@ -50,6 +52,7 @@ class TaskResource extends JsonResource
             'projectId' => $this->project_id,
             'parentId' => $this->parent_id,
             'assignedTo' => $this->assigned_to,
+            'supervisorId' => $this->supervisor_id,
             'title' => $this->title,
             'description' => $this->description ?? '',
             'acceptanceCriteria' => $this->acceptance_criteria ?? '',
@@ -99,6 +102,12 @@ class TaskResource extends JsonResource
                 'name' => $this->assignee->name,
                 'email' => $this->assignee->email,
                 'avatar' => $this->assignee->avatar,
+            ] : null),
+
+            'supervisor' => $this->whenLoaded('supervisor', fn () => $this->supervisor ? [
+                'userId' => $this->supervisor->id,
+                'name' => $this->supervisor->name,
+                'avatar' => $this->supervisor->avatar,
             ] : null),
 
             'assignees' => $this->whenLoaded('assignees', fn () => TaskAssigneeResource::collection($this->assignees)

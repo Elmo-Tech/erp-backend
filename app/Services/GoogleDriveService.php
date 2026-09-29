@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\GoogleDriveConnection;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -45,6 +46,69 @@ class GoogleDriveService
                 'expires_at' => now()->addSeconds((int) ($data['expires_in'] ?? 3600)),
             ]
         );
+    }
+
+    public function status(): array
+    {
+        $connection = GoogleDriveConnection::query()->latest('id')->first();
+
+        if (! $connection) {
+            return [
+                'connected' => false,
+                'reason' => 'Google Drive is not connected.',
+            ];
+        }
+
+        $status = [
+            'connected' => false,
+        ];
+
+        if ($connection->expires_at) {
+            $status['expiresAt'] = $connection->expires_at->toIso8601String();
+        }
+
+        if (! $connection->access_token) {
+            $status['reason'] = 'Google Drive connection is invalid. Reconnect Google Drive.';
+
+            return $status;
+        }
+
+        // Status checks never refresh or persist tokens.
+        if ($connection->expires_at?->lte(now())) {
+            $status['reason'] = 'Google Drive access has expired. Reconnect Google Drive.';
+
+            return $status;
+        }
+
+        try {
+            $response = Http::withToken($connection->access_token)->get(self::DRIVE_API.'/about', [
+                'fields' => 'user(emailAddress)',
+            ]);
+        } catch (ConnectionException) {
+            $status['reason'] = 'Google Drive connection could not be verified. Try again or reconnect Google Drive.';
+
+            return $status;
+        }
+
+        if ($response->successful()) {
+            $status['connected'] = true;
+
+            $email = data_get($response->json(), 'user.emailAddress');
+
+            if (is_string($email) && $email !== '') {
+                $status['accountEmail'] = $email;
+            }
+
+            return $status;
+        }
+
+        $status['reason'] = match ($response->status()) {
+            401 => 'Google Drive authorization is no longer valid. Reconnect Google Drive.',
+            403 => 'Google Drive authorization can no longer access Drive. Reconnect Google Drive.',
+            default => 'Google Drive connection could not be verified. Try again or reconnect Google Drive.',
+        };
+
+        return $status;
     }
 
     public function folders(?string $search = null): array

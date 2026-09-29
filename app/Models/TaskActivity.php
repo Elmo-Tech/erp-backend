@@ -61,6 +61,16 @@ class TaskActivity extends Model
 
     public const TYPE_DUE_DATE_CHANGE = 'due_date_change';
 
+    public const TYPE_SUPERVISOR_CHANGED = 'supervisor_changed';
+
+    public const TYPE_HELP_REQUESTED = 'help_requested';
+
+    public const TYPE_HELP_REQUEST_UPDATED = 'help_request_updated';
+
+    public const TYPE_SUPERVISION_SESSION_STARTED = 'supervision_session_started';
+
+    public const TYPE_SUPERVISION_SESSION_STOPPED = 'supervision_session_stopped';
+
     public const TYPE_DELIVERABLE_SUBMITTED = 'deliverable_submitted';
 
     public const TYPE_DELIVERABLE_APPROVED = 'deliverable_approved';

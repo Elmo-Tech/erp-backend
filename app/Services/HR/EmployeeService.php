@@ -6,8 +6,10 @@ use App\Models\Attendance;
 use App\Models\TaskAssignee;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class EmployeeService
 {
@@ -137,6 +139,25 @@ class EmployeeService
         // Update role if provided
         if (! empty($data['role'])) {
             $employee->syncRoles([$data['role']]);
+        }
+
+        return $employee->fresh()->load('roles');
+    }
+
+    /**
+     * Store an employee avatar and remove the previous application-owned avatar.
+     */
+    public function updateEmployeeAvatar(User $employee, UploadedFile $avatar): User
+    {
+        $directory = "employees/{$employee->id}/avatars";
+        $previousAvatar = $employee->getRawOriginal('avatar');
+        $path = $avatar->store($directory, 'public');
+
+        $employee->update(['avatar' => $path]);
+
+        // Only direct files in this employee's directory can have been created here.
+        if (is_string($previousAvatar) && dirname($previousAvatar) === $directory) {
+            Storage::disk('public')->delete($previousAvatar);
         }
 
         return $employee->fresh()->load('roles');

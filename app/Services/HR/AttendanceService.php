@@ -9,6 +9,10 @@ use Illuminate\Support\Carbon;
 
 class AttendanceService
 {
+    public function __construct(
+        private readonly OvertimeRequestService $overtimeRequestService,
+    ) {}
+
     /**
      * Clock in a user for today.
      * Calculates late minutes and handles grace days.
@@ -91,6 +95,7 @@ class AttendanceService
         $attendance->clock_out = $now;
         $attendance->idle_minutes = $attendance->calculateIdleMinutes();
         $attendance->save();
+        $this->overtimeRequestService->synchronizeApprovedRequestsForAttendance($attendance);
 
         return $attendance;
     }
@@ -276,6 +281,7 @@ class AttendanceService
         if ($attendance->clock_out) {
             $attendance->idle_minutes = $attendance->calculateIdleMinutes();
             $attendance->save();
+            $this->overtimeRequestService->synchronizeApprovedRequestsForAttendance($attendance);
         }
 
         return $attendance->load('user');
@@ -358,6 +364,10 @@ class AttendanceService
         if (isset($data['clockIn']) || isset($data['clockOut'])) {
             $attendance->idle_minutes = $attendance->calculateIdleMinutes();
             $attendance->save();
+        }
+
+        if (isset($data['clockOut']) && $attendance->clock_out !== null) {
+            $this->overtimeRequestService->synchronizeApprovedRequestsForAttendance($attendance);
         }
 
         return $attendance->fresh()->load('user');

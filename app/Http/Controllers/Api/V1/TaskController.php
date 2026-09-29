@@ -401,7 +401,7 @@ class TaskController extends Controller
      */
     public function show(Task $task): JsonResponse
     {
-        $task->load(['assignee', 'project', 'parent', 'children.assignee', 'assignees.user', 'tags']);
+        $task->load(['assignee', 'supervisor', 'project', 'parent', 'children.assignee', 'children.supervisor', 'assignees.user', 'tags']);
 
         return ApiResponse::success(
             new TaskResource($task),
@@ -1465,7 +1465,7 @@ class TaskController extends Controller
             );
 
             return ApiResponse::success(
-                new TaskResource($task->load(['assignee', 'project', 'parent', 'children.assignee', 'assignees.user', 'tags'])),
+                new TaskResource($task->load(['assignee', 'supervisor', 'project', 'parent', 'children.assignee', 'children.supervisor', 'assignees.user', 'tags'])),
                 __('messages.task_status_updated')
             );
         });
@@ -1578,7 +1578,7 @@ class TaskController extends Controller
                 );
 
                 return ApiResponse::success(
-                    new TaskResource($task->load(['assignee', 'project', 'parent', 'children.assignee', 'assignees.user', 'tags'])),
+                    new TaskResource($task->load(['assignee', 'supervisor', 'project', 'parent', 'children.assignee', 'children.supervisor', 'assignees.user', 'tags'])),
                     __('messages.task_marked_complete')
                 );
             });

@@ -5,8 +5,8 @@ namespace Tests\Unit\Models;
 use App\Models\Invoice;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use RuntimeException;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for Invoice Model
@@ -14,9 +14,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 10: Invoice Number Generation
  * Validates: Requirements 17.1, 17.2, 17.3, 17.4, 17.5
  */
-class InvoicePropertyTest extends TestCase
+class InvoicePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     /**
      * Property 10: Invoice Number Generation
@@ -102,7 +102,7 @@ class InvoicePropertyTest extends TestCase
             )
             ->then(function ($testYear) {
                 // Clear any existing invoices
-                Invoice::query()->delete();
+                Invoice::withTrashed()->forceDelete();
 
                 // Mock the current year
                 $this->travelTo(now()->setYear($testYear)->startOfYear());
@@ -146,11 +146,11 @@ class InvoicePropertyTest extends TestCase
         $this
             ->limitTo(2)
             ->forAll(
-                Generator\choose(1, 999999) // Starting sequence number
+                Generator\choose(1, 999998) // Starting sequence number
             )
             ->then(function ($startingSequence) {
                 // Clear any existing invoices
-                Invoice::query()->delete();
+                Invoice::withTrashed()->forceDelete();
 
                 $currentYear = now()->year;
                 $existingInvoiceNumber = sprintf('INV-%d-%06d', $currentYear, $startingSequence);
@@ -170,5 +170,28 @@ class InvoicePropertyTest extends TestCase
                     "New invoice number should continue sequence from {$startingSequence} to ".($startingSequence + 1)
                 );
             });
+    }
+
+    public function test_invoice_number_generation_ignores_noncanonical_latest_number(): void
+    {
+        $year = now()->year;
+        Invoice::factory()->create([
+            'invoice_number' => "INV-{$year}-9999999",
+        ]);
+
+        $this->assertSame("INV-{$year}-000001", Invoice::generateInvoiceNumber());
+    }
+
+    public function test_invoice_number_generation_rejects_an_exhausted_canonical_sequence(): void
+    {
+        $year = now()->year;
+        Invoice::factory()->create([
+            'invoice_number' => "INV-{$year}-999999",
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage("Invoice number sequence exhausted for {$year}.");
+
+        Invoice::generateInvoiceNumber();
     }
 }

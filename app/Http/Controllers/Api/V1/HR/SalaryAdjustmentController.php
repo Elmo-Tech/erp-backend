@@ -104,6 +104,8 @@ class SalaryAdjustmentController extends Controller
                 'overtime' => $adjustments->where('adjustment_type', SalaryAdjustment::TYPE_OVERTIME)->sum('amount'),
                 'allowances' => $adjustments->where('adjustment_type', SalaryAdjustment::TYPE_ALLOWANCE)->sum('amount'),
                 'penalties' => $adjustments->where('adjustment_type', SalaryAdjustment::TYPE_PENALTY)->sum('amount'),
+                'partial_pay' => $adjustments->where('adjustment_type', SalaryAdjustment::TYPE_PARTIAL_PAY)->sum('amount'),
+                'advance_recovery' => $adjustments->where('adjustment_type', SalaryAdjustment::TYPE_ADVANCE_RECOVERY)->sum('amount'),
             ],
             'employees' => $byUser,
         ];
@@ -185,7 +187,7 @@ class SalaryAdjustmentController extends Controller
 
         $validated = $request->validate([
             'ids' => 'required|array',
-            'ids.*' => 'required|exists:salary_adjustments,id',
+            'ids.*' => 'required|exists:salary_adjustment_transactions,id',
         ]);
 
         $approved = 0;

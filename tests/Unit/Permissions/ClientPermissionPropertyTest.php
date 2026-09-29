@@ -5,10 +5,9 @@ namespace Tests\Unit\Permissions;
 use App\Models\User;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for Client Permission Enforcement
@@ -16,9 +15,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 1: Client Permission Enforcement
  * Validates: Requirements 1.3, 1.5, 1.6
  */
-class ClientPermissionPropertyTest extends TestCase
+class ClientPermissionPropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     protected function setUp(): void
     {

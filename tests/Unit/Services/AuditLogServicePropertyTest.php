@@ -8,9 +8,8 @@ use App\Models\User;
 use App\Services\Client\AuditLogService;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for AuditLogService
@@ -18,9 +17,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 9: Audit Logging
  * Validates: Requirements 16.1, 16.2, 16.3, 16.4, 16.5
  */
-class AuditLogServicePropertyTest extends TestCase
+class AuditLogServicePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     private AuditLogService $auditLogService;
 

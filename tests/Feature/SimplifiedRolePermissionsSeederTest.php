@@ -85,7 +85,7 @@ class SimplifiedRolePermissionsSeederTest extends TestCase
             $this->assertTrue($admin->hasPermissionTo($permission));
         }
 
-        foreach (['view_clients', 'view_projects', 'manage_tasks', 'view_all_time_entries', 'view_all_attendance', 'view_reports'] as $permission) {
+        foreach (['view_clients', 'view_projects', 'manage_tasks', 'view_all_time_entries', 'view_all_attendance', 'view_reports', 'manage_employees'] as $permission) {
             $this->assertTrue($manager->hasPermissionTo($permission));
         }
         $this->assertFalse($manager->hasPermissionTo('view_all_projects'));

@@ -153,33 +153,31 @@ class EmployeeDeductionController extends Controller
     {
         Gate::authorize('approve', $employeeDeduction);
 
-        if (! $employeeDeduction->canBeApproved()) {
+        $deduction = DB::transaction(function () use ($employeeDeduction): ?EmployeeDeduction {
+            $deduction = EmployeeDeduction::query()
+                ->lockForUpdate()
+                ->findOrFail($employeeDeduction->id);
+
+            if (! $deduction->canBeApproved()) {
+                return null;
+            }
+
+            $deduction->approve(auth()->id());
+            SalaryAdjustment::createFromDeduction($deduction);
+
+            return $deduction;
+        });
+
+        if (! $deduction) {
             return response()->json([
                 'message' => 'This deduction cannot be approved',
             ], 422);
         }
 
-        DB::beginTransaction();
-        try {
-            $employeeDeduction->approve(auth()->id());
-
-            // Create salary adjustment
-            $adjustment = SalaryAdjustment::createFromDeduction($employeeDeduction);
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Employee deduction approved successfully',
-                'data' => new EmployeeDeductionResource($employeeDeduction->load(['user', 'deductionType', 'approver'])),
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'message' => 'Failed to approve deduction',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'message' => 'Employee deduction approved successfully',
+            'data' => new EmployeeDeductionResource($deduction->load(['user', 'deductionType', 'approver'])),
+        ]);
     }
 
     /**

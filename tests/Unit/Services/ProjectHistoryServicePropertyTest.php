@@ -9,8 +9,7 @@ use App\Models\User;
 use App\Services\Projects\ProjectHistoryService;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for ProjectHistoryService
@@ -18,9 +17,9 @@ use Tests\TestCase;
  * Feature: project-management-wiki, Property 7: History Records Created on Update
  * Validates: Requirements 3.2, 9.2, 9.3
  */
-class ProjectHistoryServicePropertyTest extends TestCase
+class ProjectHistoryServicePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     private ProjectHistoryService $historyService;
 

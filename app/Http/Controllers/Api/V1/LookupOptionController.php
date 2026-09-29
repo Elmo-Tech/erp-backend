@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\LookupOptionRequest;
 use App\Models\LookupOption;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -120,6 +121,13 @@ class LookupOptionController extends Controller
     {
         if ($lookupOption->metadata['is_system'] ?? false) {
             return ApiResponse::forbidden('System-reserved lookup options cannot be deleted.');
+        }
+
+        if ($lookupOption->type === 'project_type' && Project::withoutGlobalScopes()
+            ->withTrashed()
+            ->where('project_type_id', $lookupOption->id)
+            ->exists()) {
+            return ApiResponse::error('Project types assigned to projects cannot be deleted.', 409);
         }
 
         $lookupOption->delete();

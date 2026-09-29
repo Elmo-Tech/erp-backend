@@ -9,8 +9,7 @@ use App\Models\User;
 use App\Services\Reporting\ProfitabilityService;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for ProfitabilityService
@@ -21,9 +20,9 @@ use Tests\TestCase;
  * Feature: monitoring-profitability-admin, Property 4: Time Entry Aggregation Completeness
  * Validates: Requirements 1.1, 1.2, 1.4, 1.5, 1.6, 1.7
  */
-class ProfitabilityServicePropertyTest extends TestCase
+class ProfitabilityServicePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     private ProfitabilityService $profitabilityService;
 

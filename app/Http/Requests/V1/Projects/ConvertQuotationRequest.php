@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class ConvertQuotationRequest extends FormRequest
 {
@@ -29,6 +30,13 @@ class ConvertQuotationRequest extends FormRequest
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'deadline' => ['nullable', 'date', 'after:today'],
+            'projectTypeId' => [
+                'nullable',
+                'integer',
+                Rule::exists('lookup_options', 'id')->where(fn ($query) => $query
+                    ->where('type', 'project_type')
+                    ->where('is_active', true)),
+            ],
         ];
     }
 

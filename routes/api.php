@@ -25,8 +25,18 @@ use App\Http\Controllers\Api\V1\GoogleDriveController;
 use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\HR\DeductionTypeController;
+use App\Http\Controllers\Api\V1\HR\DirectEmployeeDeductionController;
+use App\Http\Controllers\Api\V1\HR\EmployeeAdvanceController;
 use App\Http\Controllers\Api\V1\HR\EmployeeDeductionController;
+use App\Http\Controllers\Api\V1\HR\EmployeeDocumentController;
+use App\Http\Controllers\Api\V1\HR\EmployeeLateDeductionController;
+use App\Http\Controllers\Api\V1\HR\EmployeeOvertimeRequestController;
+use App\Http\Controllers\Api\V1\HR\EmployeePartialPayController;
 use App\Http\Controllers\Api\V1\HR\EmployeeRewardController;
+use App\Http\Controllers\Api\V1\HR\EmployeeShortPermissionController;
+use App\Http\Controllers\Api\V1\HR\EmploymentContractController;
+use App\Http\Controllers\Api\V1\HR\HrPolicyController;
+use App\Http\Controllers\Api\V1\HR\LeaveManagementController;
 use App\Http\Controllers\Api\V1\HR\RewardTypeController;
 use App\Http\Controllers\Api\V1\HR\SalaryAdjustmentController;
 use App\Http\Controllers\Api\V1\InnovationLogController;
@@ -53,6 +63,7 @@ use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TaskDeliverableController;
 use App\Http\Controllers\Api\V1\TaskDependencyController;
+use App\Http\Controllers\Api\V1\TaskSupervisionController;
 use App\Http\Controllers\Api\V1\TaskTemplateController;
 use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
@@ -281,9 +292,71 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
     // Employee Management Routes
     Route::apiResource('employees', EmployeeController::class)->except(['destroy']);
+    Route::post('employees/{id}/avatar', [EmployeeController::class, 'updateAvatar'])->name('employees.avatar');
     Route::get('employees/{id}/performance', [EmployeeController::class, 'performance'])->middleware('simplified.disabled:performance')->name('employees.performance');
     Route::post('employees/{id}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');
     Route::post('employees/{id}/activate', [EmployeeController::class, 'activate'])->name('employees.activate');
+
+    Route::middleware(['auth:sanctum', 'locale'])->group(function () {
+        Route::get('employees/{id}/documents', [EmployeeDocumentController::class, 'index'])->name('employees.documents.index');
+        Route::post('employees/{id}/documents', [EmployeeDocumentController::class, 'store'])->name('employees.documents.store');
+        Route::get('employee-documents/{document}/download', [EmployeeDocumentController::class, 'download'])->name('employee-documents.download');
+        Route::delete('employee-documents/{document}', [EmployeeDocumentController::class, 'destroy'])->name('employee-documents.destroy');
+
+        Route::get('deduction-types/active', [DirectEmployeeDeductionController::class, 'activeTypes'])->name('deduction-types.active');
+        Route::get('employees/{id}/deductions', [DirectEmployeeDeductionController::class, 'history'])->name('employees.deductions.index');
+        Route::post('employees/{id}/deductions', [DirectEmployeeDeductionController::class, 'store'])->name('employees.deductions.store');
+        Route::post('employee-deductions/{deduction}/approve', [DirectEmployeeDeductionController::class, 'approve'])->name('employee-deductions.approve');
+        Route::post('employee-deductions/{deduction}/reject', [DirectEmployeeDeductionController::class, 'reject'])->name('employee-deductions.reject');
+        Route::post('employee-deductions/{deduction}/cancel', [DirectEmployeeDeductionController::class, 'cancel'])->name('employee-deductions.cancel');
+
+        Route::get('leave-types', [LeaveManagementController::class, 'index'])->name('leave-types.index');
+        Route::get('leave-types/all', [LeaveManagementController::class, 'indexAll'])->middleware('permission:manage_leave_types')->name('leave-types.all');
+        Route::post('leave-types', [LeaveManagementController::class, 'storeType'])->middleware('permission:manage_leave_types')->name('leave-types.store');
+        Route::put('leave-types/{leaveType}', [LeaveManagementController::class, 'updateType'])->middleware('permission:manage_leave_types')->name('leave-types.update');
+
+        Route::get('employees/{id}/leaves', [LeaveManagementController::class, 'history'])->name('employees.leaves.index');
+        Route::post('employees/{id}/leaves', [LeaveManagementController::class, 'store'])->name('employees.leaves.store');
+        Route::post('employee-leaves/{leave}/approve', [LeaveManagementController::class, 'approve'])->name('employee-leaves.approve');
+        Route::post('employee-leaves/{leave}/reject', [LeaveManagementController::class, 'reject'])->name('employee-leaves.reject');
+        Route::post('employee-leaves/{leave}/cancel', [LeaveManagementController::class, 'cancel'])->name('employee-leaves.cancel');
+
+        Route::get('employees/{id}/short-permissions', [EmployeeShortPermissionController::class, 'history'])->name('employees.short-permissions.index');
+        Route::post('employees/{id}/short-permissions', [EmployeeShortPermissionController::class, 'store'])->name('employees.short-permissions.store');
+        Route::post('employee-short-permissions/{permission}/approve', [EmployeeShortPermissionController::class, 'approve'])->name('employee-short-permissions.approve');
+        Route::post('employee-short-permissions/{permission}/reject', [EmployeeShortPermissionController::class, 'reject'])->name('employee-short-permissions.reject');
+        Route::post('employee-short-permissions/{permission}/cancel', [EmployeeShortPermissionController::class, 'cancel'])->name('employee-short-permissions.cancel');
+
+        Route::get('employees/{id}/overtime-requests', [EmployeeOvertimeRequestController::class, 'history'])->name('employees.overtime-requests.index');
+        Route::post('employees/{id}/overtime-requests', [EmployeeOvertimeRequestController::class, 'store'])->name('employees.overtime-requests.store');
+        Route::post('employee-overtime-requests/{request}/approve', [EmployeeOvertimeRequestController::class, 'approve'])->name('employee-overtime-requests.approve');
+        Route::post('employee-overtime-requests/{request}/reject', [EmployeeOvertimeRequestController::class, 'reject'])->name('employee-overtime-requests.reject');
+        Route::post('employee-overtime-requests/{request}/cancel', [EmployeeOvertimeRequestController::class, 'cancel'])->name('employee-overtime-requests.cancel');
+
+        Route::get('employees/{id}/advances', [EmployeeAdvanceController::class, 'history'])->name('employees.advances.index');
+        Route::post('employees/{id}/advances', [EmployeeAdvanceController::class, 'store'])->name('employees.advances.store');
+        Route::get('employee-advances/{advance}', [EmployeeAdvanceController::class, 'show'])->name('employee-advances.show');
+        Route::post('employee-advances/{advance}/approve', [EmployeeAdvanceController::class, 'approve'])->name('employee-advances.approve');
+        Route::post('employee-advances/{advance}/reject', [EmployeeAdvanceController::class, 'reject'])->name('employee-advances.reject');
+        Route::post('employee-advances/{advance}/cancel', [EmployeeAdvanceController::class, 'cancel'])->name('employee-advances.cancel');
+        Route::post('employee-advances/{advance}/disburse', [EmployeeAdvanceController::class, 'disburse'])->name('employee-advances.disburse');
+        Route::post('employee-advance-settlements/{settlement}/settle', [EmployeeAdvanceController::class, 'settle'])->name('employee-advance-settlements.settle');
+
+        Route::get('employees/{id}/partial-pays', [EmployeePartialPayController::class, 'history'])->name('employees.partial-pays.index');
+        Route::post('employees/{id}/partial-pays/preview', [EmployeePartialPayController::class, 'preview'])->name('employees.partial-pays.preview');
+        Route::post('employees/{id}/partial-pays', [EmployeePartialPayController::class, 'store'])->name('employees.partial-pays.store');
+        Route::post('employee-partial-pays/{record}/approve', [EmployeePartialPayController::class, 'approve'])->name('employee-partial-pays.approve');
+        Route::post('employee-partial-pays/{record}/cancel', [EmployeePartialPayController::class, 'cancel'])->name('employee-partial-pays.cancel');
+    });
+
+    Route::middleware(['auth:sanctum', 'locale', 'permission:manage_employees'])->group(function () {
+        Route::get('employees/{id}/employment-contracts', [EmploymentContractController::class, 'index'])->name('employees.employment-contracts.index');
+        Route::post('employees/{id}/employment-contracts', [EmploymentContractController::class, 'store'])->name('employees.employment-contracts.store');
+        Route::put('employment-contracts/{contract}', [EmploymentContractController::class, 'update'])->name('employment-contracts.update');
+        Route::get('employees/{id}/late-deductions', [EmployeeLateDeductionController::class, 'index'])->name('employees.late-deductions.index');
+        Route::post('employees/{id}/late-deductions/evaluate', [EmployeeLateDeductionController::class, 'evaluate'])->name('employees.late-deductions.evaluate');
+        Route::put('employee-late-deductions/{record}/override', [EmployeeLateDeductionController::class, 'override'])->name('employee-late-deductions.override');
+    });
 
     // Project Management Routes
     // All routes have auth:sanctum and locale middleware applied in controllers
@@ -324,6 +397,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('projects/{project}/history', [ProjectHistoryController::class, 'index'])->name('projects.history');
 
     // Google Drive project files
+    Route::get('google-drive/status', [GoogleDriveController::class, 'status'])->name('google-drive.status');
     Route::get('google-drive/oauth-url', [GoogleDriveController::class, 'oauthUrl'])->name('google-drive.oauth-url');
     Route::post('google-drive/oauth-callback', [GoogleDriveController::class, 'oauthCallback'])->name('google-drive.oauth-callback');
     Route::get('projects/{project}/drive-folders', [GoogleDriveController::class, 'folders'])->name('projects.drive-folders');
@@ -346,6 +420,17 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
     // My Assigned Tasks Route (tasks where user is team member) - MUST be before apiResource
     Route::get('tasks/my-assigned', [TaskController::class, 'myAssignedTasks'])->name('tasks.my-assigned');
+
+    // Task Supervision Routes
+    Route::put('tasks/{task}/supervisor', [TaskSupervisionController::class, 'setSupervisor'])->name('tasks.supervisor.update');
+    Route::get('tasks/{task}/supervision', [TaskSupervisionController::class, 'show'])->name('tasks.supervision.show');
+    Route::post('tasks/{task}/help-requests', [TaskSupervisionController::class, 'storeHelpRequest'])->name('tasks.help-requests.store');
+    Route::post('tasks/{task}/supervision-sessions/start', [TaskSupervisionController::class, 'startSession'])->name('tasks.supervision-sessions.start');
+    Route::patch('task-help-requests/{helpRequest}', [TaskSupervisionController::class, 'updateHelpRequest'])->name('task-help-requests.update');
+    Route::get('task-supervision-sessions/active', [TaskSupervisionController::class, 'active'])->name('task-supervision-sessions.active');
+    Route::post('task-supervision-sessions/{session}/heartbeat', [TaskSupervisionController::class, 'heartbeat'])->name('task-supervision-sessions.heartbeat');
+    Route::post('task-supervision-sessions/{session}/stop', [TaskSupervisionController::class, 'stopSession'])->name('task-supervision-sessions.stop');
+    Route::get('task-supervision/summary', [TaskSupervisionController::class, 'summary'])->name('task-supervision.summary');
 
     // Task CRUD Routes
     Route::apiResource('tasks', TaskController::class);
@@ -599,6 +684,12 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
     // HR Deductions & Rewards Routes
     Route::prefix('hr')->middleware(['auth:sanctum', 'locale'])->group(function () {
+        Route::middleware('permission:manage_hr_settings')->group(function () {
+            Route::get('policies/current', [HrPolicyController::class, 'current'])->name('hr.policies.current');
+            Route::get('policies', [HrPolicyController::class, 'index'])->name('hr.policies.index');
+            Route::post('policies', [HrPolicyController::class, 'store'])->name('hr.policies.store');
+        });
+
         // Deduction Types Routes
         Route::apiResource('deduction-types', DeductionTypeController::class)->middleware('simplified.disabled:advanced_deductions');
 
@@ -624,7 +715,12 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
         // Salary Adjustments Routes
         Route::get('salary-adjustments', [SalaryAdjustmentController::class, 'index'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.index');
-        Route::get('salary-adjustments/{salaryAdjustment}', [SalaryAdjustmentController::class, 'show'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.show');
         Route::get('salary-adjustments-payroll-summary', [SalaryAdjustmentController::class, 'payrollSummary'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.payroll-summary');
+        Route::post('salary-adjustments/bulk-approve', [SalaryAdjustmentController::class, 'bulkApprove'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.bulk-approve');
+        Route::post('salary-adjustments/bulk-process', [SalaryAdjustmentController::class, 'bulkProcess'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.bulk-process');
+        Route::post('salary-adjustments/{salaryAdjustment}/approve', [SalaryAdjustmentController::class, 'approve'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.approve');
+        Route::post('salary-adjustments/{salaryAdjustment}/cancel', [SalaryAdjustmentController::class, 'cancel'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.cancel');
+        Route::post('salary-adjustments/{salaryAdjustment}/mark-processed', [SalaryAdjustmentController::class, 'markProcessed'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.mark-processed');
+        Route::get('salary-adjustments/{salaryAdjustment}', [SalaryAdjustmentController::class, 'show'])->middleware('simplified.disabled:salary_adjustments')->name('hr.salary-adjustments.show');
     });
 });

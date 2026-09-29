@@ -28,6 +28,7 @@ class QaReleaseGateFixesTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole($adminRole);
         $project = Project::factory()->create(['title' => 'Atlas Delivery Portal']);
+        $project->members()->create(['user_id' => $admin->id, 'role' => 'member']);
 
         $this->actingAs($admin, 'sanctum')
             ->getJson('/api/v1/search?q=Atlas')
@@ -92,6 +93,7 @@ class QaReleaseGateFixesTest extends TestCase
         $manager->assignRole($adminRole);
         $member = User::factory()->create();
         $project = Project::factory()->create();
+        $project->members()->create(['user_id' => $manager->id, 'role' => 'lead']);
 
         $this->actingAs($manager, 'sanctum')
             ->postJson("/api/v1/projects/{$project->id}/members", [
@@ -114,9 +116,11 @@ class QaReleaseGateFixesTest extends TestCase
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $manager = User::factory()->create();
         $manager->assignRole($adminRole);
+        $manager->givePermissionTo(Permission::findOrCreate('manage_projects', 'web'));
         $project = Project::factory()->create([
             'deadline' => now()->addDays(10)->toDateString(),
         ]);
+        $project->members()->create(['user_id' => $manager->id, 'role' => 'lead']);
         $newDeadline = now()->addDays(20)->toDateString();
 
         $this->actingAs($manager, 'sanctum')
@@ -148,6 +152,7 @@ class QaReleaseGateFixesTest extends TestCase
         $manager->assignRole($adminRole);
         $manager->givePermissionTo('manage_project_files');
         $project = Project::factory()->create();
+        $project->members()->create(['user_id' => $manager->id, 'role' => 'lead']);
         $file = ProjectFile::create([
             'project_id' => $project->id,
             'name' => 'old-brief.pdf',

@@ -6,6 +6,7 @@ use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float|int|string $amount
  * @property string|null $reason
  * @property string $status
+ * @property string|null $source
  * @property int|null $attendance_id
  * @property int|null $late_minutes
  * @property int|null $approved_by
@@ -45,6 +47,7 @@ class EmployeeDeduction extends Model
         'amount',
         'reason',
         'status',
+        'source',
         'attendance_id',
         'late_minutes',
         'approved_by',
@@ -74,6 +77,8 @@ class EmployeeDeduction extends Model
     const STATUS_REJECTED = 'rejected';
 
     const STATUS_CANCELLED = 'cancelled';
+
+    const SOURCE_DIRECT_MANUAL = 'direct_manual';
 
     /**
      * Get the employee (user) who received the deduction
@@ -116,6 +121,14 @@ class EmployeeDeduction extends Model
     }
 
     /**
+     * Get the salary adjustment created for this deduction.
+     */
+    public function salaryAdjustment(): MorphOne
+    {
+        return $this->morphOne(SalaryAdjustment::class, 'reference');
+    }
+
+    /**
      * Scope for pending deductions
      */
     public function scopePending($query)
@@ -146,6 +159,14 @@ class EmployeeDeduction extends Model
     public function canBeApproved(): bool
     {
         return $this->status === self::STATUS_PENDING;
+    }
+
+    /**
+     * Check whether this is a direct manager-entered deduction.
+     */
+    public function isDirectManual(): bool
+    {
+        return $this->source === self::SOURCE_DIRECT_MANUAL;
     }
 
     /**

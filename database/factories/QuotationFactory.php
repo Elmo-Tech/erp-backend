@@ -83,7 +83,7 @@ class QuotationFactory extends Factory
     public function accepted(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => QuotationStatus::ACCEPTED,
+            'status' => QuotationStatus::APPROVED,
         ]);
     }
 

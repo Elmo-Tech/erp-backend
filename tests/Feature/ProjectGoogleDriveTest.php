@@ -39,6 +39,64 @@ class ProjectGoogleDriveTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_drive_status_requires_authentication(): void
+    {
+        $this->getJson('/api/v1/google-drive/status')
+            ->assertUnauthorized();
+    }
+
+    public function test_user_without_drive_management_access_cannot_see_connection_status(): void
+    {
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->getJson('/api/v1/google-drive/status')
+            ->assertForbidden();
+    }
+
+    public function test_authenticated_user_can_see_disconnected_drive_status(): void
+    {
+        Http::fake();
+        $user = User::factory()->create();
+        $user->givePermissionTo('manage_project_files');
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/google-drive/status')
+            ->assertOk()
+            ->assertJsonPath('data.connected', false)
+            ->assertJsonPath('data.reason', 'Google Drive is not connected.');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_authenticated_user_can_see_connected_drive_status(): void
+    {
+        $expiresAt = now()->addHour()->startOfSecond();
+        $user = User::factory()->create();
+        $user->givePermissionTo('manage_project_files');
+        $this->storeDriveConnection($expiresAt);
+
+        Http::fake([
+            'https://www.googleapis.com/drive/v3/about*' => Http::response([
+                'user' => [
+                    'emailAddress' => 'drive-account@example.com',
+                ],
+            ]),
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/google-drive/status');
+
+        $response->assertOk()
+            ->assertJsonPath('data.connected', true)
+            ->assertJsonPath('data.accountEmail', 'drive-account@example.com')
+            ->assertJsonPath('data.expiresAt', $expiresAt->toIso8601String());
+
+        $this->assertArrayNotHasKey('accessToken', $response->json('data'));
+        $this->assertArrayNotHasKey('refreshToken', $response->json('data'));
+        $this->assertArrayNotHasKey('access_token', $response->json('data'));
+        $this->assertArrayNotHasKey('refresh_token', $response->json('data'));
+        Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://www.googleapis.com/drive/v3/about'));
+    }
+
     public function test_authorized_user_can_connect_project_to_drive_folder(): void
     {
         $user = User::factory()->create();

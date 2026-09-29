@@ -40,7 +40,7 @@ class ProjectController extends Controller
      *     operationId="getProjects",
      *     tags={"Projects"},
      *     summary="Get all projects with pagination and filtering",
-     *     description="Retrieve a paginated list of projects with optional filtering by status, client_id, and search",
+     *     description="Retrieve a paginated list of projects with optional filtering by status, client_id, project type, and search",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -64,6 +64,14 @@ class ProjectController extends Controller
      *         name="filter[clientId]",
      *         in="query",
      *         description="Filter projects by client ID",
+     *
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\Parameter(
+     *         name="filter[projectTypeId]",
+     *         in="query",
+     *         description="Filter projects by project type ID",
      *
      *         @OA\Schema(type="integer")
      *     ),
@@ -142,7 +150,7 @@ class ProjectController extends Controller
         $user = $request->user();
 
         $projects = QueryBuilder::for(Project::class)
-            ->with(['client', 'quotation'])
+            ->with(['client', 'quotation', 'projectType'])
             ->leftJoin('pinned_projects', function ($join) use ($user) {
                 $join->on('projects.id', '=', 'pinned_projects.project_id')
                     ->where('pinned_projects.user_id', '=', $user?->id);
@@ -154,6 +162,7 @@ class ProjectController extends Controller
                 AllowedFilter::callback('clientId', function ($query, $value) {
                     $query->where('client_id', $value);
                 }),
+                AllowedFilter::exact('projectTypeId', 'project_type_id')->ignore(null),
                 AllowedFilter::callback('search', function ($query, $value) {
                     $query->where('title', 'like', "%{$value}%");
                 }),
@@ -195,7 +204,8 @@ class ProjectController extends Controller
      *             @OA\Property(property="quotationId", type="integer", example=1),
      *             @OA\Property(property="title", type="string", example="Website Redesign Project"),
      *             @OA\Property(property="description", type="string", example="Complete website redesign for client"),
-     *             @OA\Property(property="deadline", type="string", format="date", example="2025-06-30")
+     *             @OA\Property(property="deadline", type="string", format="date", example="2025-06-30"),
+     *             @OA\Property(property="projectTypeId", type="integer", example=1)
      *         )
      *     ),
      *
@@ -260,11 +270,12 @@ class ProjectController extends Controller
                         'title' => $data['title'] ?? null,
                         'description' => $data['description'] ?? null,
                         'deadline' => $data['deadline'] ?? null,
+                        'project_type_id' => $data['projectTypeId'] ?? null,
                     ]
                 );
 
                 return ApiResponse::success(
-                    new ProjectResource($project->load(['client', 'quotation'])),
+                    new ProjectResource($project->load(['client', 'quotation', 'projectType'])),
                     'Project created successfully',
                     201
                 );
@@ -343,7 +354,7 @@ class ProjectController extends Controller
         $this->authorize('view', $project);
 
         return ApiResponse::success(
-            new ProjectResource($project->load(['client', 'quotation', 'members.user', 'files'])),
+            new ProjectResource($project->load(['client', 'quotation', 'projectType', 'members.user', 'files'])),
             'Project retrieved successfully'
         );
     }
@@ -385,6 +396,7 @@ class ProjectController extends Controller
      *             @OA\Property(property="status", type="string", enum={"draft", "active", "ui_ux", "development", "testing", "completed", "on_hold", "cancelled"}, example="active"),
      *             @OA\Property(property="budget", type="number", example=15000.00),
      *             @OA\Property(property="deadline", type="string", format="date", example="2025-07-15"),
+     *             @OA\Property(property="projectTypeId", type="integer", example=1),
      *             @OA\Property(property="reason", type="string", example="Client requested additional features")
      *         )
      *     ),
@@ -491,6 +503,10 @@ class ProjectController extends Controller
                 $updateData['status'] = $data['status'];
             }
 
+            if (array_key_exists('projectTypeId', $data)) {
+                $updateData['project_type_id'] = $data['projectTypeId'];
+            }
+
             // Update project
             if (! empty($updateData)) {
                 $project->skipHistoryFields = array_values(array_intersect(
@@ -501,7 +517,7 @@ class ProjectController extends Controller
             }
 
             return ApiResponse::success(
-                new ProjectResource($project->fresh()->load(['client', 'quotation'])),
+                new ProjectResource($project->fresh()->load(['client', 'quotation', 'projectType'])),
                 'Project updated successfully'
             );
         });
@@ -610,6 +626,7 @@ class ProjectController extends Controller
      *             @OA\Property(property="description", type="string", example="Full website development project"),
      *             @OA\Property(property="budget", type="number", example=10000.00),
      *             @OA\Property(property="deadline", type="string", format="date", example="2025-06-30"),
+     *             @OA\Property(property="projectTypeId", type="integer", example=1),
      *             @OA\Property(property="status", type="string", enum={"draft", "active", "ui_ux", "development", "testing", "completed", "on_hold", "cancelled"}, example="draft")
      *         )
      *     ),
@@ -665,10 +682,11 @@ class ProjectController extends Controller
                 'deadline' => $data['deadline'] ?? null,
                 'status' => $data['status'] ?? 'draft',
                 'quotation_id' => null,
+                'project_type_id' => $data['projectTypeId'] ?? null,
             ]);
 
             return ApiResponse::success(
-                new ProjectResource($project->load(['client'])),
+                new ProjectResource($project->load(['client', 'projectType'])),
                 'Project created successfully',
                 201
             );
@@ -702,7 +720,8 @@ class ProjectController extends Controller
      *             @OA\Property(property="quotationId", type="integer", example=1),
      *             @OA\Property(property="title", type="string", example="Website Redesign Project"),
      *             @OA\Property(property="description", type="string", example="Complete website redesign for client"),
-     *             @OA\Property(property="deadline", type="string", format="date", example="2025-06-30")
+     *             @OA\Property(property="deadline", type="string", format="date", example="2025-06-30"),
+     *             @OA\Property(property="projectTypeId", type="integer", example=1)
      *         )
      *     ),
      *
@@ -767,11 +786,12 @@ class ProjectController extends Controller
                         'title' => $data['title'] ?? null,
                         'description' => $data['description'] ?? null,
                         'deadline' => $data['deadline'] ?? null,
+                        'project_type_id' => $data['projectTypeId'] ?? null,
                     ]
                 );
 
                 return ApiResponse::success(
-                    new ProjectResource($project->load(['client', 'quotation'])),
+                    new ProjectResource($project->load(['client', 'quotation', 'projectType'])),
                     'Quotation converted to project successfully',
                     201
                 );
@@ -898,7 +918,7 @@ class ProjectController extends Controller
             );
 
             return ApiResponse::success(
-                new ProjectResource($project->fresh()->load(['client', 'quotation'])),
+                new ProjectResource($project->fresh()->load(['client', 'quotation', 'projectType'])),
                 'UI/UX approved successfully'
             );
         });
@@ -992,7 +1012,7 @@ class ProjectController extends Controller
     public function updateStatus(UpdateProjectStatusRequest $request, int $project): JsonResponse
     {
         $projectModel = Project::withoutGlobalScopes()
-            ->with(['client', 'quotation'])
+            ->with(['client', 'quotation', 'projectType'])
             ->find($project);
 
         if (! $projectModel) {
@@ -1034,7 +1054,7 @@ class ProjectController extends Controller
             );
 
             return ApiResponse::success(
-                new ProjectResource($projectModel->fresh()->load(['client', 'quotation'])),
+                new ProjectResource($projectModel->fresh()->load(['client', 'quotation', 'projectType'])),
                 __('messages.project_status_updated')
             );
         });
@@ -1097,7 +1117,7 @@ class ProjectController extends Controller
 
         $user = $request->user();
         $pinnedProjects = $user->pinnedProjects()
-            ->with(['client', 'quotation'])
+            ->with(['client', 'quotation', 'projectType'])
             ->orderByPivot('created_at', 'desc')
             ->get();
 
@@ -1195,7 +1215,7 @@ class ProjectController extends Controller
         $user->pinnedProjects()->attach($project->id);
 
         return ApiResponse::success(
-            new ProjectResource($project->load(['client', 'quotation'])),
+            new ProjectResource($project->load(['client', 'quotation', 'projectType'])),
             'Project pinned successfully'
         );
     }

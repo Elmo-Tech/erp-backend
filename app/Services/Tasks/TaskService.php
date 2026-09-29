@@ -26,7 +26,7 @@ class TaskService
      */
     public function getAllTasks(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Task::query()->with(['assignee', 'project', 'tags', 'assignees.user']);
+        $query = Task::query()->with(['assignee', 'supervisor', 'project', 'tags', 'assignees.user']);
 
         // Apply user specialization filtering if user is authenticated
         $user = auth()->user();
@@ -100,15 +100,18 @@ class TaskService
         $query = Task::query()
             ->with([
                 'assignee',
+                'supervisor',
                 'project',
                 'tags',
                 'assignees.user',
                 'parent', // Load parent to show hierarchy
                 // Load children (Weekly tasks) with their children (Subtasks)
                 'children.assignee',
+                'children.supervisor',
                 'children.tags',
                 'children.assignees.user',
                 'children.children.assignee',
+                'children.children.supervisor',
                 'children.children.tags',
                 'children.children.assignees.user',
             ])
@@ -158,13 +161,16 @@ class TaskService
             ->whereNull('parent_id')
             ->with([
                 'assignee',
+                'supervisor',
                 'tags',
                 'assignees.user',
                 // Load children (Weekly tasks) with their children (Subtasks)
                 'children.assignee',
+                'children.supervisor',
                 'children.tags',
                 'children.assignees.user',
                 'children.children.assignee',
+                'children.children.supervisor',
                 'children.children.tags',
                 'children.children.assignees.user',
             ])
@@ -203,9 +209,11 @@ class TaskService
             ->where('parent_id', $taskId)
             ->with([
                 'assignee',
+                'supervisor',
                 'tags',
                 'assignees.user',
                 'children.assignee',
+                'children.supervisor',
                 'children.tags',
                 'children.assignees.user',
             ])
@@ -220,9 +228,11 @@ class TaskService
     {
         return Task::with([
             'assignee',
+            'supervisor',
             'project',
             'parent',
             'children.assignee',
+            'children.supervisor',
             'children.tags',
             'tags',
             'assignees.user',
@@ -360,7 +370,7 @@ class TaskService
 
         $this->taskNotificationService->sendTaskAssigned($task, $user, $assignedUsers);
 
-        return $task->load(['assignee', 'project', 'parent', 'children', 'tags', 'assignees.user']);
+        return $task->load(['assignee', 'supervisor', 'project', 'parent', 'children', 'tags', 'assignees.user']);
     }
 
     /**
@@ -470,7 +480,7 @@ class TaskService
             $task->tags()->sync($data['tagIds'] ?? []);
         }
 
-        return $task->fresh()->load(['assignee', 'project', 'parent', 'children', 'tags', 'assignees.user']);
+        return $task->fresh()->load(['assignee', 'supervisor', 'project', 'parent', 'children', 'tags', 'assignees.user']);
     }
 
     /**
@@ -732,7 +742,7 @@ class TaskService
     {
         return Task::query()
             ->whereHas('assignees', fn ($q) => $q->where('user_id', $userId))
-            ->with(['project', 'parent', 'tags', 'assignees.user'])
+            ->with(['project', 'parent', 'supervisor', 'tags', 'assignees.user'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -743,8 +753,8 @@ class TaskService
     public function getTaskHierarchy(Task $task): array
     {
         return [
-            'task' => $task->load(['assignee', 'project', 'tags', 'assignees.user']),
-            'ancestors' => $task->getAllAncestors()->load('assignee'),
+            'task' => $task->load(['assignee', 'supervisor', 'project', 'tags', 'assignees.user']),
+            'ancestors' => $task->getAllAncestors()->load(['assignee', 'supervisor']),
             'children' => $this->loadAllDescendants($task),
         ];
     }
@@ -754,7 +764,7 @@ class TaskService
      */
     private function loadAllDescendants(Task $task): Collection
     {
-        $children = $task->children()->with(['assignee', 'tags', 'assignees.user'])->get();
+        $children = $task->children()->with(['assignee', 'supervisor', 'tags', 'assignees.user'])->get();
 
         foreach ($children as $child) {
             $child->setRelation('children', $this->loadAllDescendants($child));

@@ -9,6 +9,7 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -21,7 +22,11 @@ class FlexibleStatusUpdateTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Role::firstOrCreate(['name' => 'admin']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $adminRole->givePermissionTo([
+            Permission::findOrCreate('manage_projects', 'web'),
+            Permission::findOrCreate('view_all_projects', 'web'),
+        ]);
         $this->user = User::factory()->create();
         $this->user->assignRole('admin');
     }

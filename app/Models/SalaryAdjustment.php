@@ -6,12 +6,15 @@ use App\Traits\HasCreatedUpdatedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SalaryAdjustment extends Model
 {
     use HasCreatedUpdatedBy, HasFactory, SoftDeletes;
+
+    protected $table = 'salary_adjustment_transactions';
 
     protected $fillable = [
         'user_id',
@@ -54,6 +57,10 @@ class SalaryAdjustment extends Model
 
     const TYPE_ADJUSTMENT = 'adjustment';
 
+    const TYPE_ADVANCE_RECOVERY = 'advance_recovery';
+
+    const TYPE_PARTIAL_PAY = 'partial_pay';
+
     /**
      * Status constants
      */
@@ -87,6 +94,16 @@ class SalaryAdjustment extends Model
     public function reference(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function lateDeduction(): HasOne
+    {
+        return $this->hasOne(EmployeeLateDeduction::class, 'salary_adjustment_id');
+    }
+
+    public function advanceRecoverySettlement(): HasOne
+    {
+        return $this->hasOne(EmployeeAdvanceSettlement::class, 'salary_adjustment_id');
     }
 
     /**
@@ -140,6 +157,7 @@ class SalaryAdjustment extends Model
             self::TYPE_BONUS,
             self::TYPE_OVERTIME,
             self::TYPE_ALLOWANCE,
+            self::TYPE_PARTIAL_PAY,
         ]);
     }
 
@@ -151,6 +169,7 @@ class SalaryAdjustment extends Model
         return in_array($this->adjustment_type, [
             self::TYPE_DEDUCTION,
             self::TYPE_PENALTY,
+            self::TYPE_ADVANCE_RECOVERY,
         ]);
     }
 
@@ -202,7 +221,11 @@ class SalaryAdjustment extends Model
      */
     public function cancel(string $reason): bool
     {
-        if ($this->status === self::STATUS_PROCESSED) {
+        if (
+            $this->status === self::STATUS_PROCESSED
+            || $this->reference_type === EmployeeAdvanceSettlement::class
+            || $this->reference_type === EmployeePartialPay::class
+        ) {
             return false;
         }
 
@@ -217,13 +240,14 @@ class SalaryAdjustment extends Model
     /**
      * Create from employee deduction
      */
-    public static function createFromDeduction(EmployeeDeduction $deduction): self
+    public static function createFromDeduction(EmployeeDeduction $deduction, ?string $notes = null): self
     {
-        return self::create([
-            'user_id' => $deduction->user_id,
-            'adjustment_type' => self::TYPE_DEDUCTION,
+        return self::firstOrCreate([
             'reference_type' => EmployeeDeduction::class,
             'reference_id' => $deduction->id,
+        ], [
+            'user_id' => $deduction->user_id,
+            'adjustment_type' => self::TYPE_DEDUCTION,
             'amount' => $deduction->amount,
             'reason' => $deduction->reason,
             'adjustment_date' => $deduction->deduction_date,
@@ -234,6 +258,7 @@ class SalaryAdjustment extends Model
                 : self::STATUS_PENDING,
             'approved_by' => $deduction->approved_by,
             'approved_at' => $deduction->approved_at,
+            'notes' => $notes,
         ]);
     }
 

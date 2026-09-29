@@ -145,6 +145,91 @@ class User extends Authenticatable
         return $this->hasMany(ProjectMember::class);
     }
 
+    public function employmentContracts(): HasMany
+    {
+        return $this->hasMany(EmploymentContract::class, 'employee_id');
+    }
+
+    public function employeePartialPays(): HasMany
+    {
+        return $this->hasMany(EmployeePartialPay::class, 'employee_id');
+    }
+
+    public function employeeDocuments(): HasMany
+    {
+        return $this->hasMany(EmployeeDocument::class, 'employee_id');
+    }
+
+    public function uploadedEmployeeDocuments(): HasMany
+    {
+        return $this->hasMany(EmployeeDocument::class, 'uploaded_by');
+    }
+
+    public function employeeLeaves(): HasMany
+    {
+        return $this->hasMany(EmployeeLeave::class, 'employee_id');
+    }
+
+    public function leaveBalances(): HasMany
+    {
+        return $this->hasMany(EmployeeLeaveBalance::class, 'employee_id');
+    }
+
+    public function reviewedEmployeeLeaves(): HasMany
+    {
+        return $this->hasMany(EmployeeLeave::class, 'reviewed_by');
+    }
+
+    public function employeeShortPermissions(): HasMany
+    {
+        return $this->hasMany(EmployeeShortPermission::class, 'employee_id');
+    }
+
+    public function permissionAllowances(): HasMany
+    {
+        return $this->hasMany(EmployeePermissionAllowance::class, 'employee_id');
+    }
+
+    public function reviewedEmployeeShortPermissions(): HasMany
+    {
+        return $this->hasMany(EmployeeShortPermission::class, 'reviewed_by');
+    }
+
+    public function employeeOvertimeRequests(): HasMany
+    {
+        return $this->hasMany(EmployeeOvertimeRequest::class, 'employee_id');
+    }
+
+    public function reviewedEmployeeOvertimeRequests(): HasMany
+    {
+        return $this->hasMany(EmployeeOvertimeRequest::class, 'reviewed_by');
+    }
+
+    public function employeeAdvances(): HasMany
+    {
+        return $this->hasMany(EmployeeAdvance::class, 'employee_id');
+    }
+
+    public function approvedEmployeeAdvances(): HasMany
+    {
+        return $this->hasMany(EmployeeAdvance::class, 'approved_by');
+    }
+
+    public function disbursedEmployeeAdvances(): HasMany
+    {
+        return $this->hasMany(EmployeeAdvance::class, 'disbursed_by');
+    }
+
+    public function settledEmployeeAdvanceSettlements(): HasMany
+    {
+        return $this->hasMany(EmployeeAdvanceSettlement::class, 'settled_by');
+    }
+
+    public function employeeLateDeductions(): HasMany
+    {
+        return $this->hasMany(EmployeeLateDeduction::class, 'employee_id');
+    }
+
     /**
      * Calculate expected clock-out time based on work hours
      */
@@ -285,6 +370,31 @@ class User extends Authenticatable
     public function assignedTasks(): HasMany
     {
         return $this->hasMany(Task::class, 'assigned_to');
+    }
+
+    public function supervisedTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'supervisor_id');
+    }
+
+    public function taskHelpRequests(): HasMany
+    {
+        return $this->hasMany(TaskHelpRequest::class, 'requested_by');
+    }
+
+    public function acknowledgedTaskHelpRequests(): HasMany
+    {
+        return $this->hasMany(TaskHelpRequest::class, 'acknowledged_by');
+    }
+
+    public function resolvedTaskHelpRequests(): HasMany
+    {
+        return $this->hasMany(TaskHelpRequest::class, 'resolved_by');
+    }
+
+    public function taskSupervisionSessions(): HasMany
+    {
+        return $this->hasMany(TaskSupervisionSession::class, 'supervisor_id');
     }
 
     /**

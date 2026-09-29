@@ -46,7 +46,21 @@ class GoogleDriveController extends Controller
             return ApiResponse::error($exception->getMessage(), 502);
         }
 
-        return ApiResponse::success(null, 'Google Drive connected successfully');
+        return ApiResponse::success([
+            'connected' => true,
+        ], 'Google Drive connected successfully');
+    }
+
+    public function status(Request $request): JsonResponse
+    {
+        if (! $request->user()?->hasAnyRole(['admin', 'super-admin']) && ! $request->user()?->can('manage_project_files')) {
+            return ApiResponse::forbidden(__('messages.unauthorized'));
+        }
+
+        return ApiResponse::success(
+            $this->drive->status(),
+            'Google Drive connection status retrieved successfully'
+        );
     }
 
     public function folders(Request $request, int|string $project): JsonResponse

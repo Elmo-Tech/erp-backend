@@ -10,8 +10,7 @@ use App\Services\Client\InvoiceService;
 use Carbon\Carbon;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for InvoiceService
@@ -19,9 +18,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 12: Overdue Invoice Processing
  * Validates: Requirements 3.8, 18.2, 18.3
  */
-class InvoiceServicePropertyTest extends TestCase
+class InvoiceServicePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     private InvoiceService $invoiceService;
 

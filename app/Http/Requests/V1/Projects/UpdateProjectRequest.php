@@ -4,6 +4,7 @@ namespace App\Http\Requests\V1\Projects;
 
 use App\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
+use App\Models\LookupOption;
 use App\Models\Project;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -33,6 +34,12 @@ class UpdateProjectRequest extends FormRequest
             'status' => ['nullable', Rule::enum(ProjectStatus::class)],
             'budget' => ['nullable', 'numeric', 'gt:0'],
             'deadline' => ['nullable', 'date', 'after:today'],
+            'projectTypeId' => [
+                'nullable',
+                'integer',
+                Rule::exists('lookup_options', 'id')->where(fn ($query) => $query
+                    ->where('type', 'project_type')),
+            ],
             'reason' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -45,6 +52,7 @@ class UpdateProjectRequest extends FormRequest
         $validator->after(function (Validator $validator) {
             $this->validateReasonRequired($validator);
             $this->validateStatusTransition($validator);
+            $this->validateProjectTypeIsActive($validator);
         });
     }
 
@@ -130,6 +138,32 @@ class UpdateProjectRequest extends FormRequest
                 'status',
                 "Invalid status transition from '{$currentStatus->value}' to '{$newStatus->value}'. {$allowedList}"
             );
+        }
+    }
+
+    /**
+     * Inactive project types can only remain assigned to their existing project.
+     */
+    private function validateProjectTypeIsActive(Validator $validator): void
+    {
+        if (! $this->filled('projectTypeId')) {
+            return;
+        }
+
+        $project = $this->route('project');
+        $projectTypeId = (int) $this->input('projectTypeId');
+
+        if (! $project instanceof Project || (int) $project->project_type_id === $projectTypeId) {
+            return;
+        }
+
+        $isInactiveProjectType = LookupOption::ofType('project_type')
+            ->whereKey($projectTypeId)
+            ->where('is_active', false)
+            ->exists();
+
+        if ($isInactiveProjectType) {
+            $validator->errors()->add('projectTypeId', 'The selected project type is inactive.');
         }
     }
 

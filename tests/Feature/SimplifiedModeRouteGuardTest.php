@@ -66,6 +66,7 @@ class SimplifiedModeRouteGuardTest extends TestCase
     {
         $admin = $this->userWithRole('admin');
         $project = Project::factory()->create();
+        $project->members()->create(['user_id' => $admin->id, 'role' => 'member']);
 
         foreach ([
             ['GET', '/api/v1/leads'],
@@ -94,6 +95,7 @@ class SimplifiedModeRouteGuardTest extends TestCase
         $clientUser = $this->userWithRole('client');
         $client = $this->ensureClientProfile($clientUser);
         $project = Project::factory()->create(['client_id' => $client->id]);
+        $project->members()->create(['user_id' => $admin->id, 'role' => 'member']);
         $task = Task::factory()->create(['project_id' => $project->id]);
         $deliverable = TaskDeliverable::factory()->create(['task_id' => $task->id]);
 
@@ -119,6 +121,7 @@ class SimplifiedModeRouteGuardTest extends TestCase
         $admin = $this->userWithRole('admin');
         $employee = $this->userWithRole('developer');
         $project = Project::factory()->create();
+        $project->members()->create(['user_id' => $admin->id, 'role' => 'member']);
 
         foreach ([
             ['GET', '/api/v1/user-points'],

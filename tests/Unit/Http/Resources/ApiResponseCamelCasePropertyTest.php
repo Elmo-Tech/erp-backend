@@ -13,8 +13,7 @@ use App\Models\TimeEntry;
 use App\Models\User;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for API Response camelCase Format
@@ -22,9 +21,9 @@ use Tests\TestCase;
  * Feature: sales-pricing-engine, Property 9: API Response camelCase Format
  * Validates: Requirements 1.6, 2.8, 5.8
  */
-class ApiResponseCamelCasePropertyTest extends TestCase
+class ApiResponseCamelCasePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     /**
      * Property 9: API Response camelCase Format - Lead Resources

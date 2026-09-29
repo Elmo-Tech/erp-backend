@@ -33,6 +33,7 @@ class Task extends Model implements Trackable
         'pipeline_position',
         'parent_id',
         'assigned_to',
+        'supervisor_id',
         'title',
         'description',
         'cover_image_path',
@@ -118,6 +119,11 @@ class Task extends Model implements Trackable
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    public function supervisor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
     /**
      * @return HasMany<TaskAssignee, $this>
      */
@@ -184,6 +190,16 @@ class Task extends Model implements Trackable
     public function activities(): HasMany
     {
         return $this->hasMany(TaskActivity::class)->orderByDesc('created_at');
+    }
+
+    public function helpRequests(): HasMany
+    {
+        return $this->hasMany(TaskHelpRequest::class)->orderByDesc('created_at');
+    }
+
+    public function supervisionSessions(): HasMany
+    {
+        return $this->hasMany(TaskSupervisionSession::class)->orderByDesc('started_at');
     }
 
     public function publicActivities(): HasMany

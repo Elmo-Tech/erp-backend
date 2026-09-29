@@ -81,6 +81,7 @@ class AdminUserSeeder extends Seeder
         'edit_attendance',
         'clock_out',
         'manage_employees',
+        'manage_leave_types',
         'view_employees',
         'create_employees',
         'edit_employees',
@@ -138,11 +139,13 @@ class AdminUserSeeder extends Seeder
         'view_all_attendance',
         'edit_attendance',
         'clock_out',
+        'manage_employees',
         'view_dashboard',
         'view_dashboard_overview',
         'view_reports',
         'view_admin_stats',
         'view_attendance_analytics',
+        'manage_leave_types',
         'view_tags',
     ];
 

@@ -9,9 +9,8 @@ use App\Models\User;
 use App\Policies\InvoicePolicy;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for InvoicePolicy Authorization
@@ -19,9 +18,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 8: InvoicePolicy Authorization
  * Validates: Requirements 12.2, 12.3, 12.4, 12.5
  */
-class InvoicePolicyPropertyTest extends TestCase
+class InvoicePolicyPropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     protected function setUp(): void
     {

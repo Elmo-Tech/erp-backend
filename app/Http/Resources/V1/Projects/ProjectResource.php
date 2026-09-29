@@ -44,6 +44,7 @@ class ProjectResource extends JsonResource
         $data = [
             'projectId' => $this->id,
             'clientId' => $this->client_id ?? 0,
+            'projectTypeId' => $this->project_type_id,
             'title' => $this->title ?? '',
             'description' => $this->description ?? '',
             'status' => $this->status?->value ?? '',
@@ -61,6 +62,14 @@ class ProjectResource extends JsonResource
                     'phone' => $this->client->phone ?? '',
                 ];
             }),
+            'projectType' => $this->whenLoaded('projectType', fn () => $this->projectType ? [
+                'projectTypeId' => $this->projectType->id,
+                'value' => $this->projectType->value,
+                'label' => $this->projectType->label,
+                'color' => $this->projectType->color,
+                'icon' => $this->projectType->icon,
+                'isActive' => $this->projectType->is_active,
+            ] : null),
             'members' => $this->when(! $isClient && $this->relationLoaded('members'), function () {
                 return $this->members->map(function ($member) {
                     return [

@@ -11,9 +11,9 @@ use App\Models\User;
 use Carbon\Carbon;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
-use Tests\TestCase;
+use Spatie\Permission\Models\Role;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for ClientProjectController UI Approval Workflow
@@ -21,9 +21,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 6: UI Approval Workflow
  * Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6
  */
-class ClientProjectControllerPropertyTest extends TestCase
+class ClientProjectControllerPropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     private User $clientUser;
 
@@ -34,6 +34,7 @@ class ClientProjectControllerPropertyTest extends TestCase
         parent::setUp();
 
         config(['simplification.enabled' => false]);
+        Role::firstOrCreate(['name' => 'client', 'guard_name' => 'web']);
 
         // Create a client user for testing
         $this->clientUser = User::factory()->create();

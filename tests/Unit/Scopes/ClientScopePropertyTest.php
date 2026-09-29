@@ -8,11 +8,10 @@ use App\Models\User;
 use App\Scopes\ClientScope;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for ClientScope Data Isolation
@@ -20,9 +19,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 2: ClientScope Data Isolation
  * Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.5
  */
-class ClientScopePropertyTest extends TestCase
+class ClientScopePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     protected function setUp(): void
     {

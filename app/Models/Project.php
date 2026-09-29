@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Cache;
 /**
  * @property int $id
  * @property int $client_id
+ * @property int|null $project_type_id
  * @property string $title
  * @property ProjectStatus|null $status
  * @property float|int|string|null $budget
@@ -28,6 +29,7 @@ use Illuminate\Support\Facades\Cache;
  * @property Carbon|null $ui_approved_at
  * @property Carbon|null $created_at
  * @property-read Client $client
+ * @property-read LookupOption|null $projectType
  * @property-read Collection<int, Invoice> $invoices
  * @property-read Collection<int, ProjectMember> $members
  */
@@ -50,6 +52,7 @@ class Project extends Model implements Trackable
     protected $fillable = [
         'client_id',
         'quotation_id',
+        'project_type_id',
         'title',
         'description',
         'status',
@@ -104,6 +107,14 @@ class Project extends Model implements Trackable
     public function quotation(): BelongsTo
     {
         return $this->belongsTo(Quotation::class);
+    }
+
+    /**
+     * Get the configured type for this project.
+     */
+    public function projectType(): BelongsTo
+    {
+        return $this->belongsTo(LookupOption::class, 'project_type_id');
     }
 
     /**

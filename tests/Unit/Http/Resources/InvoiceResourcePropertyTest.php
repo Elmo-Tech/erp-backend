@@ -9,8 +9,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for API Response camelCase Format
@@ -18,9 +17,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 11: API Response camelCase Format
  * Validates: Requirements 3.7
  */
-class InvoiceResourcePropertyTest extends TestCase
+class InvoiceResourcePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     /**
      * Property 11: API Response camelCase Format
@@ -34,6 +33,7 @@ class InvoiceResourcePropertyTest extends TestCase
     {
         $this
             ->limitTo(10)
+            ->shrinkingTimeLimit(1)
             ->forAll(
                 Generator\choose(100, 10000), // amount
                 Generator\elements(['draft', 'sent', 'paid', 'overdue', 'cancelled']), // status
@@ -56,7 +56,7 @@ class InvoiceResourcePropertyTest extends TestCase
                 // Create invoice with unique invoice number to avoid constraint violations
                 $invoice = Invoice::factory()->create([
                     'project_id' => $project->id,
-                    'invoice_number' => 'INV-TEST-'.uniqid(),
+                    'invoice_number' => Invoice::generateInvoiceNumber(),
                     'amount' => $amount,
                     'currency' => $currency,
                     'status' => $status,
@@ -139,6 +139,7 @@ class InvoiceResourcePropertyTest extends TestCase
     {
         $this
             ->limitTo(10)
+            ->shrinkingTimeLimit(1)
             ->forAll(
                 Generator\elements(['Project Alpha', 'Project Beta', 'Project Gamma', 'Test Project']), // project title
                 Generator\choose(1000, 50000), // project budget
@@ -160,7 +161,7 @@ class InvoiceResourcePropertyTest extends TestCase
 
                 $invoice = Invoice::factory()->create([
                     'project_id' => $project->id,
-                    'invoice_number' => 'INV-TEST-'.uniqid(),
+                    'invoice_number' => Invoice::generateInvoiceNumber(),
                     'created_by' => $creator->id,
                 ]);
 
@@ -223,13 +224,13 @@ class InvoiceResourcePropertyTest extends TestCase
     {
         $this
             ->limitTo(2)
+            ->shrinkingTimeLimit(1)
             ->forAll(
-                Generator\choose(1, 999999), // invoice_number sequence
                 Generator\choose(1, 365), // days until due
                 Generator\bool(), // is overdue
                 Generator\bool()  // is paid
             )
-            ->then(function ($invoiceSequence, $daysUntilDue, $isOverdue, $isPaid) {
+            ->then(function ($daysUntilDue, $isOverdue, $isPaid) {
                 // Create required models
                 $client = User::factory()->create();
                 $clientProfile = $this->ensureClientProfile($client);
@@ -246,7 +247,7 @@ class InvoiceResourcePropertyTest extends TestCase
                 $paidAt = $isPaid ? Carbon::now() : null;
 
                 // Create invoice with specific invoice number format (unique to avoid conflicts)
-                $invoiceNumber = sprintf('INV-TEST-%s-%06d', uniqid(), $invoiceSequence);
+                $invoiceNumber = Invoice::generateInvoiceNumber();
 
                 $invoice = Invoice::factory()->create([
                     'project_id' => $project->id,
@@ -303,7 +304,7 @@ class InvoiceResourcePropertyTest extends TestCase
                 $this->assertArrayHasKey('paidAt', $response);
                 if ($paidAt) {
                     $this->assertIsString($response['paidAt']);
-                    $this->assertEquals($paidAt->toISOString(), $response['paidAt']);
+                    $this->assertEquals($invoice->paid_at->toISOString(), $response['paidAt']);
                 } else {
                     $this->assertEmpty($response['paidAt']);
                 }

@@ -7,9 +7,8 @@ use App\Models\Project;
 use App\Models\User;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Validator;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for StoreInvoiceRequest Validation
@@ -17,9 +16,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 13: Invoice Amount Validation
  * Validates: Requirements 3.4
  */
-class StoreInvoiceRequestPropertyTest extends TestCase
+class StoreInvoiceRequestPropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     protected function setUp(): void
     {

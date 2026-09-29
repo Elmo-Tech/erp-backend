@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\HR\StoreEmployeeRequest;
+use App\Http\Requests\V1\HR\StoreEmployeeAvatarRequest;
 use App\Http\Requests\V1\HR\UpdateEmployeeRequest;
 use App\Http\Resources\V1\HR\EmployeeCollection;
 use App\Http\Resources\V1\HR\EmployeeResource;
@@ -175,6 +176,27 @@ class EmployeeController extends Controller
 
             return ApiResponse::error($e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Upload an employee avatar.
+     */
+    public function updateAvatar(StoreEmployeeAvatarRequest $request, int $id): JsonResponse
+    {
+        $employee = $this->employeeService->getEmployee($id);
+
+        if (! $employee) {
+            return ApiResponse::error(__('messages.employee_not_found'), 404);
+        }
+
+        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+
+        $employee = $this->employeeService->updateEmployeeAvatar(
+            $employee,
+            $request->file('avatar')
+        );
+
+        return ApiResponse::success(new EmployeeResource($employee));
     }
 
     /**

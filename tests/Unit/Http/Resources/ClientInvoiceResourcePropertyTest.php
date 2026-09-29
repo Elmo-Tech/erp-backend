@@ -9,8 +9,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for ClientInvoiceResource Format
@@ -18,9 +17,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 4: ClientInvoiceResource Format
  * Validates: Requirements 5.1, 5.2, 5.3, 5.4
  */
-class ClientInvoiceResourcePropertyTest extends TestCase
+class ClientInvoiceResourcePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     /**
      * Property 4: ClientInvoiceResource Format

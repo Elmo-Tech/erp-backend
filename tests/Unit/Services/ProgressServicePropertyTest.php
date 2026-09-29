@@ -6,8 +6,7 @@ use App\Models\Project;
 use App\Services\Client\ProgressService;
 use Eris\Generator;
 use Eris\TestTrait;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Tests\ErisDatabaseTestCase;
 
 /**
  * Property-Based Tests for ProgressService
@@ -15,9 +14,9 @@ use Tests\TestCase;
  * Feature: client-portal-security, Property 5: Progress Calculation
  * Validates: Requirements 6.1, 6.2, 6.3, 6.4
  */
-class ProgressServicePropertyTest extends TestCase
+class ProgressServicePropertyTest extends ErisDatabaseTestCase
 {
-    use RefreshDatabase, TestTrait;
+    use TestTrait;
 
     private ProgressService $progressService;
 

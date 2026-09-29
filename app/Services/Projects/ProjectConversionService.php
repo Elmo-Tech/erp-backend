@@ -4,6 +4,7 @@ namespace App\Services\Projects;
 
 use App\Enums\ProjectStatus;
 use App\Enums\QuotationStatus;
+use App\Models\LookupOption;
 use App\Models\Project;
 use App\Models\Quotation;
 use InvalidArgumentException;
@@ -32,6 +33,7 @@ class ProjectConversionService
      *                                 - title: string (optional, defaults to "Project for {company}")
      *                                 - description: string (optional)
      *                                 - deadline: string|Carbon (optional)
+     *                                 - project_type_id: int|null (optional)
      * @return Project The newly created project
      *
      * @throws InvalidArgumentException If quotation status is not 'accepted'
@@ -39,11 +41,20 @@ class ProjectConversionService
      */
     public function convertQuotation(int $quotationId, array $additionalData = []): Project
     {
+        $projectTypeId = $additionalData['project_type_id'] ?? null;
+
+        if ($projectTypeId !== null && ! LookupOption::ofType('project_type')
+            ->active()
+            ->whereKey($projectTypeId)
+            ->exists()) {
+            throw new InvalidArgumentException('The selected project type must be active.');
+        }
+
         // Find the quotation with its lead relationship
         $quotation = Quotation::with('lead')->findOrFail($quotationId);
 
         // Validate quotation is accepted
-        if ($quotation->status !== QuotationStatus::ACCEPTED) {
+        if ($quotation->status !== QuotationStatus::APPROVED) {
             throw new InvalidArgumentException(
                 'Only accepted quotations can be converted to projects.'
             );
@@ -70,6 +81,7 @@ class ProjectConversionService
         $project = Project::create([
             'quotation_id' => $quotation->id,
             'client_id' => $clientId,
+            'project_type_id' => $projectTypeId,
             'title' => $additionalData['title'] ?? $defaultTitle,
             'description' => $additionalData['description'] ?? null,
             'status' => ProjectStatus::DRAFT,
