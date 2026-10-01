@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -403,6 +404,102 @@ class ProjectPipelineAccessTest extends TestCase
             'project_id' => $project->id,
             'title' => 'Hidden project task',
         ]);
+    }
+
+    public function test_pipeline_supervisor_is_saved_atomically_and_added_to_project(): void
+    {
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'edit_main_tasks', 'manage_task_team']);
+        $supervisor = User::factory()->create(['is_employee' => true, 'is_active' => true]);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $stage = $project->workflowStages()->where('category', 'backlog')->firstOrFail();
+
+        $taskId = $this->actingAs($actor, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/pipeline/tasks", [
+                'workflowStageId' => $stage->id, 'title' => 'Supervised delivery', 'supervisorId' => $supervisor->id,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.supervisorId', $supervisor->id)
+            ->assertJsonPath('data.supervisor.name', $supervisor->name)
+            ->assertJsonCount(0, 'data.assignees')
+            ->json('data.taskId');
+
+        $this->assertDatabaseHas('project_members', ['project_id' => $project->id, 'user_id' => $supervisor->id]);
+        $this->assertDatabaseHas('task_activities', ['task_id' => $taskId, 'type' => 'supervisor_changed']);
+        $this->assertDatabaseCount('time_entries', 0);
+
+        $replacement = User::factory()->create(['is_employee' => true, 'is_active' => true]);
+        $this->patchJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$taskId}", ['supervisorId' => $replacement->id])
+            ->assertOk()->assertJsonPath('data.supervisor.name', $replacement->name);
+        $this->assertDatabaseHas('project_members', ['project_id' => $project->id, 'user_id' => $replacement->id]);
+
+        $this->patchJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$taskId}", ['supervisorId' => null])
+            ->assertOk()->assertJsonPath('data.supervisor', null);
+    }
+
+    public function test_pipeline_supervisor_assignment_requires_team_management_permission(): void
+    {
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'edit_main_tasks']);
+        $supervisor = User::factory()->create(['is_employee' => true, 'is_active' => true]);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $stage = $project->workflowStages()->where('category', 'backlog')->firstOrFail();
+
+        $this->actingAs($actor, 'sanctum')->postJson("/api/v1/projects/{$project->id}/pipeline/tasks", [
+            'workflowStageId' => $stage->id, 'title' => 'Unauthorized supervision', 'supervisorId' => $supervisor->id,
+        ])->assertForbidden();
+
+        $task = Task::factory()->for($project)->create(['workflow_stage_id' => $stage->id, 'is_pipeline_task' => true]);
+        $this->patchJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$task->id}", ['supervisorId' => $supervisor->id])->assertForbidden();
+        $this->assertNull($task->fresh()->supervisor_id);
+        $this->assertDatabaseMissing('project_members', ['project_id' => $project->id, 'user_id' => $supervisor->id]);
+    }
+
+    public function test_invalid_pipeline_supervisor_rolls_back_task_and_assignee_membership(): void
+    {
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'assign_tasks', 'manage_task_team']);
+        $supervisor = User::factory()->create(['is_employee' => true, 'is_active' => false]);
+        $assignee = User::factory()->create(['is_employee' => true, 'is_active' => true]);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $stage = $project->workflowStages()->where('category', 'backlog')->firstOrFail();
+
+        $this->actingAs($actor, 'sanctum')->postJson("/api/v1/projects/{$project->id}/pipeline/tasks", [
+            'workflowStageId' => $stage->id, 'title' => 'Invalid supervisor', 'supervisorId' => $supervisor->id,
+            'assignedUserIds' => [$assignee->id],
+        ])->assertUnprocessable()->assertJsonValidationErrors('supervisorId');
+
+        $this->assertDatabaseMissing('tasks', ['project_id' => $project->id, 'title' => 'Invalid supervisor']);
+        $this->assertDatabaseMissing('project_members', ['project_id' => $project->id, 'user_id' => $assignee->id]);
+    }
+
+    public function test_pipeline_card_payload_includes_logged_time_and_named_active_work_sessions(): void
+    {
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks']);
+        $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
+        $stage = $project->workflowStages()->where('category', 'active')->firstOrFail();
+        $task = Task::factory()->for($project)->create([
+            'workflow_stage_id' => $stage->id, 'is_pipeline_task' => true,
+            'supervisor_id' => $actor->id,
+        ]);
+        TimeEntry::factory()->create([
+            'user_id' => $actor->id, 'trackable_id' => $task->id, 'trackable_type' => Task::class,
+            'start_time' => now()->subMinutes(100), 'end_time' => now()->subMinutes(5), 'duration_minutes' => 95,
+        ]);
+        $entry = TimeEntry::factory()->active()->create([
+            'user_id' => $actor->id, 'trackable_id' => $task->id, 'trackable_type' => Task::class,
+            'start_time' => now()->subMinute(),
+        ]);
+
+        $response = $this->actingAs($actor, 'sanctum')->getJson("/api/v1/projects/{$project->id}/pipeline")->assertOk();
+        $payload = collect($response->json('data.stages'))->flatMap(fn ($item) => $item['tasks'])->firstWhere('taskId', $task->id);
+        $this->assertSame(95, $payload['totalTimeSpent']);
+        $this->assertSame($actor->name, $payload['supervisor']['name']);
+        $this->assertCount(1, $payload['activeWorkTimers']);
+        $this->assertSame($actor->id, $payload['activeWorkTimers'][0]['userId']);
+        $this->assertSame($actor->name, $payload['activeWorkTimers'][0]['name']);
+        $this->assertSame($entry->start_time->toIso8601String(), $payload['activeWorkTimers'][0]['startTime']);
     }
 
     private function userWithPermissions(array $permissions): User

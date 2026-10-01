@@ -403,6 +403,10 @@ class TaskController extends Controller
     {
         $task->load(['assignee', 'supervisor', 'project', 'parent', 'children.assignee', 'children.supervisor', 'assignees.user', 'tags']);
 
+        if ($task->is_pipeline_task) {
+            $task->load('workflowStage');
+        }
+
         return ApiResponse::success(
             new TaskResource($task),
             'Task retrieved successfully'

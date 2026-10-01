@@ -55,6 +55,7 @@ class ProjectPipelineController extends Controller
             'assignedTo' => ['nullable', 'integer', 'exists:users,id'],
             'assignedUserIds' => ['nullable', 'array', 'max:20'],
             'assignedUserIds.*' => ['integer', 'distinct', 'exists:users,id'],
+            'supervisorId' => ['nullable', 'integer', 'exists:users,id'],
             'dueDate' => ['nullable', 'date'],
             'estimatedHours' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'urgent'])],
@@ -64,6 +65,11 @@ class ProjectPipelineController extends Controller
             || ! empty($data['assignedUserIds'] ?? []);
         abort_if(
             $hasAssignees && ! $this->access->canAssignPipelineTasks($request->user(), $project),
+            403
+        );
+
+        abort_if(
+            isset($data['supervisorId']) && ! $this->canAssignSupervisor($request),
             403
         );
 
@@ -117,6 +123,7 @@ class ProjectPipelineController extends Controller
             'assignedTo' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
             'assignedUserIds' => ['sometimes', 'nullable', 'array', 'max:20'],
             'assignedUserIds.*' => ['integer', 'distinct', 'exists:users,id'],
+            'supervisorId' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
             'dueDate' => ['sometimes', 'nullable', 'date'],
             'estimatedHours' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:999999.99'],
             'priority' => ['sometimes', 'required', Rule::in(['low', 'medium', 'high', 'urgent'])],
@@ -126,6 +133,11 @@ class ProjectPipelineController extends Controller
             || array_key_exists('assignedUserIds', $data);
         abort_if(
             $changesAssignees && ! $this->access->canAssignPipelineTasks($request->user(), $project),
+            403
+        );
+
+        abort_if(
+            array_key_exists('supervisorId', $data) && ! $request->user()->can('manageTeam', $task),
             403
         );
 
@@ -286,6 +298,13 @@ class ProjectPipelineController extends Controller
             'Workflow template created successfully',
             201
         );
+    }
+
+    private function canAssignSupervisor(Request $request): bool
+    {
+        return ! $request->user()->hasRole('client')
+            && ($request->user()->hasAnyRole(['admin', 'super-admin'])
+                || $request->user()->can('manage_task_team'));
     }
 
     private function validateTemplate(Request $request): array
