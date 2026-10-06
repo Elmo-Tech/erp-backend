@@ -9,6 +9,7 @@ use App\Http\Resources\V1\HR\LeaveTypeResource;
 use App\Models\EmployeeLeave;
 use App\Models\EmployeeLeaveBalance;
 use App\Models\LeaveType;
+use App\Models\SalaryAdjustment;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
 use App\Services\HR\EmployeeService;
@@ -191,10 +192,58 @@ class LeaveManagementController extends Controller
         );
     }
 
+    public function update(Request $request, EmployeeLeave $leave): JsonResponse
+    {
+        $leave->loadMissing('employee');
+
+        if (! $request->user()->is($leave->employee)) {
+            $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $leave->employee);
+        }
+
+        $validated = $request->validate($this->leaveRequestRules());
+
+        $leave = DB::transaction(function () use ($leave, $validated): EmployeeLeave {
+            User::query()->whereKey($leave->employee_id)->lockForUpdate()->firstOrFail();
+            $leave = EmployeeLeave::query()->lockForUpdate()->findOrFail($leave->id);
+            $this->assertPending($leave);
+
+            $leaveType = LeaveType::query()->active()->lockForUpdate()->find($validated['leaveTypeId']);
+
+            if (! $leaveType) {
+                $this->leaveTypeUnavailable();
+            }
+
+            [$workingDays] = $this->leaveService->calculateWorkingDays(
+                $validated['startDate'],
+                $validated['endDate']
+            );
+            $this->assertPositiveWorkingDays($workingDays);
+            $this->assertNoOverlap(
+                $leave->employee_id,
+                $validated['startDate'],
+                $validated['endDate'],
+                $leave->id
+            );
+
+            $leave->update([
+                'leave_type_id' => $leaveType->id,
+                'start_date' => $validated['startDate'],
+                'end_date' => $validated['endDate'],
+                'working_days' => $workingDays,
+                'is_paid' => $leaveType->is_paid,
+                'reason' => $validated['reason'] ?? null,
+            ]);
+
+            return $leave->fresh(['leaveType']);
+        });
+
+        return ApiResponse::success(new EmployeeLeaveResource($leave), 'Leave request updated successfully');
+    }
+
     public function approve(Request $request, EmployeeLeave $leave): JsonResponse
     {
         $leave->loadMissing('employee');
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $leave->employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $leave->employee, 'manage_leaves');
         $validated = $request->validate($this->reviewNoteRules());
         $actorId = $request->user()->id;
 
@@ -247,6 +296,11 @@ class LeaveManagementController extends Controller
                 'policy_version_id' => $policy?->id,
             ]);
 
+            // Client decision 2: unpaid leave deducts Salary/30 per working day.
+            if (! $isPaid) {
+                $this->createUnpaidLeaveDeduction($leave->fresh(['leaveType']), $policy, $actorId);
+            }
+
             return $leave->fresh(['leaveType']);
         });
 
@@ -256,7 +310,7 @@ class LeaveManagementController extends Controller
     public function reject(Request $request, EmployeeLeave $leave): JsonResponse
     {
         $leave->loadMissing('employee');
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $leave->employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $leave->employee, 'manage_leaves');
         $validated = $request->validate($this->reviewNoteRules());
         $actorId = $request->user()->id;
 
@@ -299,6 +353,8 @@ class LeaveManagementController extends Controller
                 ]);
             }
 
+            $wasApprovedUnpaid = $leave->status === EmployeeLeave::STATUS_APPROVED && ! $leave->is_paid;
+
             if ($leave->status === EmployeeLeave::STATUS_APPROVED && $leave->is_paid) {
                 $balance = EmployeeLeaveBalance::query()
                     ->where('employee_id', $leave->employee_id)
@@ -323,6 +379,10 @@ class LeaveManagementController extends Controller
                 'reviewed_at' => now(),
                 'review_note' => $validated['reviewNote'] ?? null,
             ]);
+
+            if ($wasApprovedUnpaid) {
+                $this->cancelUnpaidLeaveDeduction($leave, 'Leave request cancelled.');
+            }
 
             return $leave->fresh(['leaveType']);
         });
@@ -450,5 +510,68 @@ class LeaveManagementController extends Controller
             'allocated_days' => $leaveType->annual_allowance_days,
             'used_days' => 0,
         ]);
+    }
+
+    /**
+     * Client decision 2: approved unpaid leave creates a traceable deduction
+     * of Salary/30 per working day (times policy multiplier, default 1).
+     */
+    private function createUnpaidLeaveDeduction(EmployeeLeave $leave, $policy, int $actorId): void
+    {
+        $employee = User::query()->lockForUpdate()->find($leave->employee_id);
+
+        if ($employee === null || $employee->salary === null) {
+            return;
+        }
+
+        $settings = is_array($policy?->settings) ? $policy->settings : [];
+        $divisor = (int) ($settings['dailyRateDivisor'] ?? 30);
+        $multiplier = (float) ($settings['unpaidLeaveDailyRateMultiplier'] ?? 1);
+
+        if ($divisor <= 0 || $multiplier < 0) {
+            return;
+        }
+
+        $workingDays = (float) $leave->working_days;
+
+        if ($workingDays <= 0) {
+            return;
+        }
+
+        $amount = round(((float) $employee->salary / $divisor) * $workingDays * $multiplier, 2);
+
+        if ($amount <= 0) {
+            return;
+        }
+
+        SalaryAdjustment::firstOrCreate([
+            'reference_type' => EmployeeLeave::class,
+            'reference_id' => $leave->id,
+        ], [
+            'user_id' => $leave->employee_id,
+            'adjustment_type' => SalaryAdjustment::TYPE_DEDUCTION,
+            'amount' => $amount,
+            'reason' => 'Unpaid leave deduction for '.$leave->start_date->toDateString().' to '.$leave->end_date->toDateString(),
+            'adjustment_date' => $leave->start_date->toDateString(),
+            'payroll_month' => $leave->start_date->month,
+            'payroll_year' => $leave->start_date->year,
+            'status' => SalaryAdjustment::STATUS_APPROVED,
+            'approved_by' => $actorId,
+            'approved_at' => now(),
+            'notes' => 'Automatically created from approved unpaid leave (Salary/30 per day).',
+        ]);
+    }
+
+    private function cancelUnpaidLeaveDeduction(EmployeeLeave $leave, string $reason): void
+    {
+        $adjustment = SalaryAdjustment::query()
+            ->where('reference_type', EmployeeLeave::class)
+            ->where('reference_id', $leave->id)
+            ->lockForUpdate()
+            ->first();
+
+        if ($adjustment !== null && $adjustment->status !== SalaryAdjustment::STATUS_PROCESSED) {
+            $adjustment->cancel($reason);
+        }
     }
 }

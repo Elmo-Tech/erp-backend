@@ -113,7 +113,7 @@ class EmployeeDocumentController extends Controller
     public function destroy(Request $request, EmployeeDocument $document): JsonResponse
     {
         $document->loadMissing('employee');
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $document->employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $document->employee, 'manage_employee_documents');
 
         DB::transaction(function () use ($document): void {
             $document = EmployeeDocument::query()

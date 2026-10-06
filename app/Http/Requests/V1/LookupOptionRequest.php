@@ -21,7 +21,7 @@ class LookupOptionRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'type' => ['required', 'string', 'in:specialization,task_category,project_type,project_status,task_status'],
+            'type' => ['required', 'string', 'in:specialization,task_category,project_type,project_status,task_status,contract_duration'],
             'label' => ['required', 'string', 'max:100'],
             'color' => ['nullable', 'string', 'max:50'],
             'icon' => ['nullable', 'string', 'max:50'],

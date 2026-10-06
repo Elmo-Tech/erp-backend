@@ -25,7 +25,7 @@ class EmploymentContractController extends Controller
 
     public function index(Request $request, int $id): JsonResponse
     {
-        abort_unless($request->user()?->can('manage_employees'), 403);
+        abort_unless($request->user()?->can('manage_employee_contracts') || $request->user()?->can('manage_employees'), 403);
 
         $employee = $this->employeeService->getEmployee($id);
 
@@ -49,7 +49,7 @@ class EmploymentContractController extends Controller
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_employee_contracts');
         $validated = $request->validated();
 
         $contract = DB::transaction(function () use ($employee, $validated, $request): EmploymentContract {
@@ -76,7 +76,7 @@ class EmploymentContractController extends Controller
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_employee_contracts');
         $validated = $request->validated();
 
         $contract = DB::transaction(function () use ($contract, $employee, $validated, $request): EmploymentContract {

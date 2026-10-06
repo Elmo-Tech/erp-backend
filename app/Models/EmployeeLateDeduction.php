@@ -67,6 +67,7 @@ class EmployeeLateDeduction extends Model
                 'override_amount',
                 'override_reason',
                 'status',
+                'waiver_reason',
                 'updated_by',
                 'updated_at',
             ];

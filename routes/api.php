@@ -317,12 +317,14 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
         Route::get('employees/{id}/leaves', [LeaveManagementController::class, 'history'])->name('employees.leaves.index');
         Route::post('employees/{id}/leaves', [LeaveManagementController::class, 'store'])->name('employees.leaves.store');
+        Route::put('employee-leaves/{leave}', [LeaveManagementController::class, 'update'])->name('employee-leaves.update');
         Route::post('employee-leaves/{leave}/approve', [LeaveManagementController::class, 'approve'])->name('employee-leaves.approve');
         Route::post('employee-leaves/{leave}/reject', [LeaveManagementController::class, 'reject'])->name('employee-leaves.reject');
         Route::post('employee-leaves/{leave}/cancel', [LeaveManagementController::class, 'cancel'])->name('employee-leaves.cancel');
 
         Route::get('employees/{id}/short-permissions', [EmployeeShortPermissionController::class, 'history'])->name('employees.short-permissions.index');
         Route::post('employees/{id}/short-permissions', [EmployeeShortPermissionController::class, 'store'])->name('employees.short-permissions.store');
+        Route::put('employee-short-permissions/{permission}', [EmployeeShortPermissionController::class, 'update'])->name('employee-short-permissions.update');
         Route::post('employee-short-permissions/{permission}/approve', [EmployeeShortPermissionController::class, 'approve'])->name('employee-short-permissions.approve');
         Route::post('employee-short-permissions/{permission}/reject', [EmployeeShortPermissionController::class, 'reject'])->name('employee-short-permissions.reject');
         Route::post('employee-short-permissions/{permission}/cancel', [EmployeeShortPermissionController::class, 'cancel'])->name('employee-short-permissions.cancel');
@@ -349,12 +351,13 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
         Route::post('employee-partial-pays/{record}/cancel', [EmployeePartialPayController::class, 'cancel'])->name('employee-partial-pays.cancel');
     });
 
-    Route::middleware(['auth:sanctum', 'locale', 'permission:manage_employees'])->group(function () {
+    Route::middleware(['auth:sanctum', 'locale'])->group(function () {
         Route::get('employees/{id}/employment-contracts', [EmploymentContractController::class, 'index'])->name('employees.employment-contracts.index');
         Route::post('employees/{id}/employment-contracts', [EmploymentContractController::class, 'store'])->name('employees.employment-contracts.store');
         Route::put('employment-contracts/{contract}', [EmploymentContractController::class, 'update'])->name('employment-contracts.update');
         Route::get('employees/{id}/late-deductions', [EmployeeLateDeductionController::class, 'index'])->name('employees.late-deductions.index');
         Route::post('employees/{id}/late-deductions/evaluate', [EmployeeLateDeductionController::class, 'evaluate'])->name('employees.late-deductions.evaluate');
+        Route::post('employees/{id}/late-deductions/reset', [EmployeeLateDeductionController::class, 'reset'])->name('employees.late-deductions.reset');
         Route::put('employee-late-deductions/{record}/override', [EmployeeLateDeductionController::class, 'override'])->name('employee-late-deductions.override');
     });
 

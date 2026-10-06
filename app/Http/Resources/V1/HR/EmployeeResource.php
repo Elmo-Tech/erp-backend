@@ -70,6 +70,9 @@ class EmployeeResource extends JsonResource
 
             // Salary info (admin only)
             'salary' => $canViewSalary ? (float) ($employee->salary ?? 0) : null,
+            'hourlyRate' => $canViewSalary
+                ? ($employee->hourly_rate === null ? null : (float) $employee->hourly_rate)
+                : null,
             'totalDeductions' => $canViewSalary ? (float) ($employee->total_deductions ?? 0) : null,
             'internalHourlyCost' => $canViewSalary ? (float) ($employee->internal_hourly_cost ?? 0) : null,
 

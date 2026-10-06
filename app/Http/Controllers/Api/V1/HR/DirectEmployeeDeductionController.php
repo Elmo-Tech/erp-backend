@@ -156,7 +156,7 @@ class DirectEmployeeDeductionController extends Controller
 
     public function cancel(Request $request, EmployeeDeduction $deduction): JsonResponse
     {
-        abort_unless($request->user()?->can('manage_employees'), 403);
+        abort_unless($request->user()?->can('manage_deductions') || $request->user()?->can('manage_employees'), 403);
         $this->authorizeDirectDeduction($request, $deduction);
 
         $deduction = DB::transaction(function () use ($deduction): EmployeeDeduction {
@@ -187,7 +187,7 @@ class DirectEmployeeDeductionController extends Controller
     {
         $deduction->loadMissing('user');
         abort_unless($deduction->isDirectManual(), 404);
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $deduction->user);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $deduction->user, 'manage_deductions');
     }
 
     private function assertDirectPending(EmployeeDeduction $deduction): void

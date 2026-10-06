@@ -28,7 +28,7 @@ class StoreHrPolicyRequest extends FormRequest
             'settings.annualLeaveDays' => ['required', 'integer', 'between:0,366'],
             'settings.sickLeaveDays' => ['required', 'integer', 'between:0,366'],
             'settings.emergencyLeaveDays' => ['required', 'integer', 'between:0,366'],
-            'settings.leaveWorkflow' => ['required', 'string', 'max:100'],
+            'settings.leaveWorkflow' => ['required', 'string', 'in:employee_request_admin_approval,admin_direct,both'],
             'settings.monthlyPaidPermissionHours' => ['required', 'numeric', 'between:0,744'],
             'settings.permissionOverageBehavior' => ['required', 'string', 'max:100'],
             'settings.lateDeductionReset' => ['required', 'string', 'max:100'],
@@ -46,6 +46,9 @@ class StoreHrPolicyRequest extends FormRequest
             'settings.payrollPaymentDay' => ['required', 'integer', 'between:1,31'],
             'settings.midMonthHirePaidDays' => ['required', 'integer', 'between:0,31'],
             'settings.taskSupervisorLimit' => ['required', 'integer', 'in:1'],
+            // Client decision 6: exactly one supervisor per task for now.
+            // Future multi-supervisor support via a task_supervisors pivot table;
+            // keep validation at 1 until that migration ships.
             'effectiveFrom' => ['nullable', 'date_format:Y-m-d'],
             'notes' => ['nullable', 'string', 'max:5000'],
         ];

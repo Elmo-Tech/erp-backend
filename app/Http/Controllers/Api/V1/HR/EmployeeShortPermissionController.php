@@ -103,10 +103,48 @@ class EmployeeShortPermissionController extends Controller
         );
     }
 
+    public function update(Request $request, EmployeeShortPermission $permission): JsonResponse
+    {
+        $permission->loadMissing('employee');
+
+        if (! $request->user()->is($permission->employee)) {
+            $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $permission->employee);
+        }
+
+        $validated = $request->validate($this->requestRules());
+
+        $permission = DB::transaction(function () use ($permission, $validated): EmployeeShortPermission {
+            User::query()->whereKey($permission->employee_id)->lockForUpdate()->firstOrFail();
+            $permission = EmployeeShortPermission::query()->lockForUpdate()->findOrFail($permission->id);
+            $this->assertPending($permission);
+
+            $durationMinutes = $this->durationMinutes($validated['startTime'], $validated['endTime']);
+            $this->assertNoOverlap(
+                $permission->employee_id,
+                $validated['permissionDate'],
+                $validated['startTime'],
+                $validated['endTime'],
+                $permission->id
+            );
+
+            $permission->update([
+                'permission_date' => $validated['permissionDate'],
+                'start_time' => $validated['startTime'],
+                'end_time' => $validated['endTime'],
+                'duration_minutes' => $durationMinutes,
+                'reason' => $validated['reason'] ?? null,
+            ]);
+
+            return $permission->fresh();
+        });
+
+        return ApiResponse::success(new EmployeeShortPermissionResource($permission), 'Short permission request updated successfully');
+    }
+
     public function approve(Request $request, EmployeeShortPermission $permission): JsonResponse
     {
         $permission->loadMissing('employee');
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $permission->employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $permission->employee, 'manage_permissions');
         $validated = $request->validate([
             'compensationType' => ['required', 'in:paid,unpaid'],
             'reviewNote' => ['nullable', 'string', 'max:2000'],
@@ -168,7 +206,7 @@ class EmployeeShortPermissionController extends Controller
     public function reject(Request $request, EmployeeShortPermission $permission): JsonResponse
     {
         $permission->loadMissing('employee');
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $permission->employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $permission->employee, 'manage_permissions');
         $validated = $request->validate($this->reviewNoteRules());
         $actorId = $request->user()->id;
 

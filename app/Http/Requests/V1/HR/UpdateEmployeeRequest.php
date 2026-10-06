@@ -46,6 +46,7 @@ class UpdateEmployeeRequest extends FormRequest
             'specialization' => ['nullable', Rule::exists('lookup_options', 'value')->where(fn ($query) => $query->where('type', 'specialization')->where('is_active', true))],
             'isActive' => ['sometimes', 'boolean'],
             'salary' => ['nullable', 'numeric', 'min:0'],
+            'hourlyRate' => ['nullable', 'numeric', 'min:0'],
             'workHoursPerDay' => ['sometimes', 'integer', 'min:1', 'max:24'],
             'workStartTime' => ['sometimes', 'date_format:H:i'],
             'graceDaysAllowed' => ['sometimes', 'integer', 'min:0', 'max:31'],

@@ -44,6 +44,7 @@ class StoreEmployeeRequest extends FormRequest
             'specialization' => ['nullable', Rule::exists('lookup_options', 'value')->where(fn ($query) => $query->where('type', 'specialization')->where('is_active', true))],
             'isActive' => ['nullable', 'boolean'],
             'salary' => ['nullable', 'numeric', 'min:0'],
+            'hourlyRate' => ['nullable', 'numeric', 'min:0'],
             'workHoursPerDay' => ['nullable', 'integer', 'min:1', 'max:24'],
             'workStartTime' => ['nullable', 'date_format:H:i'],
             'graceDaysAllowed' => ['nullable', 'integer', 'min:0', 'max:31'],

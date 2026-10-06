@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\HR\ReviewEmployeeOvertimeRequest;
 use App\Http\Requests\V1\HR\StoreEmployeeOvertimeRequest;
 use App\Http\Resources\V1\HR\EmployeeOvertimeRequestResource;
+use App\Models\Attendance;
 use App\Models\EmployeeOvertimeRequest;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
@@ -13,6 +14,7 @@ use App\Services\HR\EmployeeService;
 use App\Services\HR\OvertimeRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class EmployeeOvertimeRequestController extends Controller
@@ -41,16 +43,69 @@ class EmployeeOvertimeRequestController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        // Attendance-derived extra time for days without any approved request.
+        // Approved requests already carry their own actual/approved split via
+        // synchronize(); this covers the "worked late but never filed" case so
+        // managers see the full unapproved picture without double counting.
+        $approvedDates = $overtimeRequests
+            ->where('status', EmployeeOvertimeRequest::STATUS_APPROVED)
+            ->map(fn (EmployeeOvertimeRequest $r) => $r->overtime_date->toDateString())
+            ->unique()
+            ->flip();
+        $attendances = Attendance::query()
+            ->where('user_id', $employee->id)
+            ->whereYear('date', (int) $validated['year'])
+            ->whereMonth('date', (int) $validated['month'])
+            ->whereNotNull('clock_out')
+            ->get();
+        $unrequestedDays = [];
+        $unrequestedMinutes = 0;
+
+        foreach ($attendances as $attendance) {
+            $dateString = $attendance->date->toDateString();
+
+            if ($approvedDates->has($dateString)) {
+                continue;
+            }
+
+            $expected = $attendance->expected_clock_out ?: $employee->expected_clock_out;
+
+            if (! is_string($expected) || $expected === '' || $attendance->clock_out === null) {
+                continue;
+            }
+
+            $expectedAt = Carbon::parse($dateString.' '.substr($expected, 0, 5));
+            $clockOut = $attendance->clock_out;
+
+            if (! $clockOut->greaterThan($expectedAt)) {
+                continue;
+            }
+
+            $extra = (int) $expectedAt->diffInMinutes($clockOut);
+
+            if ($extra <= 0) {
+                continue;
+            }
+
+            $unrequestedMinutes += $extra;
+            $unrequestedDays[] = ['date' => $dateString, 'extraMinutes' => $extra];
+        }
+
+        $requestUnapproved = (int) $overtimeRequests->sum(
+            fn (EmployeeOvertimeRequest $request): int => $request->unapproved_minutes ?? 0
+        );
+
         return response()->json([
             'data' => [
                 'requests' => EmployeeOvertimeRequestResource::collection($overtimeRequests)->resolve($httpRequest),
                 'summary' => [
                     'requestedMinutes' => (int) $overtimeRequests->sum('requested_minutes'),
-                    'actualMinutes' => (int) $overtimeRequests->sum('actual_minutes'),
+                    'actualMinutes' => (int) $overtimeRequests->sum('actual_minutes') + $unrequestedMinutes,
                     'approvedMinutes' => (int) $overtimeRequests->sum('approved_minutes'),
-                    'unapprovedMinutes' => (int) $overtimeRequests->sum(
-                        fn (EmployeeOvertimeRequest $request): int => $request->unapproved_minutes ?? 0
-                    ),
+                    'unapprovedMinutes' => $requestUnapproved + $unrequestedMinutes,
+                    'unrequestedMinutes' => $unrequestedMinutes,
+                    'unrequestedDays' => $unrequestedDays,
+                    'unrequestedDaysCount' => count($unrequestedDays),
                     'payableAmount' => (float) $overtimeRequests->sum('payable_amount'),
                     'pendingCount' => $overtimeRequests
                         ->where('status', EmployeeOvertimeRequest::STATUS_PENDING)
@@ -100,7 +155,7 @@ class EmployeeOvertimeRequestController extends Controller
         EmployeeOvertimeRequest $request,
     ): JsonResponse {
         $request->loadMissing('employee');
-        $this->administrationPolicy->authorizeEmployeeMutation($httpRequest->user(), $request->employee);
+        $this->administrationPolicy->authorizeHrAction($httpRequest->user(), $request->employee, 'manage_overtime');
         abort_if($request->created_by === $httpRequest->user()->id, 403);
 
         $overtimeRequest = $this->overtimeRequestService->approve(
@@ -119,7 +174,7 @@ class EmployeeOvertimeRequestController extends Controller
         EmployeeOvertimeRequest $request,
     ): JsonResponse {
         $request->loadMissing('employee');
-        $this->administrationPolicy->authorizeEmployeeMutation($httpRequest->user(), $request->employee);
+        $this->administrationPolicy->authorizeHrAction($httpRequest->user(), $request->employee, 'manage_overtime');
         abort_if($request->created_by === $httpRequest->user()->id, 403);
 
         $overtimeRequest = $this->overtimeRequestService->reject(

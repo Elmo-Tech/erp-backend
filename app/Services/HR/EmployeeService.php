@@ -80,6 +80,8 @@ class EmployeeService
             'is_employee' => true,
             'is_active' => $data['isActive'] ?? true,
             'salary' => $salary,
+            // Client decision 1: manual payable hourly rate (null = auto fallback).
+            'hourly_rate' => isset($data['hourlyRate']) ? (float) $data['hourlyRate'] : null,
             'work_hours_per_day' => $workHoursPerDay,
             'work_start_time' => $data['workStartTime'] ?? '10:00:00',
             'grace_days_allowed' => $data['graceDaysAllowed'] ?? 5,
@@ -108,6 +110,7 @@ class EmployeeService
             'email' => 'email',
             'isActive' => 'is_active',
             'salary' => 'salary',
+            'hourlyRate' => 'hourly_rate',
             'workHoursPerDay' => 'work_hours_per_day',
             'workStartTime' => 'work_start_time',
             'graceDaysAllowed' => 'grace_days_allowed',

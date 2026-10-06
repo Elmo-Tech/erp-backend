@@ -29,7 +29,7 @@ class EmployeeLateDeductionController extends Controller
     public function index(Request $request, int $id): JsonResponse
     {
         $employee = $this->findEmployee($id);
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_deductions');
         $validated = $this->periodRules($request);
 
         return $this->recordsResponse($employee, (int) $validated['year'], (int) $validated['month'], $request);
@@ -38,7 +38,7 @@ class EmployeeLateDeductionController extends Controller
     public function evaluate(EvaluateLateDeductionsRequest $request, int $id): JsonResponse
     {
         $employee = $this->findEmployee($id);
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_deductions');
         $validated = $request->validated();
         $this->lateDeductionEvaluator->evaluate(
             $employee,
@@ -55,7 +55,7 @@ class EmployeeLateDeductionController extends Controller
         EmployeeLateDeduction $record,
     ): JsonResponse {
         $record->loadMissing('employee');
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $record->employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $record->employee, 'manage_deductions');
         $validated = $request->validated();
         $amount = number_format((float) $validated['amount'], 2, '.', '');
         $reason = $validated['reason'];
@@ -118,6 +118,67 @@ class EmployeeLateDeductionController extends Controller
         return response()->json([
             'data' => new EmployeeLateDeductionResource($record),
         ]);
+    }
+
+    /**
+     * Client decision 3: monthly auto-reset plus manual reset by Admin.
+     * Manual reset waives unprocessed records for the month (audit-preserved)
+     * and cancels their linked salary adjustments so counters restart.
+     */
+    public function reset(Request $request, int $id): JsonResponse
+    {
+        $employee = $this->findEmployee($id);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_deductions');
+        $validated = $request->validate([
+            'year' => ['required', 'integer', 'digits:4'],
+            'month' => ['required', 'integer', 'between:1,12'],
+            'reason' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $year = (int) $validated['year'];
+        $month = (int) $validated['month'];
+        $reason = $validated['reason'] ?? 'Manual monthly reset by Admin.';
+        $monthStart = Carbon::create($year, $month, 1)->startOfMonth();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+
+        DB::transaction(function () use ($employee, $monthStart, $monthEnd, $reason): void {
+            $records = EmployeeLateDeduction::query()
+                ->where('employee_id', $employee->id)
+                ->whereBetween('attendance_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($records as $record) {
+                if ($record->status === EmployeeLateDeduction::STATUS_WAIVED) {
+                    continue;
+                }
+
+                if ($record->salary_adjustment_id !== null) {
+                    $adjustment = SalaryAdjustment::query()
+                        ->lockForUpdate()
+                        ->find($record->salary_adjustment_id);
+
+                    if ($adjustment !== null && $adjustment->status === SalaryAdjustment::STATUS_PROCESSED) {
+                        throw ValidationException::withMessages([
+                            'status' => ['Processed payroll records cannot be reset.'],
+                        ]);
+                    }
+
+                    if ($adjustment !== null && $adjustment->status !== SalaryAdjustment::STATUS_CANCELLED) {
+                        $adjustment->cancel($reason);
+                    }
+                }
+
+                $record->update([
+                    'status' => EmployeeLateDeduction::STATUS_WAIVED,
+                    'waiver_reason' => $reason,
+                    'override_amount' => 0,
+                    'override_reason' => $reason,
+                ]);
+            }
+        });
+
+        return $this->recordsResponse($employee, $year, $month, $request);
     }
 
     private function findEmployee(int $id): User

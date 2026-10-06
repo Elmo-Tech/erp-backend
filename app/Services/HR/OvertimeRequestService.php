@@ -53,6 +53,7 @@ class OvertimeRequestService
             ->first();
 
         $this->assertAuthorizationWindow($employee, $attendance, $startTime, $endTime);
+        $this->assertNoOverlappingRequest($employee->id, $overtimeDate, $startTime, $endTime, null);
 
         if ($this->requiresPreapproval($overtimeDate) && $overtimeDate <= today()->toDateString()) {
             throw ValidationException::withMessages([
@@ -84,6 +85,13 @@ class OvertimeRequestService
                 $attendance,
                 $overtimeRequest->start_time,
                 $overtimeRequest->end_time,
+            );
+            $this->assertNoOverlappingRequest(
+                $employee->id,
+                $overtimeRequest->overtime_date->toDateString(),
+                $overtimeRequest->start_time,
+                $overtimeRequest->end_time,
+                $overtimeRequest->id,
             );
 
             $policy = $this->policyForDate($overtimeRequest->overtime_date);
@@ -290,6 +298,38 @@ class OvertimeRequestService
         }
     }
 
+    /**
+     * Prevent the same minutes from being paid twice via overlapping
+     * authorizations for the same employee and date.
+     */
+    private function assertNoOverlappingRequest(
+        int $employeeId,
+        string $overtimeDate,
+        string $startTime,
+        string $endTime,
+        ?int $exceptId,
+    ): void {
+        $query = EmployeeOvertimeRequest::query()
+            ->where('employee_id', $employeeId)
+            ->whereDate('overtime_date', $overtimeDate)
+            ->whereIn('status', [
+                EmployeeOvertimeRequest::STATUS_PENDING,
+                EmployeeOvertimeRequest::STATUS_APPROVED,
+            ])
+            ->where('start_time', '<', $endTime)
+            ->where('end_time', '>', $startTime);
+
+        if ($exceptId !== null) {
+            $query->whereKeyNot($exceptId);
+        }
+
+        if ($query->exists()) {
+            throw ValidationException::withMessages([
+                'startTime' => ['An overlapping overtime authorization already exists for this date.'],
+            ]);
+        }
+    }
+
     private function expectedClockOut(User $employee, ?Attendance $attendance = null): ?string
     {
         $expectedClockOut = $attendance?->expected_clock_out ?: $employee->expected_clock_out;
@@ -315,6 +355,11 @@ class OvertimeRequestService
 
     private function hourlyRate(User $employee, ?HrPolicy $policy): ?float
     {
+        // Client decision 1: manual hourly rate wins when set by Admin.
+        if ($employee->hourly_rate !== null && (float) $employee->hourly_rate > 0) {
+            return round((float) $employee->hourly_rate, 4);
+        }
+
         if ($employee->salary === null) {
             return null;
         }

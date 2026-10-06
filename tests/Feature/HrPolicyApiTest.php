@@ -148,7 +148,7 @@ class HrPolicyApiTest extends TestCase
             'annualLeaveDays' => 21,
             'sickLeaveDays' => 10,
             'emergencyLeaveDays' => 6,
-            'leaveWorkflow' => 'employee_request_admin_approval',
+            'leaveWorkflow' => 'both',
             'monthlyPaidPermissionHours' => 6,
             'permissionOverageBehavior' => 'admin_decides',
             'lateDeductionReset' => 'monthly',

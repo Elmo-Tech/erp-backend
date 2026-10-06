@@ -2,6 +2,8 @@
 
 namespace App\Services\HR;
 
+use App\Models\EmployeeAdvance;
+use App\Models\EmployeeAdvanceSettlement;
 use App\Models\EmployeePartialPay;
 use App\Models\EmploymentContract;
 use App\Models\HrPolicy;
@@ -99,6 +101,11 @@ class EmployeePartialPayService
                 'review_note' => $reviewNote,
                 'salary_adjustment_id' => $salaryAdjustment->id,
             ]);
+
+            // Termination must settle outstanding advances immediately.
+            if ($partialPay->kind === EmployeePartialPay::KIND_TERMINATION) {
+                $this->recoverOutstandingAdvances($partialPay, $reviewer);
+            }
 
             return $partialPay->fresh('salaryAdjustment');
         });
@@ -327,5 +334,70 @@ class EmployeePartialPayService
     private function centsToDecimal(int $cents): string
     {
         return number_format($cents / 100, 2, '.', '');
+    }
+
+    /**
+     * On termination approval, accelerate all outstanding advance
+     * settlements into immediate recovery adjustments in the termination
+     * payroll month so no open balance survives the final payout.
+     */
+    private function recoverOutstandingAdvances(EmployeePartialPay $partialPay, User $reviewer): void
+    {
+        $advanceIds = EmployeeAdvance::query()
+            ->where('employee_id', $partialPay->employee_id)
+            ->whereIn('status', [EmployeeAdvance::STATUS_APPROVED, EmployeeAdvance::STATUS_DISBURSED])
+            ->lockForUpdate()
+            ->pluck('id');
+
+        if ($advanceIds->isEmpty()) {
+            return;
+        }
+
+        $settlements = EmployeeAdvanceSettlement::query()
+            ->whereIn('employee_advance_id', $advanceIds)
+            ->where('status', EmployeeAdvanceSettlement::STATUS_SCHEDULED)
+            ->lockForUpdate()
+            ->orderBy('employee_advance_id')
+            ->orderBy('sequence')
+            ->get();
+
+        foreach ($settlements as $settlement) {
+            $adjustment = SalaryAdjustment::create([
+                'user_id' => $partialPay->employee_id,
+                'adjustment_type' => SalaryAdjustment::TYPE_ADVANCE_RECOVERY,
+                'reference_type' => EmployeeAdvanceSettlement::class,
+                'reference_id' => $settlement->id,
+                'amount' => $settlement->scheduled_amount,
+                'reason' => 'Termination recovery for advance #'.$settlement->employee_advance_id,
+                'adjustment_date' => $partialPay->service_end_date->toDateString(),
+                'payroll_month' => $partialPay->payroll_month,
+                'payroll_year' => $partialPay->payroll_year,
+                'status' => SalaryAdjustment::STATUS_APPROVED,
+                'approved_by' => $reviewer->id,
+                'approved_at' => now(),
+                'notes' => 'Accelerated on termination partial pay #'.$partialPay->id,
+            ]);
+
+            $settlement->update([
+                'status' => EmployeeAdvanceSettlement::STATUS_SETTLED,
+                'settled_by' => $reviewer->id,
+                'settled_at' => now(),
+                'settlement_reference' => 'termination-partial-pay-'.$partialPay->id,
+                'salary_adjustment_id' => $adjustment->id,
+            ]);
+        }
+
+        $remainingByAdvance = EmployeeAdvanceSettlement::query()
+            ->whereIn('employee_advance_id', $advanceIds)
+            ->where('status', EmployeeAdvanceSettlement::STATUS_SCHEDULED)
+            ->lockForUpdate()
+            ->count();
+
+        if ($remainingByAdvance === 0) {
+            EmployeeAdvance::query()
+                ->whereIn('id', $advanceIds)
+                ->where('status', EmployeeAdvance::STATUS_DISBURSED)
+                ->update(['status' => EmployeeAdvance::STATUS_SETTLED]);
+        }
     }
 }

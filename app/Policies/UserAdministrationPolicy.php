@@ -92,6 +92,17 @@ class UserAdministrationPolicy
         $this->authorizeManageTarget($actor, $target);
     }
 
+    /**
+     * Granular HR authorization (client section 15). Passes when the actor
+     * holds the specific HR permission OR the legacy manage_employees
+     * permission, then enforces the same hierarchy target checks.
+     */
+    public function authorizeHrAction(User $actor, User $target, string $permission): void
+    {
+        abort_unless($actor->can($permission) || $actor->can('manage_employees'), 403);
+        $this->authorizeManageTarget($actor, $target);
+    }
+
     public function authorizeEmployeeRoleAssignment(User $actor, ?User $target, string $roleName): void
     {
         abort_unless($actor->can('manage_employees'), 403);

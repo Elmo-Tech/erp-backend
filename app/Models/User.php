@@ -29,6 +29,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $specialization
  * @property bool $is_active
  * @property float|int|string|null $salary
+ * @property float|int|string|null $hourly_rate
  * @property float|int|string|null $total_deductions
  * @property int|null $work_hours_per_day
  * @property string|null $work_start_time
@@ -64,6 +65,7 @@ class User extends Authenticatable
         'is_active',
         'is_employee',
         'salary',
+        'hourly_rate',
         'work_hours_per_day',
         'work_start_time',
         'grace_days_allowed',
@@ -100,6 +102,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'internal_hourly_cost' => 'decimal:2',
             'salary' => 'decimal:2',
+            'hourly_rate' => 'decimal:4',
             'total_deductions' => 'decimal:2',
             'skills' => 'array',
             'specialization' => 'string',
