@@ -9,6 +9,7 @@ use App\Models\EmploymentContract;
 use App\Models\HrPolicy;
 use App\Models\SalaryAdjustment;
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -208,9 +209,9 @@ class EmployeePartialPayService
             'service_start_date' => $serviceStartDate->toDateString(),
             'service_end_date' => $serviceEndDate->toDateString(),
             'payable_days' => $payableDays,
-            'base_salary_snapshot' => $this->centsToDecimal($baseSalaryCents),
+            'base_salary_snapshot' => Money::fromCents($baseSalaryCents),
             'daily_rate_snapshot' => number_format($dailyRate, 6, '.', ''),
-            'gross_amount' => $this->centsToDecimal($grossAmountCents),
+            'gross_amount' => Money::fromCents($grossAmountCents),
             'policy_version_id' => $policy?->id,
             'policy_snapshot' => $policySnapshot,
             'contract_work_days' => $workDays,
@@ -299,7 +300,7 @@ class EmployeePartialPayService
 
     private function positiveBaseSalaryCents(EmploymentContract $contract): int
     {
-        $salaryCents = $this->decimalToCents($contract->base_salary);
+        $salaryCents = Money::toCents($contract->base_salary);
 
         if ($salaryCents <= 0) {
             throw ValidationException::withMessages([
@@ -318,22 +319,6 @@ class EmployeePartialPayService
     private function paidDaysSetting(mixed $value, int $default): int
     {
         return is_int($value) && $value >= 0 && $value <= 31 ? $value : $default;
-    }
-
-    private function decimalToCents(mixed $amount): int
-    {
-        $amount = (string) $amount;
-
-        if (preg_match('/^(\d+)(?:\.(\d{1,2}))?$/', $amount, $matches) === 1) {
-            return ((int) $matches[1] * 100) + (int) str_pad($matches[2] ?? '', 2, '0');
-        }
-
-        return (int) round((float) $amount * 100);
-    }
-
-    private function centsToDecimal(int $cents): string
-    {
-        return number_format($cents / 100, 2, '.', '');
     }
 
     /**

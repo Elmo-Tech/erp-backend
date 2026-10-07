@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\HR\StoreHrPolicyRequest;
 use App\Http\Resources\V1\HR\HrPolicyResource;
 use App\Models\HrPolicy;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -47,6 +48,7 @@ class HrPolicyController extends Controller
             'created_by' => $request->user()->id,
             'notes' => $validated['notes'] ?? null,
         ]);
+        app(AuditService::class)->log('hr', 'policy_created', $policy, ['effectiveFrom' => $policy->effective_from?->toDateString(), 'notes' => $policy->notes], 'warning', 'HR policy version created');
 
         return ApiResponse::success(new HrPolicyResource($policy), 'HR policy created successfully', 201);
     }

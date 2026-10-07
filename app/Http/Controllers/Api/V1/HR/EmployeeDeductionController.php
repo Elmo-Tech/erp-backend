@@ -11,6 +11,7 @@ use App\Http\Resources\V1\HR\EmployeeDeductionResource;
 use App\Models\DeductionType;
 use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -61,7 +62,7 @@ class EmployeeDeductionController extends Controller
                 $rule = $deductionType->rules()->active()->first();
 
                 if ($rule) {
-                    $user = \App\Models\User::find($validated['user_id']);
+                    $user = User::find($validated['user_id']);
                     $baseSalary = $user->salary ?? 0;
                     $validated['amount'] = $rule->calculateDeduction(
                         $validated['occurrences'] ?? 1,

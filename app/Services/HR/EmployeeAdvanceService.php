@@ -7,6 +7,7 @@ use App\Models\EmployeeAdvanceSettlement;
 use App\Models\HrPolicy;
 use App\Models\SalaryAdjustment;
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -27,7 +28,7 @@ class EmployeeAdvanceService
             $employee = User::query()->lockForUpdate()->findOrFail($employee->id);
             $snapshot = $this->policySnapshot($this->currentPolicy());
             $salaryCents = $this->positiveSalaryCents($employee, 'requestedAmount');
-            $requestedCents = $this->decimalToCents($attributes['requestedAmount']);
+            $requestedCents = Money::toCents($attributes['requestedAmount']);
             $limitCents = $this->limitCents($salaryCents, $snapshot['advanceLimitSalaryPercentage']);
 
             if ($requestedCents > $limitCents) {
@@ -40,7 +41,7 @@ class EmployeeAdvanceService
 
             return EmployeeAdvance::create([
                 'employee_id' => $employee->id,
-                'requested_amount' => $this->centsToDecimal($requestedCents),
+                'requested_amount' => Money::fromCents($requestedCents),
                 'status' => EmployeeAdvance::STATUS_PENDING,
                 'reason' => $attributes['reason'],
                 'installment_count' => (int) $attributes['installmentCount'],
@@ -65,10 +66,10 @@ class EmployeeAdvanceService
             $salaryCents = $this->positiveSalaryCents($employee, 'approvedAmount');
             $limitCents = $this->limitCents($salaryCents, $snapshot['advanceLimitSalaryPercentage']);
             $approvedCents = $approvedAmount === null
-                ? $this->decimalToCents($advance->requested_amount)
-                : $this->decimalToCents($approvedAmount);
+                ? Money::toCents($advance->requested_amount)
+                : Money::toCents($approvedAmount);
 
-            if ($approvedCents <= 0 || $approvedCents > $this->decimalToCents($advance->requested_amount)) {
+            if ($approvedCents <= 0 || $approvedCents > Money::toCents($advance->requested_amount)) {
                 throw ValidationException::withMessages([
                     'approvedAmount' => ['The approved amount must be positive and cannot exceed the requested amount.'],
                 ]);
@@ -83,12 +84,12 @@ class EmployeeAdvanceService
             }
 
             $advance->update([
-                'approved_amount' => $this->centsToDecimal($approvedCents),
+                'approved_amount' => Money::fromCents($approvedCents),
                 'status' => EmployeeAdvance::STATUS_APPROVED,
                 'policy_version_id' => $policy?->id,
                 'policy_snapshot' => $snapshot,
-                'salary_at_approval' => $this->centsToDecimal($salaryCents),
-                'advance_limit_amount' => $this->centsToDecimal($limitCents),
+                'salary_at_approval' => Money::fromCents($salaryCents),
+                'advance_limit_amount' => Money::fromCents($limitCents),
                 'approved_by' => $reviewer->id,
                 'approved_at' => now(),
                 'review_note' => $reviewNote,
@@ -154,7 +155,7 @@ class EmployeeAdvanceService
             }
 
             $reservedCents = $this->activeExposureCents($employee->id);
-            $limitCents = $this->decimalToCents($advance->advance_limit_amount ?? 0);
+            $limitCents = Money::toCents($advance->advance_limit_amount ?? 0);
 
             if ($limitCents <= 0 || $reservedCents > $limitCents) {
                 throw ValidationException::withMessages([
@@ -171,7 +172,7 @@ class EmployeeAdvanceService
                 ]);
             }
 
-            $approvedCents = $this->decimalToCents($advance->approved_amount);
+            $approvedCents = Money::toCents($advance->approved_amount);
             $snapshot = $this->policySnapshotFromAdvance($advance);
             $firstDueOn = $this->firstPayrollDate($snapshot['payrollPaymentDay']);
             $baseInstallmentCents = intdiv($approvedCents, $advance->installment_count);
@@ -179,7 +180,7 @@ class EmployeeAdvanceService
                 - ($baseInstallmentCents * ($advance->installment_count - 1));
 
             $advance->update([
-                'disbursed_amount' => $this->centsToDecimal($approvedCents),
+                'disbursed_amount' => Money::fromCents($approvedCents),
                 'status' => EmployeeAdvance::STATUS_DISBURSED,
                 'disbursed_by' => $disburser->id,
                 'disbursed_at' => now(),
@@ -194,7 +195,7 @@ class EmployeeAdvanceService
                     'employee_advance_id' => $advance->id,
                     'sequence' => $sequence,
                     'due_on' => $dueOn->toDateString(),
-                    'scheduled_amount' => $this->centsToDecimal(
+                    'scheduled_amount' => Money::fromCents(
                         $sequence === $advance->installment_count ? $lastInstallmentCents : $baseInstallmentCents
                     ),
                     'status' => EmployeeAdvanceSettlement::STATUS_SCHEDULED,
@@ -253,7 +254,7 @@ class EmployeeAdvanceService
                 'salary_adjustment_id' => $salaryAdjustment->id,
             ]);
 
-            $remainingCents = $this->decimalToCents(
+            $remainingCents = Money::toCents(
                 EmployeeAdvanceSettlement::query()
                     ->where('employee_advance_id', $advance->id)
                     ->where('status', EmployeeAdvanceSettlement::STATUS_SCHEDULED)
@@ -318,14 +319,14 @@ class EmployeeAdvanceService
 
         foreach ($advances as $activeAdvance) {
             if ($activeAdvance->status === EmployeeAdvance::STATUS_APPROVED) {
-                $exposureCents += $this->decimalToCents($activeAdvance->approved_amount);
+                $exposureCents += Money::toCents($activeAdvance->approved_amount);
 
                 continue;
             }
 
             foreach ($settlementsByAdvance->get($activeAdvance->id, []) as $settlement) {
                 if ($settlement->status === EmployeeAdvanceSettlement::STATUS_SCHEDULED) {
-                    $exposureCents += $this->decimalToCents($settlement->scheduled_amount);
+                    $exposureCents += Money::toCents($settlement->scheduled_amount);
                 }
             }
         }
@@ -353,7 +354,7 @@ class EmployeeAdvanceService
 
     private function positiveSalaryCents(User $employee, string $field): int
     {
-        $salaryCents = $this->decimalToCents($employee->salary ?? 0);
+        $salaryCents = Money::toCents($employee->salary ?? 0);
 
         if ($salaryCents <= 0) {
             throw ValidationException::withMessages([
@@ -417,21 +418,5 @@ class EmployeeAdvanceService
         $month = $month->copy()->startOfMonth();
 
         return $month->setDay(min($paymentDay, $month->daysInMonth));
-    }
-
-    private function decimalToCents(mixed $amount): int
-    {
-        $amount = (string) $amount;
-
-        if (preg_match('/^(\d+)(?:\.(\d{1,2}))?$/', $amount, $matches) === 1) {
-            return ((int) $matches[1] * 100) + (int) str_pad($matches[2] ?? '', 2, '0');
-        }
-
-        return (int) round((float) $amount * 100);
-    }
-
-    private function centsToDecimal(int $cents): string
-    {
-        return number_format($cents / 100, 2, '.', '');
     }
 }

@@ -10,6 +10,7 @@ use App\Models\EmployeeLateDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
+use App\Services\AuditService;
 use App\Services\HR\EmployeeService;
 use App\Services\HR\LateDeductionEvaluator;
 use Illuminate\Http\JsonResponse;
@@ -111,6 +112,7 @@ class EmployeeLateDeductionController extends Controller
                 'override_reason' => $reason,
                 'status' => EmployeeLateDeduction::STATUS_OVERRIDDEN,
             ]);
+            app(AuditService::class)->log('hr', 'late_deduction_overridden', $record, ['amount' => $amount, 'reason' => $reason], 'warning', 'Late deduction overridden');
 
             return $record->fresh('salaryAdjustment');
         });
@@ -152,6 +154,7 @@ class EmployeeLateDeductionController extends Controller
                 if ($record->status === EmployeeLateDeduction::STATUS_WAIVED) {
                     continue;
                 }
+                app(AuditService::class)->log('hr', 'late_deduction_reset_waived', $record, ['reason' => $reason], 'warning', 'Late deduction waived on monthly reset');
 
                 if ($record->salary_adjustment_id !== null) {
                     $adjustment = SalaryAdjustment::query()

@@ -10,6 +10,7 @@ use App\Models\Attendance;
 use App\Models\EmployeeOvertimeRequest;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
+use App\Services\AuditService;
 use App\Services\HR\EmployeeService;
 use App\Services\HR\OvertimeRequestService;
 use Illuminate\Http\JsonResponse;
@@ -163,6 +164,7 @@ class EmployeeOvertimeRequestController extends Controller
             $httpRequest->user(),
             $httpRequest->validated()['reviewNote'] ?? null,
         );
+        app(AuditService::class)->log('hr', 'overtime_approved', $overtimeRequest, ['hourlyRate' => $overtimeRequest->hourly_rate, 'multiplier' => $overtimeRequest->overtime_multiplier], 'info', 'Overtime approved for '.$overtimeRequest->overtime_date?->toDateString());
 
         return response()->json([
             'data' => new EmployeeOvertimeRequestResource($overtimeRequest),

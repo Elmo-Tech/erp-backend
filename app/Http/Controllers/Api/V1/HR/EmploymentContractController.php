@@ -10,6 +10,7 @@ use App\Http\Resources\V1\HR\EmploymentContractResource;
 use App\Models\EmploymentContract;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
+use App\Services\AuditService;
 use App\Services\HR\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,6 +62,8 @@ class EmploymentContractController extends Controller
             ));
 
             $this->supersedeOtherActiveContracts($contract, $request->user()->id);
+            $this->syncEmployeeSalary($contract, $employee);
+            app(AuditService::class)->log('hr', 'contract_created', $contract, ['status' => $contract->status, 'baseSalary' => $contract->base_salary, 'durationMonths' => $contract->duration_months], 'info', 'Employment contract created');
 
             return $contract;
         });
@@ -86,11 +89,27 @@ class EmploymentContractController extends Controller
             $contract->update($this->contractAttributes($validated, $contract));
 
             $this->supersedeOtherActiveContracts($contract, $request->user()->id);
+            $this->syncEmployeeSalary($contract->fresh(), $employee);
+            app(AuditService::class)->log('hr', 'contract_updated', $contract, ['status' => $contract->status, 'baseSalary' => $contract->base_salary], 'info', 'Employment contract updated');
 
             return $contract->fresh();
         });
 
         return ApiResponse::success(new EmploymentContractResource($contract), 'Employment contract updated successfully');
+    }
+
+    /**
+     * The employment contract is the single source of truth for base salary.
+     * Mirror its base_salary onto the employee record so overtime, late
+     * deductions, advances, and partial pay never drift apart.
+     */
+    private function syncEmployeeSalary(EmploymentContract $contract, User $employee): void
+    {
+        if ($contract->status !== EmploymentContract::STATUS_ACTIVE) {
+            return;
+        }
+
+        User::query()->whereKey($employee->id)->update(['salary' => $contract->base_salary]);
     }
 
     private function contractAttributes(array $data, ?EmploymentContract $contract = null): array

@@ -9,6 +9,7 @@ use App\Http\Resources\V1\HR\EmployeePartialPayResource;
 use App\Models\EmployeePartialPay;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
+use App\Services\AuditService;
 use App\Services\HR\EmployeePartialPayService;
 use App\Services\HR\EmployeeService;
 use Illuminate\Http\JsonResponse;
@@ -87,6 +88,7 @@ class EmployeePartialPayController extends Controller
             $request->user(),
             $request->validated('reviewNote'),
         );
+        app(AuditService::class)->log('hr', 'partial_pay_approved', $partialPay, ['kind' => $partialPay->kind, 'grossAmount' => $partialPay->gross_amount, 'payrollMonth' => $partialPay->payroll_month, 'payrollYear' => $partialPay->payroll_year], 'warning', 'Partial pay approved: '.$partialPay->kind);
 
         return response()->json([
             'data' => new EmployeePartialPayResource($partialPay),

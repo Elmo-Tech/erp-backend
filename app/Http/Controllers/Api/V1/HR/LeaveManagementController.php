@@ -12,6 +12,7 @@ use App\Models\LeaveType;
 use App\Models\SalaryAdjustment;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
+use App\Services\AuditService;
 use App\Services\HR\EmployeeService;
 use App\Services\HR\LeaveService;
 use Illuminate\Http\JsonResponse;
@@ -298,7 +299,8 @@ class LeaveManagementController extends Controller
 
             // Client decision 2: unpaid leave deducts Salary/30 per working day.
             if (! $isPaid) {
-                $this->createUnpaidLeaveDeduction($leave->fresh(['leaveType']), $policy, $actorId);
+                $adjustment = $this->createUnpaidLeaveDeduction($leave->fresh(['leaveType']), $policy, $actorId);
+                app(AuditService::class)->log('hr', 'unpaid_leave_deduction_created', $leave, ['amount' => $adjustment?->amount, 'policyVersionId' => $policy?->id], 'warning', 'Unpaid leave deduction created for leave #'.$leave->id);
             }
 
             return $leave->fresh(['leaveType']);
@@ -382,6 +384,7 @@ class LeaveManagementController extends Controller
 
             if ($wasApprovedUnpaid) {
                 $this->cancelUnpaidLeaveDeduction($leave, 'Leave request cancelled.');
+                app(AuditService::class)->log('hr', 'unpaid_leave_deduction_cancelled', $leave, [], 'info', 'Unpaid leave deduction cancelled for leave #'.$leave->id);
             }
 
             return $leave->fresh(['leaveType']);
@@ -516,12 +519,12 @@ class LeaveManagementController extends Controller
      * Client decision 2: approved unpaid leave creates a traceable deduction
      * of Salary/30 per working day (times policy multiplier, default 1).
      */
-    private function createUnpaidLeaveDeduction(EmployeeLeave $leave, $policy, int $actorId): void
+    private function createUnpaidLeaveDeduction(EmployeeLeave $leave, $policy, int $actorId): ?SalaryAdjustment
     {
         $employee = User::query()->lockForUpdate()->find($leave->employee_id);
 
         if ($employee === null || $employee->salary === null) {
-            return;
+            return null;
         }
 
         $settings = is_array($policy?->settings) ? $policy->settings : [];
@@ -529,22 +532,22 @@ class LeaveManagementController extends Controller
         $multiplier = (float) ($settings['unpaidLeaveDailyRateMultiplier'] ?? 1);
 
         if ($divisor <= 0 || $multiplier < 0) {
-            return;
+            return null;
         }
 
         $workingDays = (float) $leave->working_days;
 
         if ($workingDays <= 0) {
-            return;
+            return null;
         }
 
         $amount = round(((float) $employee->salary / $divisor) * $workingDays * $multiplier, 2);
 
         if ($amount <= 0) {
-            return;
+            return null;
         }
 
-        SalaryAdjustment::firstOrCreate([
+        return SalaryAdjustment::firstOrCreate([
             'reference_type' => EmployeeLeave::class,
             'reference_id' => $leave->id,
         ], [

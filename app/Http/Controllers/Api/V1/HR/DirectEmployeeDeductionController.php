@@ -13,6 +13,7 @@ use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
+use App\Services\AuditService;
 use App\Services\HR\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -126,6 +127,7 @@ class DirectEmployeeDeductionController extends Controller
 
             $deduction->approve($actorId);
             SalaryAdjustment::createFromDeduction($deduction, $validated['reviewNote'] ?? null);
+            app(AuditService::class)->log('hr', 'direct_deduction_approved', $deduction, ['amount' => $deduction->amount, 'typeId' => $deduction->deduction_type_id], 'warning', 'Direct deduction approved');
 
             return $deduction->fresh(['deductionType', 'salaryAdjustment']);
         });

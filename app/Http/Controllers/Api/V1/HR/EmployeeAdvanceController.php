@@ -13,6 +13,7 @@ use App\Models\EmployeeAdvance;
 use App\Models\EmployeeAdvanceSettlement;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
+use App\Services\AuditService;
 use App\Services\HR\EmployeeAdvanceService;
 use App\Services\HR\EmployeeService;
 use Illuminate\Http\JsonResponse;
@@ -98,6 +99,7 @@ class EmployeeAdvanceController extends Controller
             $validated['approvedAmount'] ?? null,
             $validated['reviewNote'] ?? null,
         );
+        app(AuditService::class)->log('hr', 'advance_approved', $advance, ['approvedAmount' => $advance->approved_amount], 'warning', 'Advance approved');
 
         return response()->json([
             'data' => new EmployeeAdvanceResource($advance),
@@ -147,6 +149,7 @@ class EmployeeAdvanceController extends Controller
             $request->user(),
             $request->validated('disbursementReference'),
         );
+        app(AuditService::class)->log('hr', 'advance_disbursed', $advance, ['amount' => $advance->disbursed_amount], 'warning', 'Advance disbursed');
 
         return response()->json([
             'data' => new EmployeeAdvanceResource($advance),

@@ -9,8 +9,10 @@ use App\Http\Requests\V1\HR\UpdateEmployeeRewardRequest;
 use App\Http\Resources\V1\HR\EmployeeRewardCollection;
 use App\Http\Resources\V1\HR\EmployeeRewardResource;
 use App\Models\EmployeeReward;
+use App\Models\PerformanceEvaluation;
 use App\Models\RewardType;
 use App\Models\SalaryAdjustment;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -58,7 +60,7 @@ class EmployeeRewardController extends Controller
             // Calculate amount if not provided
             if (! isset($validated['amount']) || $validated['amount'] == 0) {
                 $rewardType = RewardType::find($validated['reward_type_id']);
-                $user = \App\Models\User::find($validated['user_id']);
+                $user = User::find($validated['user_id']);
 
                 $params = [
                     'base_salary' => $user->salary ?? 0,
@@ -299,7 +301,7 @@ class EmployeeRewardController extends Controller
             'reason' => 'nullable|string|max:1000',
         ]);
 
-        $user = \App\Models\User::findOrFail($validated['user_id']);
+        $user = User::findOrFail($validated['user_id']);
         $rewardType = RewardType::findOrFail($validated['reward_type_id']);
 
         // Check if user has enough points
@@ -381,7 +383,7 @@ class EmployeeRewardController extends Controller
         ]);
 
         // Get evaluations for the period
-        $evaluations = \App\Models\PerformanceEvaluation::where('evaluation_period_id', $validated['evaluation_period_id'])
+        $evaluations = PerformanceEvaluation::where('evaluation_period_id', $validated['evaluation_period_id'])
             ->where('status', 'completed')
             ->get();
 
@@ -422,7 +424,7 @@ class EmployeeRewardController extends Controller
                     'status' => $rewardType->requires_approval
                         ? EmployeeReward::STATUS_PENDING
                         : EmployeeReward::STATUS_APPROVED,
-                    'rewardable_type' => \App\Models\PerformanceEvaluation::class,
+                    'rewardable_type' => PerformanceEvaluation::class,
                     'rewardable_id' => $evaluation->id,
                 ]);
 
