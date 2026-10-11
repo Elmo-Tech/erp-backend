@@ -33,6 +33,13 @@ class EmploymentContract extends Model
         'work_start_time',
         'status',
         'notes',
+        'disk',
+        'file_path',
+        'original_filename',
+        'mime_type',
+        'file_size',
+        'file_uploaded_by',
+        'file_uploaded_at',
     ];
 
     protected function casts(): array
@@ -45,7 +52,14 @@ class EmploymentContract extends Model
             'duration_months' => 'integer',
             'work_days' => 'array',
             'work_hours_per_day' => 'decimal:2',
+            'file_size' => 'integer',
+            'file_uploaded_at' => 'datetime',
         ];
+    }
+
+    public function hasFile(): bool
+    {
+        return is_string($this->file_path) && $this->file_path !== '';
     }
 
     public function employee(): BelongsTo

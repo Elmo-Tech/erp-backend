@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\HR\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -140,12 +141,35 @@ class TimeTrackingService
     }
 
     /**
+     * End every open timer attached to a trackable (e.g. a task that was
+     * completed or deleted) so no session keeps running on finished work.
+     *
+     * @return int number of timers that were closed
+     */
+    public function stopTimersForTrackable(Model $trackable, TimerStopReason $reason = TimerStopReason::END): int
+    {
+        $openEntries = TimeEntry::query()
+            ->where('trackable_type', get_class($trackable))
+            ->where('trackable_id', $trackable->getKey())
+            ->whereNull('end_time')
+            ->get();
+
+        $closed = 0;
+
+        foreach ($openEntries as $timeEntry) {
+            $this->closeTimer($timeEntry, $reason, Carbon::now('Africa/Cairo'));
+            $closed++;
+        }
+
+        return $closed;
+    }
+
+    /**
      * Get the active timer for a user.
      */
     public function getActiveTimer(User $user): ?TimeEntry
     {
-        $activeTimer = TimeEntry::where('user_id', $user->id)
-            ->whereNull('end_time')
+        $activeTimer = TimeEntry::where('user_id', $user->id)->whereNull('end_time')
             ->first();
         $cutoff = now()->subSeconds((int) config('time_tracking.stale_after_seconds', 180));
         $heartbeatAt = $activeTimer?->heartbeatAt();

@@ -80,6 +80,10 @@ Route::middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::get('employees/{id}/employment-contracts', [EmploymentContractController::class, 'index'])->name('employees.employment-contracts.index');
     Route::post('employees/{id}/employment-contracts', [EmploymentContractController::class, 'store'])->name('employees.employment-contracts.store');
     Route::put('employment-contracts/{contract}', [EmploymentContractController::class, 'update'])->name('employment-contracts.update');
+    Route::delete('employment-contracts/{contract}', [EmploymentContractController::class, 'destroy'])->name('employment-contracts.destroy');
+    Route::post('employment-contracts/{contract}/file', [EmploymentContractController::class, 'uploadFile'])->name('employment-contracts.file.upload');
+    Route::get('employment-contracts/{contract}/file', [EmploymentContractController::class, 'downloadFile'])->name('employment-contracts.file.download');
+    Route::delete('employment-contracts/{contract}/file', [EmploymentContractController::class, 'deleteFile'])->name('employment-contracts.file.destroy');
     Route::get('employees/{id}/late-deductions', [EmployeeLateDeductionController::class, 'index'])->name('employees.late-deductions.index');
     Route::post('employees/{id}/late-deductions/evaluate', [EmployeeLateDeductionController::class, 'evaluate'])->name('employees.late-deductions.evaluate');
     Route::post('employees/{id}/late-deductions/reset', [EmployeeLateDeductionController::class, 'reset'])->name('employees.late-deductions.reset');

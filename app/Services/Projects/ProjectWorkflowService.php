@@ -5,6 +5,7 @@ namespace App\Services\Projects;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
+use App\Enums\TimerStopReason;
 use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\ProjectWorkflowStage;
@@ -12,6 +13,7 @@ use App\Models\Task;
 use App\Models\TaskAssignee;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
+use App\Services\Sales\TimeTrackingService;
 use App\Services\Tasks\TaskSupervisionService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -21,7 +23,12 @@ use Illuminate\Validation\ValidationException;
 
 class ProjectWorkflowService
 {
-    public function __construct(private TaskSupervisionService $supervision) {}
+    public function __construct(
+        private TaskSupervisionService $supervision,
+        private ?TimeTrackingService $timeTracking = null,
+    ) {
+        $this->timeTracking ??= app(TimeTrackingService::class);
+    }
 
     public function ensureProjectWorkflow(Project $project, ?WorkflowTemplate $template = null): Collection
     {
@@ -173,6 +180,11 @@ class ProjectWorkflowService
                 'completed_at' => $stage->category === 'done' ? now() : null,
                 'updated_by' => $actor->id,
             ]);
+
+            // A finished task must not keep a running timer behind.
+            if ($stage->category === 'done') {
+                $this->timeTracking->stopTimersForTrackable($task, TimerStopReason::END);
+            }
         });
 
         return $task->fresh()->load(['assignee', 'assignees.user', 'workflowStage']);
@@ -224,6 +236,10 @@ class ProjectWorkflowService
 
             $task->update($updates);
 
+            if ($stage instanceof ProjectWorkflowStage && $stage->category === 'done') {
+                $this->timeTracking->stopTimersForTrackable($task, TimerStopReason::END);
+            }
+
             if ($changesAssignees) {
                 $task->assignees()->delete();
                 $this->createTaskAssignees($task, $actor, $assigneeIds);
@@ -240,6 +256,7 @@ class ProjectWorkflowService
     public function deleteTask(Project $project, Task $task): void
     {
         $this->ensurePipelineTaskBelongsToProject($project, $task);
+        $this->timeTracking->stopTimersForTrackable($task, TimerStopReason::END);
         $this->deleteCoverImageFile($task);
         $task->delete();
     }

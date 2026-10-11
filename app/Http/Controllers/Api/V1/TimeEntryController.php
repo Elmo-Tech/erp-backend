@@ -454,10 +454,12 @@ class TimeEntryController extends Controller
                 $data['sessionId']
             );
 
-            return ApiResponse::success(
-                new TimeEntryResource($timeEntry->load('trackable')),
-                'Timer heartbeat accepted'
-            );
+            // Heartbeat responses stay silent on purpose: the frontend polls
+            // every 45 seconds and any message would surface as a toast.
+            return response()->json([
+                'success' => true,
+                'data' => new TimeEntryResource($timeEntry->load('trackable')),
+            ]);
         } catch (\RuntimeException $exception) {
             return ApiResponse::error($exception->getMessage(), 409);
         }

@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\V1\HR\StoreEmployeeRequest;
 use App\Http\Requests\V1\HR\StoreEmployeeAvatarRequest;
+use App\Http\Requests\V1\HR\StoreEmployeeRequest;
 use App\Http\Requests\V1\HR\UpdateEmployeeRequest;
 use App\Http\Resources\V1\HR\EmployeeCollection;
 use App\Http\Resources\V1\HR\EmployeeResource;
@@ -286,6 +286,37 @@ class EmployeeController extends Controller
         return ApiResponse::success(
             new EmployeeResource($employee),
             __('messages.employee_activated')
+        );
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/employees/{id}",
+     *     summary="Delete an employee (soft delete, keeps history)",
+     *     tags={"Employees"},
+     *     security={{"sanctum":{}}},
+     *
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *
+     *     @OA\Response(response=200, description="Employee deleted")
+     * )
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $employee = $this->employeeService->getEmployee($id);
+
+        if (! $employee) {
+            return ApiResponse::error(__('messages.employee_not_found'), 404);
+        }
+
+        abort_if(request()->user()->is($employee), 403, __('messages.cannot_delete_self'));
+        $this->administrationPolicy->authorizeDelete(request()->user(), $employee);
+
+        $employee->delete();
+
+        return ApiResponse::success(
+            null,
+            __('messages.employee_deleted')
         );
     }
 }

@@ -277,6 +277,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
     // Employee Management Routes
     Route::apiResource('employees', EmployeeController::class)->except(['destroy']);
+    Route::delete('employees/{id}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
     Route::post('employees/{id}/avatar', [EmployeeController::class, 'updateAvatar'])->name('employees.avatar');
     Route::get('employees/{id}/performance', [EmployeeController::class, 'performance'])->middleware('simplified.disabled:performance')->name('employees.performance');
     Route::post('employees/{id}/deactivate', [EmployeeController::class, 'deactivate'])->name('employees.deactivate');

@@ -15,6 +15,12 @@ return [
     'user_updated' => 'User updated successfully',
     'user_deleted' => 'User deleted successfully',
     'user_not_found' => 'User not found',
+    'employee_created' => 'Employee created successfully',
+    'employee_updated' => 'Employee updated successfully',
+    'employee_deleted' => 'Employee deleted successfully',
+    'employee_not_found' => 'Employee not found',
+    'employee_activated' => 'Employee activated successfully',
+    'employee_deactivated' => 'Employee deactivated successfully',
     'user_activated' => 'User activated successfully',
     'user_deactivated' => 'User deactivated successfully',
     'cannot_delete_self' => 'You cannot delete your own account',
@@ -142,6 +148,7 @@ return [
         'signed' => 'Contract signed successfully',
         'status_updated' => 'Contract status updated successfully',
         'already_exists' => 'Contract already exists for this quotation',
+        'deleted' => 'Employment contract deleted successfully',
     ],
 
     // Analytics

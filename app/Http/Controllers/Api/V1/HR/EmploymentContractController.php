@@ -16,6 +16,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmploymentContractController extends Controller
 {
@@ -96,6 +99,142 @@ class EmploymentContractController extends Controller
         });
 
         return ApiResponse::success(new EmploymentContractResource($contract), 'Employment contract updated successfully');
+    }
+
+    public function destroy(Request $request, EmploymentContract $contract): JsonResponse
+    {
+        $employee = $this->employeeService->getEmployee($contract->employee_id);
+
+        if (! $employee) {
+            return ApiResponse::error(__('messages.employee_not_found'), 404);
+        }
+
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_employee_contracts');
+
+        if ($contract->status !== EmploymentContract::STATUS_DRAFT) {
+            return ApiResponse::error('Only draft contracts can be deleted. Terminate or expire active history instead.', 422);
+        }
+
+        DB::transaction(function () use ($contract): void {
+            $contract = EmploymentContract::query()->lockForUpdate()->findOrFail($contract->id);
+
+            if ($contract->hasFile()) {
+                Storage::disk($contract->disk ?? 'local')->delete($contract->file_path);
+            }
+
+            app(AuditService::class)->log('hr', 'contract_deleted', $contract, ['status' => $contract->status], 'warning', 'Draft employment contract deleted');
+            $contract->delete();
+        });
+
+        return ApiResponse::success(null, __('messages.contracts.deleted'));
+    }
+
+    public function uploadFile(Request $request, EmploymentContract $contract): JsonResponse
+    {
+        $employee = $this->employeeService->getEmployee($contract->employee_id);
+
+        if (! $employee) {
+            return ApiResponse::error(__('messages.employee_not_found'), 404);
+        }
+
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_employee_contracts');
+
+        $validated = $request->validate([
+            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp,doc,docx,xls,xlsx,csv', 'max:10240'],
+        ]);
+
+        $file = $validated['file'];
+        $path = $file->storeAs("employment-contracts/{$contract->id}", (string) Str::uuid(), 'local');
+
+        if (! is_string($path)) {
+            throw new \RuntimeException('Unable to store contract file.');
+        }
+
+        try {
+            $contract = DB::transaction(function () use ($contract, $file, $path, $request): EmploymentContract {
+                $contract = EmploymentContract::query()->lockForUpdate()->findOrFail($contract->id);
+
+                if ($contract->hasFile()) {
+                    Storage::disk($contract->disk ?? 'local')->delete($contract->file_path);
+                }
+
+                $contract->update([
+                    'disk' => 'local',
+                    'file_path' => $path,
+                    'original_filename' => Str::limit(basename(str_replace('\\', '/', $file->getClientOriginalName())), 255, ''),
+                    'mime_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                    'file_uploaded_by' => $request->user()->id,
+                    'file_uploaded_at' => now(),
+                ]);
+
+                return $contract->fresh();
+            });
+        } catch (\Throwable $exception) {
+            Storage::disk('local')->delete($path);
+
+            throw $exception;
+        }
+
+        app(AuditService::class)->log('hr', 'contract_file_uploaded', $contract, ['fileName' => $contract->original_filename], 'info', 'Contract file uploaded');
+
+        return ApiResponse::success(new EmploymentContractResource($contract), 'Contract file uploaded successfully', 201);
+    }
+
+    public function downloadFile(Request $request, EmploymentContract $contract): StreamedResponse|JsonResponse
+    {
+        $employee = $this->employeeService->getEmployee($contract->employee_id);
+
+        if (! $employee) {
+            return ApiResponse::error(__('messages.employee_not_found'), 404);
+        }
+
+        if (! $request->user()->is($employee)) {
+            $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_employee_contracts');
+        }
+
+        if (! $contract->hasFile() || ! Storage::disk($contract->disk ?? 'local')->exists($contract->file_path)) {
+            return ApiResponse::error('Contract file not found', 404);
+        }
+
+        return Storage::disk($contract->disk ?? 'local')->download(
+            $contract->file_path,
+            $contract->original_filename ?? 'contract',
+            ['Content-Type' => $contract->mime_type ?? 'application/octet-stream']
+        );
+    }
+
+    public function deleteFile(Request $request, EmploymentContract $contract): JsonResponse
+    {
+        $employee = $this->employeeService->getEmployee($contract->employee_id);
+
+        if (! $employee) {
+            return ApiResponse::error(__('messages.employee_not_found'), 404);
+        }
+
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_employee_contracts');
+
+        DB::transaction(function () use ($contract): void {
+            $contract = EmploymentContract::query()->lockForUpdate()->findOrFail($contract->id);
+
+            if ($contract->hasFile()) {
+                Storage::disk($contract->disk ?? 'local')->delete($contract->file_path);
+            }
+
+            $contract->update([
+                'disk' => null,
+                'file_path' => null,
+                'original_filename' => null,
+                'mime_type' => null,
+                'file_size' => null,
+                'file_uploaded_by' => null,
+                'file_uploaded_at' => null,
+            ]);
+        });
+
+        app(AuditService::class)->log('hr', 'contract_file_deleted', $contract, [], 'warning', 'Contract file deleted');
+
+        return ApiResponse::success(new EmploymentContractResource($contract->fresh()), 'Contract file deleted successfully');
     }
 
     /**

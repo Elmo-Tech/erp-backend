@@ -29,6 +29,11 @@ class EmploymentContractResource extends JsonResource
             'status' => $contract->status,
             'notes' => $contract->notes,
             'isCurrent' => $contract->status === EmploymentContract::STATUS_ACTIVE,
+            'hasFile' => $contract->hasFile(),
+            'fileName' => $contract->original_filename,
+            'fileSize' => $contract->file_size === null ? null : (int) $contract->file_size,
+            'fileMimeType' => $contract->mime_type,
+            'fileUploadedAt' => $contract->file_uploaded_at?->toISOString(),
             'createdAt' => $contract->created_at?->toISOString(),
             'updatedAt' => $contract->updated_at?->toISOString(),
         ];

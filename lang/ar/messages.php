@@ -15,6 +15,12 @@ return [
     'user_updated' => 'تم تحديث المستخدم بنجاح',
     'user_deleted' => 'تم حذف المستخدم بنجاح',
     'user_not_found' => 'المستخدم غير موجود',
+    'employee_created' => 'تم إنشاء الموظف بنجاح',
+    'employee_updated' => 'تم تحديث الموظف بنجاح',
+    'employee_deleted' => 'تم حذف الموظف بنجاح',
+    'employee_not_found' => 'الموظف غير موجود',
+    'employee_activated' => 'تم تفعيل الموظف بنجاح',
+    'employee_deactivated' => 'تم إلغاء تفعيل الموظف بنجاح',
     'user_activated' => 'تم تفعيل المستخدم بنجاح',
     'user_deactivated' => 'تم إلغاء تفعيل المستخدم بنجاح',
     'cannot_delete_self' => 'لا يمكنك حذف حسابك الخاص',
@@ -142,6 +148,7 @@ return [
         'signed' => 'تم توقيع العقد بنجاح',
         'status_updated' => 'تم تحديث حالة العقد بنجاح',
         'already_exists' => 'يوجد عقد بالفعل لهذا العرض',
+        'deleted' => 'تم حذف عقد العمل بنجاح',
     ],
 
     // Analytics
