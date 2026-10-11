@@ -157,7 +157,6 @@ class EmployeeOvertimeRequestController extends Controller
     ): JsonResponse {
         $request->loadMissing('employee');
         $this->administrationPolicy->authorizeHrAction($httpRequest->user(), $request->employee, 'manage_overtime');
-        abort_if($request->created_by === $httpRequest->user()->id, 403);
 
         $overtimeRequest = $this->overtimeRequestService->approve(
             $request,
@@ -177,7 +176,6 @@ class EmployeeOvertimeRequestController extends Controller
     ): JsonResponse {
         $request->loadMissing('employee');
         $this->administrationPolicy->authorizeHrAction($httpRequest->user(), $request->employee, 'manage_overtime');
-        abort_if($request->created_by === $httpRequest->user()->id, 403);
 
         $overtimeRequest = $this->overtimeRequestService->reject(
             $request,
@@ -221,7 +219,7 @@ class EmployeeOvertimeRequestController extends Controller
     private function authorizeEmployeeAccess(User $actor, User $employee): void
     {
         if (! $actor->is($employee)) {
-            $this->administrationPolicy->authorizeEmployeeMutation($actor, $employee);
+            $this->administrationPolicy->authorizeHrAction($actor, $employee, 'manage_overtime');
         }
     }
 }

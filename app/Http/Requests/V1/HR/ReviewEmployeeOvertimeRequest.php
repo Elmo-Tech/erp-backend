@@ -8,7 +8,9 @@ class ReviewEmployeeOvertimeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage_employees') ?? false;
+        $user = $this->user();
+
+        return $user !== null && ($user->can('manage_overtime') || $user->can('manage_employees'));
     }
 
     public function rules(): array

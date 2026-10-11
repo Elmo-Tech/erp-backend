@@ -100,7 +100,15 @@ class UserAdministrationPolicy
     public function authorizeHrAction(User $actor, User $target, string $permission): void
     {
         abort_unless($actor->can($permission) || $actor->can('manage_employees'), 403);
-        $this->authorizeManageTarget($actor, $target);
+        abort_if($actor->is($target), 403);
+
+        // An action-specific HR approver can manage ordinary employees without
+        // receiving user/role administration privileges. Keep peer and higher
+        // administrative targets protected by the existing hierarchy.
+        $actorTier = max(2, $this->userTier($actor));
+        $targetTier = $this->userTier($target);
+        abort_if($actorTier < $targetTier, 403);
+        abort_if($actorTier === $targetTier && $actorTier < 3, 403);
     }
 
     /**

@@ -19,6 +19,32 @@ class TimeTrackingLifecycleTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_running_timer_remains_active_through_two_heartbeat_intervals(): void
+    {
+        Event::fake([TimerUpdated::class]);
+        $user = User::factory()->create();
+        $task = Task::factory()->create();
+        $entry = app(TimeTrackingService::class)->startTimer($user, $task);
+
+        for ($interval = 0; $interval < 2; $interval++) {
+            $this->travel(45)->seconds();
+            $this->actingAs($user, 'sanctum')
+                ->postJson('/api/v1/time-entries/heartbeat', [
+                    'timeEntryId' => $entry->id,
+                    'sessionId' => $entry->session_id,
+                ])
+                ->assertOk()
+                ->assertJsonPath('data.isActive', true);
+            $this->getJson('/api/v1/time-entries/active')
+                ->assertOk()
+                ->assertJsonPath('data.timeEntryId', $entry->id)
+                ->assertJsonPath('data.isActive', true);
+        }
+
+        $this->assertNull($entry->fresh()->end_time);
+        $this->travelBack();
+    }
+
     public function test_stale_timer_stops_at_last_heartbeat(): void
     {
         Event::fake([TimerUpdated::class]);

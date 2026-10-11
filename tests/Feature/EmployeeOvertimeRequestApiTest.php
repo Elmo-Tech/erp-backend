@@ -11,7 +11,9 @@ use App\Services\HR\AttendanceService;
 use App\Services\HR\OvertimeRequestService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use PHPUnit\Framework\Attributes\TestDox;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class EmployeeOvertimeRequestApiTest extends TestCase
@@ -98,15 +100,11 @@ class EmployeeOvertimeRequestApiTest extends TestCase
             ->json('data.id');
         $this->actingAs($manager, 'sanctum')
             ->postJson("/api/v1/employee-overtime-requests/{$managerCreatedRequestId}/approve")
-            ->assertForbidden();
+            ->assertOk()
+            ->assertJsonPath('data.reviewedBy', $manager->id);
         $this->actingAs($manager, 'sanctum')
             ->postJson("/api/v1/employee-overtime-requests/{$managerCreatedRequestId}/reject")
-            ->assertForbidden();
-        $secondManager = $this->employeeManager();
-        $this->actingAs($secondManager, 'sanctum')
-            ->postJson("/api/v1/employee-overtime-requests/{$managerCreatedRequestId}/approve")
-            ->assertOk()
-            ->assertJsonPath('data.reviewedBy', $secondManager->id);
+            ->assertUnprocessable();
 
         $ownRequestId = $this->createRequest($manager, $date, ['startTime' => '20:00', 'endTime' => '21:00']);
 
@@ -153,6 +151,7 @@ class EmployeeOvertimeRequestApiTest extends TestCase
             ->assertJsonValidationErrors('requestedMinutes');
     }
 
+    #[TestDox('Show approved, unapproved, and payable overtime for partial authorization')]
     public function test_approval_snapshots_policy_rate_and_pays_only_actual_time_inside_the_approved_window(): void
     {
         $date = $this->overtimeDate();
@@ -310,6 +309,75 @@ class EmployeeOvertimeRequestApiTest extends TestCase
             'approved_minutes' => 0,
             'payable_amount' => 0,
         ]);
+    }
+
+    public function test_overtime_approver_role_can_submit_review_and_view_without_employee_administration(): void
+    {
+        $employee = $this->employee(['hourly_rate' => 50]);
+        $approver = $this->employee();
+        $role = Role::findOrCreate('overtime-approver', 'web');
+        $role->givePermissionTo(Permission::findOrCreate('manage_overtime', 'web'));
+        $approver->assignRole($role);
+        $this->assertFalse($approver->can('manage_employees'));
+        $date = $this->overtimeDate();
+
+        $id = $this->actingAs($approver, 'sanctum')
+            ->postJson("/api/v1/employees/{$employee->id}/overtime-requests", $this->payload($date))
+            ->assertCreated()->json('data.id');
+        $this->postJson("/api/v1/employee-overtime-requests/{$id}/approve")
+            ->assertOk()
+            ->assertJsonPath('data.status', EmployeeOvertimeRequest::STATUS_APPROVED);
+        $this->getJson("/api/v1/employees/{$employee->id}/overtime-requests?year={$date->year}&month={$date->month}")
+            ->assertOk()->assertJsonPath('data.requests.0.status', EmployeeOvertimeRequest::STATUS_APPROVED);
+
+        $ownId = $this->createRequest($approver, $date);
+        $this->actingAs($approver, 'sanctum')->postJson("/api/v1/employee-overtime-requests/{$ownId}/approve")
+            ->assertForbidden();
+        $manager = $this->employeeManager();
+        $managerId = $this->createRequest($manager, $date);
+        $this->actingAs($approver, 'sanctum')->postJson("/api/v1/employee-overtime-requests/{$managerId}/approve")
+            ->assertForbidden();
+    }
+
+    #[TestDox('Require a valid manual overtime rate')]
+    public function test_approval_rejects_an_invalid_manual_rate_and_accepts_a_positive_rate(): void
+    {
+        $employee = $this->employee(['salary' => 16000, 'hourly_rate' => 0]);
+        $manager = $this->employeeManager();
+        $id = $this->createRequest($employee, $this->overtimeDate());
+
+        $this->actingAs($manager, 'sanctum')->postJson("/api/v1/employee-overtime-requests/{$id}/approve")
+            ->assertUnprocessable()->assertJsonValidationErrors('hourlyRate');
+        $this->assertSame(EmployeeOvertimeRequest::STATUS_PENDING, EmployeeOvertimeRequest::findOrFail($id)->status);
+        $employee->update(['hourly_rate' => 65]);
+        $this->postJson("/api/v1/employee-overtime-requests/{$id}/approve")
+            ->assertOk()->assertJsonPath('data.hourlyRate', 65);
+    }
+
+    #[TestDox('Keep historical overtime rate after salary change')]
+    public function test_salary_and_manual_rate_changes_do_not_reprice_approved_overtime(): void
+    {
+        $date = $this->overtimeDate();
+        $employee = $this->employee(['salary' => 16000, 'hourly_rate' => 65]);
+        $manager = $this->employeeManager();
+        $id = $this->createRequest($employee, $date);
+        $this->actingAs($manager, 'sanctum')->postJson("/api/v1/employee-overtime-requests/{$id}/approve")
+            ->assertOk()->assertJsonPath('data.hourlyRate', 65);
+
+        $employee->update(['salary' => 32000, 'hourly_rate' => 130]);
+        app(AttendanceService::class)->createAttendance([
+            'userId' => $employee->id,
+            'date' => $date->toDateString(),
+            'clockIn' => $date->copy()->setTime(10, 0)->toDateTimeString(),
+            'clockOut' => $date->copy()->setTime(21, 0)->toDateTimeString(),
+        ], $manager);
+        $this->getJson("/api/v1/employees/{$employee->id}/overtime-requests?year={$date->year}&month={$date->month}")
+            ->assertOk()
+            ->assertJsonPath('data.requests.0.hourlyRate', 65)
+            ->assertJsonPath('data.requests.0.approvedMinutes', 120)
+            ->assertJsonPath('data.requests.0.unapprovedMinutes', 60)
+            ->assertJsonPath('data.requests.0.payableAmount', 195);
+        $this->assertSame('195.00', SalaryAdjustment::sole()->amount);
     }
 
     private function employee(array $attributes = []): User
