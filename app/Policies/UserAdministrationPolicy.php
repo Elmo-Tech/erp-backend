@@ -103,6 +103,23 @@ class UserAdministrationPolicy
         $this->authorizeManageTarget($actor, $target);
     }
 
+    /**
+     * Read-only HR authorization. Identical to authorizeHrAction except the
+     * actor may always view their OWN records — the self-management ban in
+     * authorizeManageTarget exists to stop privilege escalation (editing
+     * your own roles/permissions), not to hide your own HR data from you.
+     * Review/approve endpoints must keep using authorizeHrAction so nobody
+     * approves their own requests.
+     */
+    public function authorizeHrView(User $actor, User $target, string $permission): void
+    {
+        if ($actor->is($target)) {
+            return;
+        }
+
+        $this->authorizeHrAction($actor, $target, $permission);
+    }
+
     public function authorizeEmployeeRoleAssignment(User $actor, ?User $target, string $roleName): void
     {
         abort_unless($actor->can('manage_employees'), 403);

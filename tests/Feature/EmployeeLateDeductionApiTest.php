@@ -241,6 +241,24 @@ class EmployeeLateDeductionApiTest extends TestCase
         $this->assertNull($secondRecord->fresh()->override_amount);
     }
 
+    public function test_manager_may_read_but_never_review_their_own_late_deductions(): void
+    {
+        $manager = $this->employeeManager();
+
+        $this->actingAs($manager, 'sanctum')
+            ->getJson("/api/v1/employees/{$manager->id}/late-deductions?year=2026&month=10")
+            ->assertOk()
+            ->assertJsonPath('data.summary.evaluatedCount', 0);
+
+        $this->actingAs($manager, 'sanctum')
+            ->postJson("/api/v1/employees/{$manager->id}/late-deductions/evaluate", ['year' => 2026, 'month' => 10])
+            ->assertForbidden();
+
+        $this->actingAs($manager, 'sanctum')
+            ->postJson("/api/v1/employees/{$manager->id}/late-deductions/reset", ['year' => 2026, 'month' => 10])
+            ->assertForbidden();
+    }
+
     private function employeeManager(): User
     {
         $manager = User::factory()->create(['is_employee' => true]);

@@ -61,6 +61,9 @@ php artisan key:generate --force
 print_status "Running database migrations..."
 php artisan migrate --force
 
+print_status "Resetting permission cache..."
+php artisan permission:cache-reset 2>/dev/null || print_warning "permission:cache-reset not available, continuing"
+
 print_status "🔧 Setting up PDF directories (CRITICAL)..."
 if php artisan list | grep -q "pdf:setup-directories"; then
     php artisan pdf:setup-directories

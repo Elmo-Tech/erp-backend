@@ -30,7 +30,7 @@ class EmployeeLateDeductionController extends Controller
     public function index(Request $request, int $id): JsonResponse
     {
         $employee = $this->findEmployee($id);
-        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_deductions');
+        $this->administrationPolicy->authorizeHrView($request->user(), $employee, 'manage_deductions');
         $validated = $this->periodRules($request);
 
         return $this->recordsResponse($employee, (int) $validated['year'], (int) $validated['month'], $request);

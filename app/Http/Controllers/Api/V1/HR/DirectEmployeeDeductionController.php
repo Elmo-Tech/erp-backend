@@ -44,7 +44,7 @@ class DirectEmployeeDeductionController extends Controller
     public function history(Request $request, int $id): JsonResponse
     {
         $employee = $this->findEmployee($id);
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+        $this->administrationPolicy->authorizeHrView($request->user(), $employee, 'manage_deductions');
         $validated = $request->validate([
             'year' => ['required', 'integer', 'digits:4'],
             'month' => ['required', 'integer', 'between:1,12'],
