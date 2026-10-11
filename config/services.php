@@ -38,7 +38,7 @@ return [
     'google_drive' => [
         'client_id' => env('GOOGLE_DRIVE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
-        'redirect_uri' => env('GOOGLE_DRIVE_REDIRECT_URI', env('FRONTEND_URL').'/dashboard/integrations/google-drive/callback'),
+        'redirect_uri' => env('GOOGLE_DRIVE_REDIRECT_URI', env('FRONTEND_URL', 'http://localhost:3000').'/auth/google/callback'),
     ],
 
 ];

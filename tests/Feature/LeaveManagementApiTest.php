@@ -96,6 +96,27 @@ class LeaveManagementApiTest extends TestCase
             ->assertJsonPath('data.employeeId', $otherEmployee->id);
     }
 
+    public function test_leave_across_working_and_non_working_days_consumes_balance_only_after_approval(): void
+    {
+        $employee = User::factory()->create(['is_employee' => true]);
+        $manager = $this->employeeManager();
+        HrPolicy::create([
+            'settings' => ['workingDays' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']],
+            'effective_from' => '2026-01-01',
+        ]);
+        $id = $this->actingAs($employee, 'sanctum')
+            ->postJson("/api/v1/employees/{$employee->id}/leaves", $this->leavePayload([
+                'startDate' => '2026-10-09', 'endDate' => '2026-10-12',
+            ]))
+            ->assertCreated()->assertJsonPath('data.workingDays', 2)->json('data.id');
+        $this->getJson("/api/v1/employees/{$employee->id}/leaves?year=2026")
+            ->assertOk()->assertJsonPath('data.balances.0.remainingDays', 21);
+        $this->actingAs($manager, 'sanctum')->postJson("/api/v1/employee-leaves/{$id}/approve")
+            ->assertOk()->assertJsonPath('data.workingDays', 2);
+        $this->getJson("/api/v1/employees/{$employee->id}/leaves?year=2026")
+            ->assertOk()->assertJsonPath('data.balances.0.remainingDays', 19);
+    }
+
     public function test_approval_uses_current_policy_working_days_and_snapshots_its_version(): void
     {
         $employee = User::factory()->create(['is_employee' => true]);

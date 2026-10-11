@@ -147,7 +147,7 @@ class AdminStatsController extends Controller
             $activeClients = Client::whereHas('projects', function ($query) use ($activeProjectStatuses) {
                 $query->whereIn('status', $activeProjectStatuses);
             })->count();
-            $employeesCount = User::role(['admin', 'manager', 'developer'])->count();
+            $employeesCount = User::whereHas('roles', fn ($query) => $query->whereIn('name', ['admin', 'manager', 'developer']))->count();
             $todayAttendance = Attendance::whereDate('clock_in', Carbon::today())->count();
             $trackedMinutesToday = TimeEntry::whereDate('start_time', Carbon::today())
                 ->whereNotNull('end_time')

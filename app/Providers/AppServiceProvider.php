@@ -44,13 +44,15 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', function (Request $request): Limit {
             $identity = $request->user()?->getAuthIdentifier() ?? $request->ip();
 
-            return Limit::perMinute(300)->by((string) $identity);
+            return Limit::perMinute(max(1, (int) config('rate_limits.api_per_minute', 300)))->by((string) $identity);
         });
 
         RateLimiter::for('login', function (Request $request): Limit {
             $identity = Str::lower(trim((string) $request->input('email')));
 
-            return Limit::perMinute(10)->by($identity.'|'.$request->ip());
+            return Limit::perMinute(max(1, (int) config('rate_limits.failed_logins_per_minute', 10)))
+                ->by($identity.'|'.$request->ip())
+                ->after(fn ($response): bool => in_array($response->getStatusCode(), [401, 422], true));
         });
 
         // Force HTTPS URLs in production

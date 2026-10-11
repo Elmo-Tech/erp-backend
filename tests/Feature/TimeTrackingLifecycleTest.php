@@ -13,6 +13,7 @@ use App\Services\Sales\TimeTrackingService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use PHPUnit\Framework\Attributes\TestDox;
 use Tests\TestCase;
 
 class TimeTrackingLifecycleTest extends TestCase
@@ -122,5 +123,32 @@ class TimeTrackingLifecycleTest extends TestCase
 
         $service->resumeTimer($user, $held);
         $this->assertSame($activeStage->id, $task->fresh()->workflow_stage_id);
+    }
+
+    #[TestDox('Complete a running task from the board')]
+    public function test_end_endpoint_completes_the_task_and_closes_all_its_running_sessions(): void
+    {
+        Event::fake([TimerUpdated::class]);
+        $user = User::factory()->create();
+        $coworker = User::factory()->create();
+        $project = Project::factory()->create();
+        $task = Task::factory()->for($project)->create(['is_pipeline_task' => true]);
+        $service = app(TimeTrackingService::class);
+        $first = $service->startTimer($user, $task);
+        $second = $service->startTimer($coworker, $task);
+        $otherTask = Task::factory()->create();
+        $unrelated = $service->startTimer(User::factory()->create(), $otherTask);
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/v1/time-entries/end')
+            ->assertOk()->assertJsonPath('data.isActive', false)->assertJsonPath('data.stopReason', 'end');
+
+        $task->refresh();
+        $this->assertSame(TaskStatus::COMPLETED, $task->status);
+        $this->assertNotNull($task->completed_at);
+        $this->assertSame($project->workflowStages()->where('category', 'done')->firstOrFail()->id, $task->workflow_stage_id);
+        $this->assertNotNull($first->fresh()->end_time);
+        $this->assertNotNull($second->fresh()->end_time);
+        $this->assertNull($unrelated->fresh()->end_time);
+        $this->getJson('/api/v1/time-entries/resumable')->assertOk()->assertJsonPath('data', null);
     }
 }

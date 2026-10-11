@@ -214,6 +214,33 @@ class TimeTrackingService
         return $this->stopTimer($user, TimerStopReason::PAUSE);
     }
 
+    public function endTimer(User $user): TimeEntry
+    {
+        return DB::transaction(function () use ($user): TimeEntry {
+            $activeTimer = $this->getActiveTimer($user);
+            if ($activeTimer === null) {
+                throw new RuntimeException('No active timer found for this user.');
+            }
+
+            $activeTimer->loadMissing('trackable');
+            $ended = $this->closeTimer($activeTimer, TimerStopReason::END, Carbon::now('Africa/Cairo'));
+
+            if ($activeTimer->trackable instanceof Task) {
+                $task = Task::query()->whereKey($activeTimer->trackable_id)->lockForUpdate()->firstOrFail();
+                $task->update([
+                    ...$this->pipelineStageUpdates($task, 'done'),
+                    'status' => TaskStatus::COMPLETED,
+                    'completed_at' => now(),
+                    'hold_reason' => null,
+                    'updated_by' => $user->id,
+                ]);
+                $this->stopTimersForTrackable($task, TimerStopReason::END);
+            }
+
+            return $ended;
+        });
+    }
+
     public function holdTimer(User $user, string $reason): TimeEntry
     {
         $activeTimer = $this->getActiveTimer($user);
@@ -387,7 +414,7 @@ class TimeTrackingService
             return [];
         }
 
-        $project = $task->project()->first();
+        $project = $task->project()->withoutGlobalScopes()->first();
         if (! $project instanceof Project) {
             return [];
         }

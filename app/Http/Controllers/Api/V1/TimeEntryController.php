@@ -505,14 +505,11 @@ class TimeEntryController extends Controller
     public function end(Request $request): JsonResponse
     {
         try {
-            $timeEntry = $this->timeTrackingService->stopTimer(
-                $request->user(),
-                TimerStopReason::END
-            );
+            $timeEntry = $this->timeTrackingService->endTimer($request->user());
 
             return ApiResponse::success(
                 new TimeEntryResource($timeEntry->load('trackable')),
-                'Timer ended successfully'
+                'Work completed successfully'
             );
         } catch (\RuntimeException $exception) {
             return ApiResponse::error($exception->getMessage(), 400);

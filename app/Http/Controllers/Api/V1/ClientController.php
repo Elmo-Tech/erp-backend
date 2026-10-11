@@ -50,7 +50,13 @@ class ClientController extends Controller
 
         $clients = QueryBuilder::for(Client::class)
             ->allowedFilters([
-                AllowedFilter::partial('search', 'name'),
+                AllowedFilter::callback('search', function ($query, $value): void {
+                    $query->where(function ($query) use ($value): void {
+                        foreach (['name', 'email', 'company', 'website', 'city'] as $column) {
+                            $query->orWhere($column, 'like', '%'.$value.'%');
+                        }
+                    });
+                }),
                 AllowedFilter::exact('status'),
                 AllowedFilter::partial('company'),
                 AllowedFilter::partial('email'),

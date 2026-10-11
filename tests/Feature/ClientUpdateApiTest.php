@@ -34,6 +34,14 @@ class ClientUpdateApiTest extends TestCase
             'website' => 'https://updated.example.com',
             'city' => 'San Francisco',
         ]);
+
+        foreach (['San Francisco', 'updated.example.com'] as $search) {
+            $this->getJson('/api/v1/clients?'.http_build_query(['filter' => ['search' => $search]]))
+                ->assertOk()
+                ->assertJsonCount(1, 'data.clients')
+                ->assertJsonPath('data.clients.0.city', 'San Francisco')
+                ->assertJsonPath('data.clients.0.website', 'https://updated.example.com');
+        }
     }
 
     public function test_client_update_rejects_another_clients_email(): void

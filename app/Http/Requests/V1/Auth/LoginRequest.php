@@ -54,7 +54,7 @@ class LoginRequest extends FormRequest
     protected function failedValidation(Validator $validator): void
     {
         throw new HttpResponseException(
-            ApiResponse::error('Validation failed', $validator->errors()->toArray(), 422)
+            ApiResponse::error('Validation failed', 422, $validator->errors()->toArray())
         );
     }
 }

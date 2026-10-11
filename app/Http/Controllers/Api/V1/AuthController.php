@@ -116,7 +116,7 @@ class AuthController extends Controller
         $credentials = $request->validated();
 
         if (! Auth::attempt($credentials)) {
-            return ApiResponse::error('Invalid credentials', [], 401);
+            return ApiResponse::error('Invalid credentials', 401);
         }
 
         $user = Auth::user();
