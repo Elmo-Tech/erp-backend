@@ -29,7 +29,7 @@ class DirectEmployeeDeductionController extends Controller
 
     public function activeTypes(Request $request): JsonResponse
     {
-        abort_unless($request->user()?->can('manage_employees'), 403);
+        abort_unless($request->user()?->can('manage_employees') || $request->user()?->can('manage_deductions'), 403);
 
         $types = DeductionType::query()
             ->active()
@@ -80,7 +80,7 @@ class DirectEmployeeDeductionController extends Controller
     public function store(StoreDirectEmployeeDeductionRequest $request, int $id): JsonResponse
     {
         $employee = $this->findEmployee($id);
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_deductions');
         $validated = $request->validated();
 
         $deduction = DB::transaction(function () use ($employee, $validated): EmployeeDeduction {

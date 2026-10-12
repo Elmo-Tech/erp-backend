@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\HR\EmployeeDeductionController;
 use App\Http\Controllers\Api\V1\HR\EmployeeDocumentController;
 use App\Http\Controllers\Api\V1\HR\EmployeeLateDeductionController;
 use App\Http\Controllers\Api\V1\HR\EmployeeOvertimeRequestController;
+use App\Http\Controllers\Api\V1\HR\EmployeeOverviewController;
 use App\Http\Controllers\Api\V1\HR\EmployeePartialPayController;
 use App\Http\Controllers\Api\V1\HR\EmployeeRewardController;
 use App\Http\Controllers\Api\V1\HR\EmployeeShortPermissionController;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 // inside their controllers.
 
 Route::middleware(['auth:sanctum', 'locale'])->group(function () {
+    Route::get('employees/{id}/overview', EmployeeOverviewController::class)->name('employees.overview');
     Route::get('employees/{id}/documents', [EmployeeDocumentController::class, 'index'])->name('employees.documents.index');
     Route::post('employees/{id}/documents', [EmployeeDocumentController::class, 'store'])->name('employees.documents.store');
     Route::get('employee-documents/{document}/download', [EmployeeDocumentController::class, 'download'])->name('employee-documents.download');
@@ -100,7 +102,7 @@ Route::prefix('hr')->middleware(['auth:sanctum', 'locale'])->group(function () {
     });
 
     // Deduction Types Routes
-    Route::apiResource('deduction-types', DeductionTypeController::class)->middleware('simplified.disabled:advanced_deductions');
+    Route::apiResource('deduction-types', DeductionTypeController::class);
 
     // Reward Types Routes
     Route::apiResource('reward-types', RewardTypeController::class)->middleware('simplified.disabled:rewards');

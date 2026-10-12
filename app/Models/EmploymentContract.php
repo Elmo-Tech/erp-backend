@@ -24,6 +24,7 @@ class EmploymentContract extends Model
         'employee_id',
         'employment_type',
         'base_salary',
+        'hourly_rate',
         'start_date',
         'end_date',
         'terminated_on',
@@ -46,6 +47,7 @@ class EmploymentContract extends Model
     {
         return [
             'base_salary' => 'decimal:2',
+            'hourly_rate' => 'decimal:2',
             'start_date' => 'date',
             'end_date' => 'date',
             'terminated_on' => 'date',

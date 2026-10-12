@@ -16,28 +16,22 @@ class EmployeeShortPermissionApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    #[TestDox('Create and approve a short permission')]
-    public function test_admin_can_find_and_approve_their_own_pending_request_as_paid(): void
+    #[TestDox('Register an admin short permission as paid in one step')]
+    public function test_admin_registers_paid_permission_without_a_second_approval(): void
     {
         $admin = User::factory()->create(['name' => 'Review Admin', 'is_employee' => true]);
         $admin->assignRole(Role::findOrCreate('admin', 'web'));
         $admin->givePermissionTo(Permission::findOrCreate('manage_permissions', 'web'));
         $id = $this->actingAs($admin, 'sanctum')
             ->postJson("/api/v1/employees/{$admin->id}/short-permissions", $this->payload([
-                'permissionDate' => '2026-10-12', 'startTime' => '09:00', 'endTime' => '10:00',
+                'permissionDate' => '2026-10-12', 'startTime' => '09:00', 'endTime' => '10:00', 'compensationType' => 'paid',
             ]))
-            ->assertCreated()->json('data.id');
+            ->assertCreated()->assertJsonPath('data.status', 'approved')->assertJsonPath('data.isPaid', true)->json('data.id');
 
         $this->getJson('/api/v1/employee-short-permissions/pending')
-            ->assertOk()->assertJsonCount(1, 'data.permissions')
-            ->assertJsonPath('data.permissions.0.id', $id)
-            ->assertJsonPath('data.permissions.0.employee.name', 'Review Admin')
-            ->assertJsonPath('data.permissions.0.canReview', true);
+            ->assertOk()->assertJsonCount(0, 'data.permissions');
         $this->getJson("/api/v1/employees/{$admin->id}/short-permissions?month=2026-10")
             ->assertOk()->assertJsonPath('data.canReview', true)->assertJsonPath('data.permissions.0.id', $id);
-        $this->postJson("/api/v1/employee-short-permissions/{$id}/approve", ['compensationType' => 'paid'])
-            ->assertOk()->assertJsonPath('data.status', 'approved')
-            ->assertJsonPath('data.isPaid', true)->assertJsonPath('data.allowance.usedPaidMinutes', 60);
         $this->assertSame(60, EmployeePermissionAllowance::sole()->used_paid_minutes);
         $this->getJson('/api/v1/employee-short-permissions/pending')
             ->assertOk()->assertJsonCount(0, 'data.permissions');
@@ -55,11 +49,11 @@ class EmployeeShortPermissionApiTest extends TestCase
         $ownId = $this->createRequest($approver);
         $firstId = $this->createRequest($firstEmployee, ['permissionDate' => '2026-01-12']);
         $this->createRequest($peer);
-        $secondId = $this->actingAs($approver, 'sanctum')
+        $secondId = $this->actingAs($secondEmployee, 'sanctum')
             ->postJson("/api/v1/employees/{$secondEmployee->id}/short-permissions", $this->payload())
             ->assertCreated()->json('data.id');
 
-        $response = $this->getJson('/api/v1/employee-short-permissions/pending')
+        $response = $this->actingAs($approver, 'sanctum')->getJson('/api/v1/employee-short-permissions/pending')
             ->assertOk()->assertJsonCount(3, 'data.permissions');
         $permissions = collect($response->json('data.permissions'))->keyBy('id');
         $this->assertTrue($permissions[$firstId]['canReview']);
@@ -121,8 +115,9 @@ class EmployeeShortPermissionApiTest extends TestCase
             ->assertForbidden();
 
         $permissionId = $this->actingAs($manager, 'sanctum')
-            ->postJson("/api/v1/employees/{$otherEmployee->id}/short-permissions", $this->payload())
+            ->postJson("/api/v1/employees/{$otherEmployee->id}/short-permissions", $this->payload(['compensationType' => 'paid']))
             ->assertCreated()
+            ->assertJsonPath('data.status', 'approved')
             ->assertJsonPath('data.employeeId', $otherEmployee->id)
             ->json('data.id');
 

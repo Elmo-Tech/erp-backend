@@ -92,9 +92,13 @@ class EmployeeShortPermissionController extends Controller
         }
 
         $validated = $request->validate($this->requestRules());
+        $registerDirectly = $this->administrationPolicy->canRegisterHrRecord($request->user(), $employee, 'manage_permissions');
+        if ($registerDirectly && empty($validated['compensationType'])) {
+            throw ValidationException::withMessages(['compensationType' => ['Choose Paid or Unpaid when registering a short permission.']]);
+        }
         $durationMinutes = $this->durationMinutes($validated['startTime'], $validated['endTime']);
 
-        $permission = DB::transaction(function () use ($employee, $validated, $durationMinutes): EmployeeShortPermission {
+        $permission = DB::transaction(function () use ($employee, $validated, $durationMinutes, $request, $registerDirectly): EmployeeShortPermission {
             User::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
             $this->assertNoOverlap(
                 $employee->id,
@@ -103,7 +107,7 @@ class EmployeeShortPermissionController extends Controller
                 $validated['endTime']
             );
 
-            return EmployeeShortPermission::create([
+            $permission = EmployeeShortPermission::create([
                 'employee_id' => $employee->id,
                 'permission_date' => $validated['permissionDate'],
                 'start_time' => $validated['startTime'],
@@ -112,11 +116,17 @@ class EmployeeShortPermissionController extends Controller
                 'status' => EmployeeShortPermission::STATUS_PENDING,
                 'reason' => $validated['reason'] ?? null,
             ]);
+
+            if ($registerDirectly) {
+                [$permission] = $this->approvePermission($permission, $validated['compensationType'], $request->user()->id);
+            }
+
+            return $permission;
         });
 
         return ApiResponse::success(
             new EmployeeShortPermissionResource($permission),
-            'Short permission request created successfully',
+            $registerDirectly ? 'Short permission registered successfully' : 'Short permission request created successfully',
             201
         );
     }
@@ -169,7 +179,24 @@ class EmployeeShortPermissionController extends Controller
         ]);
         $actorId = $request->user()->id;
 
-        [$permission, $allowance] = DB::transaction(function () use ($permission, $validated, $actorId): array {
+        [$permission, $allowance] = $this->approvePermission($permission, $validated['compensationType'], $actorId, $validated['reviewNote'] ?? null);
+
+        $period = $permission->permission_date->format('Y-m');
+        $allowanceSummary = $this->allowanceSummary($allowance, $period);
+
+        return ApiResponse::success(array_merge(
+            (new EmployeeShortPermissionResource($permission))->resolve($request),
+            [
+                'allowance' => $allowanceSummary,
+                'remainingMinutes' => $allowanceSummary['remainingMinutes'],
+                'overageMinutes' => $allowanceSummary['overageMinutes'],
+            ]
+        ), 'Short permission request approved successfully');
+    }
+
+    private function approvePermission(EmployeeShortPermission $permission, string $compensationType, int $actorId, ?string $reviewNote = null): array
+    {
+        return DB::transaction(function () use ($permission, $compensationType, $reviewNote, $actorId): array {
             User::query()->whereKey($permission->employee_id)->lockForUpdate()->firstOrFail();
             $permission = EmployeeShortPermission::query()->lockForUpdate()->findOrFail($permission->id);
             $this->assertPending($permission);
@@ -181,7 +208,7 @@ class EmployeeShortPermissionController extends Controller
                 $permission->id
             );
             [$allocatedMinutes, $policy] = $this->leaveService->monthlyPaidPermissionMinutes();
-            $isPaid = $validated['compensationType'] === 'paid';
+            $isPaid = $compensationType === 'paid';
             $allowance = null;
 
             if ($isPaid) {
@@ -201,24 +228,12 @@ class EmployeeShortPermissionController extends Controller
                 'status' => EmployeeShortPermission::STATUS_APPROVED,
                 'reviewed_by' => $actorId,
                 'reviewed_at' => now(),
-                'review_note' => $validated['reviewNote'] ?? null,
+                'review_note' => $reviewNote,
                 'policy_version_id' => $policy?->id,
             ]);
 
             return [$permission->fresh(), $allowance?->fresh()];
         });
-
-        $period = $permission->permission_date->format('Y-m');
-        $allowanceSummary = $this->allowanceSummary($allowance, $period);
-
-        return ApiResponse::success(array_merge(
-            (new EmployeeShortPermissionResource($permission))->resolve($request),
-            [
-                'allowance' => $allowanceSummary,
-                'remainingMinutes' => $allowanceSummary['remainingMinutes'],
-                'overageMinutes' => $allowanceSummary['overageMinutes'],
-            ]
-        ), 'Short permission request approved successfully');
     }
 
     public function reject(Request $request, EmployeeShortPermission $permission): JsonResponse
@@ -307,6 +322,7 @@ class EmployeeShortPermissionController extends Controller
             'startTime' => ['required', 'date_format:H:i'],
             'endTime' => ['required', 'date_format:H:i'],
             'reason' => ['nullable', 'string', 'max:2000'],
+            'compensationType' => ['nullable', 'in:paid,unpaid'],
         ];
     }
 

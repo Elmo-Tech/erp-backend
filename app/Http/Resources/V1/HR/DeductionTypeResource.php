@@ -24,7 +24,7 @@ class DeductionTypeResource extends JsonResource
             'name' => $deductionType->name,
             'code' => $deductionType->code,
             'description' => $deductionType->description,
-            'category' => null,
+            'category' => $deductionType->category,
             'is_active' => $deductionType->is_active,
             'requires_approval' => $deductionType->requires_approval,
             'auto_calculate' => false,

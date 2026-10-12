@@ -82,9 +82,7 @@ class LeaveManagementController extends Controller
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
-        if (! $request->user()->is($employee)) {
-            abort_unless($request->user()?->can('manage_employees'), 403);
-        }
+        $this->administrationPolicy->authorizeHrView($request->user(), $employee, 'manage_leaves');
 
         $validated = $request->validate([
             'year' => ['nullable', 'integer', 'between:1000,9999'],
@@ -141,7 +139,7 @@ class LeaveManagementController extends Controller
         }
 
         if (! $request->user()->is($employee)) {
-            $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+            $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_leaves');
         }
 
         $validated = $request->validate($this->leaveRequestRules());
@@ -153,11 +151,12 @@ class LeaveManagementController extends Controller
 
         [$workingDays] = $this->leaveService->calculateWorkingDays(
             $validated['startDate'],
-            $validated['endDate']
+            $validated['endDate'],
+            $employee->id,
         );
         $this->assertPositiveWorkingDays($workingDays);
 
-        $leave = DB::transaction(function () use ($employee, $leaveType, $validated, $workingDays): EmployeeLeave {
+        $leave = DB::transaction(function () use ($employee, $leaveType, $validated, $workingDays, $request): EmployeeLeave {
             User::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
             $leaveType = LeaveType::query()
                 ->active()
@@ -171,10 +170,10 @@ class LeaveManagementController extends Controller
             $this->assertNoOverlap(
                 $employee->id,
                 $validated['startDate'],
-                $validated['endDate']
+                $validated['endDate'],
             );
 
-            return EmployeeLeave::create([
+            $leave = EmployeeLeave::create([
                 'employee_id' => $employee->id,
                 'leave_type_id' => $leaveType->id,
                 'start_date' => $validated['startDate'],
@@ -184,11 +183,15 @@ class LeaveManagementController extends Controller
                 'status' => EmployeeLeave::STATUS_PENDING,
                 'reason' => $validated['reason'] ?? null,
             ]);
+
+            return $this->administrationPolicy->canRegisterHrRecord($request->user(), $employee, 'manage_leaves')
+                ? $this->approveLeave($leave, $request->user()->id)
+                : $leave;
         });
 
         return ApiResponse::success(
             new EmployeeLeaveResource($leave->load('leaveType')),
-            'Leave request created successfully',
+            $leave->status === EmployeeLeave::STATUS_APPROVED ? 'Leave registered and approved successfully' : 'Leave request created successfully',
             201
         );
     }
@@ -216,7 +219,8 @@ class LeaveManagementController extends Controller
 
             [$workingDays] = $this->leaveService->calculateWorkingDays(
                 $validated['startDate'],
-                $validated['endDate']
+                $validated['endDate'],
+                $leave->employee_id,
             );
             $this->assertPositiveWorkingDays($workingDays);
             $this->assertNoOverlap(
@@ -248,7 +252,14 @@ class LeaveManagementController extends Controller
         $validated = $request->validate($this->reviewNoteRules());
         $actorId = $request->user()->id;
 
-        $leave = DB::transaction(function () use ($leave, $validated, $actorId): EmployeeLeave {
+        $leave = $this->approveLeave($leave, $actorId, $validated['reviewNote'] ?? null);
+
+        return ApiResponse::success(new EmployeeLeaveResource($leave), 'Leave request approved successfully');
+    }
+
+    private function approveLeave(EmployeeLeave $leave, int $actorId, ?string $reviewNote = null): EmployeeLeave
+    {
+        return DB::transaction(function () use ($leave, $reviewNote, $actorId): EmployeeLeave {
             User::query()->whereKey($leave->employee_id)->lockForUpdate()->firstOrFail();
             $leave = EmployeeLeave::query()
                 ->with('leaveType')
@@ -264,7 +275,8 @@ class LeaveManagementController extends Controller
 
             [$workingDays, $policy] = $this->leaveService->calculateWorkingDays(
                 $leave->start_date->toDateString(),
-                $leave->end_date->toDateString()
+                $leave->end_date->toDateString(),
+                $leave->employee_id,
             );
             $this->assertPositiveWorkingDays($workingDays);
 
@@ -293,7 +305,7 @@ class LeaveManagementController extends Controller
                 'status' => EmployeeLeave::STATUS_APPROVED,
                 'reviewed_by' => $actorId,
                 'reviewed_at' => now(),
-                'review_note' => $validated['reviewNote'] ?? null,
+                'review_note' => $reviewNote,
                 'policy_version_id' => $policy?->id,
             ]);
 
@@ -305,8 +317,6 @@ class LeaveManagementController extends Controller
 
             return $leave->fresh(['leaveType']);
         });
-
-        return ApiResponse::success(new EmployeeLeaveResource($leave), 'Leave request approved successfully');
     }
 
     public function reject(Request $request, EmployeeLeave $leave): JsonResponse

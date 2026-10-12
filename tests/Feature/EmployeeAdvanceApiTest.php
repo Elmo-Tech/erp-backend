@@ -141,7 +141,7 @@ class EmployeeAdvanceApiTest extends TestCase
         ]);
     }
 
-    public function test_managers_cannot_approve_or_reject_the_request_they_created(): void
+    public function test_managers_can_review_advances_they_registered_for_an_employee_but_not_their_own(): void
     {
         $employee = $this->employee();
         $manager = $this->employeeManager();
@@ -149,11 +149,14 @@ class EmployeeAdvanceApiTest extends TestCase
 
         $this->actingAs($manager, 'sanctum')
             ->postJson("/api/v1/employee-advances/{$advanceId}/approve")
-            ->assertForbidden();
+            ->assertOk()->assertJsonPath('data.approvedBy', $manager->id);
+        $ownId = $this->createAdvance($manager, $manager);
+        $this->actingAs($manager, 'sanctum')->postJson("/api/v1/employee-advances/{$ownId}/approve")->assertForbidden();
         $this->actingAs($manager, 'sanctum')
-            ->postJson("/api/v1/employee-advances/{$advanceId}/reject")
+            ->postJson("/api/v1/employee-advances/{$ownId}/reject")
             ->assertForbidden();
 
+        $advanceId = $this->createAdvance($manager, $employee);
         $otherManager = $this->employeeManager();
         $this->actingAs($otherManager, 'sanctum')
             ->postJson("/api/v1/employee-advances/{$advanceId}/reject", ['reviewNote' => 'Reviewed independently.'])

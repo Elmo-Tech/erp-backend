@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Traits\HasCreatedUpdatedBy;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -19,9 +21,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property bool $requires_approval
  * @property int $grace_period_minutes
  * @property array<string, mixed>|null $rules
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \Illuminate\Database\Eloquent\Collection<int, DeductionRule> $deductionRules
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Collection<int, DeductionRule> $deductionRules
  */
 class DeductionType extends Model
 {
@@ -31,6 +33,7 @@ class DeductionType extends Model
         'name',
         'code',
         'description',
+        'category',
         'calculation_type',
         'amount',
         'is_active',

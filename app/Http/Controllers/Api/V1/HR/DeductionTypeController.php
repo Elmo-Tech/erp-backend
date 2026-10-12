@@ -31,7 +31,7 @@ class DeductionTypeController extends Controller
                 AllowedFilter::exact('category'),
             ])
             ->allowedSorts(['name', 'created_at', 'is_active'])
-            ->with(['deductionRules'])
+            ->when(! config('simplification.enabled'), fn ($query) => $query->with('deductionRules'))
             ->paginate($request->get('per_page', 15));
 
         return response()->json(new DeductionTypeCollection($deductionTypes));
@@ -44,7 +44,10 @@ class DeductionTypeController extends Controller
     {
         $this->authorize('create', DeductionType::class);
 
-        $deductionType = DeductionType::create($request->validated());
+        $deductionType = DeductionType::create(array_merge($request->validated(), [
+            'calculation_type' => DeductionType::CALCULATION_FIXED,
+            'amount' => $request->validated('default_amount') ?? 0,
+        ]));
 
         return response()->json([
             'message' => 'Deduction type created successfully',
@@ -59,9 +62,12 @@ class DeductionTypeController extends Controller
     {
         $this->authorize('view', $deductionType);
 
-        $deductionType->load(['deductionRules', 'employeeDeductions' => function ($query) {
+        $deductionType->load(['employeeDeductions' => function ($query) {
             $query->latest()->limit(10);
         }]);
+        if (! config('simplification.enabled')) {
+            $deductionType->load('deductionRules');
+        }
 
         return response()->json(new DeductionTypeResource($deductionType));
     }
@@ -73,7 +79,11 @@ class DeductionTypeController extends Controller
     {
         $this->authorize('update', $deductionType);
 
-        $deductionType->update($request->validated());
+        $attributes = $request->validated();
+        if (array_key_exists('default_amount', $attributes)) {
+            $attributes['amount'] = $attributes['default_amount'] ?? 0;
+        }
+        $deductionType->update($attributes);
 
         return response()->json([
             'message' => 'Deduction type updated successfully',

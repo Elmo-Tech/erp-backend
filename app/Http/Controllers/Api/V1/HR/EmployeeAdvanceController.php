@@ -30,7 +30,7 @@ class EmployeeAdvanceController extends Controller
     public function history(Request $request, int $id): JsonResponse
     {
         $employee = $this->findEmployee($id);
-        $this->authorizeEmployeeAccess($request->user(), $employee);
+        $this->administrationPolicy->authorizeHrView($request->user(), $employee, 'manage_employees');
         $validated = $request->validate([
             'year' => ['required', 'integer', 'digits:4'],
             'month' => ['required', 'integer', 'between:1,12'],
@@ -80,7 +80,7 @@ class EmployeeAdvanceController extends Controller
     public function show(Request $request, EmployeeAdvance $advance): JsonResponse
     {
         $advance->loadMissing('employee', 'settlements');
-        $this->authorizeEmployeeAccess($request->user(), $advance->employee);
+        $this->administrationPolicy->authorizeHrView($request->user(), $advance->employee, 'manage_employees');
 
         return response()->json([
             'data' => new EmployeeAdvanceResource($advance),
@@ -91,7 +91,7 @@ class EmployeeAdvanceController extends Controller
     {
         $advance->loadMissing('employee');
         $this->authorizeManager($request->user(), $advance);
-        abort_if($advance->created_by === $request->user()->id, 403);
+        abort_if($advance->employee_id === $request->user()->id, 403);
         $validated = $request->validated();
         $advance = $this->employeeAdvanceService->approve(
             $advance,
@@ -110,7 +110,7 @@ class EmployeeAdvanceController extends Controller
     {
         $advance->loadMissing('employee');
         $this->authorizeManager($request->user(), $advance);
-        abort_if($advance->created_by === $request->user()->id, 403);
+        abort_if($advance->employee_id === $request->user()->id, 403);
         $advance = $this->employeeAdvanceService->reject(
             $advance,
             $request->user(),

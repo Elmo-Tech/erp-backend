@@ -130,7 +130,12 @@ class UserAdministrationPolicy
 
     public function canReviewShortPermission(User $actor, User $target): bool
     {
-        if (! $actor->can('manage_permissions') && ! $actor->can('manage_employees')) {
+        return $this->canRegisterHrRecord($actor, $target, 'manage_permissions');
+    }
+
+    public function canRegisterHrRecord(User $actor, User $target, string $permission): bool
+    {
+        if (! $actor->can($permission) && ! $actor->can('manage_employees')) {
             return false;
         }
 

@@ -8,6 +8,7 @@ use App\Models\HrPolicy;
 use App\Models\SalaryAdjustment;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -18,6 +19,46 @@ class OvertimeRequestService
     private const DEFAULT_OVERTIME_MULTIPLIER = 1.5;
 
     private const DEFAULT_WORK_HOURS_PER_DAY = 8;
+
+    public function periodSummary(User $employee, int $year, int $month, ?Collection $requests = null): array
+    {
+        $requests ??= EmployeeOvertimeRequest::where('employee_id', $employee->id)->whereYear('overtime_date', $year)->whereMonth('overtime_date', $month)->get();
+        $approved = $requests->where('status', EmployeeOvertimeRequest::STATUS_APPROVED);
+        $approvedDates = $approved->map(fn ($request) => $request->overtime_date->toDateString())->flip();
+        $attendance = Attendance::where('user_id', $employee->id)->whereYear('date', $year)->whereMonth('date', $month)->whereNotNull('clock_out')->get();
+        $actualMinutes = 0;
+        $unrequestedMinutes = 0;
+        $unrequestedDays = [];
+
+        foreach ($attendance as $record) {
+            $expected = $record->expected_clock_out ?: $employee->expected_clock_out;
+            if (! is_string($expected) || $expected === '') {
+                continue;
+            }
+            $date = $record->date->toDateString();
+            $expectedAt = Carbon::parse($date.' '.substr($expected, 0, 5));
+            $extraMinutes = max(0, (int) $expectedAt->diffInMinutes($record->clock_out, false));
+            $actualMinutes += $extraMinutes;
+            if ($extraMinutes > 0 && ! $approvedDates->has($date)) {
+                $unrequestedMinutes += $extraMinutes;
+                $unrequestedDays[] = ['date' => $date, 'extraMinutes' => $extraMinutes];
+            }
+        }
+
+        $approvedMinutes = (int) $approved->sum('approved_minutes');
+
+        return [
+            'requestedMinutes' => (int) $requests->whereIn('status', [EmployeeOvertimeRequest::STATUS_PENDING, EmployeeOvertimeRequest::STATUS_APPROVED])->sum('requested_minutes'),
+            'actualMinutes' => $actualMinutes,
+            'approvedMinutes' => $approvedMinutes,
+            'unapprovedMinutes' => max(0, $actualMinutes - $approvedMinutes),
+            'unrequestedMinutes' => $unrequestedMinutes,
+            'unrequestedDays' => $unrequestedDays,
+            'unrequestedDaysCount' => count($unrequestedDays),
+            'payableAmount' => (float) $approved->sum('payable_amount'),
+            'pendingCount' => $requests->where('status', EmployeeOvertimeRequest::STATUS_PENDING)->count(),
+        ];
+    }
 
     public function durationMinutes(string $startTime, string $endTime): int
     {
@@ -142,10 +183,20 @@ class OvertimeRequestService
             $overtimeRequest = EmployeeOvertimeRequest::query()
                 ->lockForUpdate()
                 ->findOrFail($overtimeRequest->id);
-            $this->assertPending($overtimeRequest);
+            if (! in_array($overtimeRequest->status, [EmployeeOvertimeRequest::STATUS_PENDING, EmployeeOvertimeRequest::STATUS_APPROVED], true)) {
+                throw ValidationException::withMessages(['status' => ['Only pending or approved overtime can be cancelled.']]);
+            }
+            $adjustment = SalaryAdjustment::query()->where('reference_type', EmployeeOvertimeRequest::class)
+                ->where('reference_id', $overtimeRequest->id)->lockForUpdate()->first();
+            if ($adjustment?->status === SalaryAdjustment::STATUS_PROCESSED) {
+                throw ValidationException::withMessages(['status' => ['Overtime already included in payroll cannot be cancelled.']]);
+            }
+            $adjustment?->cancel('Overtime cancelled.');
 
             $overtimeRequest->update([
                 'status' => EmployeeOvertimeRequest::STATUS_CANCELLED,
+                'approved_minutes' => 0,
+                'payable_amount' => 0,
                 'reviewed_by' => $actor->id,
                 'reviewed_at' => now(),
                 'review_note' => $reviewNote,

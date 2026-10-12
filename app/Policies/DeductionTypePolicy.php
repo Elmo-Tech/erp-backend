@@ -15,7 +15,7 @@ class DeductionTypePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole(['admin', 'hr_manager', 'manager']);
+        return $user->can('manage_deductions') || $user->can('manage_hr_settings') || $user->can('manage_employees');
     }
 
     /**
@@ -23,7 +23,7 @@ class DeductionTypePolicy
      */
     public function view(User $user, DeductionType $deductionType): bool
     {
-        return $user->hasRole(['admin', 'hr_manager', 'manager']);
+        return $this->viewAny($user);
     }
 
     /**
@@ -31,7 +31,7 @@ class DeductionTypePolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole(['admin', 'hr_manager']);
+        return $this->viewAny($user);
     }
 
     /**
@@ -39,7 +39,7 @@ class DeductionTypePolicy
      */
     public function update(User $user, DeductionType $deductionType): bool
     {
-        return $user->hasRole(['admin', 'hr_manager']);
+        return $this->viewAny($user);
     }
 
     /**
@@ -47,7 +47,7 @@ class DeductionTypePolicy
      */
     public function delete(User $user, DeductionType $deductionType): bool
     {
-        return $user->hasRole(['admin', 'hr_manager']);
+        return $this->viewAny($user);
     }
 
     /**

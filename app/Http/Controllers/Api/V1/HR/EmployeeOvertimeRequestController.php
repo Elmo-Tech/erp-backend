@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\HR\ReviewEmployeeOvertimeRequest;
 use App\Http\Requests\V1\HR\StoreEmployeeOvertimeRequest;
 use App\Http\Resources\V1\HR\EmployeeOvertimeRequestResource;
-use App\Models\Attendance;
 use App\Models\EmployeeOvertimeRequest;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
@@ -15,7 +14,6 @@ use App\Services\HR\EmployeeService;
 use App\Services\HR\OvertimeRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class EmployeeOvertimeRequestController extends Controller
@@ -44,74 +42,10 @@ class EmployeeOvertimeRequestController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        // Attendance-derived extra time for days without any approved request.
-        // Approved requests already carry their own actual/approved split via
-        // synchronize(); this covers the "worked late but never filed" case so
-        // managers see the full unapproved picture without double counting.
-        $approvedDates = $overtimeRequests
-            ->where('status', EmployeeOvertimeRequest::STATUS_APPROVED)
-            ->map(fn (EmployeeOvertimeRequest $r) => $r->overtime_date->toDateString())
-            ->unique()
-            ->flip();
-        $attendances = Attendance::query()
-            ->where('user_id', $employee->id)
-            ->whereYear('date', (int) $validated['year'])
-            ->whereMonth('date', (int) $validated['month'])
-            ->whereNotNull('clock_out')
-            ->get();
-        $unrequestedDays = [];
-        $unrequestedMinutes = 0;
-
-        foreach ($attendances as $attendance) {
-            $dateString = $attendance->date->toDateString();
-
-            if ($approvedDates->has($dateString)) {
-                continue;
-            }
-
-            $expected = $attendance->expected_clock_out ?: $employee->expected_clock_out;
-
-            if (! is_string($expected) || $expected === '' || $attendance->clock_out === null) {
-                continue;
-            }
-
-            $expectedAt = Carbon::parse($dateString.' '.substr($expected, 0, 5));
-            $clockOut = $attendance->clock_out;
-
-            if (! $clockOut->greaterThan($expectedAt)) {
-                continue;
-            }
-
-            $extra = (int) $expectedAt->diffInMinutes($clockOut);
-
-            if ($extra <= 0) {
-                continue;
-            }
-
-            $unrequestedMinutes += $extra;
-            $unrequestedDays[] = ['date' => $dateString, 'extraMinutes' => $extra];
-        }
-
-        $requestUnapproved = (int) $overtimeRequests->sum(
-            fn (EmployeeOvertimeRequest $request): int => $request->unapproved_minutes ?? 0
-        );
-
         return response()->json([
             'data' => [
                 'requests' => EmployeeOvertimeRequestResource::collection($overtimeRequests)->resolve($httpRequest),
-                'summary' => [
-                    'requestedMinutes' => (int) $overtimeRequests->sum('requested_minutes'),
-                    'actualMinutes' => (int) $overtimeRequests->sum('actual_minutes') + $unrequestedMinutes,
-                    'approvedMinutes' => (int) $overtimeRequests->sum('approved_minutes'),
-                    'unapprovedMinutes' => $requestUnapproved + $unrequestedMinutes,
-                    'unrequestedMinutes' => $unrequestedMinutes,
-                    'unrequestedDays' => $unrequestedDays,
-                    'unrequestedDaysCount' => count($unrequestedDays),
-                    'payableAmount' => (float) $overtimeRequests->sum('payable_amount'),
-                    'pendingCount' => $overtimeRequests
-                        ->where('status', EmployeeOvertimeRequest::STATUS_PENDING)
-                        ->count(),
-                ],
+                'summary' => $this->overtimeRequestService->periodSummary($employee, (int) $validated['year'], (int) $validated['month'], $overtimeRequests),
             ],
         ]);
     }
@@ -132,10 +66,11 @@ class EmployeeOvertimeRequestController extends Controller
             $validated['endTime'],
         );
 
-        $overtimeRequest = DB::transaction(function () use ($employee, $validated, $requestedMinutes): EmployeeOvertimeRequest {
+        $overtimeRequest = DB::transaction(function () use ($employee, $validated, $requestedMinutes, $httpRequest): EmployeeOvertimeRequest {
             User::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
+            $this->overtimeRequestService->assertSubmissionAllowed($employee, $validated['overtimeDate'], $validated['startTime'], $validated['endTime']);
 
-            return EmployeeOvertimeRequest::create([
+            $overtimeRequest = EmployeeOvertimeRequest::create([
                 'employee_id' => $employee->id,
                 'overtime_date' => $validated['overtimeDate'],
                 'start_time' => $validated['startTime'],
@@ -144,6 +79,13 @@ class EmployeeOvertimeRequestController extends Controller
                 'status' => EmployeeOvertimeRequest::STATUS_PENDING,
                 'reason' => $validated['reason'],
             ]);
+
+            if ($this->administrationPolicy->canRegisterHrRecord($httpRequest->user(), $employee, 'manage_overtime')) {
+                $overtimeRequest = $this->overtimeRequestService->approve($overtimeRequest, $httpRequest->user());
+                app(AuditService::class)->log('hr', 'overtime_approved', $overtimeRequest, ['hourlyRate' => $overtimeRequest->hourly_rate], 'info', 'Overtime registered and approved');
+            }
+
+            return $overtimeRequest;
         });
 
         return response()->json([

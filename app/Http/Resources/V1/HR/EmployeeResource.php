@@ -55,7 +55,7 @@ class EmployeeResource extends JsonResource
             'specialization' => $employee->specialization ?? '',
 
             // Work schedule
-            'workHoursPerDay' => (int) ($employee->work_hours_per_day ?? 0),
+            'workHoursPerDay' => (float) ($employee->work_hours_per_day ?? 0),
             'monthlyWorkHours' => app(SalaryRateCalculator::class)
                 ->monthlyWorkHours((float) ($employee->work_hours_per_day ?? 0)),
             'workStartTime' => $employee->work_start_time,

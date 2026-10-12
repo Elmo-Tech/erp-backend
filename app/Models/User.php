@@ -31,7 +31,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property float|int|string|null $salary
  * @property float|int|string|null $hourly_rate
  * @property float|int|string|null $total_deductions
- * @property int|null $work_hours_per_day
+ * @property float|null $work_hours_per_day
  * @property string|null $work_start_time
  * @property int|null $grace_days_allowed
  * @property int|null $grace_days_used
@@ -108,7 +108,7 @@ class User extends Authenticatable
             'specialization' => 'string',
             'is_active' => 'boolean',
             'is_employee' => 'boolean',
-            'work_hours_per_day' => 'integer',
+            'work_hours_per_day' => 'float',
             'grace_days_allowed' => 'integer',
             'grace_days_used' => 'integer',
             'grace_days_reset_date' => 'date',
@@ -243,7 +243,7 @@ class User extends Authenticatable
         }
 
         return Carbon::parse($this->work_start_time)
-            ->addHours($this->work_hours_per_day ?? 8)
+            ->addMinutes((int) round(($this->work_hours_per_day ?? 8) * 60))
             ->format('H:i:s');
     }
 

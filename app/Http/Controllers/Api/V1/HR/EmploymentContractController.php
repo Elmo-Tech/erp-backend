@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
 use App\Services\AuditService;
 use App\Services\HR\EmployeeService;
+use App\Services\HR\SalaryRateCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -248,7 +249,16 @@ class EmploymentContractController extends Controller
             return;
         }
 
-        User::query()->whereKey($employee->id)->update(['salary' => $contract->base_salary]);
+        $employee->update([
+            'salary' => $contract->base_salary,
+            'hourly_rate' => $contract->hourly_rate,
+            'work_hours_per_day' => $contract->work_hours_per_day,
+            'work_start_time' => $contract->work_start_time,
+            'internal_hourly_cost' => app(SalaryRateCalculator::class)->hourlyRate(
+                (float) $contract->base_salary,
+                (float) $contract->work_hours_per_day,
+            ),
+        ]);
     }
 
     private function contractAttributes(array $data, ?EmploymentContract $contract = null): array
@@ -259,6 +269,7 @@ class EmploymentContractController extends Controller
         return [
             'employment_type' => $data['employmentType'] ?? $contract?->employment_type,
             'base_salary' => $data['baseSalary'] ?? $contract?->base_salary,
+            'hourly_rate' => array_key_exists('hourlyRate', $data) ? $data['hourlyRate'] : $contract?->hourly_rate,
             'start_date' => $startDate,
             'end_date' => Carbon::parse($startDate)
                 ->addMonthsNoOverflow($durationMonths)

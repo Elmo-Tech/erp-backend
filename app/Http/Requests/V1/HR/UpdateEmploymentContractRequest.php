@@ -22,6 +22,7 @@ class UpdateEmploymentContractRequest extends FormRequest
             'employeeId' => ['prohibited'],
             'employmentType' => ['sometimes', 'string', Rule::in(['full_time', 'part_time'])],
             'baseSalary' => ['sometimes', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
+            'hourlyRate' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
             'startDate' => ['sometimes', 'date_format:Y-m-d'],
             'endDate' => ['prohibited'],
             'terminatedOn' => ['sometimes', 'nullable', 'date_format:Y-m-d'],

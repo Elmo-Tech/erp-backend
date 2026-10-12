@@ -87,8 +87,7 @@ class EmployeeOvertimeRequestApiTest extends TestCase
             ->assertJsonValidationErrors('status');
         $this->actingAs($employee, 'sanctum')
             ->postJson("/api/v1/employee-overtime-requests/{$requestId}/cancel")
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('status');
+            ->assertOk()->assertJsonPath('data.status', EmployeeOvertimeRequest::STATUS_CANCELLED);
 
         $managerCreatedRequestId = $this->actingAs($manager, 'sanctum')
             ->postJson("/api/v1/employees/{$employee->id}/overtime-requests", $this->payload($date, [
@@ -96,12 +95,12 @@ class EmployeeOvertimeRequestApiTest extends TestCase
                 'endTime' => '21:00',
             ]))
             ->assertCreated()
-            ->assertJsonPath('data.status', EmployeeOvertimeRequest::STATUS_PENDING)
+            ->assertJsonPath('data.status', EmployeeOvertimeRequest::STATUS_APPROVED)
+            ->assertJsonPath('data.reviewedBy', $manager->id)
             ->json('data.id');
         $this->actingAs($manager, 'sanctum')
             ->postJson("/api/v1/employee-overtime-requests/{$managerCreatedRequestId}/approve")
-            ->assertOk()
-            ->assertJsonPath('data.reviewedBy', $manager->id);
+            ->assertUnprocessable();
         $this->actingAs($manager, 'sanctum')
             ->postJson("/api/v1/employee-overtime-requests/{$managerCreatedRequestId}/reject")
             ->assertUnprocessable();
@@ -323,10 +322,9 @@ class EmployeeOvertimeRequestApiTest extends TestCase
 
         $id = $this->actingAs($approver, 'sanctum')
             ->postJson("/api/v1/employees/{$employee->id}/overtime-requests", $this->payload($date))
-            ->assertCreated()->json('data.id');
+            ->assertCreated()->assertJsonPath('data.status', EmployeeOvertimeRequest::STATUS_APPROVED)->json('data.id');
         $this->postJson("/api/v1/employee-overtime-requests/{$id}/approve")
-            ->assertOk()
-            ->assertJsonPath('data.status', EmployeeOvertimeRequest::STATUS_APPROVED);
+            ->assertUnprocessable();
         $this->getJson("/api/v1/employees/{$employee->id}/overtime-requests?year={$date->year}&month={$date->month}")
             ->assertOk()->assertJsonPath('data.requests.0.status', EmployeeOvertimeRequest::STATUS_APPROVED);
 

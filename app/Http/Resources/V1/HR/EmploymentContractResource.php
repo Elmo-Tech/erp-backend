@@ -19,6 +19,7 @@ class EmploymentContractResource extends JsonResource
             'employeeId' => $contract->employee_id,
             'employmentType' => $contract->employment_type,
             'baseSalary' => (float) $contract->base_salary,
+            'hourlyRate' => $contract->hourly_rate === null ? null : (float) $contract->hourly_rate,
             'startDate' => $contract->start_date?->toDateString(),
             'endDate' => $contract->end_date?->toDateString(),
             'terminatedOn' => $contract->terminated_on?->toDateString(),

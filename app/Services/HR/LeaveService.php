@@ -2,6 +2,7 @@
 
 namespace App\Services\HR;
 
+use App\Models\EmploymentContract;
 use App\Models\HrPolicy;
 use Illuminate\Support\Carbon;
 
@@ -28,10 +29,12 @@ class LeaveService
     /**
      * @return array{0: int, 1: HrPolicy|null}
      */
-    public function calculateWorkingDays(string $startDate, string $endDate): array
+    public function calculateWorkingDays(string $startDate, string $endDate, ?int $employeeId = null): array
     {
         $policy = $this->currentPolicy();
-        $workingDayNumbers = $this->workingDayNumbers($policy);
+        $contract = $employeeId === null ? null : EmploymentContract::where('employee_id', $employeeId)
+            ->where('status', EmploymentContract::STATUS_ACTIVE)->first();
+        $workingDayNumbers = $this->workingDayNumbers($policy, $contract?->work_days);
         $workingDays = 0;
 
         for ($date = Carbon::parse($startDate); $date->lte($endDate); $date->addDay()) {
@@ -71,12 +74,12 @@ class LeaveService
     /**
      * @return list<int>
      */
-    private function workingDayNumbers(?HrPolicy $policy): array
+    private function workingDayNumbers(?HrPolicy $policy, ?array $contractDays = null): array
     {
         $settings = $policy?->settings;
-        $configuredDays = is_array($settings)
+        $configuredDays = $contractDays ?? (is_array($settings)
             ? ($settings['workingDays'] ?? self::FALLBACK_WORKING_DAYS)
-            : self::FALLBACK_WORKING_DAYS;
+            : self::FALLBACK_WORKING_DAYS);
         $dayNumbers = [];
 
         if (is_array($configuredDays)) {

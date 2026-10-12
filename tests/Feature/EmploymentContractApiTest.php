@@ -181,7 +181,7 @@ class EmploymentContractApiTest extends TestCase
             ->assertJsonPath('data.isCurrent', false);
 
         $this->assertSame('1234.00', $employee->fresh()->salary);
-        $this->assertSame(6, $employee->fresh()->work_hours_per_day);
+        $this->assertSame(6.0, $employee->fresh()->work_hours_per_day);
         $this->assertSame('08:00:00', $employee->fresh()->work_start_time);
 
         $otherEmployee = User::factory()->create(['is_employee' => true]);
