@@ -48,6 +48,7 @@ Route::middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::post('employee-leaves/{leave}/cancel', [LeaveManagementController::class, 'cancel'])->name('employee-leaves.cancel');
 
     Route::get('employees/{id}/short-permissions', [EmployeeShortPermissionController::class, 'history'])->name('employees.short-permissions.index');
+    Route::get('employee-short-permissions/pending', [EmployeeShortPermissionController::class, 'pending'])->name('employee-short-permissions.pending');
     Route::post('employees/{id}/short-permissions', [EmployeeShortPermissionController::class, 'store'])->name('employees.short-permissions.store');
     Route::put('employee-short-permissions/{permission}', [EmployeeShortPermissionController::class, 'update'])->name('employee-short-permissions.update');
     Route::post('employee-short-permissions/{permission}/approve', [EmployeeShortPermissionController::class, 'approve'])->name('employee-short-permissions.approve');

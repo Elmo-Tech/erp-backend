@@ -7,12 +7,92 @@ use App\Models\HrPolicy;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\TestDox;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class EmployeeShortPermissionApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    #[TestDox('Create and approve a short permission')]
+    public function test_admin_can_find_and_approve_their_own_pending_request_as_paid(): void
+    {
+        $admin = User::factory()->create(['name' => 'Review Admin', 'is_employee' => true]);
+        $admin->assignRole(Role::findOrCreate('admin', 'web'));
+        $admin->givePermissionTo(Permission::findOrCreate('manage_permissions', 'web'));
+        $id = $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/v1/employees/{$admin->id}/short-permissions", $this->payload([
+                'permissionDate' => '2026-10-12', 'startTime' => '09:00', 'endTime' => '10:00',
+            ]))
+            ->assertCreated()->json('data.id');
+
+        $this->getJson('/api/v1/employee-short-permissions/pending')
+            ->assertOk()->assertJsonCount(1, 'data.permissions')
+            ->assertJsonPath('data.permissions.0.id', $id)
+            ->assertJsonPath('data.permissions.0.employee.name', 'Review Admin')
+            ->assertJsonPath('data.permissions.0.canReview', true);
+        $this->getJson("/api/v1/employees/{$admin->id}/short-permissions?month=2026-10")
+            ->assertOk()->assertJsonPath('data.canReview', true)->assertJsonPath('data.permissions.0.id', $id);
+        $this->postJson("/api/v1/employee-short-permissions/{$id}/approve", ['compensationType' => 'paid'])
+            ->assertOk()->assertJsonPath('data.status', 'approved')
+            ->assertJsonPath('data.isPaid', true)->assertJsonPath('data.allowance.usedPaidMinutes', 60);
+        $this->assertSame(60, EmployeePermissionAllowance::sole()->used_paid_minutes);
+        $this->getJson('/api/v1/employee-short-permissions/pending')
+            ->assertOk()->assertJsonCount(0, 'data.permissions');
+        $this->postJson("/api/v1/employee-short-permissions/{$id}/approve", ['compensationType' => 'paid'])
+            ->assertUnprocessable();
+        $this->assertSame(60, EmployeePermissionAllowance::sole()->fresh()->used_paid_minutes);
+    }
+
+    public function test_pending_queue_includes_authorized_requests_across_dates_and_creators_only(): void
+    {
+        $approver = $this->employeeManager();
+        $firstEmployee = User::factory()->create(['is_employee' => true]);
+        $secondEmployee = User::factory()->create(['is_employee' => true]);
+        $peer = $this->employeeManager();
+        $ownId = $this->createRequest($approver);
+        $firstId = $this->createRequest($firstEmployee, ['permissionDate' => '2026-01-12']);
+        $this->createRequest($peer);
+        $secondId = $this->actingAs($approver, 'sanctum')
+            ->postJson("/api/v1/employees/{$secondEmployee->id}/short-permissions", $this->payload())
+            ->assertCreated()->json('data.id');
+
+        $response = $this->getJson('/api/v1/employee-short-permissions/pending')
+            ->assertOk()->assertJsonCount(3, 'data.permissions');
+        $permissions = collect($response->json('data.permissions'))->keyBy('id');
+        $this->assertTrue($permissions[$firstId]['canReview']);
+        $this->assertTrue($permissions[$secondId]['canReview']);
+        $this->assertFalse($permissions[$ownId]['canReview']);
+
+        $this->actingAs($firstEmployee, 'sanctum')->getJson('/api/v1/employee-short-permissions/pending')
+            ->assertForbidden();
+    }
+
+    public function test_admin_self_approval_requires_the_short_permission_permission(): void
+    {
+        $admin = User::factory()->create(['is_employee' => true]);
+        $admin->assignRole(Role::findOrCreate('admin', 'web'));
+        $id = $this->createRequest($admin);
+        $this->getJson("/api/v1/employees/{$admin->id}/short-permissions?month=2026-10")
+            ->assertOk()->assertJsonPath('data.canReview', false);
+        $this->postJson("/api/v1/employee-short-permissions/{$id}/approve", ['compensationType' => 'paid'])
+            ->assertForbidden();
+    }
+
+    public function test_granular_short_permission_approver_can_load_and_review_the_employee_history(): void
+    {
+        $employee = User::factory()->create(['is_employee' => true]);
+        $id = $this->createRequest($employee);
+        $approver = User::factory()->create(['is_employee' => true]);
+        $approver->givePermissionTo(Permission::findOrCreate('manage_permissions', 'web'));
+        $this->actingAs($approver, 'sanctum')
+            ->getJson("/api/v1/employees/{$employee->id}/short-permissions?month=2026-10")
+            ->assertOk()->assertJsonPath('data.canReview', true)->assertJsonPath('data.permissions.0.id', $id);
+        $this->postJson("/api/v1/employee-short-permissions/{$id}/approve", ['compensationType' => 'paid'])
+            ->assertOk()->assertJsonPath('data.isPaid', true);
+    }
 
     public function test_employees_can_manage_only_their_own_requests_while_managers_can_manage_targets(): void
     {

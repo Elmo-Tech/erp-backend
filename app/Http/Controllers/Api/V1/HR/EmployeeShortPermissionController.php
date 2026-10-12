@@ -25,6 +25,25 @@ class EmployeeShortPermissionController extends Controller
         private readonly LeaveService $leaveService,
     ) {}
 
+    public function pending(Request $request): JsonResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor->can('manage_permissions') || $actor->can('manage_employees'), 403);
+
+        $permissions = EmployeeShortPermission::query()
+            ->with(['employee.roles.permissions', 'employee.permissions'])
+            ->where('status', EmployeeShortPermission::STATUS_PENDING)
+            ->orderBy('permission_date')
+            ->orderBy('start_time')
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (EmployeeShortPermission $permission): bool => $permission->employee !== null
+                && ($actor->is($permission->employee) || $this->administrationPolicy->canReviewShortPermission($actor, $permission->employee)))
+            ->values();
+
+        return ApiResponse::success(['permissions' => EmployeeShortPermissionResource::collection($permissions)]);
+    }
+
     public function history(Request $request, int $id): JsonResponse
     {
         $employee = $this->employeeService->getEmployee($id);
@@ -33,9 +52,7 @@ class EmployeeShortPermissionController extends Controller
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
-        if (! $request->user()->is($employee)) {
-            abort_unless($request->user()?->can('manage_employees'), 403);
-        }
+        $this->administrationPolicy->authorizeHrView($request->user(), $employee, 'manage_permissions');
 
         $validated = $request->validate([
             'month' => ['nullable', 'date_format:Y-m'],
@@ -58,6 +75,7 @@ class EmployeeShortPermissionController extends Controller
         return ApiResponse::success([
             'permissions' => EmployeeShortPermissionResource::collection($permissions),
             'allowance' => $this->allowanceSummary($allowance, $period),
+            'canReview' => $this->administrationPolicy->canReviewShortPermission($request->user(), $employee),
         ]);
     }
 
@@ -70,7 +88,7 @@ class EmployeeShortPermissionController extends Controller
         }
 
         if (! $request->user()->is($employee)) {
-            $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+            $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_permissions');
         }
 
         $validated = $request->validate($this->requestRules());
@@ -108,7 +126,7 @@ class EmployeeShortPermissionController extends Controller
         $permission->loadMissing('employee');
 
         if (! $request->user()->is($permission->employee)) {
-            $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $permission->employee);
+            $this->administrationPolicy->authorizeHrAction($request->user(), $permission->employee, 'manage_permissions');
         }
 
         $validated = $request->validate($this->requestRules());
@@ -144,7 +162,7 @@ class EmployeeShortPermissionController extends Controller
     public function approve(Request $request, EmployeeShortPermission $permission): JsonResponse
     {
         $permission->loadMissing('employee');
-        $this->administrationPolicy->authorizeHrAction($request->user(), $permission->employee, 'manage_permissions');
+        $this->administrationPolicy->authorizeShortPermissionReview($request->user(), $permission->employee);
         $validated = $request->validate([
             'compensationType' => ['required', 'in:paid,unpaid'],
             'reviewNote' => ['nullable', 'string', 'max:2000'],
@@ -206,7 +224,7 @@ class EmployeeShortPermissionController extends Controller
     public function reject(Request $request, EmployeeShortPermission $permission): JsonResponse
     {
         $permission->loadMissing('employee');
-        $this->administrationPolicy->authorizeHrAction($request->user(), $permission->employee, 'manage_permissions');
+        $this->administrationPolicy->authorizeShortPermissionReview($request->user(), $permission->employee);
         $validated = $request->validate($this->reviewNoteRules());
         $actorId = $request->user()->id;
 
@@ -233,7 +251,7 @@ class EmployeeShortPermissionController extends Controller
         $permission->loadMissing('employee');
 
         if (! $request->user()->is($permission->employee)) {
-            $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $permission->employee);
+            $this->administrationPolicy->authorizeHrAction($request->user(), $permission->employee, 'manage_permissions');
         }
 
         $validated = $request->validate($this->reviewNoteRules());

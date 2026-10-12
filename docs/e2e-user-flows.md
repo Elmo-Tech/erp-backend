@@ -9,8 +9,12 @@ run `php artisan config:clear` (or rebuild the configuration cache on deployment
 Default QA accounts are seeded by `AdminUserSeeder`. The admin and manager role
 permission sets include `view_admin_stats`; use an authorized account for Reports.
 Short permissions can be created and approved from Attendance Management's
-**Review short permissions** action. An employee's own requests require another
-authorized approver.
+**Review short permissions** action. Its pending queue covers all dates and
+employees in the current reviewer's scope, including requests entered by that
+reviewer. Admin and super-admin accounts with `manage_permissions` (or legacy
+`manage_employees`) may approve their own short permissions. Other employees'
+own requests require another authorized approver. **Mark as Paid** opens approval
+with paid compensation selected; **Approve** allows choosing paid or unpaid.
 
 Paid leave balances consume working days on approval. My Requests shows pending
 working days separately so a submitted request does not look like missing data.

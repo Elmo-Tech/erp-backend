@@ -116,8 +116,8 @@ class UserAdministrationPolicy
      * actor may always view their OWN records — the self-management ban in
      * authorizeManageTarget exists to stop privilege escalation (editing
      * your own roles/permissions), not to hide your own HR data from you.
-     * Review/approve endpoints must keep using authorizeHrAction so nobody
-     * approves their own requests.
+     * Review/approve endpoints normally use authorizeHrAction. Short permissions
+     * use authorizeShortPermissionReview for their admin self-approval rule.
      */
     public function authorizeHrView(User $actor, User $target, string $permission): void
     {
@@ -126,6 +126,27 @@ class UserAdministrationPolicy
         }
 
         $this->authorizeHrAction($actor, $target, $permission);
+    }
+
+    public function canReviewShortPermission(User $actor, User $target): bool
+    {
+        if (! $actor->can('manage_permissions') && ! $actor->can('manage_employees')) {
+            return false;
+        }
+
+        if ($actor->is($target)) {
+            return $actor->hasAnyRole(['admin', 'super-admin']);
+        }
+
+        $actorTier = max(2, $this->userTier($actor));
+        $targetTier = $this->userTier($target);
+
+        return $actorTier > $targetTier || ($actorTier === 3 && $targetTier === 3);
+    }
+
+    public function authorizeShortPermissionReview(User $actor, User $target): void
+    {
+        abort_unless($this->canReviewShortPermission($actor, $target), 403);
     }
 
     public function authorizeEmployeeRoleAssignment(User $actor, ?User $target, string $roleName): void
