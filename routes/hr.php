@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\HR\DirectEmployeeDeductionController;
 use App\Http\Controllers\Api\V1\HR\EmployeeAdvanceController;
 use App\Http\Controllers\Api\V1\HR\EmployeeDeductionController;
 use App\Http\Controllers\Api\V1\HR\EmployeeDocumentController;
+use App\Http\Controllers\Api\V1\HR\EmployeeHrReportController;
 use App\Http\Controllers\Api\V1\HR\EmployeeLateDeductionController;
 use App\Http\Controllers\Api\V1\HR\EmployeeOvertimeRequestController;
 use App\Http\Controllers\Api\V1\HR\EmployeeOverviewController;
@@ -25,6 +26,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::get('employees/{id}/overview', EmployeeOverviewController::class)->name('employees.overview');
+    Route::get('employees/{id}/hr-report', EmployeeHrReportController::class)->name('employees.hr-report');
     Route::get('employees/{id}/documents', [EmployeeDocumentController::class, 'index'])->name('employees.documents.index');
     Route::post('employees/{id}/documents', [EmployeeDocumentController::class, 'store'])->name('employees.documents.store');
     Route::get('employee-documents/{document}/download', [EmployeeDocumentController::class, 'download'])->name('employee-documents.download');

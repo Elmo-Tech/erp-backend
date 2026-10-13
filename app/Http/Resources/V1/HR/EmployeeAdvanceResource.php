@@ -28,6 +28,7 @@ class EmployeeAdvanceResource extends JsonResource
             'status' => $advance->status,
             'reason' => $advance->reason,
             'installmentCount' => $advance->installment_count,
+            'isSalaryWithdrawal' => (bool) $advance->is_salary_withdrawal,
             'policyVersionId' => $advance->policy_version_id,
             'policySnapshot' => $advance->policy_snapshot,
             'salaryAtApproval' => $advance->salary_at_approval === null ? null : (float) $advance->salary_at_approval,

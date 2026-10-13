@@ -36,12 +36,20 @@ class EmployeeAdvanceController extends Controller
             'month' => ['required', 'integer', 'between:1,12'],
         ]);
 
-        // Advance history is grouped by its request creation month, not a later review or disbursement date.
+        // Paid withdrawals belong to the actual payment month. Pending requests
+        // remain visible in the request month until paid.
         $advances = EmployeeAdvance::query()
             ->with('settlements')
             ->where('employee_id', $employee->id)
-            ->whereYear('created_at', (int) $validated['year'])
-            ->whereMonth('created_at', (int) $validated['month'])
+            ->where(function ($query) use ($validated): void {
+                $query->where(function ($paid) use ($validated): void {
+                    $paid->where('is_salary_withdrawal', true)->whereNotNull('disbursed_at')
+                        ->whereYear('disbursed_at', (int) $validated['year'])->whereMonth('disbursed_at', (int) $validated['month']);
+                })->orWhere(function ($requested) use ($validated): void {
+                    $requested->where(fn ($unpaid) => $unpaid->where('is_salary_withdrawal', false)->orWhereNull('disbursed_at'))
+                        ->whereYear('created_at', (int) $validated['year'])->whereMonth('created_at', (int) $validated['month']);
+                });
+            })
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
@@ -70,7 +78,8 @@ class EmployeeAdvanceController extends Controller
     {
         $employee = $this->findEmployee($id);
         $this->authorizeEmployeeAccess($request->user(), $employee);
-        $advance = $this->employeeAdvanceService->create($employee, $request->validated());
+        $advance = $this->employeeAdvanceService->recordWithdrawal($employee, $request->user(), $request->validated());
+        app(AuditService::class)->log('hr', 'salary_withdrawal_registered', $advance, ['amount' => $advance->requested_amount, 'status' => $advance->status, 'paidAt' => $advance->disbursed_at?->toISOString()], 'info', 'Salary withdrawal registered');
 
         return response()->json([
             'data' => new EmployeeAdvanceResource($advance->load('settlements')),

@@ -17,6 +17,7 @@ use App\Services\AuditService;
 use App\Services\HR\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -83,12 +84,14 @@ class DirectEmployeeDeductionController extends Controller
         $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_deductions');
         $validated = $request->validated();
 
-        $deduction = DB::transaction(function () use ($employee, $validated): EmployeeDeduction {
+        $deduction = DB::transaction(function () use ($employee, $validated, $request): EmployeeDeduction {
             User::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
-            $deductionType = DeductionType::query()
-                ->active()
-                ->lockForUpdate()
-                ->find($validated['deductionTypeId']);
+            $deductionType = isset($validated['deductionTypeId'])
+                ? DeductionType::query()->active()->lockForUpdate()->find($validated['deductionTypeId'])
+                : DeductionType::firstOrCreate(['code' => 'DIRECT_SALARY_DEDUCTION'], [
+                    'name' => 'Direct salary deduction', 'calculation_type' => DeductionType::CALCULATION_FIXED,
+                    'amount' => 0, 'is_active' => true, 'requires_approval' => false,
+                ]);
 
             if (! $deductionType) {
                 throw ValidationException::withMessages([
@@ -96,10 +99,12 @@ class DirectEmployeeDeductionController extends Controller
                 ]);
             }
 
-            return EmployeeDeduction::create([
+            $occurredAt = isset($validated['occurredAt']) ? Carbon::parse($validated['occurredAt'])->setTimezone(config('app.timezone')) : null;
+            $deduction = EmployeeDeduction::create([
                 'user_id' => $employee->id,
                 'deduction_type_id' => $deductionType->id,
-                'deduction_date' => $validated['deductionDate'],
+                'deduction_date' => $occurredAt?->toDateString() ?? $validated['deductionDate'],
+                'occurred_at' => $occurredAt,
                 'amount' => $validated['amount'],
                 'reason' => $validated['reason'],
                 'status' => EmployeeDeduction::STATUS_PENDING,
@@ -108,6 +113,14 @@ class DirectEmployeeDeductionController extends Controller
                 'deductible_type' => DeductionType::class,
                 'deductible_id' => $deductionType->id,
             ]);
+
+            if ($request->user()->hasAnyRole(['admin', 'super-admin'])) {
+                $deduction->approve($request->user()->id);
+                SalaryAdjustment::createFromDeduction($deduction, 'Automatically approved on administrative registration.');
+            }
+            app(AuditService::class)->log('hr', 'direct_deduction_registered', $deduction, ['amount' => $deduction->amount, 'status' => $deduction->status], 'info', 'Direct salary deduction registered');
+
+            return $deduction;
         });
 
         return response()->json([

@@ -55,20 +55,20 @@ class EmployeeHrWorkspaceApiTest extends TestCase
         $this->assertSame(0, EmployeePermissionAllowance::sole()->used_paid_minutes);
     }
 
-    public function test_contract_is_the_source_of_salary_hourly_rate_and_fractional_work_schedule(): void
+    public function test_contract_is_the_source_of_salary_monthly_target_and_fractional_work_schedule(): void
     {
         $manager = $this->manager();
         $employee = User::factory()->create(['is_employee' => true, 'salary' => null]);
         $id = $this->actingAs($manager, 'sanctum')->postJson("/api/v1/employees/{$employee->id}/employment-contracts", [
-            'employmentType' => 'part_time', 'baseSalary' => 6000, 'hourlyRate' => 75,
+            'employmentType' => 'part_time', 'baseSalary' => 6000, 'requiredMonthlyHours' => 80,
             'startDate' => '2026-10-01', 'durationMonths' => 12, 'workDays' => ['sunday', 'monday'],
             'workHoursPerDay' => 4.5, 'workStartTime' => '09:00', 'status' => 'active',
-        ])->assertCreated()->assertJsonPath('data.hourlyRate', 75)->json('data.id');
+        ])->assertCreated()->assertJsonPath('data.requiredMonthlyHours', 80)->json('data.id');
         $employee->refresh();
         $this->assertSame('6000.00', $employee->salary);
         $this->assertSame(4.5, $employee->work_hours_per_day);
         $this->assertSame('13:30:00', $employee->expected_clock_out);
-        $this->putJson("/api/v1/employment-contracts/{$id}", ['status' => 'active', 'hourlyRate' => null, 'baseSalary' => 6500])->assertOk();
+        $this->putJson("/api/v1/employment-contracts/{$id}", ['status' => 'active', 'baseSalary' => 6500])->assertOk();
         $this->assertNull($employee->fresh()->hourly_rate);
         $this->assertSame('6500.00', $employee->fresh()->salary);
     }
@@ -92,14 +92,14 @@ class EmployeeHrWorkspaceApiTest extends TestCase
         $this->get("/api/v1/employee-documents/{$documentId}/download")->assertOk()->assertDownload('identity.jpg');
     }
 
-    public function test_super_admin_can_view_own_advances_and_approve_an_advance_registered_for_an_employee(): void
+    public function test_super_admin_can_view_own_advances_and_register_a_one_step_employee_withdrawal(): void
     {
         $manager = $this->manager();
         $employee = User::factory()->create(['is_employee' => true, 'salary' => 6000]);
         $this->actingAs($manager, 'sanctum')->getJson("/api/v1/employees/{$manager->id}/advances?year=2026&month=10")->assertOk();
-        $id = $this->postJson("/api/v1/employees/{$employee->id}/advances", ['requestedAmount' => 1000, 'installmentCount' => 1, 'reason' => 'Cash advance'])->assertCreated()->json('data.id');
-        $this->postJson("/api/v1/employee-advances/{$id}/approve")->assertOk();
-        $this->postJson("/api/v1/employee-advances/{$id}/disburse")->assertOk()->assertJsonPath('data.outstandingAmount', 1000);
+        $id = $this->postJson("/api/v1/employees/{$employee->id}/advances", ['requestedAmount' => 1000, 'reason' => 'Cash advance'])->assertCreated()->assertJsonPath('data.status', 'settled')->json('data.id');
+        $this->postJson("/api/v1/employee-advances/{$id}/approve")->assertUnprocessable();
+        $this->getJson("/api/v1/employee-advances/{$id}")->assertOk()->assertJsonPath('data.outstandingAmount', 0)->assertJsonPath('data.disbursedAmount', 1000);
     }
 
     public function test_deduction_types_can_be_managed_in_simplified_mode_and_used_for_direct_deductions(): void
@@ -115,7 +115,7 @@ class EmployeeHrWorkspaceApiTest extends TestCase
         $id = $this->postJson("/api/v1/employees/{$employee->id}/deductions", [
             'deductionTypeId' => $typeId, 'deductionDate' => '2026-10-12', 'amount' => 100, 'reason' => 'Recorded deduction',
         ])->assertCreated()->json('data.id');
-        $this->postJson("/api/v1/employee-deductions/{$id}/approve")->assertOk()->assertJsonPath('data.amount', 100);
+        $this->postJson("/api/v1/employee-deductions/{$id}/approve")->assertUnprocessable();
         $this->assertDatabaseHas('salary_adjustment_transactions', ['user_id' => $employee->id, 'amount' => 100, 'status' => 'approved']);
     }
 
@@ -133,16 +133,13 @@ class EmployeeHrWorkspaceApiTest extends TestCase
         $this->actingAs($employee, 'sanctum')->getJson("/api/v1/employees/{$manager->id}/overview?month=2026-10")->assertForbidden();
     }
 
-    public function test_overtime_registration_approves_once_and_rolls_back_when_rate_is_invalid(): void
+    public function test_overtime_registration_approves_once_using_the_salary_derived_rate(): void
     {
         $manager = $this->manager();
         $employee = User::factory()->create(['is_employee' => true, 'salary' => 6000, 'hourly_rate' => 0, 'work_start_time' => '09:00', 'work_hours_per_day' => 8]);
         $payload = ['overtimeDate' => today()->addDays(2)->toDateString(), 'startTime' => '18:00', 'endTime' => '19:00', 'reason' => 'Delivery'];
-        $this->actingAs($manager, 'sanctum')->postJson("/api/v1/employees/{$employee->id}/overtime-requests", $payload)->assertUnprocessable();
-        $this->assertDatabaseCount('employee_overtime_requests', 0);
-        $employee->update(['hourly_rate' => 50]);
-        $id = $this->postJson("/api/v1/employees/{$employee->id}/overtime-requests", $payload)->assertCreated()
-            ->assertJsonPath('data.status', 'approved')->assertJsonPath('data.hourlyRate', 50)->json('data.id');
+        $id = $this->actingAs($manager, 'sanctum')->postJson("/api/v1/employees/{$employee->id}/overtime-requests", $payload)->assertCreated()
+            ->assertJsonPath('data.status', 'approved')->assertJsonPath('data.hourlyRate', 25)->json('data.id');
         $this->assertDatabaseCount('salary_adjustment_transactions', 0);
         $this->postJson("/api/v1/employee-overtime-requests/{$id}/approve")->assertUnprocessable();
         $this->postJson("/api/v1/employee-overtime-requests/{$id}/cancel")->assertOk();

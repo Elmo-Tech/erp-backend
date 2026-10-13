@@ -146,13 +146,6 @@ class EmployeePartialPayService
         $monthStart = Carbon::create($payrollYear, $payrollMonth, 1)->startOfMonth();
 
         if ($kind === EmployeePartialPay::KIND_FIRST_MONTH) {
-            if ($contract->start_date->day !== 15) {
-                throw ValidationException::withMessages([
-                    'contractId' => ['Automatic first-month proration is only configured for day-15 hires.'],
-                    'kind' => ['Automatic first-month proration is only configured for day-15 hires.'],
-                ]);
-            }
-
             if (
                 $contract->start_date->year !== $payrollYear
                 || $contract->start_date->month !== $payrollMonth
@@ -163,8 +156,13 @@ class EmployeePartialPayService
             }
 
             $serviceStartDate = $contract->start_date->copy();
-            $serviceEndDate = $monthStart->copy()->endOfMonth();
-            $payableDays = $policySnapshot['midMonthHirePaidDays'];
+            $serviceEndDate = $monthStart->copy()->endOfMonth()->min($contract->end_date);
+            if ($contract->terminated_on !== null) {
+                $serviceEndDate = $serviceEndDate->min($contract->terminated_on);
+            }
+            $payableDays = (int) $serviceStartDate->diffInDays($serviceEndDate) + 1;
+            $policySnapshot['dailyRateDivisor'] = $monthStart->daysInMonth;
+            $policySnapshot['prorationMethod'] = 'inclusive_calendar_days';
         } else {
             if (
                 $contract->status !== EmploymentContract::STATUS_TERMINATED

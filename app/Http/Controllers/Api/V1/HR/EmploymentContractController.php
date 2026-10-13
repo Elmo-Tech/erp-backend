@@ -251,13 +251,15 @@ class EmploymentContractController extends Controller
 
         $employee->update([
             'salary' => $contract->base_salary,
-            'hourly_rate' => $contract->hourly_rate,
+            'hourly_rate' => null,
             'work_hours_per_day' => $contract->work_hours_per_day,
             'work_start_time' => $contract->work_start_time,
-            'internal_hourly_cost' => app(SalaryRateCalculator::class)->hourlyRate(
-                (float) $contract->base_salary,
-                (float) $contract->work_hours_per_day,
-            ),
+            'internal_hourly_cost' => $contract->employment_type === 'part_time' && $contract->required_monthly_hours > 0
+                ? round((float) $contract->base_salary / (float) $contract->required_monthly_hours, 2)
+                : app(SalaryRateCalculator::class)->hourlyRate(
+                    (float) $contract->base_salary,
+                    (float) $contract->work_hours_per_day,
+                ),
         ]);
     }
 
@@ -269,7 +271,10 @@ class EmploymentContractController extends Controller
         return [
             'employment_type' => $data['employmentType'] ?? $contract?->employment_type,
             'base_salary' => $data['baseSalary'] ?? $contract?->base_salary,
-            'hourly_rate' => array_key_exists('hourlyRate', $data) ? $data['hourlyRate'] : $contract?->hourly_rate,
+            'hourly_rate' => null,
+            'required_monthly_hours' => ($data['employmentType'] ?? $contract?->employment_type) === 'part_time'
+                ? ($data['requiredMonthlyHours'] ?? $contract?->required_monthly_hours)
+                : null,
             'start_date' => $startDate,
             'end_date' => Carbon::parse($startDate)
                 ->addMonthsNoOverflow($durationMonths)

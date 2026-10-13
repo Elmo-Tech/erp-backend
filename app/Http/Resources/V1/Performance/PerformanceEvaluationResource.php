@@ -35,6 +35,7 @@ class PerformanceEvaluationResource extends JsonResource
                 ],
             ],
             'totalScore' => (float) ($this->total_score ?? 0),
+            'workCommitment' => $this->work_commitment_snapshot,
             'bonusTier' => $this->bonus_tier ?? '',
             'bonusPercentage' => (float) ($this->bonus_percentage ?? 0),
             'bonusAmount' => (float) ($this->bonus_amount ?? 0),

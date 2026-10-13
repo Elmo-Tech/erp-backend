@@ -22,6 +22,81 @@ class EmployeeAdvanceService
 
     private const DEFAULT_PAYROLL_PAYMENT_DAY = 1;
 
+    public function recordWithdrawal(User $employee, User $actor, array $attributes): EmployeeAdvance
+    {
+        return DB::transaction(function () use ($employee, $actor, $attributes): EmployeeAdvance {
+            User::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
+            $advance = EmployeeAdvance::create([
+                'employee_id' => $employee->id,
+                'requested_amount' => Money::fromCents(Money::toCents($attributes['requestedAmount'])),
+                'status' => EmployeeAdvance::STATUS_PENDING,
+                'reason' => $attributes['reason'],
+                'installment_count' => 1,
+                'is_salary_withdrawal' => true,
+            ]);
+
+            if ($actor->hasAnyRole(['admin', 'super-admin'])) {
+                $advance = $this->approveWithdrawal($advance, $actor, null, 'Automatically approved on administrative registration.', $attributes['withdrawalDate'] ?? null);
+            }
+
+            return $advance->fresh('settlements');
+        });
+    }
+
+    private function approveWithdrawal(EmployeeAdvance $advance, User $reviewer, mixed $amount, ?string $note, ?string $withdrawalDate = null): EmployeeAdvance
+    {
+        return DB::transaction(function () use ($advance, $reviewer, $amount, $note, $withdrawalDate): EmployeeAdvance {
+            $employee = User::query()->whereKey($advance->employee_id)->lockForUpdate()->firstOrFail();
+            $advance = EmployeeAdvance::query()->lockForUpdate()->findOrFail($advance->id);
+            $this->assertPending($advance, 'approved');
+            $cents = Money::toCents($amount ?? $advance->requested_amount);
+            if ($cents <= 0 || $cents > Money::toCents($advance->requested_amount)) {
+                throw ValidationException::withMessages(['approvedAmount' => ['The approved amount must be positive and cannot exceed the requested amount.']]);
+            }
+            $paidAt = $withdrawalDate === null ? now() : Carbon::parse($withdrawalDate)->setTimezone(config('app.timezone'));
+            $policy = $this->currentPolicy();
+            $advance->update([
+                'approved_amount' => Money::fromCents($cents),
+                'disbursed_amount' => Money::fromCents($cents),
+                'status' => EmployeeAdvance::STATUS_SETTLED,
+                'approved_by' => $reviewer->id,
+                'approved_at' => now(),
+                'disbursed_by' => $reviewer->id,
+                'disbursed_at' => $paidAt,
+                'review_note' => $note,
+                'policy_version_id' => $policy?->id,
+                'policy_snapshot' => ['recovery' => 'single_salary_deduction', 'payrollMonth' => $paidAt->format('Y-m')],
+                'salary_at_approval' => $employee->salary,
+            ]);
+            $settlement = EmployeeAdvanceSettlement::create([
+                'employee_advance_id' => $advance->id,
+                'sequence' => 1,
+                'due_on' => $paidAt->toDateString(),
+                'scheduled_amount' => Money::fromCents($cents),
+                'status' => EmployeeAdvanceSettlement::STATUS_SETTLED,
+                'settled_by' => $reviewer->id,
+                'settled_at' => now(),
+            ]);
+            $adjustment = SalaryAdjustment::create([
+                'user_id' => $employee->id,
+                'adjustment_type' => SalaryAdjustment::TYPE_ADVANCE_RECOVERY,
+                'reference_type' => EmployeeAdvanceSettlement::class,
+                'reference_id' => $settlement->id,
+                'amount' => Money::fromCents($cents),
+                'reason' => 'Salary withdrawal: '.$advance->reason,
+                'adjustment_date' => $paidAt->toDateString(),
+                'payroll_month' => $paidAt->month,
+                'payroll_year' => $paidAt->year,
+                'status' => SalaryAdjustment::STATUS_APPROVED,
+                'approved_by' => $reviewer->id,
+                'approved_at' => now(),
+            ]);
+            $settlement->update(['salary_adjustment_id' => $adjustment->id]);
+
+            return $advance->fresh('settlements');
+        });
+    }
+
     public function create(User $employee, array $attributes): EmployeeAdvance
     {
         return DB::transaction(function () use ($employee, $attributes): EmployeeAdvance {
@@ -55,6 +130,10 @@ class EmployeeAdvanceService
         mixed $approvedAmount,
         ?string $reviewNote,
     ): EmployeeAdvance {
+        if ($advance->is_salary_withdrawal) {
+            return $this->approveWithdrawal($advance, $reviewer, $approvedAmount, $reviewNote);
+        }
+
         return DB::transaction(function () use ($advance, $reviewer, $approvedAmount, $reviewNote): EmployeeAdvance {
             $employee = User::query()->lockForUpdate()->findOrFail($advance->employee_id);
             $advance = EmployeeAdvance::query()->lockForUpdate()->findOrFail($advance->id);

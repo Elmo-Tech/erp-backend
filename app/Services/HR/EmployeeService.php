@@ -226,6 +226,7 @@ class EmployeeService
                 'year' => $year,
                 'month' => $month,
             ],
+            'workCommitment' => app(WorkCommitmentService::class)->summary($employee, $startDate, $endDate),
             'attendance' => [
                 'totalDays' => $totalDays,
                 'totalLateMinutes' => $totalLateMinutes,

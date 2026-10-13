@@ -16,7 +16,7 @@ class EmployeePartialPayApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_day_fifteen_first_month_preview_uses_fixed_policy_paid_days_without_persisting_a_record(): void
+    public function test_first_month_preview_uses_inclusive_calendar_days_without_persisting_a_record(): void
     {
         $manager = $this->employeeManager();
         $employee = $this->employee(['salary' => 9999]);
@@ -38,12 +38,12 @@ class EmployeePartialPayApiTest extends TestCase
             ->assertJsonPath('data.kind', EmployeePartialPay::KIND_FIRST_MONTH)
             ->assertJsonPath('data.serviceStartDate', '2026-02-15')
             ->assertJsonPath('data.serviceEndDate', '2026-02-28')
-            ->assertJsonPath('data.payableDays', 15)
+            ->assertJsonPath('data.payableDays', 14)
             ->assertJsonPath('data.baseSalarySnapshot', 3000)
-            ->assertJsonPath('data.dailyRateSnapshot', 150)
-            ->assertJsonPath('data.grossAmount', 2250)
+            ->assertJsonPath('data.dailyRateSnapshot', 107.142857)
+            ->assertJsonPath('data.grossAmount', 1500)
             ->assertJsonPath('data.policyVersionId', $policy->id)
-            ->assertJsonPath('data.policySnapshot.dailyRateDivisor', 20)
+            ->assertJsonPath('data.policySnapshot.dailyRateDivisor', 28)
             ->assertJsonPath('data.policySnapshot.midMonthHirePaidDays', 15)
             ->assertJsonPath('data.contractWorkDays', ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday']);
 
@@ -51,7 +51,7 @@ class EmployeePartialPayApiTest extends TestCase
         $this->assertDatabaseCount('salary_adjustment_transactions', 0);
     }
 
-    public function test_first_month_proration_rejects_contracts_that_do_not_start_on_day_fifteen(): void
+    public function test_first_month_proration_supports_any_contract_start_date(): void
     {
         $manager = $this->employeeManager();
         $employee = $this->employee();
@@ -62,8 +62,9 @@ class EmployeePartialPayApiTest extends TestCase
 
         $this->actingAs($manager, 'sanctum')
             ->postJson("/api/v1/employees/{$employee->id}/partial-pays/preview", $this->payload($contract))
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['contractId', 'kind']);
+            ->assertOk()
+            ->assertJsonPath('data.payableDays', 15)
+            ->assertJsonPath('data.grossAmount', 2678.57);
     }
 
     public function test_termination_preview_uses_the_last_scheduled_workday_before_a_nonworking_termination_date(): void
@@ -212,10 +213,10 @@ class EmployeePartialPayApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.records.0.id', $recordId)
             ->assertJsonPath('data.records.0.baseSalarySnapshot', 3000)
-            ->assertJsonPath('data.records.0.dailyRateSnapshot', 100)
+            ->assertJsonPath('data.records.0.dailyRateSnapshot', 107.142857)
             ->assertJsonPath('data.records.0.grossAmount', 1500)
             ->assertJsonPath('data.records.0.policyVersionId', $policy->id)
-            ->assertJsonPath('data.records.0.policySnapshot.dailyRateDivisor', 30)
+            ->assertJsonPath('data.records.0.policySnapshot.dailyRateDivisor', 28)
             ->assertJsonPath('data.records.0.policySnapshot.midMonthHirePaidDays', 15)
             ->assertJsonPath('data.records.0.contractWorkDays', ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday']);
     }

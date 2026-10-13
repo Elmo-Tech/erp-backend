@@ -10,6 +10,7 @@ use App\Models\InnovationLog;
 use App\Models\PerformanceEvaluation;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\HR\WorkCommitmentService;
 use Illuminate\Support\Carbon;
 
 class PerformanceEvaluationService
@@ -54,6 +55,15 @@ class PerformanceEvaluationService
         $productivityScores = $this->calculateProductivityScore($user, $startDate, $endDate);
         $softSkillsScores = $this->calculateSoftSkillsScore($user, $startDate, $endDate);
 
+        $commitment = app(WorkCommitmentService::class)->summary($user, $startDate, $endDate);
+        $evaluation->work_commitment_snapshot = $commitment;
+        if ($commitment['hasPartTimeTarget'] && $commitment['requiredMinutes'] > 0) {
+            $factor = min(1, $commitment['workedMinutes'] / $commitment['requiredMinutes']);
+            foreach (['onTimeDelivery', 'flexibility', 'total'] as $key) {
+                $productivityScores[$key] = round($productivityScores[$key] * $factor, 2);
+            }
+        }
+
         // Update evaluation
         $evaluation->bug_severity_score = $technicalScores['bugSeverity'];
         $evaluation->code_quality_score = $technicalScores['codeQuality'];
@@ -91,7 +101,7 @@ class PerformanceEvaluationService
         // Bug Severity Score (based on reopen_count)
         $tasks = Task::whereHas('assignees', fn ($q) => $q->where('user_id', $user->id))
             ->whereBetween('updated_at', [$startDate, $endDate])
-            ->whereIn('status', [TaskStatus::DONE, TaskStatus::TESTING])
+            ->whereIn('status', [TaskStatus::COMPLETED, TaskStatus::TESTING])
             ->get();
 
         $totalTasks = $tasks->count();
@@ -172,7 +182,7 @@ class PerformanceEvaluationService
     {
         // On-time Delivery Score
         $completedTasks = Task::whereHas('assignees', fn ($q) => $q->where('user_id', $user->id))
-            ->where('status', TaskStatus::DONE)
+            ->where('status', TaskStatus::COMPLETED)
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->whereNotNull('due_date')
             ->get();
@@ -282,6 +292,7 @@ class PerformanceEvaluationService
             'bonusPercentage' => $evaluation->bonus_percentage,
             'bonusAmount' => $evaluation->bonus_amount,
             'status' => $evaluation->status,
+            'workCommitment' => $evaluation->work_commitment_snapshot,
         ];
     }
 

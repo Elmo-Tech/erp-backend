@@ -406,15 +406,9 @@ class OvertimeRequestService
 
     private function hourlyRate(User $employee, ?HrPolicy $policy): ?float
     {
-        // Client decision 1: manual hourly rate wins when set by Admin.
-        if ($employee->hourly_rate !== null) {
-            if (! is_numeric($employee->hourly_rate) || (float) $employee->hourly_rate <= 0) {
-                throw ValidationException::withMessages([
-                    'hourlyRate' => ['The manual overtime hourly rate must be greater than zero.'],
-                ]);
-            }
-
-            return round((float) $employee->hourly_rate, 4);
+        $contract = $employee->employmentContracts()->where('status', 'active')->orderByDesc('start_date')->first();
+        if ($contract?->employment_type === 'part_time' && $contract->required_monthly_hours > 0) {
+            return round((float) $contract->base_salary / (float) $contract->required_monthly_hours, 4);
         }
 
         if ($employee->salary === null) {

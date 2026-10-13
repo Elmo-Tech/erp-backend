@@ -22,6 +22,7 @@ class DirectEmployeeDeductionResource extends JsonResource
                 'name' => $deduction->deductionType?->name,
             ],
             'deductionDate' => $deduction->deduction_date?->toDateString(),
+            'occurredAt' => $deduction->occurred_at?->toISOString(),
             'amount' => (float) $deduction->amount,
             'status' => $deduction->status,
             'reason' => $deduction->reason,

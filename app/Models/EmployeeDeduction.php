@@ -9,12 +9,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $user_id
  * @property int $deduction_type_id
- * @property \Illuminate\Support\Carbon|null $deduction_date
+ * @property Carbon|null $deduction_date
  * @property float|int|string $amount
  * @property string|null $reason
  * @property string $status
@@ -22,12 +23,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int|null $attendance_id
  * @property int|null $late_minutes
  * @property int|null $approved_by
- * @property \Illuminate\Support\Carbon|null $approved_at
+ * @property Carbon|null $approved_at
  * @property string|null $rejection_reason
  * @property string $deductible_type
  * @property int $deductible_id
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property-read User|null $user
  * @property-read DeductionType|null $deductionType
  * @property-read Attendance|null $attendance
@@ -44,6 +45,7 @@ class EmployeeDeduction extends Model
         'user_id',
         'deduction_type_id',
         'deduction_date',
+        'occurred_at',
         'amount',
         'reason',
         'status',
@@ -62,6 +64,7 @@ class EmployeeDeduction extends Model
      */
     protected $casts = [
         'deduction_date' => 'date',
+        'occurred_at' => 'datetime',
         'amount' => 'decimal:2',
         'late_minutes' => 'integer',
         'approved_at' => 'datetime',

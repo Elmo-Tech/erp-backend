@@ -337,19 +337,15 @@ class EmployeeOvertimeRequestApiTest extends TestCase
             ->assertForbidden();
     }
 
-    #[TestDox('Require a valid manual overtime rate')]
-    public function test_approval_rejects_an_invalid_manual_rate_and_accepts_a_positive_rate(): void
+    #[TestDox('Derive overtime rate from salary instead of the removed manual rate')]
+    public function test_approval_ignores_legacy_manual_rates_and_uses_the_salary_derived_rate(): void
     {
         $employee = $this->employee(['salary' => 16000, 'hourly_rate' => 0]);
         $manager = $this->employeeManager();
         $id = $this->createRequest($employee, $this->overtimeDate());
 
         $this->actingAs($manager, 'sanctum')->postJson("/api/v1/employee-overtime-requests/{$id}/approve")
-            ->assertUnprocessable()->assertJsonValidationErrors('hourlyRate');
-        $this->assertSame(EmployeeOvertimeRequest::STATUS_PENDING, EmployeeOvertimeRequest::findOrFail($id)->status);
-        $employee->update(['hourly_rate' => 65]);
-        $this->postJson("/api/v1/employee-overtime-requests/{$id}/approve")
-            ->assertOk()->assertJsonPath('data.hourlyRate', 65);
+            ->assertOk()->assertJsonPath('data.hourlyRate', 66.6667);
     }
 
     #[TestDox('Keep historical overtime rate after salary change')]
@@ -360,7 +356,7 @@ class EmployeeOvertimeRequestApiTest extends TestCase
         $manager = $this->employeeManager();
         $id = $this->createRequest($employee, $date);
         $this->actingAs($manager, 'sanctum')->postJson("/api/v1/employee-overtime-requests/{$id}/approve")
-            ->assertOk()->assertJsonPath('data.hourlyRate', 65);
+            ->assertOk()->assertJsonPath('data.hourlyRate', 66.6667);
 
         $employee->update(['salary' => 32000, 'hourly_rate' => 130]);
         app(AttendanceService::class)->createAttendance([
@@ -371,11 +367,11 @@ class EmployeeOvertimeRequestApiTest extends TestCase
         ], $manager);
         $this->getJson("/api/v1/employees/{$employee->id}/overtime-requests?year={$date->year}&month={$date->month}")
             ->assertOk()
-            ->assertJsonPath('data.requests.0.hourlyRate', 65)
+            ->assertJsonPath('data.requests.0.hourlyRate', 66.6667)
             ->assertJsonPath('data.requests.0.approvedMinutes', 120)
             ->assertJsonPath('data.requests.0.unapprovedMinutes', 60)
-            ->assertJsonPath('data.requests.0.payableAmount', 195);
-        $this->assertSame('195.00', SalaryAdjustment::sole()->amount);
+            ->assertJsonPath('data.requests.0.payableAmount', 200);
+        $this->assertSame('200.00', SalaryAdjustment::sole()->amount);
     }
 
     private function employee(array $attributes = []): User

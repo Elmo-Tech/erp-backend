@@ -7,6 +7,8 @@ use App\Models\Attendance;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Services\HR\WorkCommitmentService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
@@ -64,6 +66,11 @@ class UserPerformanceService
             'taskCompletionRate' => number_format($taskCompletionRate, 2, '.', ''),
             'averageBounceRate' => number_format($averageBounceRate, 2, '.', ''),
             'attendanceDays' => $attendanceDays,
+            'workCommitment' => app(WorkCommitmentService::class)->summary(
+                $user,
+                Carbon::parse($filters['dateFrom'] ?? now()->startOfMonth()),
+                Carbon::parse($filters['dateTo'] ?? now()->endOfMonth()),
+            ),
         ];
     }
 

@@ -21,7 +21,7 @@ class StoreEmploymentContractRequest extends FormRequest
             'employeeId' => ['prohibited'],
             'employmentType' => ['required', 'string', Rule::in(['full_time', 'part_time'])],
             'baseSalary' => ['required', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'hourlyRate' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
+            'requiredMonthlyHours' => ['nullable', 'required_if:employmentType,part_time', 'numeric', 'gt:0', 'max:744', 'decimal:0,2'],
             'startDate' => ['required', 'date_format:Y-m-d'],
             'endDate' => ['prohibited'],
             'terminatedOn' => [

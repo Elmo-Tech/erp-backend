@@ -14,9 +14,11 @@ use App\Models\LeaveType;
 use App\Models\SalaryAdjustment;
 use App\Models\TimeEntry;
 use App\Policies\UserAdministrationPolicy;
+use App\Services\HR\EmployeeSalaryPeriodService;
 use App\Services\HR\EmployeeService;
 use App\Services\HR\LeaveService;
 use App\Services\HR\OvertimeRequestService;
+use App\Services\HR\WorkCommitmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -59,6 +61,8 @@ class EmployeeOverviewController extends Controller
         return response()->json(['data' => [
             'month' => $validated['month'],
             'salary' => $employee->salary === null ? null : (float) $employee->salary,
+            'salaryPeriod' => app(EmployeeSalaryPeriodService::class)->calculate($employee, $period),
+            'workCommitment' => app(WorkCommitmentService::class)->summary($employee, $period->copy()->startOfMonth(), $period->copy()->endOfMonth()),
             'deductions' => $deductions,
             'additions' => (float) $adjustments->whereIn('adjustment_type', [SalaryAdjustment::TYPE_OVERTIME, SalaryAdjustment::TYPE_REWARD, SalaryAdjustment::TYPE_BONUS, SalaryAdjustment::TYPE_ALLOWANCE])->sum('amount'),
             'advanceRecovery' => (float) $adjustments->where('adjustment_type', SalaryAdjustment::TYPE_ADVANCE_RECOVERY)->sum('amount'),
@@ -74,7 +78,10 @@ class EmployeeOverviewController extends Controller
                     ->whereMonth('start_time', $period->month)->whereNotNull('end_time')->sum('duration_minutes'),
             ],
             'leaveDays' => (float) EmployeeLeave::where('employee_id', $id)->where('status', EmployeeLeave::STATUS_APPROVED)
-                ->whereBetween('start_date', [$start, $end])->sum('working_days'),
+                ->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start)->get()
+                ->sum(fn ($leave) => app(LeaveService::class)->calculateWorkingDays(
+                    max($start, $leave->start_date->toDateString()), min($end, $leave->end_date->toDateString()), $id,
+                )[0]),
             'leaveBalances' => $leaveBalances->values(),
             'permissions' => [
                 'count' => $permissions->count(),

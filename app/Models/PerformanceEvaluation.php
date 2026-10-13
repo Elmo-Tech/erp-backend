@@ -38,6 +38,7 @@ class PerformanceEvaluation extends Model
         'evaluated_by',
         'evaluated_at',
         'status',
+        'work_commitment_snapshot',
     ];
 
     protected function casts(): array
@@ -58,6 +59,7 @@ class PerformanceEvaluation extends Model
             'bonus_percentage' => 'decimal:2',
             'bonus_amount' => 'decimal:2',
             'evaluated_at' => 'datetime',
+            'work_commitment_snapshot' => 'array',
         ];
     }
 

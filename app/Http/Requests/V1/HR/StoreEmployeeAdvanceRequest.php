@@ -16,7 +16,8 @@ class StoreEmployeeAdvanceRequest extends FormRequest
         return [
             'requestedAmount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:999999999999.99'],
             'reason' => ['required', 'string', 'max:2000'],
-            'installmentCount' => ['required', 'integer', 'between:1,12'],
+            'installmentCount' => ['sometimes', 'integer', 'in:1'],
+            'withdrawalDate' => ['nullable', 'date', 'before_or_equal:now'],
             'employeeId' => ['prohibited'],
             'employee_id' => ['prohibited'],
             'approvedAmount' => ['prohibited'],

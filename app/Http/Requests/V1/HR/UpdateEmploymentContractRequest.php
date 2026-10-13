@@ -22,7 +22,7 @@ class UpdateEmploymentContractRequest extends FormRequest
             'employeeId' => ['prohibited'],
             'employmentType' => ['sometimes', 'string', Rule::in(['full_time', 'part_time'])],
             'baseSalary' => ['sometimes', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'hourlyRate' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
+            'requiredMonthlyHours' => ['sometimes', 'nullable', 'numeric', 'gt:0', 'max:744', 'decimal:0,2'],
             'startDate' => ['sometimes', 'date_format:Y-m-d'],
             'endDate' => ['prohibited'],
             'terminatedOn' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
@@ -48,6 +48,12 @@ class UpdateEmploymentContractRequest extends FormRequest
     {
         $validator->after(function (Validator $validator): void {
             $contract = $this->route('contract');
+
+            if ($contract instanceof EmploymentContract
+                && $this->input('employmentType', $contract->employment_type) === 'part_time'
+                && ! $this->input('requiredMonthlyHours', $contract->required_monthly_hours)) {
+                $validator->errors()->add('requiredMonthlyHours', 'Required monthly hours must be specified for a part-time contract.');
+            }
 
             if (! $contract instanceof EmploymentContract || $this->input('status') !== EmploymentContract::STATUS_TERMINATED) {
                 return;

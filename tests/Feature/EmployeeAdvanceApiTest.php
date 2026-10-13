@@ -7,6 +7,7 @@ use App\Models\EmployeeAdvanceSettlement;
 use App\Models\HrPolicy;
 use App\Models\SalaryAdjustment;
 use App\Models\User;
+use App\Services\HR\EmployeeAdvanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Permission;
@@ -66,14 +67,15 @@ class EmployeeAdvanceApiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_creation_validates_inputs_salary_policy_cap_and_server_owned_fields(): void
+    public function test_withdrawal_creation_validates_inputs_and_server_owned_fields_without_legacy_policy_caps(): void
     {
         $employee = $this->employee(['salary' => 0]);
 
         $this->actingAs($employee, 'sanctum')
             ->postJson("/api/v1/employees/{$employee->id}/advances", $this->payload())
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('requestedAmount');
+            ->assertCreated()
+            ->assertJsonPath('data.isSalaryWithdrawal', true)
+            ->assertJsonPath('data.status', EmployeeAdvance::STATUS_PENDING);
         $this->actingAs($employee, 'sanctum')
             ->postJson("/api/v1/employees/{$employee->id}/advances", $this->payload([
                 'requestedAmount' => '100.001',
@@ -93,8 +95,8 @@ class EmployeeAdvanceApiTest extends TestCase
             ->postJson("/api/v1/employees/{$employee->id}/advances", $this->payload([
                 'requestedAmount' => '500.01',
             ]))
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('requestedAmount');
+            ->assertCreated()
+            ->assertJsonPath('data.requestedAmount', 500.01);
         $this->actingAs($employee, 'sanctum')
             ->postJson("/api/v1/employees/{$employee->id}/advances", $this->payload([
                 'requestedAmount' => '500.00',
@@ -341,10 +343,11 @@ class EmployeeAdvanceApiTest extends TestCase
 
     private function createAdvance(User $actor, User $employee, array $overrides = []): int
     {
-        return $this->actingAs($actor, 'sanctum')
-            ->postJson("/api/v1/employees/{$employee->id}/advances", $this->payload($overrides))
-            ->assertCreated()
-            ->json('data.id');
+        // Historical advances keep their existing approval/disbursement/recovery
+        // lifecycle. New one-step withdrawals are covered in EmployeeHrSimplificationTest.
+        $this->actingAs($actor, 'sanctum');
+
+        return app(EmployeeAdvanceService::class)->create($employee, $this->payload($overrides))->id;
     }
 
     private function payload(array $overrides = []): array

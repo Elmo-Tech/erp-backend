@@ -9,20 +9,21 @@ class StoreDirectEmployeeDeductionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage_employees') ?? false;
+        return $this->user()?->can('manage_employees') || $this->user()?->can('manage_deductions') ?? false;
     }
 
     public function rules(): array
     {
         return [
             'deductionTypeId' => [
-                'required',
+                'nullable',
                 'integer',
                 Rule::exists('deduction_types', 'id')->where(
                     fn ($query) => $query->where('is_active', true)->whereNull('deleted_at')
                 ),
             ],
             'deductionDate' => ['required', 'date_format:Y-m-d'],
+            'occurredAt' => ['nullable', 'date', 'before_or_equal:now'],
             'amount' => ['required', 'numeric', 'gt:0', 'max:99999999.99', 'decimal:0,2'],
             'reason' => ['required', 'string', 'max:2000'],
             'employeeId' => ['prohibited'],
