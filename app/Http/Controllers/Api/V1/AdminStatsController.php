@@ -16,9 +16,14 @@ use App\Services\Reporting\ProfitabilityService;
 use App\Services\Reporting\QualityService;
 use App\Services\Reporting\UserPerformanceService;
 use Carbon\Carbon;
+use Exception;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 use OpenApi\Annotations as OA;
+use RuntimeException;
 use Throwable;
 
 class AdminStatsController extends Controller
@@ -32,6 +37,14 @@ class AdminStatsController extends Controller
     ) {
         // Apply middleware using Laravel 12 approach
         $this->middleware(['auth:sanctum', 'locale']);
+    }
+
+    private function canAccessReport(string ...$permissions): bool
+    {
+        $user = auth()->user();
+
+        // Match the frontend's super-admin access even when role permissions are incomplete.
+        return $user !== null && ($user->hasRole('super-admin') || $user->can($permissions));
     }
 
     /**
@@ -129,7 +142,7 @@ class AdminStatsController extends Controller
     public function overview(): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('view_admin_stats')) {
+        if (! $this->canAccessReport('view_admin_stats')) {
             return ApiResponse::forbidden('You do not have permission to view admin statistics');
         }
 
@@ -151,7 +164,7 @@ class AdminStatsController extends Controller
             $todayAttendance = Attendance::whereDate('clock_in', Carbon::today())->count();
             $trackedMinutesToday = TimeEntry::whereDate('start_time', Carbon::today())
                 ->whereNotNull('end_time')
-                ->sum('duration_minutes') ?? 0;
+                ->sum('duration_minutes');
 
             $completionRate = $openTasks + $completedTasks > 0
                 ? round(($completedTasks / ($openTasks + $completedTasks)) * 100, 2)
@@ -189,7 +202,7 @@ class AdminStatsController extends Controller
                 $overviewData,
                 'Admin overview statistics retrieved successfully'
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ApiResponse::error(
                 'Failed to retrieve admin overview statistics: '.$e->getMessage(),
                 500
@@ -356,7 +369,7 @@ class AdminStatsController extends Controller
     public function profitability(Request $request): JsonResponse
     {
         // Check both required permissions
-        if (! auth()->user()->can('view_admin_stats') || ! auth()->user()->can('view_internal_costs')) {
+        if (! $this->canAccessReport('view_admin_stats', 'view_internal_costs')) {
             return ApiResponse::forbidden('You do not have permission to view profitability data');
         }
 
@@ -401,12 +414,12 @@ class AdminStatsController extends Controller
                 $responseData,
                 'Profitability report retrieved successfully'
             );
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return ApiResponse::validationError(
                 ['sortBy' => [$e->getMessage()]],
                 'Invalid filter parameters'
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ApiResponse::error(
                 'Failed to retrieve profitability report: '.$e->getMessage(),
                 500
@@ -532,7 +545,7 @@ class AdminStatsController extends Controller
     public function quality(Request $request): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('view_admin_stats')) {
+        if (! $this->canAccessReport('view_admin_stats')) {
             return ApiResponse::forbidden('You do not have permission to view admin statistics');
         }
 
@@ -566,7 +579,7 @@ class AdminStatsController extends Controller
                 $qualityData,
                 'Quality metrics retrieved successfully'
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ApiResponse::error(
                 'Failed to retrieve quality metrics: '.$e->getMessage(),
                 500
@@ -660,7 +673,7 @@ class AdminStatsController extends Controller
     public function userPerformance(Request $request): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('view_admin_stats')) {
+        if (! $this->canAccessReport('view_admin_stats')) {
             return ApiResponse::forbidden('You do not have permission to view admin statistics');
         }
 
@@ -681,7 +694,7 @@ class AdminStatsController extends Controller
                 $userPerformanceData,
                 'User performance metrics retrieved successfully'
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ApiResponse::error(
                 'Failed to retrieve user performance metrics: '.$e->getMessage(),
                 500
@@ -779,7 +792,7 @@ class AdminStatsController extends Controller
     public function attendance(Request $request): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('view_admin_stats')) {
+        if (! $this->canAccessReport('view_admin_stats')) {
             return ApiResponse::forbidden('You do not have permission to view admin statistics');
         }
 
@@ -800,7 +813,7 @@ class AdminStatsController extends Controller
                 $attendanceData,
                 'Attendance analytics retrieved successfully'
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ApiResponse::error(
                 'Failed to retrieve attendance analytics: '.$e->getMessage(),
                 500
@@ -967,7 +980,7 @@ class AdminStatsController extends Controller
     public function employeeReview(Request $request, int $userId): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('view_admin_stats')) {
+        if (! $this->canAccessReport('view_admin_stats')) {
             return ApiResponse::forbidden('You do not have permission to view admin statistics');
         }
 
@@ -988,7 +1001,7 @@ class AdminStatsController extends Controller
             }
 
             // Add debug logging
-            \Log::info('Employee Review Request', [
+            Log::info('Employee Review Request', [
                 'userId' => $userId,
                 'filters' => $filters,
                 'user' => auth()->user()->name,
@@ -998,7 +1011,7 @@ class AdminStatsController extends Controller
             $reviewData = $this->employeeReviewService->getEmployeeReview($userId, $filters);
 
             // Add debug logging for response
-            \Log::info('Employee Review Response Structure', [
+            Log::info('Employee Review Response Structure', [
                 'userId' => $userId,
                 'projects_count' => $reviewData['projects']['total'] ?? 'N/A',
                 'trends_weeks' => count($reviewData['trends']['weeklyTimeTracking'] ?? []),
@@ -1010,15 +1023,15 @@ class AdminStatsController extends Controller
                 $reviewData,
                 'Employee review retrieved successfully'
             );
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return ApiResponse::error('User not found', 404);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return ApiResponse::validationError(
                 ['dateRange' => [$e->getMessage()]],
                 'Invalid date range'
             );
         } catch (Throwable $e) {
-            \Log::error('Employee Review Error', [
+            Log::error('Employee Review Error', [
                 'userId' => $userId,
                 'filters' => $filters ?? [],
                 'exception' => $e::class,
@@ -1154,7 +1167,7 @@ class AdminStatsController extends Controller
     {
         try {
             // Check permission
-            if (! $request->user()->can('view_admin_stats')) {
+            if (! $this->canAccessReport('view_admin_stats')) {
                 return ApiResponse::error(
                     'Access denied. You do not have permission to view admin statistics.',
                     403
@@ -1220,23 +1233,23 @@ class AdminStatsController extends Controller
 
             } catch (Throwable $pdfException) {
                 // Log the error for debugging
-                \Log::error('Employee Review PDF Export Failed', [
+                Log::error('Employee Review PDF Export Failed', [
                     'user_id' => $userId,
                     'filters' => $filters,
                     'error' => $pdfException->getMessage(),
                     'trace' => $pdfException->getTraceAsString(),
                 ]);
 
-                throw new \RuntimeException('PDF generation failed: '.$pdfException->getMessage(), previous: $pdfException);
+                throw new RuntimeException('PDF generation failed: '.$pdfException->getMessage(), previous: $pdfException);
             }
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return ApiResponse::error(
                 'User not found',
                 404
             );
         } catch (Throwable $e) {
-            \Log::error('Employee Review Export Error', [
+            Log::error('Employee Review Export Error', [
                 'userId' => $userId,
                 'filters' => $filters ?? [],
                 'exception' => $e::class,
@@ -1289,9 +1302,9 @@ class AdminStatsController extends Controller
                         file_put_contents($gitkeepFile, '');
                     }
 
-                    \Log::info("Created PDF directory: {$directory}");
-                } catch (\Exception $e) {
-                    \Log::warning("Failed to create PDF directory {$directory}: ".$e->getMessage());
+                    Log::info("Created PDF directory: {$directory}");
+                } catch (Exception $e) {
+                    Log::warning("Failed to create PDF directory {$directory}: ".$e->getMessage());
                 }
             }
         }
