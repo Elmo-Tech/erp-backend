@@ -14,6 +14,7 @@ use App\Models\Task;
 use App\Models\TaskActivity;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Services\Tasks\ActiveWorkService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -411,20 +412,22 @@ class DashboardController extends Controller
 
     private function liveWork(): array
     {
-        $timers = TimeEntry::with(['user:id,name', 'trackable'])->whereNull('end_time')
-            ->where('trackable_type', Task::class)->whereHasMorph('trackable', [Task::class], fn ($task) => $task->where(function ($query): void {
-                $query->whereNull('project_id')->orWhereIn('project_id', Project::withoutGlobalScopes()->withoutTrashed()->select('id'));
-            }))->orderBy('id')
-            ->get();
+        $work = app(ActiveWorkService::class);
+        $timers = $work->openTimers();
         $workingIds = $timers->pluck('user_id')->unique();
 
         return [
             'activeTimerCount' => $timers->count(),
-            'working' => $timers->map(fn ($timer) => [
-                'userId' => $timer->user_id, 'name' => $timer->user?->name,
-                'taskId' => $timer->trackable_id, 'taskTitle' => $timer->trackable?->title,
-                'projectId' => $timer->trackable?->project_id, 'startedAt' => $timer->start_time->toISOString(),
-            ])->values(),
+            'working' => $timers->map(function ($timer) use ($work): array {
+                $target = $work->target($timer);
+
+                return [
+                    'userId' => $timer->user_id, 'name' => $timer->user?->name ?? 'Unavailable employee',
+                    'taskId' => $timer->trackable_id, 'taskTitle' => $target['task']?->title ?? 'Deleted task #'.$timer->trackable_id,
+                    'projectId' => $target['task']?->project_id, 'startedAt' => $timer->start_time->toISOString(),
+                    'targetStatus' => $target['status'], 'targetMessage' => $target['message'],
+                ];
+            })->values(),
             'idle' => User::where('is_employee', true)->where('is_active', true)->whereNotIn('id', $workingIds)
                 ->orderBy('name')->get(['id', 'name'])->map(fn ($user) => ['userId' => $user->id, 'name' => $user->name]),
         ];

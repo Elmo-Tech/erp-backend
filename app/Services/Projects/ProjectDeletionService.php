@@ -39,10 +39,7 @@ class ProjectDeletionService
             // These relations use SET NULL, whereas task-owned child tables use CASCADE.
             $innovationLogs->delete();
             DB::table('contracts')->where('project_id', $project->id)->delete();
-            DB::table('notifications')->where(function ($query) use ($project, $taskIds): void {
-                $query->where('data->project_id', $project->id)->orWhere('data->projectId', $project->id)
-                    ->orWhereIn('data->task_id', $taskIds)->orWhereIn('data->taskId', $taskIds);
-            })->delete();
+            $this->deleteNotifications($project->id, $taskIds->all());
             // Polymorphic work entries and point sources do not have FK cascades.
             $points = DB::table('point_transactions')->where(function ($query) use ($sources): void {
                 foreach ($sources as $type => $ids) {
@@ -60,6 +57,39 @@ class ProjectDeletionService
             DB::afterCommit(function () use ($paths): void {
                 DeleteProjectUploads::dispatch($paths);
             });
+        });
+    }
+
+    private function deleteNotifications(int $projectId, array $taskIds): void
+    {
+        $taskIds = array_fill_keys(array_map('strval', $taskIds), true);
+        // Laravel's notifications.data is TEXT, not a PostgreSQL JSON column.
+        // Decode in bounded batches so legacy malformed/unrelated data is retained,
+        // and numeric/string reference IDs behave consistently on every driver.
+        DB::table('notifications')->select(['id', 'data'])->chunkById(500, function ($rows) use ($projectId, $taskIds): void {
+            $ids = [];
+            foreach ($rows as $row) {
+                $data = json_decode($row->data, true);
+                if (! is_array($data)) {
+                    continue;
+                }
+                foreach (['project_id', 'projectId', 'task_id', 'taskId'] as $key) {
+                    $value = $data[$key] ?? null;
+                    if (! is_int($value) && ! is_string($value)) {
+                        continue;
+                    }
+                    $matches = str_starts_with($key, 'project')
+                        ? (string) $value === (string) $projectId
+                        : isset($taskIds[(string) $value]);
+                    if ($matches) {
+                        $ids[] = $row->id;
+                        break;
+                    }
+                }
+            }
+            if ($ids !== []) {
+                DB::table('notifications')->whereIn('id', $ids)->delete();
+            }
         });
     }
 }

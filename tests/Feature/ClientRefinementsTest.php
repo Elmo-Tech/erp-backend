@@ -142,8 +142,9 @@ class ClientRefinementsTest extends TestCase
         TimeEntry::factory()->create(['user_id' => $employee->id, 'trackable_type' => Task::class, 'trackable_id' => $task->id, 'end_time' => null]);
         $standalone = Task::factory()->create(['project_id' => null]);
         TimeEntry::factory()->create(['trackable_type' => Task::class, 'trackable_id' => $standalone->id, 'end_time' => null]);
-        $this->actingAs($admin, 'sanctum')->getJson('/api/v1/dashboard/overview')->assertOk()
-            ->assertJsonPath('data.liveWork.activeTimerCount', 2)->assertJsonPath('data.liveWork.working.0.userId', $employee->id);
+        $working = $this->actingAs($admin, 'sanctum')->getJson('/api/v1/dashboard/overview')->assertOk()
+            ->assertJsonPath('data.liveWork.activeTimerCount', 2)->json('data.liveWork.working');
+        $this->assertContains($employee->id, array_column($working, 'userId'));
         $response = $this->actingAs($employee, 'sanctum')->getJson('/api/v1/dashboard/overview')->assertOk()
             ->assertJsonFragment(['projectId' => $project->id, 'name' => $project->title, 'deadline' => '2026-11-01']);
         $this->assertNotContains($other->id, array_column($response->json('data.projects'), 'projectId'));

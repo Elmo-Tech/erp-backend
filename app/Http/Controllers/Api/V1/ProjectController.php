@@ -592,7 +592,10 @@ class ProjectController extends Controller
     {
         $this->authorize('delete', $project);
 
-        $data = $request->validate(['permanent' => ['sometimes', 'boolean'], 'confirmation' => ['required_if:permanent,true', 'string']]);
+        $data = $request->validate([
+            'permanent' => ['sometimes', 'boolean'],
+            'confirmation' => ['exclude_unless:permanent,true', 'required', 'string'],
+        ]);
         if ($data['permanent'] ?? false) {
             abort_unless($request->user()->can('force_delete_projects'), 403);
             abort_unless(($data['confirmation'] ?? '') === $project->title, 422, 'Type the exact project name to confirm permanent deletion.');
@@ -601,7 +604,7 @@ class ProjectController extends Controller
             DB::transaction(function () use ($project): void {
                 $project = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
                 abort_if(TimeEntry::whereNull('end_time')->where('trackable_type', Task::class)
-                    ->whereIn('trackable_id', $project->tasks()->select('id'))->exists(), 409, 'Stop this project’s active timers before moving it to trash.');
+                    ->whereIn('trackable_id', $project->tasks()->withTrashed()->select('id'))->exists(), 409, 'Stop this project’s active timers before moving it to trash.');
                 $project->delete();
             });
         }

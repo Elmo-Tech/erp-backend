@@ -17,7 +17,9 @@ use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Services\Projects\ProjectAccess;
 use App\Services\Sales\TimeTrackingService;
+use App\Services\Tasks\ActiveWorkService;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
@@ -506,13 +508,23 @@ class TimeEntryController extends Controller
     {
         try {
             $timeEntry = $this->timeTrackingService->endTimer($request->user());
+            $target = app(ActiveWorkService::class)->target($timeEntry);
 
             return ApiResponse::success(
                 new TimeEntryResource($timeEntry->load('trackable')),
-                'Work completed successfully'
+                $target['status'] === 'available' ? 'Work completed successfully'
+                    : 'Timer stopped and work time saved. '.$target['message'].' The task was not marked complete.'
             );
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return ApiResponse::error('The timer could not be ended because its work record is temporarily unavailable. Refresh its status and try again, or pause the timer.', 503);
         } catch (\RuntimeException $exception) {
-            return ApiResponse::error($exception->getMessage(), 400);
+            return ApiResponse::error($exception->getMessage(), 409);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return ApiResponse::error('The task could not be completed. Refresh the timer status and try again. If the issue continues, contact an administrator with the time of this action.', 500);
         }
     }
 
@@ -883,14 +895,12 @@ class TimeEntryController extends Controller
             return ApiResponse::error(__('messages.unauthorized'), 403);
         }
 
-        $activeTimers = TimeEntry::with(['user', 'trackable'])
-            ->whereNull('end_time')
-            ->when(config('simplification.enabled'), fn ($query) => $query->where('trackable_type', Task::class))
-            ->orderBy('start_time', 'desc')
-            ->get();
+        $work = app(ActiveWorkService::class);
+        $activeTimers = $work->openTimers((bool) config('simplification.enabled'));
 
-        $timersData = $activeTimers->map(function ($timer) {
+        $timersData = $activeTimers->map(function ($timer) use ($work) {
             $elapsedMinutes = $timer->start_time->diffInMinutes(now());
+            $target = $work->target($timer);
 
             return [
                 'timeEntryId' => $timer->id,
@@ -902,6 +912,8 @@ class TimeEntryController extends Controller
                 'startTime' => $timer->start_time->toISOString(),
                 'elapsedMinutes' => $elapsedMinutes,
                 'createdAt' => $timer->created_at->toISOString(),
+                'targetStatus' => $target['status'],
+                'targetMessage' => $target['message'],
             ];
         });
 

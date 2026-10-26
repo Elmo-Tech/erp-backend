@@ -12,14 +12,17 @@ use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use App\Services\HR\AttendanceService;
+use App\Services\Tasks\ActiveWorkService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
+use Throwable;
 
 class TimeTrackingService
 {
@@ -66,7 +69,7 @@ class TimeTrackingService
         });
 
         // Broadcast timer started event
-        broadcast(new TimerUpdated($user->id, 'started', $timeEntry))->toOthers();
+        $this->broadcastTimerUpdate($user->id, 'started', $timeEntry);
 
         return $timeEntry;
     }
@@ -79,6 +82,10 @@ class TimeTrackingService
      */
     private function validateTaskCanHaveTimer(Task $task): void
     {
+        $target = app(ActiveWorkService::class)->taskTarget($task);
+        if ($target['status'] !== 'available') {
+            throw new InvalidArgumentException($target['message']);
+        }
         // Check if task has any children
         $hasChildren = Task::where('parent_id', $task->id)->exists();
 
@@ -218,16 +225,20 @@ class TimeTrackingService
     public function endTimer(User $user): TimeEntry
     {
         return DB::transaction(function () use ($user): TimeEntry {
+            User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
             $activeTimer = $this->getActiveTimer($user);
             if ($activeTimer === null) {
-                throw new RuntimeException('No active timer found for this user.');
+                throw new RuntimeException('This timer is already stopped or no longer available. Refresh to see the latest timer status.');
             }
 
-            $activeTimer->loadMissing('trackable');
+            $target = app(ActiveWorkService::class)->target($activeTimer);
             $ended = $this->closeTimer($activeTimer, TimerStopReason::END, Carbon::now('Africa/Cairo'));
 
-            if ($activeTimer->trackable instanceof Task) {
-                $task = Task::query()->whereKey($activeTimer->trackable_id)->lockForUpdate()->firstOrFail();
+            if ($target['task'] instanceof Task && $target['status'] === 'available') {
+                $task = Task::query()->whereKey($activeTimer->trackable_id)->lockForUpdate()->first();
+                if ($task === null) {
+                    return $ended;
+                }
                 $task->update([
                     ...$this->pipelineStageUpdates($task, 'done'),
                     'status' => TaskStatus::COMPLETED,
@@ -250,6 +261,10 @@ class TimeTrackingService
             throw new RuntimeException('No active timer found for this user.');
         }
 
+        $target = app(ActiveWorkService::class)->target($activeTimer);
+        if ($target['status'] !== 'available') {
+            throw new InvalidArgumentException($target['message'].' End the timer to save its work time.');
+        }
         $activeTimer->loadMissing('trackable');
         if (! $activeTimer->trackable instanceof Task) {
             throw new InvalidArgumentException('Hold is available only for project tasks.');
@@ -282,13 +297,17 @@ class TimeTrackingService
             422
         );
 
+        $target = app(ActiveWorkService::class)->target($previousEntry);
+        if ($target['status'] !== 'available') {
+            throw new InvalidArgumentException($target['message']);
+        }
         $previousEntry->loadMissing('trackable');
         if (! $previousEntry->trackable instanceof Trackable) {
             throw new InvalidArgumentException('The previous timer target is no longer available.');
         }
 
         if ($previousEntry->trackable instanceof Task) {
-            $previousEntry->trackable->update(['hold_reason' => null]);
+            $this->validateTaskCanHaveTimer($previousEntry->trackable);
         }
 
         return $this->startTimer($user, $previousEntry->trackable, $previousEntry->id);
@@ -313,7 +332,8 @@ class TimeTrackingService
             return null;
         }
 
-        return $latestEntry;
+        return app(ActiveWorkService::class)->target($latestEntry)['status'] === 'available'
+            ? $latestEntry : null;
     }
 
     public function expireStaleTimers(): int
@@ -406,10 +426,22 @@ class TimeTrackingService
         ]);
 
         DB::afterCommit(
-            fn () => broadcast(new TimerUpdated($timeEntry->user_id, $reason->value, null))->toOthers()
+            fn () => $this->broadcastTimerUpdate($timeEntry->user_id, $reason->value)
         );
 
         return $timeEntry->fresh();
+    }
+
+    private function broadcastTimerUpdate(int $userId, string $action, ?TimeEntry $entry = null): void
+    {
+        try {
+            broadcast(new TimerUpdated($userId, $action, $entry))->toOthers();
+        } catch (Throwable $exception) {
+            // Realtime delivery must not turn a committed timer change into a 500.
+            Log::warning('Timer saved but realtime delivery failed', [
+                'userId' => $userId, 'action' => $action, 'exception' => $exception,
+            ]);
+        }
     }
 
     private function pipelineStageUpdates(Task $task, string $category): array

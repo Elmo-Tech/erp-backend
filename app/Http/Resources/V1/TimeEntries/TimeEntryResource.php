@@ -4,6 +4,7 @@ namespace App\Http\Resources\V1\TimeEntries;
 
 use App\Models\Task;
 use App\Models\TimeEntry;
+use App\Services\Tasks\ActiveWorkService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -25,6 +26,14 @@ class TimeEntryResource extends JsonResource
         $trackable = $timeEntry?->relationLoaded('trackable')
             ? $timeEntry->getRelation('trackable')
             : null;
+        $target = $timeEntry ? app(ActiveWorkService::class)->target($timeEntry) : null;
+        if ($target && $target['task'] instanceof Task) {
+            $trackable = $target['task'];
+            $trackableDisplayName = $trackable->getTrackableDisplayName();
+        }
+        if ($trackableDisplayName === '' && $target && $target['status'] !== 'available') {
+            $trackableDisplayName = 'Deleted task #'.$this->trackable_id;
+        }
 
         return [
             'timeEntryId' => $this->id,
@@ -43,6 +52,8 @@ class TimeEntryResource extends JsonResource
             'stopReason' => $timeEntry?->stopReason()?->value,
             'resumedFromId' => $timeEntry?->getAttribute('resumed_from_id'),
             'isActive' => $this->isActive(),
+            'targetStatus' => $target['status'] ?? 'available',
+            'targetMessage' => $target['message'] ?? null,
             'createdAt' => $this->created_at?->format('Y-m-d\TH:i:s') ?? '',
             'updatedAt' => $this->updated_at?->format('Y-m-d\TH:i:s') ?? '',
         ];
