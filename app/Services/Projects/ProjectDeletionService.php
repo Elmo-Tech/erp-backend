@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Models\TaskDeliverable;
 use App\Models\TaskTestScenario;
 use App\Models\TimeEntry;
+use App\Services\Tasks\WorkActivityPublisher;
 use Illuminate\Support\Facades\DB;
 
 class ProjectDeletionService
@@ -32,10 +33,14 @@ class ProjectDeletionService
             }
             $innovationLogs = DB::table('innovation_logs')->where(fn ($query) => $query->where('project_id', $project->id)->orWhereIn('task_id', $taskIds));
             $sources[InnovationLog::class] = $innovationLogs->pluck('id');
-            TimeEntry::where(function ($query) use ($project, $taskIds): void {
+            $entries = TimeEntry::where(function ($query) use ($project, $taskIds): void {
                 $query->where(fn ($entry) => $entry->where('trackable_type', Project::class)->where('trackable_id', $project->id))
                     ->orWhere(fn ($entry) => $entry->where('trackable_type', Task::class)->whereIn('trackable_id', $taskIds));
-            })->delete();
+            });
+            $timerUsers = (clone $entries)->where(function ($query): void {
+                $query->whereNull('end_time')->orWhereIn('stop_reason', ['pause', 'hold', 'connection_lost']);
+            })->distinct()->pluck('user_id')->all();
+            $entries->delete();
             // These relations use SET NULL, whereas task-owned child tables use CASCADE.
             $innovationLogs->delete();
             DB::table('contracts')->where('project_id', $project->id)->delete();
@@ -54,6 +59,7 @@ class ProjectDeletionService
             // Project-owned foreign keys cascade (files, wiki, members, workflow,
             // history, invoices, change requests, handovers and pins).
             $project->forceDelete();
+            app(WorkActivityPublisher::class)->changed('project_deleted', $timerUsers);
             DB::afterCommit(function () use ($paths): void {
                 DeleteProjectUploads::dispatch($paths);
             });

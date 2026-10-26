@@ -13,6 +13,7 @@ use App\Models\TimeEntry;
 use App\Models\User;
 use App\Services\HR\AttendanceService;
 use App\Services\Tasks\ActiveWorkService;
+use App\Services\Tasks\WorkActivityPublisher;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -69,7 +70,8 @@ class TimeTrackingService
         });
 
         // Broadcast timer started event
-        $this->broadcastTimerUpdate($user->id, 'started', $timeEntry);
+        DB::afterCommit(fn () => $this->broadcastTimerUpdate($user->id, 'started', $timeEntry));
+        app(WorkActivityPublisher::class)->changed('timer_started');
 
         return $timeEntry;
     }
@@ -428,6 +430,7 @@ class TimeTrackingService
         DB::afterCommit(
             fn () => $this->broadcastTimerUpdate($timeEntry->user_id, $reason->value)
         );
+        app(WorkActivityPublisher::class)->changed('timer_'.$reason->value);
 
         return $timeEntry->fresh();
     }

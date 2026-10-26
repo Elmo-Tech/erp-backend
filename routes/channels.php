@@ -1,6 +1,10 @@
 <?php
 
+use App\Models\User;
+use App\Policies\WorkMonitoringPolicy;
 use Illuminate\Support\Facades\Broadcast;
+
+Broadcast::channel('work-monitoring', fn (User $user) => app(WorkMonitoringPolicy::class)->view($user));
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;

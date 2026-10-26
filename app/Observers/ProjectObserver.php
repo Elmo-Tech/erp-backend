@@ -11,6 +11,7 @@ use App\Services\AuditService;
 use App\Services\BillingService;
 use App\Services\Projects\ProjectHistoryService;
 use App\Services\Projects\ProjectWorkflowService;
+use App\Services\Tasks\WorkActivityPublisher;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -44,6 +45,7 @@ class ProjectObserver
     public function created(Project $project): void
     {
         $this->workflowService->ensureProjectWorkflow($project);
+        app(WorkActivityPublisher::class)->changed('project_created');
     }
 
     /**
@@ -98,6 +100,10 @@ class ProjectObserver
     {
         // Clear caches when project is updated
         $project->clearAllCaches();
+        $publisher = app(WorkActivityPublisher::class);
+        $users = $project->wasChanged(['title', 'status'])
+            ? $publisher->usersTrackingTasks($project->tasks()->withTrashed()->pluck('id')->all()) : [];
+        $publisher->changed('project_changed', $users);
 
         // Record status changes in history
         if ($project->wasChanged('status')) {
@@ -159,9 +165,23 @@ class ProjectObserver
         }
     }
 
-    /**
-     * Notify team members about project status change.
-     */
+    public function deleted(Project $project): void
+    {
+        $this->publishTargetChange($project);
+    }
+
+    public function restored(Project $project): void
+    {
+        $this->publishTargetChange($project);
+    }
+
+    private function publishTargetChange(Project $project): void
+    {
+        $publisher = app(WorkActivityPublisher::class);
+        $publisher->changed('project_targets_changed', $publisher->usersTrackingTasks($project->tasks()->withTrashed()->pluck('id')->all()));
+    }
+
+    /** Notify team members about project status change. */
     private function notifyTeamAboutStatusChange(Project $project, ?string $oldStatus, string $newStatus): void
     {
         // Get all team members for this project

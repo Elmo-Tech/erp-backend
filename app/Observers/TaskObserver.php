@@ -6,6 +6,7 @@ use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Models\Task;
 use App\Services\Points\UnifiedPointService;
+use App\Services\Tasks\WorkActivityPublisher;
 
 /**
  * Observer for Task model to handle bug bounce rate tracking and point awards.
@@ -97,10 +98,38 @@ class TaskObserver
         }
     }
 
-    /**
-     * Determine if points should be awarded for this task.
-     * Points are only awarded for MAIN and WEEKLY tasks, not for SUBTASKS.
-     */
+    public function created(Task $task): void
+    {
+        app(WorkActivityPublisher::class)->changed('task_created');
+    }
+
+    public function updated(Task $task): void
+    {
+        if (! $task->wasChanged(['title', 'status', 'project_id', 'due_date', 'assigned_to', 'supervisor_id'])) {
+            return;
+        }
+        $publisher = app(WorkActivityPublisher::class);
+        $users = $task->wasChanged(['title', 'project_id']) ? $publisher->usersTrackingTasks([$task->id]) : [];
+        $publisher->changed('task_changed', $users);
+    }
+
+    public function deleted(Task $task): void
+    {
+        $this->publishTargetChange($task);
+    }
+
+    public function restored(Task $task): void
+    {
+        $this->publishTargetChange($task);
+    }
+
+    private function publishTargetChange(Task $task): void
+    {
+        $publisher = app(WorkActivityPublisher::class);
+        $publisher->changed('task_targets_changed', $publisher->usersTrackingTasks([$task->id]));
+    }
+
+    /** Points are only awarded for MAIN and WEEKLY tasks, not SUBTASKS. */
     private function shouldAwardPoints(Task $task): bool
     {
         return in_array($task->type, [TaskType::MAIN, TaskType::WEEKLY]);

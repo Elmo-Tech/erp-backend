@@ -140,7 +140,7 @@ class DeploymentRegressionsTest extends TestCase
         Log::spy();
         $entry = app(TimeTrackingService::class)->startTimer($user, $task);
         $this->assertDatabaseHas('time_entries', ['id' => $entry->id, 'end_time' => null]);
-        Log::shouldHaveReceived('warning')->once();
+        Log::shouldHaveReceived('warning')->with('Timer saved but realtime delivery failed', \Mockery::type('array'))->once();
     }
 
     private function makeUnavailable(Task $task, string $state): void

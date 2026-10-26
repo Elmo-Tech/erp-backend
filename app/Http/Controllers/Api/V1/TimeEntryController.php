@@ -18,6 +18,7 @@ use App\Models\TimeEntry;
 use App\Services\Projects\ProjectAccess;
 use App\Services\Sales\TimeTrackingService;
 use App\Services\Tasks\ActiveWorkService;
+use App\Services\Tasks\WorkActivityPublisher;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -743,6 +744,9 @@ class TimeEntryController extends Controller
         }
 
         $timeEntry->update($updateData);
+        if ($timeEntry->wasChanged(['start_time', 'end_time', 'duration_minutes'])) {
+            app(WorkActivityPublisher::class)->changed('timer_edited', [$timeEntry->user_id]);
+        }
 
         return ApiResponse::success(
             new TimeEntryResource($timeEntry->fresh()->load('trackable')),
