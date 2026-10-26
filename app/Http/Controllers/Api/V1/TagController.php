@@ -20,6 +20,7 @@ class TagController extends Controller
     public function __construct()
     {
         $this->middleware(['auth:sanctum', 'locale']);
+        $this->middleware('permission:manage_tags')->except('index');
     }
 
     /**
@@ -29,17 +30,18 @@ class TagController extends Controller
      *     tags={"Settings - Tags"},
      *     summary="List all tags",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Tags retrieved successfully")
      * )
      */
     public function index(Request $request): JsonResponse
     {
         $query = Tag::query();
-        
+
         if ($request->has('type')) {
             $query->ofType($request->type);
         }
-        
+
         $tags = $query->orderBy('name')->get();
 
         return ApiResponse::success($tags, 'Tags retrieved successfully');
@@ -52,6 +54,7 @@ class TagController extends Controller
      *     tags={"Settings - Tags"},
      *     summary="Create a tag",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=201, description="Tag created successfully")
      * )
      */
@@ -63,7 +66,7 @@ class TagController extends Controller
             'type' => 'nullable|string|max:50',
         ]);
 
-        if (!isset($validated['type'])) {
+        if (! isset($validated['type'])) {
             $validated['type'] = 'task';
         }
 
@@ -79,6 +82,7 @@ class TagController extends Controller
      *     tags={"Settings - Tags"},
      *     summary="Update a tag",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Tag updated successfully")
      * )
      */
@@ -102,6 +106,7 @@ class TagController extends Controller
      *     tags={"Settings - Tags"},
      *     summary="Delete a tag",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(response=200, description="Tag deleted successfully")
      * )
      */

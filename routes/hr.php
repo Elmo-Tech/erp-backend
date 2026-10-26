@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::get('employees/{id}/overview', EmployeeOverviewController::class)->name('employees.overview');
+    Route::put('employees/{id}/salary', [EmploymentContractController::class, 'updateSalary'])->name('employees.salary.update');
     Route::get('employees/{id}/hr-report', EmployeeHrReportController::class)->name('employees.hr-report');
     Route::get('employees/{id}/documents', [EmployeeDocumentController::class, 'index'])->name('employees.documents.index');
     Route::post('employees/{id}/documents', [EmployeeDocumentController::class, 'store'])->name('employees.documents.store');
@@ -45,6 +46,7 @@ Route::middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::put('leave-types/{leaveType}', [LeaveManagementController::class, 'updateType'])->middleware('permission:manage_leave_types')->name('leave-types.update');
 
     Route::get('employees/{id}/leaves', [LeaveManagementController::class, 'history'])->name('employees.leaves.index');
+    Route::put('employees/{id}/leave-balances/{leaveType}', [LeaveManagementController::class, 'updateBalance'])->name('employees.leave-balances.update');
     Route::post('employees/{id}/leaves', [LeaveManagementController::class, 'store'])->name('employees.leaves.store');
     Route::put('employee-leaves/{leave}', [LeaveManagementController::class, 'update'])->name('employee-leaves.update');
     Route::post('employee-leaves/{leave}/approve', [LeaveManagementController::class, 'approve'])->name('employee-leaves.approve');

@@ -8,6 +8,7 @@ use App\Http\Requests\V1\Admin\StoreRoleRequest;
 use App\Http\Requests\V1\Admin\UpdateRoleRequest;
 use App\Policies\UserAdministrationPolicy;
 use App\Services\Client\AuditLogService;
+use App\Support\PermissionCatalog;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use OpenApi\Annotations as OA;
@@ -101,7 +102,7 @@ class AdminRoleController extends Controller
     public function index(): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(['manage_roles', 'view_roles', 'manage_employees', 'assign_user_roles'])) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -226,7 +227,7 @@ class AdminRoleController extends Controller
     public function show(int $role): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(['manage_roles', 'view_roles'])) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -375,7 +376,7 @@ class AdminRoleController extends Controller
     public function store(StoreRoleRequest $request): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(['manage_roles', 'create_roles'])) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -561,7 +562,7 @@ class AdminRoleController extends Controller
     public function update(UpdateRoleRequest $request, int $role): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(['manage_roles', 'edit_roles'])) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -731,7 +732,7 @@ class AdminRoleController extends Controller
     public function destroy(int $role): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(['manage_roles', 'delete_roles'])) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -842,7 +843,7 @@ class AdminRoleController extends Controller
     public function permissions(): JsonResponse
     {
         // Check permission
-        if (! auth()->user()->can('manage_roles')) {
+        if (! auth()->user()->hasAnyPermission(['manage_roles', 'view_roles', 'create_roles', 'edit_roles'])) {
             return ApiResponse::forbidden('You do not have permission to manage roles');
         }
 
@@ -851,7 +852,7 @@ class AdminRoleController extends Controller
 
             $permissionsData = $permissions->map(function ($permission) {
                 // Group permissions by their prefix for better organization
-                $group = $this->getPermissionGroup($permission->name);
+                $group = PermissionCatalog::group($permission->name);
 
                 return [
                     'id' => $permission->id,

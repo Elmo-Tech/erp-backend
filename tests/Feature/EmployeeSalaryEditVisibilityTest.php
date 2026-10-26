@@ -37,6 +37,7 @@ class EmployeeSalaryEditVisibilityTest extends TestCase
     public function test_user_without_salary_permission_cannot_receive_edit_salary_values(): void
     {
         $viewer = User::factory()->create(['name' => 'ZZZ Viewer']);
+        $viewer->givePermissionTo(Permission::findOrCreate('view_employees', 'web'));
         $employee = User::factory()->create([
             'name' => 'AAA Protected Employee',
             'is_employee' => true,

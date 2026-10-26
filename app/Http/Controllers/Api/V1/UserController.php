@@ -106,7 +106,7 @@ class UserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        if (! auth()->user()->can('manage_users')) {
+        if (! auth()->user()->hasAnyPermission(['manage_users', 'view_users'])) {
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 
@@ -250,7 +250,7 @@ class UserController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        if (! auth()->user()->can('manage_users')) {
+        if (! auth()->user()->hasAnyPermission(['manage_users', 'view_users'])) {
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 
@@ -407,7 +407,7 @@ class UserController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
-        if (! auth()->user()->can('manage_users')) {
+        if (! auth()->user()->hasAnyPermission(['manage_users', 'delete_users'])) {
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 
@@ -484,7 +484,7 @@ class UserController extends Controller
      */
     public function toggleStatus(int $id): JsonResponse
     {
-        if (! auth()->user()->can('manage_users')) {
+        if (! auth()->user()->hasAnyPermission(['manage_users', 'edit_users'])) {
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 
@@ -575,7 +575,7 @@ class UserController extends Controller
      */
     public function assignRoles(Request $request, int $id): JsonResponse
     {
-        if (! auth()->user()->can('manage_users')) {
+        if (! auth()->user()->hasAnyPermission(['manage_users', 'edit_users'])) {
             return ApiResponse::forbidden(__('messages.no_permission'));
         }
 

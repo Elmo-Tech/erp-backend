@@ -257,6 +257,36 @@ class LeaveManagementApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_type_changes_preserve_custom_used_other_types_and_previous_years(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 25));
+        $manager = $this->employeeManager();
+        $manager->givePermissionTo(Permission::findOrCreate('manage_leave_types', 'web'));
+        $employee = User::factory()->create(['is_employee' => true]);
+        $customEmployee = User::factory()->create(['is_employee' => true]);
+        $annual = $this->annualLeaveType();
+        $sick = LeaveType::where('slug', 'sick')->firstOrFail();
+        $default = EmployeeLeaveBalance::create(['employee_id' => $employee->id, 'leave_type_id' => $annual->id, 'year' => 2026, 'allocated_days' => 21, 'used_days' => 5]);
+        $custom = EmployeeLeaveBalance::create(['employee_id' => $customEmployee->id, 'leave_type_id' => $annual->id, 'year' => 2026, 'allocated_days' => 25, 'used_days' => 2, 'is_custom' => true]);
+        $other = EmployeeLeaveBalance::create(['employee_id' => $employee->id, 'leave_type_id' => $sick->id, 'year' => 2026, 'allocated_days' => 10, 'used_days' => 1]);
+        $past = EmployeeLeaveBalance::create(['employee_id' => $employee->id, 'leave_type_id' => $annual->id, 'year' => 2025, 'allocated_days' => 21, 'used_days' => 8]);
+
+        $this->actingAs($manager, 'sanctum')->putJson('/api/v1/leave-types/'.$annual->id, ['annualAllowanceDays' => 30])->assertOk();
+        $this->assertEquals(30, $default->fresh()->allocated_days);
+        $this->assertEquals(5, $default->fresh()->used_days);
+        $this->assertEquals(25, $custom->fresh()->allocated_days);
+        $this->assertEquals(10, $other->fresh()->allocated_days);
+        $this->assertEquals(21, $past->fresh()->allocated_days);
+
+        $this->putJson("/api/v1/employees/{$employee->id}/leave-balances/{$annual->id}", ['year' => 2026, 'useDefault' => false, 'allocatedDays' => 3])->assertOk();
+        $this->assertEquals(5, $default->fresh()->used_days);
+        $this->assertTrue($default->fresh()->is_custom);
+        $this->getJson("/api/v1/employees/{$employee->id}/leaves?year=2026")->assertOk()->assertJsonPath('data.balances.0.overdrawnDays', 2);
+        $this->putJson("/api/v1/employees/{$employee->id}/leave-balances/{$annual->id}", ['year' => 2026, 'useDefault' => true])->assertOk();
+        $this->assertEquals(30, $default->fresh()->allocated_days);
+        $this->actingAs($employee, 'sanctum')->putJson("/api/v1/employees/{$employee->id}/leave-balances/{$annual->id}", ['year' => 2026, 'useDefault' => false, 'allocatedDays' => 99])->assertForbidden();
+    }
+
     private function employeeManager(): User
     {
         $manager = User::factory()->create(['is_employee' => true]);

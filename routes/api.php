@@ -17,6 +17,9 @@ use App\Http\Controllers\Api\V1\ClientPortalAccessController;
 use App\Http\Controllers\Api\V1\CodeReviewController;
 use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\DeviceBridgeController;
+use App\Http\Controllers\Api\V1\DeviceController;
+use App\Http\Controllers\Api\V1\DeviceWebhookController;
 use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\EnumController;
 use App\Http\Controllers\Api\V1\ExportController;
@@ -40,6 +43,7 @@ use App\Http\Controllers\Api\V1\ProjectMemberController;
 use App\Http\Controllers\Api\V1\ProjectPipelineController;
 use App\Http\Controllers\Api\V1\ProjectWikiController;
 use App\Http\Controllers\Api\V1\ProposalController;
+use App\Http\Controllers\Api\V1\PushSubscriptionController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\RecurringTaskController;
 use App\Http\Controllers\Api\V1\SalesAnalyticsController;
@@ -75,7 +79,21 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     // Health check endpoint
     Route::get('/health', HealthController::class)->name('api.v1.health');
 
+    // Access control device webhook (push mode).
+    Route::post('device-bridge/{id}/events', DeviceBridgeController::class)
+        ->middleware('throttle:device-webhook')->name('device-bridge.events');
+    // The device authenticates with the per-device token in the URL.
+    Route::post('device-events/{token}', [DeviceWebhookController::class, 'handle'])
+        ->middleware('throttle:device-webhook')
+        ->name('device-events.handle');
+
     // Authentication Routes
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('notifications/settings', [PushSubscriptionController::class, 'settings']);
+        Route::put('notifications/preferences', [PushSubscriptionController::class, 'preferences']);
+        Route::post('notifications/push-subscriptions', [PushSubscriptionController::class, 'store']);
+        Route::delete('notifications/push-subscriptions', [PushSubscriptionController::class, 'destroy']);
+    });
     // Security: Rate limiting applied to prevent brute force attacks
     // Registration is disabled by default - use admin panel to create users
     Route::prefix('auth')->group(function () {
@@ -301,6 +319,9 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::put('projects/{project}/pipeline/stages', [ProjectPipelineController::class, 'updateStages'])->name('projects.pipeline.stages.update');
     Route::post('projects/{project}/pipeline/templates/{template}', [ProjectPipelineController::class, 'applyTemplate'])->name('projects.pipeline.templates.apply');
 
+    Route::get('projects/trash', [ProjectController::class, 'trash'])->name('projects.trash');
+    Route::post('projects/{id}/restore', [ProjectController::class, 'restore'])->name('projects.restore');
+    Route::delete('projects/{id}/permanent', [ProjectController::class, 'forceDestroy'])->name('projects.permanent');
     Route::apiResource('projects', ProjectController::class);
 
     // Pinned Projects Routes
@@ -331,6 +352,22 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::post('projects/{project}/drive-folder', [GoogleDriveController::class, 'connectFolder'])->name('projects.drive-folder');
     Route::get('projects/{project}/drive-files', [GoogleDriveController::class, 'files'])->name('projects.drive-files');
     Route::post('projects/{project}/drive-files', [GoogleDriveController::class, 'upload'])->name('projects.drive-files.upload');
+
+    // Access Control Devices (fingerprint / card terminals)
+    Route::get('devices', [DeviceController::class, 'index'])->name('devices.index');
+    Route::post('devices', [DeviceController::class, 'store'])->name('devices.store');
+    Route::get('devices/{device}', [DeviceController::class, 'show'])->name('devices.show');
+    Route::put('devices/{device}', [DeviceController::class, 'update'])->name('devices.update');
+    Route::delete('devices/{device}', [DeviceController::class, 'destroy'])->name('devices.destroy');
+    Route::post('devices/{device}/test', [DeviceController::class, 'test'])->name('devices.test');
+    Route::post('devices/{device}/poll', [DeviceController::class, 'poll'])->name('devices.poll');
+    Route::post('devices/{device}/users/push', [DeviceController::class, 'pushUsers'])->name('devices.users.push');
+    Route::get('devices/{device}/users/pull', [DeviceController::class, 'pullUsers'])->name('devices.users.pull');
+    Route::post('devices/{device}/users', [DeviceController::class, 'linkUser'])->name('devices.users.link');
+    Route::delete('devices/{device}/users/{deviceUser}', [DeviceController::class, 'unlinkUser'])->name('devices.users.unlink');
+    Route::get('devices/{device}/events', [DeviceController::class, 'events'])->name('devices.events');
+    Route::post('devices/{device}/webhook/enable', [DeviceController::class, 'enableWebhook'])->name('devices.webhook.enable');
+    Route::post('devices/{device}/webhook/disable', [DeviceController::class, 'disableWebhook'])->name('devices.webhook.disable');
 
     // Project Wiki Routes (nested resource)
     Route::apiResource('projects.wikis', ProjectWikiController::class);

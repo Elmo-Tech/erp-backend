@@ -44,6 +44,8 @@ class AttendanceResource extends JsonResource
             'attendanceId' => $attendance->id,
             'userId' => $attendance->user_id,
             'date' => $attendance->date?->format('Y-m-d'),
+            'source' => $attendance->source,
+            'deviceId' => $attendance->device_id,
             'clockIn' => $attendance->clock_in?->format('Y-m-d\TH:i:s'),
             'clockOut' => $attendance->clock_out?->format('Y-m-d\TH:i:s'),
             'expectedClockIn' => $attendance->expected_clock_in,

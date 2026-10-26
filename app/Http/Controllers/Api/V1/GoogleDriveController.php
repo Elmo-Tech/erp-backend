@@ -20,7 +20,7 @@ class GoogleDriveController extends Controller
 
     public function oauthUrl(Request $request): JsonResponse
     {
-        if (! $request->user()?->hasAnyRole(['admin', 'super-admin']) && ! $request->user()?->can('manage_project_files')) {
+        if (! $request->user()?->hasAnyPermission(['manage_google_drive', 'manage_project_files'])) {
             return ApiResponse::forbidden(__('messages.unauthorized'));
         }
 
@@ -32,7 +32,7 @@ class GoogleDriveController extends Controller
 
     public function oauthCallback(Request $request): JsonResponse
     {
-        if (! $request->user()?->hasAnyRole(['admin', 'super-admin']) && ! $request->user()?->can('manage_project_files')) {
+        if (! $request->user()?->hasAnyPermission(['manage_google_drive', 'manage_project_files'])) {
             return ApiResponse::forbidden(__('messages.unauthorized'));
         }
 
@@ -53,7 +53,7 @@ class GoogleDriveController extends Controller
 
     public function status(Request $request): JsonResponse
     {
-        if (! $request->user()?->hasAnyRole(['admin', 'super-admin']) && ! $request->user()?->can('manage_project_files')) {
+        if (! $request->user()?->hasAnyPermission(['manage_google_drive', 'manage_project_files'])) {
             return ApiResponse::forbidden(__('messages.unauthorized'));
         }
 

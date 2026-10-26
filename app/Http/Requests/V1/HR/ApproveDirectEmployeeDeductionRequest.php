@@ -8,7 +8,7 @@ class ApproveDirectEmployeeDeductionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage_employees') ?? false;
+        return $this->user()?->hasAnyPermission(['manage_employees', 'manage_deductions', 'approve_deductions']) ?? false;
     }
 
     public function rules(): array

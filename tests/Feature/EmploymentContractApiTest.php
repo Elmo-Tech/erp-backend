@@ -239,6 +239,21 @@ class EmploymentContractApiTest extends TestCase
         $this->assertSame('2026-12-31', $contract->end_date?->toDateString());
     }
 
+    public function test_salary_permission_updates_contract_and_employee_together_but_read_only_cannot_write(): void
+    {
+        $employee = User::factory()->create(['is_employee' => true]);
+        $contract = EmploymentContract::create([...$this->contractAttributes($employee), 'status' => EmploymentContract::STATUS_ACTIVE]);
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo(Permission::findOrCreate('view_employee_salary', 'web'));
+        $this->actingAs($viewer, 'sanctum')->putJson('/api/v1/employees/'.$employee->id.'/salary', ['baseSalary' => 12000])->assertForbidden();
+        $editor = User::factory()->create();
+        $editor->givePermissionTo(Permission::findOrCreate('manage_employee_salary', 'web'));
+        $this->actingAs($editor, 'sanctum')->putJson('/api/v1/employees/'.$employee->id.'/salary', ['baseSalary' => 12000])->assertOk();
+        $this->assertEquals(12000, $employee->fresh()->salary);
+        $this->assertEquals(12000, $contract->fresh()->base_salary);
+        $this->putJson('/api/v1/employees/'.$employee->id, ['name' => 'Not authorized'])->assertForbidden();
+    }
+
     private function employeeManager(): User
     {
         $manager = User::factory()->create();

@@ -6,13 +6,23 @@ use App\Jobs\GenerateRecurringTasksJob;
 use App\Jobs\MarkOverdueInvoicesJob;
 use App\Jobs\SendActivityRemindersJob;
 use App\Jobs\SendExpiryWarningsJob;
+use App\Jobs\SyncDeviceEventsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use Minishlink\WebPush\VAPID;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('notifications:vapid', function () {
+    $keys = VAPID::createVapidKeys();
+    $this->line('WEB_PUSH_PUBLIC_KEY='.$keys['publicKey']);
+    $this->line('WEB_PUSH_PRIVATE_KEY='.$keys['privateKey']);
+})->purpose('Generate Web Push VAPID keys once; store these in the server environment');
+
+Schedule::command('time-entries:remind')->everyMinute()->withoutOverlapping()->onOneServer();
 
 // Schedule the MarkOverdueInvoicesJob to run daily at midnight
 // Requirements: 18.1, 18.5
@@ -69,3 +79,11 @@ Schedule::command('time-entries:expire-stale')
     ->everyMinute()
     ->withoutOverlapping()
     ->onOneServer();
+
+// Poll the access control terminals for new events.
+if (config('devices.polling.enabled')) {
+    Schedule::job(new SyncDeviceEventsJob)
+        ->everyFiveMinutes()
+        ->withoutOverlapping()
+        ->onOneServer();
+}

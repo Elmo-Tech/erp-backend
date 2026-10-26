@@ -11,9 +11,12 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $user_id
- * @property \Illuminate\Support\Carbon|null $date
- * @property \Illuminate\Support\Carbon|null $clock_in
- * @property \Illuminate\Support\Carbon|null $clock_out
+ * @property Carbon|null $date
+ * @property string $source
+ * @property int|null $device_id
+ * @property string|null $external_id
+ * @property Carbon|null $clock_in
+ * @property Carbon|null $clock_out
  * @property int $late_minutes
  * @property bool $is_late
  * @property int $idle_minutes
@@ -23,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $expected_clock_out
  * @property string|null $notes
  * @property-read User $user
+ * @property-read Device|null $device
  */
 class Attendance extends Model
 {
@@ -36,6 +40,9 @@ class Attendance extends Model
     protected $fillable = [
         'user_id',
         'date',
+        'source',
+        'device_id',
+        'external_id',
         'clock_in',
         'clock_out',
         'late_minutes',
@@ -47,6 +54,21 @@ class Attendance extends Model
         'expected_clock_out',
         'notes',
     ];
+
+    /**
+     * Attendance recorded through the access control terminal.
+     */
+    public const SOURCE_DEVICE = 'device';
+
+    /**
+     * Attendance recorded from the web / mobile application.
+     */
+    public const SOURCE_WEB = 'web';
+
+    /**
+     * Attendance created manually by an administrator.
+     */
+    public const SOURCE_MANUAL = 'manual';
 
     /**
      * Get the attributes that should be cast.
@@ -73,6 +95,22 @@ class Attendance extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the access control terminal that produced this record.
+     */
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class);
+    }
+
+    /**
+     * Determine whether this record came from a physical device.
+     */
+    public function isFromDevice(): bool
+    {
+        return $this->source === self::SOURCE_DEVICE;
     }
 
     public function lateDeduction(): HasOne

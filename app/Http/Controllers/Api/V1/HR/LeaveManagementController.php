@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
 use App\Services\AuditService;
 use App\Services\HR\EmployeeService;
+use App\Services\HR\HrRequestNotifier;
 use App\Services\HR\LeaveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -67,11 +68,50 @@ class LeaveManagementController extends Controller
     {
         abort_unless($request->user()?->can('manage_leave_types'), 403);
 
-        $leaveType->update($this->leaveTypeAttributes(
-            $request->validate($this->leaveTypeRules($leaveType))
-        ));
+        $attributes = $this->leaveTypeAttributes($request->validate($this->leaveTypeRules($leaveType)));
+        DB::transaction(function () use ($leaveType, $attributes): void {
+            $leaveType = LeaveType::query()->lockForUpdate()->findOrFail($leaveType->id);
+            $leaveType->update($attributes);
+            if (array_key_exists('annual_allowance_days', $attributes)) {
+                EmployeeLeaveBalance::where('leave_type_id', $leaveType->id)
+                    ->where('year', today()->year)->where('is_custom', false)
+                    ->update(['allocated_days' => $leaveType->annual_allowance_days]);
+            }
+        });
 
-        return ApiResponse::success(new LeaveTypeResource($leaveType), 'Leave type updated successfully');
+        return ApiResponse::success(new LeaveTypeResource($leaveType->fresh()), 'Leave type updated successfully');
+    }
+
+    public function updateBalance(Request $request, int $id, LeaveType $leaveType): JsonResponse
+    {
+        $employee = $this->employeeService->getEmployee($id);
+        abort_unless($employee, 404);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_leaves');
+        $data = $request->validate([
+            'year' => ['required', 'integer', 'between:2000,2100'],
+            'allocatedDays' => ['nullable', 'numeric', 'between:0,366'],
+            'useDefault' => ['required', 'boolean'],
+        ]);
+        if (! $data['useDefault'] && ! isset($data['allocatedDays'])) {
+            throw ValidationException::withMessages(['allocatedDays' => ['Enter the total annual allocation.']]);
+        }
+        DB::transaction(function () use ($employee, $leaveType, $data): void {
+            User::whereKey($employee->id)->lockForUpdate()->firstOrFail();
+            $type = LeaveType::whereKey($leaveType->id)->lockForUpdate()->firstOrFail();
+            $balance = EmployeeLeaveBalance::firstOrCreate([
+                'employee_id' => $employee->id, 'leave_type_id' => $type->id, 'year' => $data['year'],
+            ], ['allocated_days' => $type->annual_allowance_days, 'used_days' => 0]);
+            $before = $balance->only(['allocated_days', 'used_days', 'is_custom']);
+            $balance->update([
+                'allocated_days' => $data['useDefault'] ? $type->annual_allowance_days : $data['allocatedDays'],
+                'is_custom' => ! $data['useDefault'],
+            ]);
+            app(AuditService::class)->log('hr', 'leave_balance_updated', $balance, [
+                'before' => $before, 'after' => $balance->only(['allocated_days', 'used_days', 'is_custom']),
+            ], 'info', 'Employee leave allocation updated without changing consumed days');
+        });
+
+        return ApiResponse::success(null, 'Leave allocation updated successfully');
     }
 
     public function history(Request $request, int $id): JsonResponse
@@ -120,6 +160,8 @@ class LeaveManagementController extends Controller
                 'leaveTypeId' => $leaveType->id,
                 'allocatedDays' => $allocatedDays,
                 'usedDays' => $usedDays,
+                'isCustom' => (bool) ($balance?->is_custom ?? false),
+                'overdrawnDays' => max(0, round($usedDays - $allocatedDays, 2)),
                 'remainingDays' => max(0, round($allocatedDays - $usedDays, 2)),
             ];
         })->values();
@@ -189,6 +231,8 @@ class LeaveManagementController extends Controller
                 : $leave;
         });
 
+        app(HrRequestNotifier::class)->send($leave, 'leave', 'manage_leaves');
+
         return ApiResponse::success(
             new EmployeeLeaveResource($leave->load('leaveType')),
             $leave->status === EmployeeLeave::STATUS_APPROVED ? 'Leave registered and approved successfully' : 'Leave request created successfully',
@@ -201,7 +245,7 @@ class LeaveManagementController extends Controller
         $leave->loadMissing('employee');
 
         if (! $request->user()->is($leave->employee)) {
-            $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $leave->employee);
+            $this->administrationPolicy->authorizeHrAction($request->user(), $leave->employee, 'manage_leaves');
         }
 
         $validated = $request->validate($this->leaveRequestRules());
@@ -253,6 +297,7 @@ class LeaveManagementController extends Controller
         $actorId = $request->user()->id;
 
         $leave = $this->approveLeave($leave, $actorId, $validated['reviewNote'] ?? null);
+        app(HrRequestNotifier::class)->send($leave, 'leave', 'manage_leaves');
 
         return ApiResponse::success(new EmployeeLeaveResource($leave), 'Leave request approved successfully');
     }
@@ -341,6 +386,8 @@ class LeaveManagementController extends Controller
             return $leave->fresh(['leaveType']);
         });
 
+        app(HrRequestNotifier::class)->send($leave, 'leave', 'manage_leaves');
+
         return ApiResponse::success(new EmployeeLeaveResource($leave), 'Leave request rejected successfully');
     }
 
@@ -349,7 +396,7 @@ class LeaveManagementController extends Controller
         $leave->loadMissing('employee');
 
         if (! $request->user()->is($leave->employee)) {
-            $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $leave->employee);
+            $this->administrationPolicy->authorizeHrAction($request->user(), $leave->employee, 'manage_leaves');
         }
 
         $validated = $request->validate($this->reviewNoteRules());

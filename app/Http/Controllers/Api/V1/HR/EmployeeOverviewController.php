@@ -29,7 +29,10 @@ class EmployeeOverviewController extends Controller
     {
         $employee = app(EmployeeService::class)->getEmployee($id);
         abort_if($employee === null, 404, 'Employee not found.');
-        app(UserAdministrationPolicy::class)->authorizeHrView($request->user(), $employee, 'manage_employees');
+        if (! $request->user()->is($employee)) {
+            abort_unless($request->user()->hasAnyPermission(['manage_employees', 'view_hr_overview', 'view_employee_salary', 'manage_employee_salary']), 403);
+            app(UserAdministrationPolicy::class)->authorizeHrReadTarget($request->user(), $employee);
+        }
         $validated = $request->validate(['month' => ['required', 'date_format:Y-m']]);
         $period = Carbon::createFromFormat('!Y-m', $validated['month']);
         $start = $period->copy()->startOfMonth()->toDateString();

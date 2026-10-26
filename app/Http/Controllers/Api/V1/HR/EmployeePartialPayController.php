@@ -72,6 +72,7 @@ class EmployeePartialPayController extends Controller
         $partialPay = $this->employeePartialPayService->create($employee, $request->validated());
 
         return response()->json([
+            'message' => 'Partial salary record created',
             'data' => new EmployeePartialPayResource($partialPay->load('salaryAdjustment')),
         ], 201);
     }
@@ -91,6 +92,7 @@ class EmployeePartialPayController extends Controller
         app(AuditService::class)->log('hr', 'partial_pay_approved', $partialPay, ['kind' => $partialPay->kind, 'grossAmount' => $partialPay->gross_amount, 'payrollMonth' => $partialPay->payroll_month, 'payrollYear' => $partialPay->payroll_year], 'warning', 'Partial pay approved: '.$partialPay->kind);
 
         return response()->json([
+            'message' => 'Partial salary record approved',
             'data' => new EmployeePartialPayResource($partialPay),
         ]);
     }
@@ -107,6 +109,7 @@ class EmployeePartialPayController extends Controller
         );
 
         return response()->json([
+            'message' => 'Partial salary record cancelled',
             'data' => new EmployeePartialPayResource($partialPay),
         ]);
     }

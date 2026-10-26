@@ -26,6 +26,7 @@ class DashboardController extends Controller
     public function __construct()
     {
         $this->middleware(['auth:sanctum', 'locale']);
+        $this->middleware('permission:view_dashboard|view_dashboard_overview');
     }
 
     #[OA\Get(
@@ -153,9 +154,9 @@ class DashboardController extends Controller
         ];
 
         // Projects Stats
-        $totalProjects = Project::withoutGlobalScopes()->count();
-        $projectsThisMonth = Project::withoutGlobalScopes()->where('created_at', '>=', $startOfMonth)->count();
-        $projectsLastMonth = Project::withoutGlobalScopes()->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])->count();
+        $totalProjects = Project::withoutGlobalScopes()->withoutTrashed()->count();
+        $projectsThisMonth = Project::withoutGlobalScopes()->withoutTrashed()->where('created_at', '>=', $startOfMonth)->count();
+        $projectsLastMonth = Project::withoutGlobalScopes()->withoutTrashed()->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])->count();
         $projectsChange = $this->calculateChange($projectsThisMonth, $projectsLastMonth);
 
         // Work Hours Stats (all team)
@@ -168,19 +169,19 @@ class DashboardController extends Controller
         $workHoursChange = $this->calculateChange($workHoursThisMonth, $workHoursLastMonth);
 
         // Active Clients
-        $activeClients = Project::withoutGlobalScopes()
+        $activeClients = Project::withoutGlobalScopes()->withoutTrashed()
             ->whereIn('status', $activeStatuses)
             ->whereNotNull('client_id')
             ->distinct('client_id')
             ->count('client_id');
-        $clientsLastMonth = Project::withoutGlobalScopes()
+        $clientsLastMonth = Project::withoutGlobalScopes()->withoutTrashed()
             ->whereIn('status', $activeStatuses)
             ->where('created_at', '<', $startOfMonth)
             ->whereNotNull('client_id')
             ->distinct('client_id')
             ->count('client_id');
         $clientsChange = $activeClients - $clientsLastMonth;
-        $completedProjects = Project::withoutGlobalScopes()
+        $completedProjects = Project::withoutGlobalScopes()->withoutTrashed()
             ->where('status', ProjectStatus::COMPLETED->value)
             ->count();
         $openTasks = Task::whereIn('status', ['todo', 'in_progress'])->count();
@@ -188,7 +189,7 @@ class DashboardController extends Controller
             ->whereDate('due_date', '<', Carbon::today())
             ->where('status', '!=', 'completed')
             ->count();
-        $employeesCount = User::role(['admin', 'manager', 'developer'])->count();
+        $employeesCount = User::where('is_employee', true)->where('is_active', true)->count();
         $todayAttendance = Attendance::whereDate('clock_in', Carbon::today())->count();
 
         // Recent Projects
@@ -200,7 +201,7 @@ class DashboardController extends Controller
             'stats' => [
                 'totalProjects' => $totalProjects,
                 'projectsChange' => $projectsChange,
-                'activeProjects' => Project::withoutGlobalScopes()->whereIn('status', $activeStatuses)->count(),
+                'activeProjects' => Project::withoutGlobalScopes()->withoutTrashed()->whereIn('status', $activeStatuses)->count(),
                 'completedProjects' => $completedProjects,
                 'workHours' => round($workHoursThisMonth),
                 'workHoursChange' => $workHoursChange,
@@ -214,6 +215,7 @@ class DashboardController extends Controller
             'recentProjects' => $recentProjects,
             'recentActivities' => $recentActivities,
             'timeline' => $this->getDeliveryTimeline(),
+            'liveWork' => $this->liveWork(),
         ], 'Dashboard overview retrieved successfully');
     }
 
@@ -233,7 +235,7 @@ class DashboardController extends Controller
         $teamMemberIds = User::role('developer')->pluck('id')->toArray();
 
         // Active Projects (projects with active status)
-        $activeProjects = Project::withoutGlobalScopes()
+        $activeProjects = Project::withoutGlobalScopes()->withoutTrashed()
             ->whereIn('status', $activeStatuses)
             ->count();
 
@@ -328,7 +330,7 @@ class DashboardController extends Controller
         $myProjectIds = Task::where('assigned_to', $userId)
             ->distinct('project_id')
             ->pluck('project_id');
-        $myActiveProjects = Project::withoutGlobalScopes()
+        $myActiveProjects = Project::withoutGlobalScopes()->withoutTrashed()
             ->whereIn('id', $myProjectIds)
             ->whereIn('status', [
                 ProjectStatus::ACTIVE->value,
@@ -384,6 +386,13 @@ class DashboardController extends Controller
                 'todayHours' => round($todayHours, 1),
             ],
             'recentTasks' => $myRecentTasks,
+            'projects' => Project::withoutGlobalScopes()->whereNull('projects.deleted_at')
+                ->where(function ($query) use ($userId): void {
+                    $query->whereHas('members', fn ($members) => $members->where('user_id', $userId))
+                        ->orWhereHas('tasks', fn ($tasks) => $tasks->where('assigned_to', $userId)
+                            ->orWhereHas('assignees', fn ($assignees) => $assignees->where('user_id', $userId)));
+                })->orderBy('deadline')->get(['id', 'title', 'deadline', 'status'])
+                ->map(fn ($project) => ['projectId' => $project->id, 'name' => $project->title, 'deadline' => $project->deadline?->toDateString()]),
             'recentActivities' => $myRecentActivities,
         ], 'Dashboard overview retrieved successfully');
     }
@@ -400,12 +409,33 @@ class DashboardController extends Controller
         return $current > 0 ? 100 : 0;
     }
 
+    private function liveWork(): array
+    {
+        $timers = TimeEntry::with(['user:id,name', 'trackable'])->whereNull('end_time')
+            ->where('trackable_type', Task::class)->whereHasMorph('trackable', [Task::class], fn ($task) => $task->where(function ($query): void {
+                $query->whereNull('project_id')->orWhereIn('project_id', Project::withoutGlobalScopes()->withoutTrashed()->select('id'));
+            }))->orderBy('id')
+            ->get();
+        $workingIds = $timers->pluck('user_id')->unique();
+
+        return [
+            'activeTimerCount' => $timers->count(),
+            'working' => $timers->map(fn ($timer) => [
+                'userId' => $timer->user_id, 'name' => $timer->user?->name,
+                'taskId' => $timer->trackable_id, 'taskTitle' => $timer->trackable?->title,
+                'projectId' => $timer->trackable?->project_id, 'startedAt' => $timer->start_time->toISOString(),
+            ])->values(),
+            'idle' => User::where('is_employee', true)->where('is_active', true)->whereNotIn('id', $workingIds)
+                ->orderBy('name')->get(['id', 'name'])->map(fn ($user) => ['userId' => $user->id, 'name' => $user->name]),
+        ];
+    }
+
     /**
      * Get recent projects for admin
      */
     private function getRecentProjects(): array
     {
-        return Project::withoutGlobalScopes()
+        return Project::withoutGlobalScopes()->withoutTrashed()
             ->select('id', 'title', 'status')
             ->orderBy('updated_at', 'desc')
             ->limit(4)
@@ -443,7 +473,7 @@ class DashboardController extends Controller
      */
     private function getProjectTimelineEntries(): array
     {
-        return Project::withoutGlobalScopes()
+        return Project::withoutGlobalScopes()->withoutTrashed()
             ->select('id', 'title', 'deadline', 'created_at')
             ->whereNotNull('deadline')
             ->orderBy('deadline')

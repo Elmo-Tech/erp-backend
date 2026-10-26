@@ -3,7 +3,9 @@
 namespace App\Http\Resources\V1\HR;
 
 use App\Models\User;
+use App\Policies\UserAdministrationPolicy;
 use App\Services\HR\SalaryRateCalculator;
+use App\Support\PermissionCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -38,9 +40,19 @@ class EmployeeResource extends JsonResource
         /** @var User $employee */
         $employee = $this->resource;
         $user = $request->user();
+        // Task assignment needs an employee directory, not HR/personal records.
+        if ($user && ! $user->is($employee) && ! $user->hasAnyPermission(PermissionCatalog::hrPermissions())) {
+            return [
+                'userId' => $employee->id, 'name' => $employee->name, 'email' => $employee->email,
+                'avatar' => $employee->avatar, 'isActive' => (bool) $employee->is_active,
+                'specialization' => $employee->specialization, 'salary' => null,
+            ];
+        }
         $simplifiedMode = (bool) config('simplification.enabled');
+        $canReadTarget = $user && app(UserAdministrationPolicy::class)->canReadHrTarget($user, $employee);
         $canViewSalary = $user
-            && $user->hasAnyPermission(['view_employee_salary', 'manage_employees']);
+            && $canReadTarget && ($user->is($employee) || $user->hasAnyPermission(['view_employee_salary', 'manage_employee_salary', 'manage_employee_contracts', 'manage_employees']));
+        $canViewPersonal = $user && $canReadTarget && ($user->is($employee) || $user->hasAnyPermission(['manage_employees', 'view_employees', 'create_employees', 'edit_employees']));
         $roleName = $employee->roles->pluck('name')->first() ?? '';
         $graceDaysAllowed = $employee->grace_days_allowed ?? 0;
         $graceDaysUsed = $employee->grace_days_used ?? 0;
@@ -53,6 +65,17 @@ class EmployeeResource extends JsonResource
             'isActive' => (bool) $employee->is_active,
             'role' => $roleName,
             'specialization' => $employee->specialization ?? '',
+            'jobTitle' => $employee->job_title,
+            'workArrangement' => $employee->work_arrangement,
+            'canViewPersonalDetails' => $canViewPersonal,
+            'birthDate' => $canViewPersonal ? $employee->birth_date?->toDateString() : null,
+            'appointmentDate' => $canViewPersonal ? $employee->appointment_date?->toDateString() : null,
+            'residence' => $canViewPersonal ? $employee->residence : null,
+            'nationalId' => $canViewPersonal ? $employee->national_id : null,
+            'mobile' => $canViewPersonal ? $employee->mobile : null,
+            'otherPhone' => $canViewPersonal ? $employee->other_phone : null,
+            'education' => $canViewPersonal ? $employee->education : null,
+            'employmentType' => $employee->currentEmploymentContract?->employment_type,
 
             // Work schedule
             'workHoursPerDay' => (float) ($employee->work_hours_per_day ?? 0),

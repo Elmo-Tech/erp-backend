@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\TaskActivity;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -21,6 +22,7 @@ class DashboardRecentActivitiesTest extends TestCase
         Role::firstOrCreate(['name' => 'developer']);
         $admin = User::factory()->create();
         $admin->assignRole($adminRole);
+        $admin->givePermissionTo(Permission::findOrCreate('view_dashboard', 'web'));
         $actor = User::factory()->create(['name' => 'QA Actor']);
         $task = Task::factory()->create(['title' => 'Fix release gate']);
 
@@ -48,6 +50,7 @@ class DashboardRecentActivitiesTest extends TestCase
         Role::firstOrCreate(['name' => 'developer']);
         $admin = User::factory()->create();
         $admin->assignRole($adminRole);
+        $admin->givePermissionTo(Permission::findOrCreate('view_dashboard', 'web'));
         $project = Project::factory()->create([
             'title' => 'ERP rollout',
             'created_at' => '2026-07-01',

@@ -5,6 +5,7 @@ namespace App\Services\HR;
 use App\Models\Attendance;
 use App\Models\TaskAssignee;
 use App\Models\User;
+use App\Support\EmployeeDetails;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -24,7 +25,7 @@ class EmployeeService
     public function getAllEmployees(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         // Get all users except those who have client role
-        $query = User::with('roles')
+        $query = User::with(['roles.permissions', 'permissions', 'currentEmploymentContract'])
             ->where(function ($q) {
                 // Users without any roles OR users without client role
                 $q->whereDoesntHave('roles')
@@ -54,7 +55,7 @@ class EmployeeService
      */
     public function getEmployee(int $id): ?User
     {
-        return User::with('roles')
+        return User::with(['roles.permissions', 'permissions', 'currentEmploymentContract'])
             ->where('id', $id)
             ->where(function ($q) {
                 $q->whereDoesntHave('roles')
@@ -74,6 +75,7 @@ class EmployeeService
         $salary = isset($data['salary']) ? (float) $data['salary'] : null;
 
         $employee = User::create([
+            ...EmployeeDetails::attributes($data),
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
@@ -103,7 +105,7 @@ class EmployeeService
      */
     public function updateEmployee(User $employee, array $data): User
     {
-        $updateData = [];
+        $updateData = EmployeeDetails::attributes($data);
 
         $fieldMap = [
             'name' => 'name',

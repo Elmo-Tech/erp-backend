@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\User;
+use App\Support\PermissionCatalog;
 use Illuminate\Support\Collection;
 use Spatie\Permission\Models\Role;
 
@@ -34,7 +35,7 @@ class UserAdministrationPolicy
 
     public function authorizeCreate(User $actor): void
     {
-        abort_unless($actor->can('manage_users'), 403);
+        abort_unless($actor->hasAnyPermission(['manage_users', 'create_users']), 403);
     }
 
     public function authorizeManageTarget(User $actor, User $target): void
@@ -50,7 +51,7 @@ class UserAdministrationPolicy
 
     public function authorizeRoleAssignment(User $actor, ?User $target, array $roleNames): void
     {
-        abort_unless($actor->can('manage_users') && $actor->can('assign_user_roles'), 403);
+        abort_unless($actor->hasAnyPermission(['manage_users', 'create_users', 'edit_users']) && $actor->can('assign_user_roles'), 403);
 
         if ($target !== null) {
             $this->authorizeManageTarget($actor, $target);
@@ -78,7 +79,7 @@ class UserAdministrationPolicy
 
     public function authorizeStatusToggle(User $actor, User $target): void
     {
-        abort_unless($actor->can('manage_users'), 403);
+        abort_unless($actor->hasAnyPermission(['manage_users', 'edit_users']), 403);
         $this->authorizeManageTarget($actor, $target);
 
         if ($target->can('manage_protected_users') && $target->is_active) {
@@ -92,6 +93,20 @@ class UserAdministrationPolicy
         $this->authorizeManageTarget($actor, $target);
     }
 
+    public function authorizeEmployeeEdit(User $actor, User $target): void
+    {
+        abort_unless($actor->hasAnyPermission(['manage_employees', 'edit_employees']), 403);
+        $this->authorizeHrReadTarget($actor, $target);
+        abort_if($actor->is($target), 403);
+    }
+
+    public function authorizeEmployeeOperation(User $actor, User $target, string $permission): void
+    {
+        abort_unless($actor->hasAnyPermission(['manage_employees', $permission]), 403);
+        abort_if($actor->is($target), 403);
+        $this->authorizeHrReadTarget($actor, $target);
+    }
+
     /**
      * Granular HR authorization (client section 15). Passes when the actor
      * holds the specific HR permission OR the legacy manage_employees
@@ -99,7 +114,7 @@ class UserAdministrationPolicy
      */
     public function authorizeHrAction(User $actor, User $target, string $permission): void
     {
-        abort_unless($actor->can($permission) || $actor->can('manage_employees'), 403);
+        abort_unless($actor->can($permission) || $actor->can('manage_employees') || $actor->can(PermissionCatalog::hrAction($permission)), 403);
         abort_if($actor->is($target), 403);
 
         // An action-specific HR approver can manage ordinary employees without
@@ -125,17 +140,46 @@ class UserAdministrationPolicy
             return;
         }
 
-        $this->authorizeHrAction($actor, $target, $permission);
+        $resource = substr($permission, strlen('manage_'));
+        $actions = PermissionCatalog::HR_ACTIONS[$resource] ?? [];
+        abort_unless($actor->can($permission) || $actor->can('manage_employees') || collect($actions)->contains(fn ($action) => $actor->can($action.'_'.$resource)), 403);
+        $this->authorizeHrReadTarget($actor, $target);
+    }
+
+    public function authorizeHrReadTarget(User $actor, User $target): void
+    {
+        abort_unless($this->canReadHrTarget($actor, $target), 403);
+    }
+
+    public function canReadHrTarget(User $actor, User $target): bool
+    {
+        if ($actor->is($target)) {
+            return true;
+        }
+        $actorTier = max(2, $this->userTier($actor));
+        $targetTier = $this->userTier($target);
+
+        return $actorTier > $targetTier || ($actorTier === 3 && $targetTier === 3);
     }
 
     public function canReviewShortPermission(User $actor, User $target): bool
     {
-        return $this->canRegisterHrRecord($actor, $target, 'manage_permissions');
+        if (! $actor->hasAnyPermission(['manage_employees', 'manage_permissions', 'approve_permissions', 'reject_permissions'])) {
+            return false;
+        }
+        if ($actor->is($target)) {
+            return $actor->hasAnyRole(['admin', 'super-admin']);
+        }
+        $actorTier = max(2, $this->userTier($actor));
+        $targetTier = $this->userTier($target);
+
+        return $actorTier > $targetTier || ($actorTier === 3 && $targetTier === 3);
     }
 
     public function canRegisterHrRecord(User $actor, User $target, string $permission): bool
     {
-        if (! $actor->can($permission) && ! $actor->can('manage_employees')) {
+        $resource = substr($permission, strlen('manage_'));
+        if (! $actor->can($permission) && ! $actor->can('manage_employees') && ! ($actor->can('create_'.$resource) && $actor->can('approve_'.$resource))) {
             return false;
         }
 
@@ -152,6 +196,7 @@ class UserAdministrationPolicy
     public function authorizeShortPermissionReview(User $actor, User $target): void
     {
         abort_unless($this->canReviewShortPermission($actor, $target), 403);
+        abort_unless($actor->hasAnyPermission(['manage_employees', 'manage_permissions', PermissionCatalog::hrAction('manage_permissions')]), 403);
     }
 
     public function authorizeEmployeeRoleAssignment(User $actor, ?User $target, string $roleName): void
@@ -172,7 +217,7 @@ class UserAdministrationPolicy
 
     public function authorizeDelete(User $actor, User $target): void
     {
-        abort_unless($actor->can('manage_users'), 403);
+        abort_unless($actor->hasAnyPermission(['manage_users', 'delete_users']), 403);
         $this->authorizeManageTarget($actor, $target);
 
         if ($target->can('manage_protected_users')) {
@@ -182,13 +227,13 @@ class UserAdministrationPolicy
 
     public function authorizeRoleCreation(User $actor, array $permissionNames): void
     {
-        abort_unless($actor->can('manage_roles'), 403);
+        abort_unless($actor->hasAnyPermission(['manage_roles', 'create_roles']), 403);
         $this->authorizePermissionGrant($actor, $permissionNames);
     }
 
     public function authorizeRoleMutation(User $actor, Role $role, array $permissionNames): void
     {
-        abort_unless($actor->can('manage_roles'), 403);
+        abort_unless($actor->hasAnyPermission(['manage_roles', 'edit_roles']), 403);
 
         if ($this->isProtectedRole($role)) {
             abort_unless($actor->can('manage_protected_users'), 403);
@@ -210,7 +255,7 @@ class UserAdministrationPolicy
 
     public function authorizeRoleDeletion(User $actor, Role $role): void
     {
-        abort_unless($actor->can('manage_roles'), 403);
+        abort_unless($actor->hasAnyPermission(['manage_roles', 'delete_roles']), 403);
         abort_if($this->isProtectedRole($role), 422);
         abort_if($this->userTier($actor) <= $this->roleTier($role->loadMissing('permissions')), 403);
     }

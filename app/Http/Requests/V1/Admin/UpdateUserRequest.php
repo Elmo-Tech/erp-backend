@@ -12,7 +12,7 @@ class UpdateUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage_users') ?? false;
+        return $this->user()?->hasAnyPermission(['manage_users', 'edit_users']) ?? false;
     }
 
     public function rules(): array

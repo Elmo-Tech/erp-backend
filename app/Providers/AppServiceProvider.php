@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Events\NotificationCreated;
 use App\Events\TimerUpdated;
+use App\Jobs\SendWebPush;
 use App\Models\CodeReview;
 use App\Models\InnovationLog;
 use App\Models\Project;
@@ -11,6 +12,7 @@ use App\Models\Task;
 use App\Models\TaskDeliverable;
 use App\Models\TaskTestScenario;
 use App\Models\TimeEntry;
+use App\Models\User;
 use App\Observers\CodeReviewObserver;
 use App\Observers\InnovationLogObserver;
 use App\Observers\ProjectObserver;
@@ -20,6 +22,7 @@ use App\Observers\TaskTestScenarioObserver;
 use App\Observers\TimeEntryObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
@@ -55,6 +58,13 @@ class AppServiceProvider extends ServiceProvider
                 ->after(fn ($response): bool => in_array($response->getStatusCode(), [401, 422], true));
         });
 
+        // Access control terminals push their events to a public endpoint.
+        // The limit is generous but still protects the endpoint from abuse.
+        RateLimiter::for('device-webhook', function (Request $request): Limit {
+            return Limit::perMinute((int) config('devices.webhook.rate_limit_per_minute', 120))
+                ->by((string) $request->route('token'));
+        });
+
         // Force HTTPS URLs in production
         if (config('app.env') === 'production' || request()->isSecure()) {
             URL::forceScheme('https');
@@ -70,6 +80,15 @@ class AppServiceProvider extends ServiceProvider
         TaskDeliverable::observe(TaskDeliverableObserver::class);
 
         // Register event listeners for broadcasting
+        Event::listen(NotificationSent::class, function ($event): void {
+            if ($event->channel !== 'database' || ! $event->notifiable instanceof User) {
+                return;
+            }
+            $data = $event->response?->data ?? [];
+            $data['tag'] = 'notification-'.$event->notification->id;
+            $data['url'] ??= isset($data['project_id']) ? '/dashboard/projects/'.$data['project_id'] : '/dashboard';
+            SendWebPush::dispatch($event->notifiable->id, $data)->afterCommit();
+        });
         Event::listen(NotificationCreated::class, function (NotificationCreated $event) {
             // Event will be automatically broadcast due to ShouldBroadcastNow interface
         });

@@ -23,6 +23,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property int $id
  * @property string|null $name
  * @property string|null $email
+ * @property string|null $employee_no
  * @property Carbon|null $email_verified_at
  * @property string|null $avatar
  * @property array<int, string>|null $skills
@@ -57,6 +58,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'employee_no',
         'password',
         'avatar',
         'internal_hourly_cost',
@@ -74,6 +76,8 @@ class User extends Authenticatable
         'total_points',
         'total_deductions',
         'bonus_base_amount',
+        'job_title', 'work_arrangement', 'birth_date', 'appointment_date', 'residence',
+        'national_id', 'mobile', 'other_phone', 'education',
     ];
 
     /**
@@ -82,6 +86,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
+        'national_id', 'birth_date', 'appointment_date', 'residence', 'mobile', 'other_phone', 'education',
         'password',
         'remember_token',
         'internal_hourly_cost',
@@ -99,6 +104,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'birth_date' => 'date',
+            'appointment_date' => 'date',
             'password' => 'hashed',
             'internal_hourly_cost' => 'decimal:2',
             'salary' => 'decimal:2',
@@ -151,6 +158,11 @@ class User extends Authenticatable
     public function employmentContracts(): HasMany
     {
         return $this->hasMany(EmploymentContract::class, 'employee_id');
+    }
+
+    public function currentEmploymentContract(): HasOne
+    {
+        return $this->hasOne(EmploymentContract::class, 'employee_id')->where('status', EmploymentContract::STATUS_ACTIVE);
     }
 
     public function employeePartialPays(): HasMany

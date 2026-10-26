@@ -10,6 +10,7 @@ use App\Models\EmployeeShortPermission;
 use App\Models\User;
 use App\Policies\UserAdministrationPolicy;
 use App\Services\HR\EmployeeService;
+use App\Services\HR\HrRequestNotifier;
 use App\Services\HR\LeaveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,7 +29,7 @@ class EmployeeShortPermissionController extends Controller
     public function pending(Request $request): JsonResponse
     {
         $actor = $request->user();
-        abort_unless($actor->can('manage_permissions') || $actor->can('manage_employees'), 403);
+        abort_unless($actor->hasAnyPermission(['manage_permissions', 'manage_employees', 'approve_permissions', 'reject_permissions']), 403);
 
         $permissions = EmployeeShortPermission::query()
             ->with(['employee.roles.permissions', 'employee.permissions'])
@@ -124,6 +125,8 @@ class EmployeeShortPermissionController extends Controller
             return $permission;
         });
 
+        app(HrRequestNotifier::class)->send($permission, 'permission', 'manage_permissions');
+
         return ApiResponse::success(
             new EmployeeShortPermissionResource($permission),
             $registerDirectly ? 'Short permission registered successfully' : 'Short permission request created successfully',
@@ -180,6 +183,7 @@ class EmployeeShortPermissionController extends Controller
         $actorId = $request->user()->id;
 
         [$permission, $allowance] = $this->approvePermission($permission, $validated['compensationType'], $actorId, $validated['reviewNote'] ?? null);
+        app(HrRequestNotifier::class)->send($permission, 'permission', 'manage_permissions');
 
         $period = $permission->permission_date->format('Y-m');
         $allowanceSummary = $this->allowanceSummary($allowance, $period);
@@ -257,6 +261,8 @@ class EmployeeShortPermissionController extends Controller
 
             return $permission->fresh();
         });
+
+        app(HrRequestNotifier::class)->send($permission, 'permission', 'manage_permissions');
 
         return ApiResponse::success(new EmployeeShortPermissionResource($permission), 'Short permission request rejected successfully');
     }

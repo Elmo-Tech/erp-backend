@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\V1;
 
+use App\Support\PermissionCatalog;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,7 +13,14 @@ class LookupOptionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        $type = (string) $this->input('type', $this->route('lookupOption')?->type ?? '');
+        $action = $this->isMethod('POST') ? 'create' : 'edit';
+        $permission = PermissionCatalog::lookupPermission($type);
+        $can = $this->user()?->hasAnyPermission(['manage_lookup_options', $permission, $action.substr($permission, strlen('manage'))]);
+        $existing = $this->route('lookupOption');
+        $existingPermission = $existing ? PermissionCatalog::lookupPermission($existing->type) : $permission;
+
+        return $can && (! $existing || $this->user()?->hasAnyPermission(['manage_lookup_options', $existingPermission, $action.substr($existingPermission, strlen('manage'))]));
     }
 
     /**

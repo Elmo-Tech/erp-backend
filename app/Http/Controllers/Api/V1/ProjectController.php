@@ -13,7 +13,10 @@ use App\Http\Requests\V1\Projects\UpdateProjectStatusRequest;
 use App\Http\Resources\V1\Projects\ProjectCollection;
 use App\Http\Resources\V1\Projects\ProjectResource;
 use App\Models\Project;
+use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Services\Projects\ProjectConversionService;
+use App\Services\Projects\ProjectDeletionService;
 use App\Services\Projects\ProjectHistoryService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -585,16 +588,62 @@ class ProjectController extends Controller
      *     )
      * )
      */
-    public function destroy(Project $project): JsonResponse
+    public function destroy(Project $project, Request $request): JsonResponse
     {
         $this->authorize('delete', $project);
 
-        $project->delete();
+        $data = $request->validate(['permanent' => ['sometimes', 'boolean'], 'confirmation' => ['required_if:permanent,true', 'string']]);
+        if ($data['permanent'] ?? false) {
+            abort_unless($request->user()->can('force_delete_projects'), 403);
+            abort_unless(($data['confirmation'] ?? '') === $project->title, 422, 'Type the exact project name to confirm permanent deletion.');
+            app(ProjectDeletionService::class)->permanentlyDelete($project);
+        } else {
+            DB::transaction(function () use ($project): void {
+                $project = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+                abort_if(TimeEntry::whereNull('end_time')->where('trackable_type', Task::class)
+                    ->whereIn('trackable_id', $project->tasks()->select('id'))->exists(), 409, 'Stop this project’s active timers before moving it to trash.');
+                $project->delete();
+            });
+        }
 
         return ApiResponse::success(
             null,
             'Project deleted successfully'
         );
+    }
+
+    public function trash(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->can('view_deleted_projects'), 403);
+        $query = Project::withoutGlobalScopes()->onlyTrashed();
+        if (! $request->user()->can('view_all_projects')) {
+            $query->whereHas('members', fn ($members) => $members->where('user_id', $request->user()->id));
+        }
+
+        return ApiResponse::success($query->orderByDesc('deleted_at')->get(['id', 'title', 'deleted_at'])
+            ->map(fn ($project) => ['projectId' => $project->id, 'title' => $project->title, 'deletedAt' => $project->deleted_at->toISOString()]));
+    }
+
+    public function restore(Request $request, int $id): JsonResponse
+    {
+        abort_unless($request->user()->can('restore_projects'), 403);
+        $project = Project::withoutGlobalScopes()->onlyTrashed()->findOrFail($id);
+        $this->authorize('view', $project);
+        $project->restore();
+
+        return ApiResponse::success(null, 'Project restored successfully');
+    }
+
+    public function forceDestroy(Request $request, int $id): JsonResponse
+    {
+        abort_unless($request->user()->can('force_delete_projects'), 403);
+        $project = Project::withoutGlobalScopes()->onlyTrashed()->findOrFail($id);
+        $this->authorize('view', $project);
+        $data = $request->validate(['confirmation' => ['required', 'string']]);
+        abort_unless($data['confirmation'] === $project->title, 422, 'Type the exact project name to confirm permanent deletion.');
+        app(ProjectDeletionService::class)->permanentlyDelete($project);
+
+        return ApiResponse::success(null, 'Project and its associated records permanently deleted');
     }
 
     /**

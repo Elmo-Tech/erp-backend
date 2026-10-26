@@ -7,6 +7,7 @@ use App\Models\EmployeeAdvanceSettlement;
 use App\Models\HrPolicy;
 use App\Models\SalaryAdjustment;
 use App\Models\User;
+use App\Policies\UserAdministrationPolicy;
 use App\Support\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class EmployeeAdvanceService
                 'is_salary_withdrawal' => true,
             ]);
 
-            if ($actor->hasAnyRole(['admin', 'super-admin'])) {
+            if ($actor->hasAnyRole(['admin', 'super-admin']) && app(UserAdministrationPolicy::class)->canRegisterHrRecord($actor, $employee, 'manage_employee_advances')) {
                 $advance = $this->approveWithdrawal($advance, $actor, null, 'Automatically approved on administrative registration.', $attributes['withdrawalDate'] ?? null);
             }
 

@@ -8,7 +8,7 @@ class RejectEmployeeAdvanceRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage_employees') ?? false;
+        return $this->user()?->hasAnyPermission(['manage_employees', 'manage_employee_advances', 'reject_employee_advances']) ?? false;
     }
 
     public function rules(): array

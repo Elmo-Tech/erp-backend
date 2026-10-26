@@ -175,7 +175,8 @@ class TimeTrackingService
         $heartbeatAt = $activeTimer?->heartbeatAt();
 
         if (
-            $activeTimer !== null
+            config('time_tracking.expire_on_disconnect')
+            && $activeTimer !== null
             && $heartbeatAt !== null
             && $heartbeatAt->lt($cutoff)
         ) {
@@ -317,6 +318,9 @@ class TimeTrackingService
 
     public function expireStaleTimers(): int
     {
+        if (! config('time_tracking.expire_on_disconnect')) {
+            return 0;
+        }
         $cutoff = now()->subSeconds((int) config('time_tracking.stale_after_seconds', 180));
         $expiredCount = 0;
 

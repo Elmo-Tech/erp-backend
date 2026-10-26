@@ -9,7 +9,7 @@ class StoreDirectEmployeeDeductionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage_employees') || $this->user()?->can('manage_deductions') ?? false;
+        return $this->user()?->hasAnyPermission(['manage_employees', 'manage_deductions', 'create_deductions']) ?? false;
     }
 
     public function rules(): array

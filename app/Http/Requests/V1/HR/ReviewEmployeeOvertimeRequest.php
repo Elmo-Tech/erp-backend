@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\V1\HR;
 
+use App\Support\PermissionCatalog;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ReviewEmployeeOvertimeRequest extends FormRequest
@@ -10,7 +11,7 @@ class ReviewEmployeeOvertimeRequest extends FormRequest
     {
         $user = $this->user();
 
-        return $user !== null && ($user->can('manage_overtime') || $user->can('manage_employees'));
+        return $user !== null && $user->hasAnyPermission(['manage_overtime', 'manage_employees', PermissionCatalog::hrAction('manage_overtime')]);
     }
 
     public function rules(): array

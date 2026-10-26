@@ -118,6 +118,7 @@ class EmployeeLateDeductionController extends Controller
         });
 
         return response()->json([
+            'message' => 'Late deduction override saved',
             'data' => new EmployeeLateDeductionResource($record),
         ]);
     }
@@ -211,6 +212,7 @@ class EmployeeLateDeductionController extends Controller
         );
 
         return response()->json([
+            'message' => $request->isMethod('GET') ? null : 'Late deductions updated',
             'data' => [
                 'records' => EmployeeLateDeductionResource::collection($records)->resolve($request),
                 'summary' => [

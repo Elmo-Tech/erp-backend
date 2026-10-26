@@ -163,7 +163,7 @@ class ProjectTypeTest extends TestCase
 
     public function test_project_types_assigned_to_projects_cannot_be_deleted_but_can_be_deactivated(): void
     {
-        $actor = User::factory()->create();
+        $actor = $this->userWithPermissions(['manage_project_types']);
         $projectType = $this->projectType('retained');
         Project::factory()->create(['project_type_id' => $projectType->id]);
 

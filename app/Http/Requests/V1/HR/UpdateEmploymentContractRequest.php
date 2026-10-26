@@ -13,7 +13,7 @@ class UpdateEmploymentContractRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage_employee_contracts') || $this->user()?->can('manage_employees') ?? false;
+        return $this->user()?->hasAnyPermission(['manage_employee_contracts', 'edit_employee_contracts', 'manage_employees']) ?? false;
     }
 
     public function rules(): array

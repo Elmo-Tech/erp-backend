@@ -30,14 +30,15 @@ class EmploymentContractController extends Controller
 
     public function index(Request $request, int $id): JsonResponse
     {
-        abort_unless($request->user()?->can('manage_employee_contracts') || $request->user()?->can('manage_employees'), 403);
-
         $employee = $this->employeeService->getEmployee($id);
 
         if (! $employee) {
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
+        if (! $request->user()->is($employee)) {
+            $this->administrationPolicy->authorizeHrView($request->user(), $employee, 'manage_employee_contracts');
+        }
         $contracts = $employee->employmentContracts()
             ->orderByDesc('start_date')
             ->orderByDesc('id')
@@ -73,6 +74,25 @@ class EmploymentContractController extends Controller
         });
 
         return ApiResponse::success(new EmploymentContractResource($contract), 'Employment contract created successfully', 201);
+    }
+
+    public function updateSalary(Request $request, int $id): JsonResponse
+    {
+        $employee = $this->employeeService->getEmployee($id);
+        abort_unless($employee, 404);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_employee_salary');
+        $data = $request->validate(['baseSalary' => ['required', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2']]);
+        DB::transaction(function () use ($employee, $data): void {
+            User::whereKey($employee->id)->lockForUpdate()->firstOrFail();
+            $contract = $employee->employmentContracts()->where('status', EmploymentContract::STATUS_ACTIVE)->lockForUpdate()->first();
+            abort_unless($contract, 422, 'Create an active employment contract before changing salary.');
+            $before = $contract->base_salary;
+            $contract->update(['base_salary' => $data['baseSalary']]);
+            $this->syncEmployeeSalary($contract, $employee);
+            app(AuditService::class)->log('hr', 'salary_updated', $contract, ['previousSalary' => $before, 'baseSalary' => $data['baseSalary']], 'info', 'Current contract salary updated');
+        });
+
+        return ApiResponse::success(null, 'Salary updated successfully');
     }
 
     public function update(UpdateEmploymentContractRequest $request, EmploymentContract $contract): JsonResponse

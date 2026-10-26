@@ -3,6 +3,7 @@
 namespace App\Http\Requests\V1\HR;
 
 use App\Helpers\ApiResponse;
+use App\Support\EmployeeDetails;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -31,7 +32,11 @@ class UpdateEmployeeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('manage_employees');
+        if ($this->hasAny(['salary', 'hourlyRate', 'internalHourlyCost', 'workHoursPerDay', 'workStartTime']) && ! $this->user()->hasAnyPermission(['manage_employees', 'manage_employee_salary', 'manage_employee_contracts'])) {
+            return false;
+        }
+
+        return $this->user()->hasAnyPermission(['manage_employees', 'edit_employees']);
     }
 
     public function rules(): array
@@ -39,6 +44,7 @@ class UpdateEmployeeRequest extends FormRequest
         $employeeId = $this->route('id');
 
         return [
+            ...EmployeeDetails::rules(),
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($employeeId)],
             'password' => ['sometimes', 'string', 'min:8'],

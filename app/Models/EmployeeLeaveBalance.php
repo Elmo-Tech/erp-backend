@@ -16,12 +16,14 @@ class EmployeeLeaveBalance extends Model
         'year',
         'allocated_days',
         'used_days',
+        'is_custom',
     ];
 
     protected function casts(): array
     {
         return [
             'year' => 'integer',
+            'is_custom' => 'boolean',
             'allocated_days' => 'decimal:2',
             'used_days' => 'decimal:2',
         ];

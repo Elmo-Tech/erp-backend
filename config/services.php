@@ -41,4 +41,10 @@ return [
         'redirect_uri' => env('GOOGLE_DRIVE_REDIRECT_URI', env('FRONTEND_URL', 'http://localhost:3000').'/auth/google/callback'),
     ],
 
+    'hikvision' => [
+        'default_username' => env('HIKVISION_DEFAULT_USERNAME', 'admin'),
+        'default_password' => env('HIKVISION_DEFAULT_PASSWORD'),
+        'default_port' => (int) env('HIKVISION_DEFAULT_PORT', 80),
+    ],
+
 ];

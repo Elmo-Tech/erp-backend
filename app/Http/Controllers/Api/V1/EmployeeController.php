@@ -11,6 +11,7 @@ use App\Http\Resources\V1\HR\EmployeeCollection;
 use App\Http\Resources\V1\HR\EmployeeResource;
 use App\Policies\UserAdministrationPolicy;
 use App\Services\HR\EmployeeService;
+use App\Support\PermissionCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +47,10 @@ class EmployeeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        abort_unless($request->user()->hasAnyPermission([
+            ...PermissionCatalog::hrPermissions(),
+            'assign_tasks', 'manage_task_team', 'manage_tasks', 'create_main_tasks', 'edit_main_tasks',
+        ]), 403);
         $filters = [
             'search' => $request->input('filter.search'),
             'isActive' => $request->has('filter.isActive')
@@ -76,11 +81,13 @@ class EmployeeController extends Controller
         $data = $request->validated();
 
         if (! empty($data['role'])) {
-            $this->administrationPolicy->authorizeEmployeeRoleAssignment(
-                $request->user(),
-                null,
-                $data['role']
-            );
+            if ($request->user()->can('manage_employees')) {
+                $this->administrationPolicy->authorizeEmployeeRoleAssignment($request->user(), null, $data['role']);
+            } else {
+                abort_unless($data['role'] === 'developer', 403, 'Assigning elevated roles requires employee administration permission.');
+            }
+        } elseif (! $request->user()->can('manage_employees')) {
+            $data['role'] = 'developer';
         }
 
         try {
@@ -115,12 +122,17 @@ class EmployeeController extends Controller
      *     @OA\Response(response=404, description="Not found")
      * )
      */
-    public function show(int $id): JsonResponse
+    public function show(int $id, Request $request): JsonResponse
     {
         $employee = $this->employeeService->getEmployee($id);
 
         if (! $employee) {
             return ApiResponse::error(__('messages.employee_not_found'), 404);
+        }
+
+        if (! $request->user()->is($employee)) {
+            abort_unless($request->user()->hasAnyPermission(PermissionCatalog::hrPermissions()), 403);
+            $this->administrationPolicy->authorizeHrReadTarget($request->user(), $employee);
         }
 
         return ApiResponse::success(new EmployeeResource($employee));
@@ -150,7 +162,7 @@ class EmployeeController extends Controller
         }
 
         $data = $request->validated();
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+        $this->administrationPolicy->authorizeEmployeeEdit($request->user(), $employee);
 
         if (! empty($data['role'])) {
             $this->administrationPolicy->authorizeEmployeeRoleAssignment(
@@ -189,7 +201,7 @@ class EmployeeController extends Controller
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $employee);
+        $this->administrationPolicy->authorizeEmployeeEdit($request->user(), $employee);
 
         $employee = $this->employeeService->updateEmployeeAvatar(
             $employee,
@@ -249,7 +261,7 @@ class EmployeeController extends Controller
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
-        $this->administrationPolicy->authorizeEmployeeMutation(request()->user(), $employee);
+        $this->administrationPolicy->authorizeEmployeeOperation(request()->user(), $employee, 'toggle_employee_status');
 
         $employee = $this->employeeService->deactivateEmployee($employee);
 
@@ -279,7 +291,7 @@ class EmployeeController extends Controller
             return ApiResponse::error(__('messages.employee_not_found'), 404);
         }
 
-        $this->administrationPolicy->authorizeEmployeeMutation(request()->user(), $employee);
+        $this->administrationPolicy->authorizeEmployeeOperation(request()->user(), $employee, 'toggle_employee_status');
 
         $employee = $this->employeeService->activateEmployee($employee);
 
@@ -310,7 +322,7 @@ class EmployeeController extends Controller
         }
 
         abort_if(request()->user()->is($employee), 403, __('messages.cannot_delete_self'));
-        $this->administrationPolicy->authorizeDelete(request()->user(), $employee);
+        $this->administrationPolicy->authorizeEmployeeOperation(request()->user(), $employee, 'delete_employees');
 
         $employee->delete();
 

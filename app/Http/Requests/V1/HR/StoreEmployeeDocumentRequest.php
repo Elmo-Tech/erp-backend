@@ -25,7 +25,7 @@ class StoreEmployeeDocumentRequest extends FormRequest
             return true;
         }
 
-        app(UserAdministrationPolicy::class)->authorizeEmployeeMutation($actor, $employee);
+        app(UserAdministrationPolicy::class)->authorizeHrAction($actor, $employee, 'manage_employee_documents');
 
         return true;
     }

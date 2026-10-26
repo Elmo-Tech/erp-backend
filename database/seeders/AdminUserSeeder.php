@@ -6,6 +6,7 @@ use App\Enums\ClientStatus;
 use App\Enums\UserSpecialization;
 use App\Models\Client;
 use App\Models\User;
+use App\Support\PermissionCatalog;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -101,6 +102,8 @@ class AdminUserSeeder extends Seeder
         'view_audit_logs',
         'manage_tags',
         'view_tags',
+        'manage_devices',
+        'view_devices',
     ];
 
     public const MANAGER_PERMISSIONS = [
@@ -163,6 +166,7 @@ class AdminUserSeeder extends Seeder
         'view_attendance_analytics',
         'manage_leave_types',
         'view_tags',
+        'view_devices',
     ];
 
     public const DEVELOPER_PERMISSIONS = [
@@ -209,6 +213,9 @@ class AdminUserSeeder extends Seeder
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
+        foreach (PermissionCatalog::definitions() as $permission => $group) {
+            Permission::findOrCreate($permission, 'web');
+        }
 
         // Create roles
         $superAdminRole = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
@@ -221,12 +228,15 @@ class AdminUserSeeder extends Seeder
         $superAdminRole->syncPermissions(Permission::all());
 
         $adminRole->syncPermissions(self::existingPermissions(self::ADMIN_PERMISSIONS));
+        $adminRole->givePermissionTo(array_keys(PermissionCatalog::definitions()));
 
         // Assign permissions to manager
         $managerRole->syncPermissions(self::existingPermissions(self::MANAGER_PERMISSIONS));
 
         // Assign permissions to developer
         $developerRole->syncPermissions(self::existingPermissions(self::DEVELOPER_PERMISSIONS));
+        $developerRole->givePermissionTo(['view_profile', 'view_my_requests']);
+        $managerRole->givePermissionTo(['view_profile', 'view_my_requests']);
 
         $clientRole->syncPermissions(self::existingPermissions(self::CLIENT_PERMISSIONS));
 

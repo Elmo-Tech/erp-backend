@@ -30,7 +30,7 @@ class EmployeeAdvanceController extends Controller
     public function history(Request $request, int $id): JsonResponse
     {
         $employee = $this->findEmployee($id);
-        $this->administrationPolicy->authorizeHrView($request->user(), $employee, 'manage_employees');
+        $this->administrationPolicy->authorizeHrView($request->user(), $employee, 'manage_employee_advances');
         $validated = $request->validate([
             'year' => ['required', 'integer', 'digits:4'],
             'month' => ['required', 'integer', 'between:1,12'],
@@ -89,7 +89,7 @@ class EmployeeAdvanceController extends Controller
     public function show(Request $request, EmployeeAdvance $advance): JsonResponse
     {
         $advance->loadMissing('employee', 'settlements');
-        $this->administrationPolicy->authorizeHrView($request->user(), $advance->employee, 'manage_employees');
+        $this->administrationPolicy->authorizeHrView($request->user(), $advance->employee, 'manage_employee_advances');
 
         return response()->json([
             'data' => new EmployeeAdvanceResource($advance),
@@ -170,7 +170,7 @@ class EmployeeAdvanceController extends Controller
         EmployeeAdvanceSettlement $settlement,
     ): JsonResponse {
         $settlement->loadMissing('advance.employee');
-        $this->administrationPolicy->authorizeEmployeeMutation($request->user(), $settlement->advance->employee);
+        $this->administrationPolicy->authorizeHrAction($request->user(), $settlement->advance->employee, 'manage_employee_advances');
         $settlement = $this->employeeAdvanceService->settle(
             $settlement,
             $request->user(),
@@ -194,12 +194,12 @@ class EmployeeAdvanceController extends Controller
     private function authorizeEmployeeAccess(User $actor, User $employee): void
     {
         if (! $actor->is($employee)) {
-            $this->administrationPolicy->authorizeEmployeeMutation($actor, $employee);
+            $this->administrationPolicy->authorizeHrAction($actor, $employee, 'manage_employee_advances');
         }
     }
 
     private function authorizeManager(User $actor, EmployeeAdvance $advance): void
     {
-        $this->administrationPolicy->authorizeEmployeeMutation($actor, $advance->employee);
+        $this->administrationPolicy->authorizeHrAction($actor, $advance->employee, 'manage_employee_advances');
     }
 }

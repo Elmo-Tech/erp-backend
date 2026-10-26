@@ -50,7 +50,9 @@ class EmployeeDocumentController extends Controller
             return $employee;
         }
 
-        $this->authorizeEmployeeAccess($request->user(), $employee);
+        if (! $request->user()->is($employee)) {
+            $this->administrationPolicy->authorizeHrAction($request->user(), $employee, 'manage_employee_documents');
+        }
 
         $file = $request->file('file');
         $path = $file->storeAs("employee-documents/{$employee->id}", (string) Str::uuid(), 'local');
@@ -141,7 +143,12 @@ class EmployeeDocumentController extends Controller
     private function authorizeEmployeeAccess(User $actor, User $employee): void
     {
         if (! $actor->is($employee)) {
-            $this->administrationPolicy->authorizeEmployeeMutation($actor, $employee);
+            if (request()->route()?->getActionMethod() === 'download') {
+                abort_unless($actor->hasAnyPermission(['manage_employees', 'manage_employee_documents', 'download_employee_documents']), 403);
+                $this->administrationPolicy->authorizeHrReadTarget($actor, $employee);
+            } else {
+                $this->administrationPolicy->authorizeHrView($actor, $employee, 'manage_employee_documents');
+            }
         }
     }
 }

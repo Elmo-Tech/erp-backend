@@ -48,6 +48,7 @@ class TimeTrackingLifecycleTest extends TestCase
 
     public function test_stale_timer_stops_at_last_heartbeat(): void
     {
+        config()->set('time_tracking.expire_on_disconnect', true);
         Event::fake([TimerUpdated::class]);
         $user = User::factory()->create();
         $task = Task::factory()->create();

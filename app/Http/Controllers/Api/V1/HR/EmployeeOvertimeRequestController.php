@@ -27,7 +27,7 @@ class EmployeeOvertimeRequestController extends Controller
     public function history(HttpRequest $httpRequest, int $id): JsonResponse
     {
         $employee = $this->findEmployee($id);
-        $this->authorizeEmployeeAccess($httpRequest->user(), $employee);
+        $this->administrationPolicy->authorizeHrView($httpRequest->user(), $employee, 'manage_overtime');
         $validated = $httpRequest->validate([
             'year' => ['required', 'integer', 'digits:4'],
             'month' => ['required', 'integer', 'between:1,12'],
@@ -89,6 +89,7 @@ class EmployeeOvertimeRequestController extends Controller
         });
 
         return response()->json([
+            'message' => 'Overtime request saved',
             'data' => new EmployeeOvertimeRequestResource($overtimeRequest),
         ], 201);
     }
@@ -108,6 +109,7 @@ class EmployeeOvertimeRequestController extends Controller
         app(AuditService::class)->log('hr', 'overtime_approved', $overtimeRequest, ['hourlyRate' => $overtimeRequest->hourly_rate, 'multiplier' => $overtimeRequest->overtime_multiplier], 'info', 'Overtime approved for '.$overtimeRequest->overtime_date?->toDateString());
 
         return response()->json([
+            'message' => 'Overtime request approved',
             'data' => new EmployeeOvertimeRequestResource($overtimeRequest),
         ]);
     }
@@ -126,6 +128,7 @@ class EmployeeOvertimeRequestController extends Controller
         );
 
         return response()->json([
+            'message' => 'Overtime request rejected',
             'data' => new EmployeeOvertimeRequestResource($overtimeRequest),
         ]);
     }
@@ -145,6 +148,7 @@ class EmployeeOvertimeRequestController extends Controller
         );
 
         return response()->json([
+            'message' => 'Overtime request cancelled',
             'data' => new EmployeeOvertimeRequestResource($overtimeRequest),
         ]);
     }

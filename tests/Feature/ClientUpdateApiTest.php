@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Client;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class ClientUpdateApiTest extends TestCase
@@ -14,6 +15,7 @@ class ClientUpdateApiTest extends TestCase
     public function test_edit_an_existing_client_preserves_its_email_and_persists_website_and_city(): void
     {
         $user = User::factory()->create();
+        $user->givePermissionTo(Permission::findOrCreate('manage_clients', 'web'));
         $client = Client::factory()->create();
 
         $this->actingAs($user, 'sanctum')
@@ -47,6 +49,7 @@ class ClientUpdateApiTest extends TestCase
     public function test_client_update_rejects_another_clients_email(): void
     {
         $user = User::factory()->create();
+        $user->givePermissionTo(Permission::findOrCreate('manage_clients', 'web'));
         $client = Client::factory()->create();
         $otherClient = Client::factory()->create();
 

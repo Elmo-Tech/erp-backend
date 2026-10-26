@@ -114,7 +114,7 @@ class DirectEmployeeDeductionController extends Controller
                 'deductible_id' => $deductionType->id,
             ]);
 
-            if ($request->user()->hasAnyRole(['admin', 'super-admin'])) {
+            if ($request->user()->hasAnyRole(['admin', 'super-admin']) && $this->administrationPolicy->canRegisterHrRecord($request->user(), $employee, 'manage_deductions')) {
                 $deduction->approve($request->user()->id);
                 SalaryAdjustment::createFromDeduction($deduction, 'Automatically approved on administrative registration.');
             }

@@ -17,7 +17,10 @@ class EmployeeHrReportController extends Controller
     {
         $employee = app(EmployeeService::class)->getEmployee($id);
         abort_if($employee === null, 404, 'Employee not found.');
-        app(UserAdministrationPolicy::class)->authorizeHrView($request->user(), $employee, 'manage_employees');
+        if (! $request->user()->is($employee)) {
+            abort_unless($request->user()->hasAnyPermission(['manage_employees', 'view_employee_reports']), 403);
+            app(UserAdministrationPolicy::class)->authorizeHrReadTarget($request->user(), $employee);
+        }
         $data = $request->validate([
             'dateFrom' => ['required', 'date_format:Y-m-d'],
             'dateTo' => ['required', 'date_format:Y-m-d', 'after_or_equal:dateFrom'],

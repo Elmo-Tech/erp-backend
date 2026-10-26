@@ -26,6 +26,10 @@ class ClientController extends Controller
     public function __construct()
     {
         $this->middleware(['auth:sanctum', 'locale']);
+        $this->middleware('permission:view_clients|manage_clients')->only(['index', 'show']);
+        $this->middleware('permission:create_clients|manage_clients')->only('store');
+        $this->middleware('permission:edit_clients|manage_clients')->only('update');
+        $this->middleware('permission:delete_clients|manage_clients')->only('destroy');
     }
 
     /**

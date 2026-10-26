@@ -11,7 +11,7 @@ class StoreEmployeeAvatarRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('manage_employees');
+        return $this->user()->hasAnyPermission(['manage_employees', 'edit_employees']);
     }
 
     public function rules(): array
