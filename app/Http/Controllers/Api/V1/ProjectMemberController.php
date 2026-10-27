@@ -16,6 +16,9 @@ class ProjectMemberController extends Controller
     public function __construct()
     {
         $this->middleware(['auth:sanctum', 'locale']);
+        $this->middleware('permission:manage_project_members|add_project_members')->only('store');
+        $this->middleware('permission:manage_project_members')->only('update');
+        $this->middleware('permission:manage_project_members|remove_project_members')->only('destroy');
     }
 
     public function index(Project $project): JsonResponse

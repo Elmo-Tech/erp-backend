@@ -86,7 +86,7 @@ class LeaveManagementApiTest extends TestCase
             ->postJson("/api/v1/employees/{$employee->id}/leaves", $this->leavePayload())
             ->assertCreated()
             ->assertJsonPath('data.employeeId', $employee->id)
-            ->assertJsonPath('data.status', 'pending');
+            ->assertJsonPath('data.status', null)->assertJsonPath('data.needsReview', true);
         $this->actingAs($employee, 'sanctum')
             ->postJson("/api/v1/employees/{$otherEmployee->id}/leaves", $this->leavePayload())
             ->assertForbidden();
@@ -148,7 +148,7 @@ class LeaveManagementApiTest extends TestCase
         ]);
     }
 
-    public function test_pending_and_approved_leave_dates_cannot_overlap(): void
+    public function test_submitted_and_approved_leave_dates_cannot_overlap(): void
     {
         $employee = User::factory()->create(['is_employee' => true]);
 
@@ -266,6 +266,7 @@ class LeaveManagementApiTest extends TestCase
         $customEmployee = User::factory()->create(['is_employee' => true]);
         $annual = $this->annualLeaveType();
         $sick = LeaveType::where('slug', 'sick')->firstOrFail();
+        $emergency = LeaveType::where('slug', 'emergency')->firstOrFail();
         $default = EmployeeLeaveBalance::create(['employee_id' => $employee->id, 'leave_type_id' => $annual->id, 'year' => 2026, 'allocated_days' => 21, 'used_days' => 5]);
         $custom = EmployeeLeaveBalance::create(['employee_id' => $customEmployee->id, 'leave_type_id' => $annual->id, 'year' => 2026, 'allocated_days' => 25, 'used_days' => 2, 'is_custom' => true]);
         $other = EmployeeLeaveBalance::create(['employee_id' => $employee->id, 'leave_type_id' => $sick->id, 'year' => 2026, 'allocated_days' => 10, 'used_days' => 1]);
@@ -276,6 +277,7 @@ class LeaveManagementApiTest extends TestCase
         $this->assertEquals(5, $default->fresh()->used_days);
         $this->assertEquals(25, $custom->fresh()->allocated_days);
         $this->assertEquals(10, $other->fresh()->allocated_days);
+        $this->assertEquals(6, $emergency->fresh()->annual_allowance_days);
         $this->assertEquals(21, $past->fresh()->allocated_days);
 
         $this->putJson("/api/v1/employees/{$employee->id}/leave-balances/{$annual->id}", ['year' => 2026, 'useDefault' => false, 'allocatedDays' => 3])->assertOk();

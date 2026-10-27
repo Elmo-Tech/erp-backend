@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\LookupOptionRequest;
 use App\Models\LookupOption;
 use App\Models\Project;
+use App\Models\Task;
+use App\Models\User;
 use App\Support\PermissionCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -132,8 +134,22 @@ class LookupOptionController extends Controller
     {
         $permission = PermissionCatalog::lookupPermission($lookupOption->type);
         abort_unless(auth()->user()->hasAnyPermission(['manage_lookup_options', $permission, 'delete'.substr($permission, strlen('manage'))]), 403);
-        if ($lookupOption->metadata['is_system'] ?? false) {
-            return ApiResponse::forbidden('System-reserved lookup options cannot be deleted.');
+        // Prevent deleting lookup options that are currently in use, to avoid
+        // breaking existing records and UI labels.
+        $inUse = match ($lookupOption->type) {
+            'specialization' => User::where('specialization', $lookupOption->value)->exists(),
+            'project_status' => Project::withoutGlobalScopes()->withTrashed()
+                ->where(function ($query) use ($lookupOption) {
+                    $query->where('status', $lookupOption->value)
+                        ->orWhere('previous_status', $lookupOption->value);
+                })->exists(),
+            'task_status' => Task::where('status', $lookupOption->value)->exists(),
+            'task_category' => Task::where('task_category', $lookupOption->value)->exists(),
+            default => false,
+        };
+
+        if ($inUse) {
+            return ApiResponse::error('Cannot delete "'.$lookupOption->label.'": it is currently in use by existing records. Deactivate it instead to hide it from new selections while preserving existing data.', 409);
         }
 
         if ($lookupOption->type === 'project_type' && Project::withoutGlobalScopes()

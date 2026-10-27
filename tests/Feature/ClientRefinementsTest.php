@@ -76,7 +76,7 @@ class ClientRefinementsTest extends TestCase
         $leave = $this->actingAs($creator, 'sanctum')->postJson('/api/v1/employees/'.$employee->id.'/leaves', [
             'leaveTypeId' => LeaveType::where('slug', 'annual')->value('id'),
             'startDate' => '2026-10-26', 'endDate' => '2026-10-26',
-        ])->assertCreated()->assertJsonPath('data.status', 'pending')->json('data.id');
+        ])->assertCreated()->assertJsonPath('data.status', null)->assertJsonPath('data.needsReview', true)->json('data.id');
         $this->getJson('/api/v1/employees/'.$employee->id.'/leaves?year=2026')->assertOk();
         $this->getJson('/api/v1/employees/'.$employee->id)->assertOk()
             ->assertJsonPath('data.canViewPersonalDetails', false)->assertJsonPath('data.nationalId', null);

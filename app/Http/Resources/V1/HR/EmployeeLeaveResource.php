@@ -24,6 +24,7 @@ class EmployeeLeaveResource extends JsonResource
             'workingDays' => (float) $leave->working_days,
             'isPaid' => $leave->is_paid,
             'status' => $leave->status,
+            'needsReview' => $leave->needsReview(),
             'reason' => $leave->reason,
             'reviewedBy' => $leave->reviewed_by,
             'reviewedAt' => $leave->reviewed_at?->toISOString(),

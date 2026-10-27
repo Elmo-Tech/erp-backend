@@ -16,16 +16,17 @@ class HrRequestNotifier
         if (! $employee) {
             return;
         }
-        $pending = $record->status === 'pending';
+        $needsReview = $kind === 'leave' ? $record->status === null : $record->status === 'pending';
+        $event = $kind === 'leave' && $needsReview ? 'submitted' : $record->status;
         $data = [
-            'type' => $kind.'_'.$record->status, 'request_id' => $record->id,
+            'type' => $kind.'_'.$event, 'request_id' => $record->id,
             'employee_id' => $employee->id, 'employee_name' => $employee->name,
             'status' => $record->status,
-            'message' => $pending ? $employee->name.' submitted a '.$kind.' request' : 'Your '.$kind.' request was '.$record->status,
+            'message' => $needsReview ? $employee->name.' submitted a '.$kind.' request' : 'Your '.$kind.' request was '.$record->status,
             'body' => $kind === 'leave' ? $record->start_date->toDateString().' to '.$record->end_date->toDateString() : $record->permission_date->toDateString(),
-            'url' => $pending ? '/dashboard/employees/'.$employee->id : '/dashboard/profile',
+            'url' => $needsReview ? '/dashboard/employees/'.$employee->id : '/dashboard/profile',
         ];
-        if (! $pending) {
+        if (! $needsReview) {
             $employee->notify(new HrRequestNotification($data));
 
             return;

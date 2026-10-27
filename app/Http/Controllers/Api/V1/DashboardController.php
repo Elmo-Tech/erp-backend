@@ -7,6 +7,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\ChangeRequest;
+use App\Models\Client;
 use App\Models\Project;
 use App\Models\ProjectFile;
 use App\Models\ProjectHistory;
@@ -169,18 +170,11 @@ class DashboardController extends Controller
             ->sum('duration_minutes') ?? 0) / 60;
         $workHoursChange = $this->calculateChange($workHoursThisMonth, $workHoursLastMonth);
 
-        // Active Clients
-        $activeClients = Project::withoutGlobalScopes()->withoutTrashed()
-            ->whereIn('status', $activeStatuses)
-            ->whereNotNull('client_id')
-            ->distinct('client_id')
-            ->count('client_id');
-        $clientsLastMonth = Project::withoutGlobalScopes()->withoutTrashed()
-            ->whereIn('status', $activeStatuses)
+        // Active Clients (clients with active status)
+        $activeClients = Client::where('status', 'active')->count();
+        $clientsLastMonth = Client::where('status', 'active')
             ->where('created_at', '<', $startOfMonth)
-            ->whereNotNull('client_id')
-            ->distinct('client_id')
-            ->count('client_id');
+            ->count();
         $clientsChange = $activeClients - $clientsLastMonth;
         $completedProjects = Project::withoutGlobalScopes()->withoutTrashed()
             ->where('status', ProjectStatus::COMPLETED->value)

@@ -29,7 +29,7 @@ class ClientResource extends JsonResource
             'country' => $client->country ?? '',
             'website' => $client->website ?? '',
             'notes' => $client->notes ?? '',
-            'status' => $client->status->value,
+            'status' => $client->status?->value ?? 'active',
             'userId' => $client->user_id,
             'leadId' => $client->lead_id,
             'hasPortalAccess' => $client->hasPortalAccess(),

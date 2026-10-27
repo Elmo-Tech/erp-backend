@@ -91,6 +91,7 @@ class QaReleaseGateFixesTest extends TestCase
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $manager = User::factory()->create(['name' => 'Project Manager']);
         $manager->assignRole($adminRole);
+        $manager->givePermissionTo(Permission::findOrCreate('add_project_members', 'web'));
         $member = User::factory()->create();
         $project = Project::factory()->create();
         $project->members()->create(['user_id' => $manager->id, 'role' => 'lead']);

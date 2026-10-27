@@ -16,8 +16,9 @@ reviewer. Admin and super-admin accounts with `manage_permissions` (or legacy
 own requests require another authorized approver. **Mark as Paid** opens approval
 with paid compensation selected; **Approve** allows choosing paid or unpaid.
 
-Paid leave balances consume working days on approval. My Requests shows pending
-working days separately so a submitted request does not look like missing data.
+Paid leave balances consume working days on approval. My Requests shows submitted
+working days separately. Leave requests have no decision (`status: null`,
+`needsReview: true`) until approval/rejection; there is no Pending leave status.
 
 Deduction-type creation is intentionally excluded from the simplified ERP UI;
 the backend continues to block the advanced-deductions module. Exclude

@@ -10,8 +10,6 @@ class EmployeeLeave extends Model
 {
     use HasCreatedUpdatedBy;
 
-    public const STATUS_PENDING = 'pending';
-
     public const STATUS_APPROVED = 'approved';
 
     public const STATUS_REJECTED = 'rejected';
@@ -42,6 +40,11 @@ class EmployeeLeave extends Model
             'is_paid' => 'boolean',
             'reviewed_at' => 'datetime',
         ];
+    }
+
+    public function needsReview(): bool
+    {
+        return $this->status === null;
     }
 
     public function employee(): BelongsTo

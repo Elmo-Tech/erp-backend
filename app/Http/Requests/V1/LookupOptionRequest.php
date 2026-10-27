@@ -70,15 +70,6 @@ class LookupOptionRequest extends FormRequest
      */
     public function withValidator($validator): void
     {
-        $validator->after(function ($validator) {
-            if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
-                $lookupOption = $this->route('lookupOption');
-                if ($lookupOption && ($lookupOption->metadata['is_system'] ?? false)) {
-                    if ($this->has('value') && $this->input('value') !== $lookupOption->value) {
-                        $validator->errors()->add('value', 'The value/slug of a system-reserved lookup option cannot be modified.');
-                    }
-                }
-            }
-        });
+        // System-reserved lookup options can now be fully edited/deleted by authorized users.
     }
 }

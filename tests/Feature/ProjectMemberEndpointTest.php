@@ -14,6 +14,41 @@ class ProjectMemberEndpointTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_read_only_project_member_cannot_add_change_or_remove_members(): void
+    {
+        $employee = User::factory()->create();
+        $employee->givePermissionTo(Permission::findOrCreate('view_projects', 'web'));
+        $project = Project::factory()->create();
+        $membership = $project->members()->create(['user_id' => $employee->id, 'role' => 'member']);
+        $other = User::factory()->create();
+
+        $this->actingAs($employee, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/members", ['userId' => $other->id])
+            ->assertForbidden();
+        $this->putJson("/api/v1/projects/{$project->id}/members/{$membership->id}", ['role' => 'lead'])
+            ->assertForbidden();
+        $this->deleteJson("/api/v1/projects/{$project->id}/members/{$membership->id}")
+            ->assertForbidden();
+        $this->assertDatabaseCount('project_members', 1);
+        $this->assertDatabaseHas('project_members', ['id' => $membership->id, 'role' => 'member']);
+    }
+
+    public function test_project_member_mutations_respect_independent_action_permissions(): void
+    {
+        $manager = User::factory()->create();
+        $manager->givePermissionTo(Permission::findOrCreate('add_project_members', 'web'));
+        $project = Project::factory()->create();
+        $project->members()->create(['user_id' => $manager->id, 'role' => 'member']);
+        $member = User::factory()->create();
+        $membershipId = $this->actingAs($manager, 'sanctum')
+            ->postJson("/api/v1/projects/{$project->id}/members", ['userId' => $member->id])
+            ->assertCreated()->json('data.memberId');
+        $this->deleteJson("/api/v1/projects/{$project->id}/members/{$membershipId}")->assertForbidden();
+        $manager->givePermissionTo(Permission::findOrCreate('manage_project_members', 'web'));
+        $this->putJson("/api/v1/projects/{$project->id}/members/{$membershipId}", ['role' => 'reviewer'])->assertOk();
+        $this->deleteJson("/api/v1/projects/{$project->id}/members/{$membershipId}")->assertOk();
+    }
+
     public function test_project_member_endpoint_returns_existing_members(): void
     {
         $adminRole = Role::firstOrCreate(['name' => 'admin']);

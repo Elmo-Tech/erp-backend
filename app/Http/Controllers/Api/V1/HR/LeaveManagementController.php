@@ -222,7 +222,7 @@ class LeaveManagementController extends Controller
                 'end_date' => $validated['endDate'],
                 'working_days' => $workingDays,
                 'is_paid' => $leaveType->is_paid,
-                'status' => EmployeeLeave::STATUS_PENDING,
+                'status' => null,
                 'reason' => $validated['reason'] ?? null,
             ]);
 
@@ -253,7 +253,7 @@ class LeaveManagementController extends Controller
         $leave = DB::transaction(function () use ($leave, $validated): EmployeeLeave {
             User::query()->whereKey($leave->employee_id)->lockForUpdate()->firstOrFail();
             $leave = EmployeeLeave::query()->lockForUpdate()->findOrFail($leave->id);
-            $this->assertPending($leave);
+            $this->assertUnreviewed($leave);
 
             $leaveType = LeaveType::query()->active()->lockForUpdate()->find($validated['leaveTypeId']);
 
@@ -310,7 +310,7 @@ class LeaveManagementController extends Controller
                 ->with('leaveType')
                 ->lockForUpdate()
                 ->findOrFail($leave->id);
-            $this->assertPending($leave);
+            $this->assertUnreviewed($leave);
             $this->assertNoOverlap(
                 $leave->employee_id,
                 $leave->start_date->toDateString(),
@@ -374,7 +374,7 @@ class LeaveManagementController extends Controller
         $leave = DB::transaction(function () use ($leave, $validated, $actorId): EmployeeLeave {
             User::query()->whereKey($leave->employee_id)->lockForUpdate()->firstOrFail();
             $leave = EmployeeLeave::query()->lockForUpdate()->findOrFail($leave->id);
-            $this->assertPending($leave);
+            $this->assertUnreviewed($leave);
 
             $leave->update([
                 'status' => EmployeeLeave::STATUS_REJECTED,
@@ -406,9 +406,9 @@ class LeaveManagementController extends Controller
             User::query()->whereKey($leave->employee_id)->lockForUpdate()->firstOrFail();
             $leave = EmployeeLeave::query()->lockForUpdate()->findOrFail($leave->id);
 
-            if (! in_array($leave->status, [EmployeeLeave::STATUS_PENDING, EmployeeLeave::STATUS_APPROVED], true)) {
+            if (! in_array($leave->status, [null, EmployeeLeave::STATUS_APPROVED], true)) {
                 throw ValidationException::withMessages([
-                    'status' => ['Only pending or approved leave requests can be cancelled.'],
+                    'status' => ['Only submitted or approved leave requests can be cancelled.'],
                 ]);
             }
 
@@ -512,7 +512,9 @@ class LeaveManagementController extends Controller
     {
         $query = EmployeeLeave::query()
             ->where('employee_id', $employeeId)
-            ->whereIn('status', [EmployeeLeave::STATUS_PENDING, EmployeeLeave::STATUS_APPROVED])
+            ->where(function ($query): void {
+                $query->whereNull('status')->orWhere('status', EmployeeLeave::STATUS_APPROVED);
+            })
             ->whereDate('start_date', '<=', $endDate)
             ->whereDate('end_date', '>=', $startDate)
             ->lockForUpdate();
@@ -523,7 +525,7 @@ class LeaveManagementController extends Controller
 
         if ($query->exists()) {
             throw ValidationException::withMessages([
-                'startDate' => ['The leave request overlaps an existing pending or approved leave.'],
+                'startDate' => ['The leave request overlaps an existing submitted or approved leave.'],
             ]);
         }
     }
@@ -537,11 +539,11 @@ class LeaveManagementController extends Controller
         }
     }
 
-    private function assertPending(EmployeeLeave $leave): void
+    private function assertUnreviewed(EmployeeLeave $leave): void
     {
-        if ($leave->status !== EmployeeLeave::STATUS_PENDING) {
+        if (! $leave->needsReview()) {
             throw ValidationException::withMessages([
-                'status' => ['Only pending leave requests can be reviewed.'],
+                'status' => ['This leave request already has a decision or has been withdrawn.'],
             ]);
         }
     }
