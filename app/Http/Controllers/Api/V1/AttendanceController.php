@@ -66,6 +66,7 @@ class AttendanceController extends Controller
             'attendance' => $attendance ? new AttendanceResource($attendance) : null,
             'hasActiveTimer' => $activeTimer !== null,
             'totalWorkedMinutes' => (int) $totalWorkedMinutes,
+            'currentIdleMinutes' => $attendance?->clock_out ? (int) $attendance->idle_minutes : null,
             'expectedClockOut' => $user->expected_clock_out,
             'graceDaysRemaining' => max(0, $user->grace_days_allowed - $user->grace_days_used),
         ]);

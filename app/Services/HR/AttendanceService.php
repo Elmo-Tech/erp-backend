@@ -51,6 +51,7 @@ class AttendanceService
         // Calculate late minutes
         $lateMinutes = $attendance->calculateLateMinutes();
         $attendance->late_minutes = $lateMinutes;
+        $attendance->is_late = $lateMinutes > 0;
 
         // Calculate deduction
         $deduction = $attendance->calculateDeduction($user);

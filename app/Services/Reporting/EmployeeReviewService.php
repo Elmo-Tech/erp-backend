@@ -21,7 +21,7 @@ class EmployeeReviewService
     /**
      * Cache filtered primary tasks per request to keep the reporting sections aligned.
      *
-     * @var array<string, \Illuminate\Support\Collection<int, \App\Models\Task>>
+     * @var array<string, Collection<int, Task>>
      */
     private array $primaryTasksCache = [];
 
@@ -587,7 +587,7 @@ class EmployeeReviewService
                 'date' => $attendance->date,
                 'clockIn' => $attendance->clock_in,
                 'clockOut' => $attendance->clock_out,
-                'isLate' => $attendance->is_late,
+                'isLate' => $attendance->late_minutes > 0,
                 'lateMinutes' => $attendance->late_minutes,
                 'idleMinutes' => $attendance->idle_minutes,
             ];
@@ -595,7 +595,7 @@ class EmployeeReviewService
 
         return [
             'totalDays' => $attendances->count(),
-            'lateDays' => $attendances->where('is_late', true)->count(),
+            'lateDays' => $attendances->where('late_minutes', '>', 0)->count(),
             'totalLateMinutes' => $attendances->sum('late_minutes'),
             'totalIdleMinutes' => $attendances->sum('idle_minutes'),
             'averageIdlePerDay' => $attendances->count() > 0
@@ -901,7 +901,7 @@ class EmployeeReviewService
     /**
      * Get the rolling two-month window used for all points views in the report.
      *
-     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}
+     * @return array{0: Carbon, 1: Carbon}
      */
     private function getPointsWindow(): array
     {

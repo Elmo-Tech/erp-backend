@@ -37,6 +37,11 @@ foreach (['QA Working Project', 'QA Restore Project', 'QA Permanent Project', 'Q
     $projects[$title] = $project->id;
 }
 $task = Task::factory()->create(['title' => 'QA Timer Task', 'project_id' => $projects['QA Working Project'], 'assigned_to' => $employee->id, 'task_category' => 'testing']);
+$completedTask = Task::factory()->create([
+    'title' => 'QA Completed Task', 'project_id' => null, 'assigned_to' => $other->id,
+    'type' => 'main', 'status' => 'completed',
+]);
+$completedTask->assignees()->create(['user_id' => $other->id, 'role' => 'developer', 'is_primary' => true]);
 $contract = EmploymentContract::create([
     'employee_id' => $employee->id, 'employment_type' => 'full_time', 'base_salary' => 6000,
     'start_date' => '2026-01-01', 'end_date' => '2026-12-31', 'duration_months' => 12,

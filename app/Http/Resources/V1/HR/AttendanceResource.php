@@ -51,7 +51,8 @@ class AttendanceResource extends JsonResource
             'expectedClockIn' => $attendance->expected_clock_in,
             'expectedClockOut' => $attendance->expected_clock_out,
             'lateMinutes' => (int) $attendance->late_minutes,
-            'isLate' => $attendance->is_late,
+            // Derive from minutes so legacy web records with an unset flag agree with history.
+            'isLate' => $attendance->late_minutes > 0,
             'idleMinutes' => (int) $attendance->idle_minutes,
             'usedGraceDay' => $attendance->used_grace_day,
             'workedMinutes' => $attendance->getWorkedMinutes(),
