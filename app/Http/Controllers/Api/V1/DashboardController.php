@@ -339,7 +339,8 @@ class DashboardController extends Controller
         $todayAttendance = Attendance::where('user_id', $userId)
             ->whereDate('clock_in', Carbon::today())
             ->first();
-        $clockedIn = $todayAttendance !== null;
+        $clockedIn = $todayAttendance?->clock_in !== null && $todayAttendance?->clock_out === null;
+        $clockedOut = $todayAttendance?->clock_out !== null;
         $todayHours = 0;
         if ($todayAttendance) {
             $todayHours = (TimeEntry::where('user_id', $userId)
@@ -378,6 +379,7 @@ class DashboardController extends Controller
                 'myHoursChange' => $myHoursChange,
                 'myActiveProjects' => $myActiveProjects,
                 'clockedIn' => $clockedIn,
+                'clockedOut' => $clockedOut,
                 'todayHours' => round($todayHours, 1),
             ],
             'recentTasks' => $myRecentTasks,
