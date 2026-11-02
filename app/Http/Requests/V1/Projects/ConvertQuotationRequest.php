@@ -29,7 +29,7 @@ class ConvertQuotationRequest extends FormRequest
             'quotationId' => ['required', 'integer', 'exists:quotations,id'],
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'deadline' => ['nullable', 'date', 'after:today'],
+            'deadline' => ['nullable', 'date', 'after_or_equal:today'],
             'projectTypeId' => [
                 'nullable',
                 'integer',

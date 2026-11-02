@@ -22,7 +22,7 @@ class StoreDirectProjectRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'budget' => ['required', 'numeric', 'min:0'],
-            'deadline' => ['nullable', 'date', 'after:today'],
+            'deadline' => ['nullable', 'date', 'after_or_equal:today'],
             'status' => ['nullable', 'string', 'in:draft,active,ui_ux,development,testing,completed,on_hold,cancelled'],
             'projectTypeId' => [
                 'nullable',

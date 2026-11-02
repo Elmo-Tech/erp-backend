@@ -33,7 +33,7 @@ class UpdateProjectRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'status' => ['nullable', Rule::enum(ProjectStatus::class)],
             'budget' => ['nullable', 'numeric', 'gt:0'],
-            'deadline' => ['nullable', 'date', 'after:today'],
+            'deadline' => ['nullable', 'date', 'after_or_equal:today'],
             'projectTypeId' => [
                 'nullable',
                 'integer',

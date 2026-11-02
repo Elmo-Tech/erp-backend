@@ -143,6 +143,19 @@ class QaReleaseGateFixesTest extends TestCase
         $this->assertSame($newDeadline, $histories->first()->new_value);
     }
 
+    public function test_project_deadline_can_be_today_but_not_yesterday(): void
+    {
+        $manager = User::factory()->create();
+        $manager->assignRole(Role::firstOrCreate(['name' => 'admin']));
+        $manager->givePermissionTo(Permission::findOrCreate('manage_projects', 'web'));
+        $project = Project::factory()->create(['deadline' => now()->addDays(10)->toDateString()]);
+        $project->members()->create(['user_id' => $manager->id, 'role' => 'lead']);
+        $payload = ['title' => $project->title, 'status' => $project->status->value, 'reason' => 'Updated schedule'];
+
+        $this->actingAs($manager, 'sanctum')->putJson("/api/v1/projects/{$project->id}", $payload + ['deadline' => now()->toDateString()])->assertOk();
+        $this->putJson("/api/v1/projects/{$project->id}", $payload + ['deadline' => now()->subDay()->toDateString()])->assertUnprocessable()->assertJsonValidationErrors('deadline');
+    }
+
     public function test_project_file_can_be_replaced_and_recorded_in_history(): void
     {
         Storage::fake('public');
