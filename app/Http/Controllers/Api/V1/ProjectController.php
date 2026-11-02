@@ -160,7 +160,7 @@ class ProjectController extends Controller
             })
             ->select('projects.*', 'pinned_projects.id as is_pinned')
             ->allowedFilters([
-                'status',
+                AllowedFilter::exact('status', 'projects.status'),
                 AllowedFilter::exact('client_id', 'client_id')->ignore(null),
                 AllowedFilter::callback('clientId', function ($query, $value) {
                     $query->where('client_id', $value);
@@ -1078,14 +1078,14 @@ class ProjectController extends Controller
         return DB::transaction(function () use ($request, $projectModel) {
             $data = $request->validated();
             $oldStatus = $projectModel->status;
-            $newStatus = ProjectStatus::from($data['status']);
+            $newStatus = $data['status'];
             $reason = $data['reason'] ?? null;
 
             // Check if status is actually changing
-            if ($oldStatus === $newStatus) {
+            if ($oldStatus?->value === $newStatus) {
                 return ApiResponse::success(
                     new ProjectResource($projectModel),
-                    'Project status is already '.$newStatus->label()
+                    'Project status is already '.$oldStatus->label()
                 );
             }
 
@@ -1100,8 +1100,8 @@ class ProjectController extends Controller
             $this->historyService->recordChange(
                 $projectModel,
                 'status',
-                $oldStatus->value,
-                $newStatus->value,
+                $oldStatus?->value,
+                $newStatus,
                 $reason ?? 'Status updated via API'
             );
 

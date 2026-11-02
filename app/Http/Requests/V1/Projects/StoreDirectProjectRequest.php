@@ -3,6 +3,7 @@
 namespace App\Http\Requests\V1\Projects;
 
 use App\Helpers\ApiResponse;
+use App\Rules\SelectableProjectStatus;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -23,7 +24,7 @@ class StoreDirectProjectRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'budget' => ['required', 'numeric', 'min:0'],
             'deadline' => ['nullable', 'date', 'after_or_equal:today'],
-            'status' => ['nullable', 'string', 'in:draft,active,ui_ux,development,testing,completed,on_hold,cancelled'],
+            'status' => ['nullable', 'string', new SelectableProjectStatus],
             'projectTypeId' => [
                 'nullable',
                 'integer',

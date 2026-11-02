@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\V1;
 
+use App\Models\Project;
 use App\Support\PermissionCatalog;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -70,6 +71,17 @@ class LookupOptionRequest extends FormRequest
      */
     public function withValidator($validator): void
     {
-        // System-reserved lookup options can now be fully edited/deleted by authorized users.
+        $validator->after(function ($validator): void {
+            $option = $this->route('lookupOption');
+            if (! $option || $option->type !== 'project_status') {
+                return;
+            }
+            $valueChanged = $this->has('value') && $this->input('value') !== $option->value;
+            $typeChanged = $this->input('type', $option->type) !== $option->type;
+            if (($valueChanged || $typeChanged) && Project::withoutGlobalScopes()->withTrashed()
+                ->where(fn ($query) => $query->where('status', $option->value)->orWhere('previous_status', $option->value))->exists()) {
+                $validator->errors()->add('value', 'This status is used by a project. Change its label instead, or move the projects to another status before changing its value.');
+            }
+        });
     }
 }

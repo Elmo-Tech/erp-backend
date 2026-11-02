@@ -2,12 +2,12 @@
 
 namespace App\Http\Requests\V1\Projects;
 
-use App\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
+use App\Models\Project;
+use App\Rules\SelectableProjectStatus;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Validation\Rule;
 
 class UpdateProjectStatusRequest extends FormRequest
 {
@@ -30,7 +30,7 @@ class UpdateProjectStatusRequest extends FormRequest
             'status' => [
                 'required',
                 'string',
-                Rule::enum(ProjectStatus::class),
+                new SelectableProjectStatus(Project::withoutGlobalScopes()->find($this->route('project'))?->status?->value),
             ],
             'reason' => [
                 'nullable',

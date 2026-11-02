@@ -113,7 +113,7 @@ class ProjectObserver
             // Handle case where old status might be a string
             if (is_string($oldStatus)) {
                 $oldStatusValue = $oldStatus;
-            } elseif ($oldStatus instanceof ProjectStatus) {
+            } elseif (is_object($oldStatus) && isset($oldStatus->value)) {
                 $oldStatusValue = $oldStatus->value;
             } else {
                 $oldStatusValue = null;

@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\V1\Projects;
 
-use App\Enums\ProjectStatus;
 use App\Helpers\ApiResponse;
 use App\Models\LookupOption;
 use App\Models\Project;
+use App\Rules\SelectableProjectStatus;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -31,7 +31,7 @@ class UpdateProjectRequest extends FormRequest
         return [
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'status' => ['nullable', Rule::enum(ProjectStatus::class)],
+            'status' => ['nullable', 'string', new SelectableProjectStatus($this->route('project') instanceof Project ? $this->route('project')->status?->value : null)],
             'budget' => ['nullable', 'numeric', 'gt:0'],
             'deadline' => ['nullable', 'date', 'after_or_equal:today'],
             'projectTypeId' => [
@@ -51,7 +51,6 @@ class UpdateProjectRequest extends FormRequest
     {
         $validator->after(function (Validator $validator) {
             $this->validateReasonRequired($validator);
-            $this->validateStatusTransition($validator);
             $this->validateProjectTypeIsActive($validator);
         });
     }
@@ -87,57 +86,6 @@ class UpdateProjectRequest extends FormRequest
                     $validator->errors()->add('reason', 'A reason is required when changing the deadline.');
                 }
             }
-        }
-    }
-
-    /**
-     * Validate that the status transition is allowed.
-     */
-    private function validateStatusTransition(Validator $validator): void
-    {
-        if (! $this->filled('status')) {
-            return;
-        }
-
-        $project = $this->route('project');
-
-        if (! $project instanceof Project) {
-            return;
-        }
-
-        $currentStatus = $project->status;
-        $newStatus = ProjectStatus::tryFrom($this->input('status'));
-
-        if ($newStatus === null) {
-            return; // Let the enum validation handle invalid values
-        }
-
-        // Same status is not a transition
-        if ($currentStatus === $newStatus) {
-            return;
-        }
-
-        // Special handling for ON_HOLD: can return to previous status
-        if ($currentStatus === ProjectStatus::ON_HOLD && $project->previous_status !== null) {
-            if ($newStatus === $project->previous_status) {
-                return; // Valid transition back to previous status
-            }
-        }
-
-        if (! $currentStatus->canTransitionTo($newStatus)) {
-            $allowedTransitions = array_map(
-                fn (ProjectStatus $s) => $s->value,
-                $currentStatus->allowedTransitions()
-            );
-
-            $allowedList = empty($allowedTransitions)
-                ? 'No transitions allowed from this status.'
-                : 'Allowed transitions: '.implode(', ', $allowedTransitions);
-
-            $validator->errors()->add(
-                'status',
-                "Invalid status transition from '{$currentStatus->value}' to '{$newStatus->value}'. {$allowedList}"
-            );
         }
     }
 
