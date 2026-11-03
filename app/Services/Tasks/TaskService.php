@@ -26,7 +26,7 @@ class TaskService
      */
     public function getAllTasks(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Task::query()->with(['assignee', 'supervisor', 'project', 'tags', 'assignees.user']);
+        $query = Task::query()->with(['assignee', 'supervisor', 'project', 'tags', 'assignees.user', 'workflowStage']);
 
         // Apply user specialization filtering if user is authenticated
         $user = auth()->user();

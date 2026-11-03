@@ -305,7 +305,7 @@ class ProjectPipelineAccessTest extends TestCase
 
         $response = $this->actingAs($actor, 'sanctum')
             ->post("/api/v1/projects/{$project->id}/pipeline/tasks/{$task->id}/cover", [
-                'coverImage' => UploadedFile::fake()->image('cover.jpg', 1200, 675),
+                'coverImage' => UploadedFile::fake()->image('cover.jpg', 1200, 675)->size(6144),
             ])
             ->assertOk();
 
@@ -316,6 +316,30 @@ class ProjectPipelineAccessTest extends TestCase
             'data.coverImageUrl',
             Storage::disk('public')->url($newCoverPath)
         );
+    }
+
+    public function test_reference_images_can_be_added_opened_and_removed_by_authorized_project_members(): void
+    {
+        Storage::fake('public');
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'edit_main_tasks']);
+        $viewer = $this->userWithPermissions(['view_tasks']);
+        foreach ([$actor, $viewer] as $user) $project->members()->create(['user_id' => $user->id, 'role' => 'member']);
+        $task = Task::factory()->for($project)->create(['is_pipeline_task' => true]);
+        $url = "/api/v1/projects/{$project->id}/pipeline/tasks/{$task->id}/references";
+        $this->actingAs($actor, 'sanctum')->post($url, ['images' => [UploadedFile::fake()->image('one.jpg'), UploadedFile::fake()->image('two.png')]])->assertOk();
+        $paths = $task->fresh()->reference_images;
+        $this->assertCount(2, $paths);
+        Storage::disk('public')->assertExists($paths[0]);
+        $this->actingAs($viewer, 'sanctum')->getJson("/api/v1/tasks/{$task->id}")->assertOk()
+            ->assertJsonPath('data.referenceImages.0.url', Storage::disk('public')->url($paths[0]))->assertJsonCount(2, 'data.referenceImages');
+        $this->post($url, ['images' => [UploadedFile::fake()->image('third.jpg')]])->assertForbidden();
+        $task->update(['reference_images' => array_fill(0, 10, 'already-saved.jpg')]);
+        $this->actingAs($actor, 'sanctum')->post($url, ['images' => [UploadedFile::fake()->image('extra.jpg')]], ['Accept' => 'application/json'])->assertUnprocessable();
+        $task->update(['reference_images' => $paths]);
+        $this->actingAs($actor, 'sanctum')->deleteJson($url.'/'.basename($paths[0]))->assertOk();
+        Storage::disk('public')->assertMissing($paths[0]);
+        $this->assertCount(1, $task->fresh()->reference_images);
     }
 
     public function test_authorized_member_can_remove_pipeline_task_cover(): void

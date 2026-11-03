@@ -22,7 +22,8 @@ class ProjectDeletionService
             $tasks = Task::withTrashed()->where('project_id', $project->id)->lockForUpdate()->get();
             $taskIds = $tasks->pluck('id');
             $paths = $project->files()->whereNotNull('file_path')->pluck('file_path')
-                ->merge($tasks->pluck('cover_image_path')->filter())->unique()->values()->all();
+                ->merge($tasks->pluck('cover_image_path')->filter())
+                ->merge($tasks->flatMap(fn ($task) => $task->reference_images ?? []))->unique()->values()->all();
             $sources = [Project::class => [$project->id], Task::class => $taskIds];
             foreach ([
                 CodeReview::class => 'code_reviews',

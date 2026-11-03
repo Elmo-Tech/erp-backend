@@ -84,6 +84,10 @@ class TaskResource extends JsonResource
             'internalReviewerNotes' => $canViewInternal ? ($this->internal_reviewer_notes ?? '') : null,
             'holdReason' => $this->hold_reason,
             'isPipelineTask' => (bool) $this->is_pipeline_task,
+            'coverImageUrl' => $this->cover_image_url,
+            'referenceImages' => collect($this->reference_images ?? [])->map(fn ($path) => [
+                'id' => basename($path), 'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($path),
+            ])->values(),
             'pipelinePosition' => (int) $this->pipeline_position,
             'workflowStageId' => $this->workflow_stage_id,
             'workflowStage' => $this->whenLoaded('workflowStage', fn () => [

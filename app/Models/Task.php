@@ -37,6 +37,7 @@ class Task extends Model implements Trackable
         'title',
         'description',
         'cover_image_path',
+        'reference_images',
         'acceptance_criteria',
         'status',
         'type',
@@ -81,6 +82,7 @@ class Task extends Model implements Trackable
             'is_recurring_instance' => 'boolean',
             'is_pipeline_task' => 'boolean',
             'pipeline_position' => 'integer',
+            'reference_images' => 'array',
         ];
     }
 

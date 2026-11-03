@@ -150,6 +150,24 @@ class ClientRefinementsTest extends TestCase
         $this->assertNotContains($other->id, array_column($response->json('data.projects'), 'projectId'));
     }
 
+    public function test_dashboard_shows_only_the_latest_paused_work_and_removes_it_when_work_resumes(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::findOrCreate('admin', 'web'));
+        $admin->givePermissionTo(Permission::findOrCreate('view_dashboard', 'web'));
+        $employee = User::factory()->create(['is_employee' => true, 'is_active' => true]);
+        $task = Task::factory()->create();
+        TimeEntry::factory()->create(['user_id' => $employee->id, 'trackable_type' => Task::class, 'trackable_id' => $task->id, 'start_time' => now()->subHour(), 'end_time' => now()->subMinutes(5), 'stop_reason' => 'pause']);
+        $response = $this->actingAs($admin, 'sanctum')->getJson('/api/v1/dashboard/overview')->assertOk();
+        $this->assertSame($employee->id, $response->json('data.liveWork.paused.0.userId'));
+        $this->assertSame($task->title, $response->json('data.liveWork.paused.0.taskTitle'));
+        $this->assertNotContains($employee->id, array_column($response->json('data.liveWork.idle'), 'userId'));
+        TimeEntry::factory()->create(['user_id' => $employee->id, 'trackable_type' => Task::class, 'trackable_id' => $task->id, 'start_time' => now(), 'end_time' => null]);
+        $response = $this->getJson('/api/v1/dashboard/overview')->assertOk();
+        $this->assertNotContains($employee->id, array_column($response->json('data.liveWork.paused'), 'userId'));
+        $this->assertContains($employee->id, array_column($response->json('data.liveWork.working'), 'userId'));
+    }
+
     public function test_lan_bridge_defaults_to_shadow_then_imports_idempotently_without_device_writes(): void
     {
         $device = Device::factory()->create(['is_active' => true, 'meta' => ['bridge_token_hash' => hash('sha256', 'office-token'), 'bridge_mode' => 'shadow']]);

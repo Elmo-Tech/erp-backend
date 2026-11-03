@@ -13,6 +13,7 @@ use App\Services\Projects\ProjectWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ProjectPipelineController extends Controller
@@ -174,7 +175,7 @@ class ProjectPipelineController extends Controller
                 'required',
                 'image',
                 'mimes:jpeg,jpg,png,webp',
-                'max:5120',
+                'max:25600',
                 'dimensions:max_width=6000,max_height=6000',
             ],
         ]);
@@ -187,6 +188,46 @@ class ProjectPipelineController extends Controller
             $this->workflow->taskPayload($task),
             'Task cover image updated successfully'
         );
+    }
+
+    public function storeTaskReferences(Request $request, Project $project, Task $task): JsonResponse
+    {
+        abort_unless($task->is_pipeline_task && $task->project_id === $project->id, 404);
+        abort_unless($this->access->canManagePipelineTaskCover($request->user(), $project, $task), 403);
+        $request->validate(['images' => ['required', 'array', 'min:1', 'max:10'], 'images.*' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:25600', 'dimensions:max_width=6000,max_height=6000']]);
+        $paths = [];
+        try {
+            DB::transaction(function () use ($task, $project, $request, &$paths): void {
+                $locked = Task::whereKey($task->id)->lockForUpdate()->firstOrFail();
+                $existing = $locked->reference_images ?? [];
+                if (count($existing) + count($request->file('images')) > 10) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['images' => 'A task can have at most 10 reference images.']);
+                }
+                foreach ($request->file('images') as $image) {
+                    $paths[] = $image->store("projects/{$project->id}/tasks/{$task->id}/references", 'public');
+                }
+                $locked->update(['reference_images' => [...$existing, ...$paths]]);
+            });
+        } catch (\Throwable $exception) {
+            Storage::disk('public')->delete($paths);
+            throw $exception;
+        }
+        return ApiResponse::success(null, 'Reference images uploaded successfully');
+    }
+
+    public function destroyTaskReference(Request $request, Project $project, Task $task, string $reference): JsonResponse
+    {
+        abort_unless($task->is_pipeline_task && $task->project_id === $project->id, 404);
+        abort_unless($this->access->canManagePipelineTaskCover($request->user(), $project, $task), 403);
+        DB::transaction(function () use ($task, $reference): void {
+            $locked = Task::whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $paths = $locked->reference_images ?? [];
+            $path = collect($paths)->first(fn ($item) => basename($item) === $reference);
+            abort_unless($path, 404);
+            $locked->update(['reference_images' => array_values(array_filter($paths, fn ($item) => $item !== $path))]);
+            DB::afterCommit(fn () => Storage::disk('public')->delete($path));
+        });
+        return ApiResponse::success(null, 'Reference image deleted successfully');
     }
 
     public function destroyTaskCover(

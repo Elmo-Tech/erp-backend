@@ -30,4 +30,9 @@ class HrRequestNotification extends Notification implements ShouldQueue
     {
         return new BroadcastMessage($this->data);
     }
+
+    public function broadcastType(): string
+    {
+        return $this->data['type'] ?? 'hr_request';
+    }
 }

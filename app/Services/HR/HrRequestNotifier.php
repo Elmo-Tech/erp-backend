@@ -24,7 +24,12 @@ class HrRequestNotifier
             'status' => $record->status,
             'message' => $needsReview ? $employee->name.' submitted a '.$kind.' request' : 'Your '.$kind.' request was '.$record->status,
             'body' => $kind === 'leave' ? $record->start_date->toDateString().' to '.$record->end_date->toDateString() : $record->permission_date->toDateString(),
-            'url' => $needsReview ? '/dashboard/employees/'.$employee->id : '/dashboard/profile',
+            'url' => $needsReview
+                ? '/dashboard/employees/'.$employee->id.'?'.http_build_query([
+                    'review' => $kind,
+                    'month' => $kind === 'leave' ? $record->start_date->format('Y-m') : $record->permission_date->format('Y-m'),
+                ])
+                : '/dashboard/my-requests',
         ];
         if (! $needsReview) {
             $employee->notify(new HrRequestNotification($data));

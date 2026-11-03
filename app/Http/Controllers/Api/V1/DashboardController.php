@@ -411,6 +411,24 @@ class DashboardController extends Controller
         $work = app(ActiveWorkService::class);
         $timers = $work->openTimers();
         $workingIds = $timers->pluck('user_id')->unique();
+        // Only the latest session can describe a person's current paused state.
+        $paused = TimeEntry::with('user:id,name')
+            ->whereNotNull('end_time')
+            ->whereNotExists(function ($query): void {
+                $query->selectRaw('1')->from('time_entries as later')
+                    ->whereColumn('later.user_id', 'time_entries.user_id')->whereNotNull('later.end_time')
+                    ->where(function ($later): void {
+                        $later->whereColumn('later.end_time', '>', 'time_entries.end_time')
+                            ->orWhere(function ($tie): void {
+                                $tie->whereColumn('later.end_time', 'time_entries.end_time')
+                                    ->whereColumn('later.id', '>', 'time_entries.id');
+                            });
+                    });
+            })
+            ->where('trackable_type', Task::class)
+            ->whereIn('stop_reason', ['pause', 'hold'])
+            ->whereNotIn('user_id', $workingIds)->get();
+        $pausedIds = $paused->pluck('user_id');
 
         return [
             'activeTimerCount' => $timers->count(),
@@ -424,7 +442,16 @@ class DashboardController extends Controller
                     'targetStatus' => $target['status'], 'targetMessage' => $target['message'],
                 ];
             })->values(),
-            'idle' => User::where('is_employee', true)->where('is_active', true)->whereNotIn('id', $workingIds)
+            'paused' => $paused->map(function ($timer) use ($work): array {
+                $target = $work->target($timer);
+                return [
+                    'userId' => $timer->user_id, 'name' => $timer->user?->name ?? 'Unavailable employee',
+                    'taskId' => $timer->trackable_id, 'taskTitle' => $target['task']?->title ?? 'Deleted task #'.$timer->trackable_id,
+                    'projectId' => $target['task']?->project_id, 'reason' => $timer->stopReason()?->value,
+                    'pausedAt' => $timer->end_time?->toISOString(), 'targetStatus' => $target['status'],
+                ];
+            })->values(),
+            'idle' => User::where('is_employee', true)->where('is_active', true)->whereNotIn('id', $workingIds->merge($pausedIds))
                 ->orderBy('name')->get(['id', 'name'])->map(fn ($user) => ['userId' => $user->id, 'name' => $user->name]),
         ];
     }
