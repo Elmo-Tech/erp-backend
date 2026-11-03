@@ -385,6 +385,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     // All routes have auth:sanctum and locale middleware applied in controller
 
     // My Assigned Tasks Route (tasks where user is team member) - MUST be before apiResource
+    Route::get('tasks/dashboard-list', [TaskController::class, 'dashboardTasks'])->name('tasks.dashboard-list');
     Route::get('tasks/my-assigned', [TaskController::class, 'myAssignedTasks'])->name('tasks.my-assigned');
 
     // Task Supervision Routes

@@ -200,6 +200,12 @@ class TaskController extends Controller
      *     )
      * )
      */
+    public function dashboardTasks(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->can('view_tasks') || $request->user()->can('manage_tasks'), 403);
+        return ApiResponse::success($this->taskService->getDashboardTasks($request->user()), 'Dashboard tasks retrieved successfully');
+    }
+
     public function index(Request $request): JsonResponse
     {
         $filters = [];

@@ -16,6 +16,33 @@ class ProjectPipelineAccessTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_dashboard_tasks_include_all_visible_projects_and_actual_workflow_names(): void
+    {
+        $project = Project::factory()->create();
+        $otherProject = Project::factory()->create();
+        $archived = Project::factory()->create();
+        $member = $this->userWithPermissions(['view_tasks']);
+        $admin = $this->userWithPermissions(['view_tasks', 'view_all_projects', 'manage_tasks']);
+        $project->members()->create(['user_id' => $member->id, 'role' => 'member']);
+        $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
+        $stage->update(['name' => 'Client Review']);
+        $visible = Task::factory()->for($project)->create(['title' => 'Visible board task', 'is_pipeline_task' => true, 'workflow_stage_id' => $stage->id]);
+        Task::factory()->count(101)->for($project)->create();
+        $hidden = Task::factory()->for($otherProject)->create(['title' => 'Other project task']);
+        Task::factory()->for($archived)->create(['title' => 'Archived project task']);
+        $archived->delete();
+        $response = $this->actingAs($member, 'sanctum')->getJson('/api/v1/tasks/dashboard-list')->assertOk()->json('data');
+        $this->assertContains($visible->id, array_column($response, 'taskId'));
+        $this->assertCount(102, $response);
+        $this->assertNotContains($hidden->id, array_column($response, 'taskId'));
+        $this->assertSame('Client Review', collect($response)->firstWhere('taskId', $visible->id)['status']);
+        $response = $this->actingAs($admin, 'sanctum')->getJson('/api/v1/tasks/dashboard-list')->assertOk()->json('data');
+        $this->assertContains($hidden->id, array_column($response, 'taskId'));
+        $this->assertNotContains('Archived project task', array_column($response, 'title'));
+        $unauthorized = User::factory()->create();
+        $this->actingAs($unauthorized, 'sanctum')->getJson('/api/v1/tasks/dashboard-list')->assertForbidden();
+    }
+
     public function test_project_member_can_view_pipeline_but_outsider_cannot(): void
     {
         $project = Project::factory()->create();

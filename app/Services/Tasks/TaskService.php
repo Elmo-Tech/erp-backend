@@ -6,6 +6,8 @@ use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Models\Tag;
+use App\Models\Project;
+use App\Models\LookupOption;
 use App\Models\Task;
 use App\Models\TaskActivity;
 use App\Models\TaskAssignee;
@@ -20,6 +22,33 @@ class TaskService
     public function __construct(
         private TaskNotificationService $taskNotificationService
     ) {}
+
+    /** Compact company-wide list for the dashboard, respecting project visibility. */
+    public function getDashboardTasks(User $user): array
+    {
+        $query = Task::query()->select(['id', 'project_id', 'assigned_to', 'title', 'status', 'priority', 'due_date', 'workflow_stage_id'])
+            ->with(['project:id,title', 'assignee:id,name', 'assignees.user:id,name', 'workflowStage:id,name,color'])
+            ->where(function ($query): void {
+                $query->whereNull('project_id')->orWhereIn('project_id', Project::withoutGlobalScopes()->whereNull('deleted_at')->select('id'));
+            });
+        $this->applyProjectVisibility($query, $user);
+        if ($user->specialization && ! ($user->can('view_all_projects') && $user->can('manage_tasks'))) {
+            $query->visibleToUser($user);
+        }
+        $statuses = LookupOption::ofType('task_status')->get()->keyBy('value');
+        return $query->orderByDesc('created_at')->orderByDesc('id')->get()->map(function (Task $task) use ($statuses): array {
+            $value = $task->status?->value ?? 'todo';
+            $option = $statuses->get($value);
+            return [
+                'taskId' => $task->id, 'title' => $task->title,
+                'project' => $task->project?->title, 'projectId' => $task->project_id,
+                'status' => $task->workflowStage?->name ?? $option?->label ?? ucwords(str_replace('_', ' ', $value)),
+                'statusColor' => $task->workflowStage?->color ?? $option?->color,
+                'priority' => $task->priority?->value, 'dueDate' => $task->due_date?->format('Y-m-d'),
+                'assignees' => $task->assignees->map(fn ($assignee) => $assignee->user?->name)->filter()->values()->all() ?: array_values(array_filter([$task->assignee?->name])),
+            ];
+        })->all();
+    }
 
     /**
      * Get all tasks with optional filtering and pagination.
