@@ -16,6 +16,22 @@ class ProjectPipelineAccessTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_paginated_tasks_with_json_references_and_multiple_assignees_are_returned_once(): void
+    {
+        $project = Project::factory()->create();
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_projects']);
+        $one = User::factory()->create();
+        $two = User::factory()->create();
+        $task = Task::factory()->for($project)->create(['reference_images' => ['projects/test/reference.png']]);
+        foreach ([$one, $two] as $user) {
+            $task->assignees()->create(['user_id' => $user->id, 'role' => 'developer', 'is_primary' => false]);
+        }
+        $response = $this->actingAs($actor, 'sanctum')->getJson('/api/v1/tasks?page=1&perPage=25')->assertOk();
+        $this->assertSame(1, $response->json('data.pagination.total'));
+        $response->assertJsonCount(1, 'data.tasks')->assertJsonPath('data.tasks.0.taskId', $task->id);
+        $this->getJson('/api/v1/tasks?page=2&perPage=1')->assertOk()->assertJsonCount(0, 'data.tasks');
+    }
+
     public function test_dashboard_tasks_include_all_visible_projects_and_actual_workflow_names(): void
     {
         $project = Project::factory()->create();

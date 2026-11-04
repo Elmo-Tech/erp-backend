@@ -113,9 +113,8 @@ class TaskService
             $query->where('title', 'like', '%'.$filters['search'].'%');
         }
 
-        // Use distinct to prevent duplicate results when joining with assignees
-        $query->distinct();
-
+        // Relationship filters use EXISTS, so this query does not join or duplicate tasks.
+        // DISTINCT over tasks.* fails on PostgreSQL when a task has JSON columns.
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
     }
 
