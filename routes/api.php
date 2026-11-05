@@ -266,6 +266,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
     // Time Entry Routes
     Route::post('time-entries/start', [TimeEntryController::class, 'start'])->name('time-entries.start');
+    Route::post('time-entries/confirm-after-hours', [TimeEntryController::class, 'confirmAfterHours']);
     Route::post('time-entries/heartbeat', [TimeEntryController::class, 'heartbeat'])->name('time-entries.heartbeat');
     Route::post('time-entries/pause', [TimeEntryController::class, 'pause'])->name('time-entries.pause');
     Route::post('time-entries/hold', [TimeEntryController::class, 'hold'])->name('time-entries.hold');

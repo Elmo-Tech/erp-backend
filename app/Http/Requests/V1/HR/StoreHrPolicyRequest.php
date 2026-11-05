@@ -17,7 +17,7 @@ class StoreHrPolicyRequest extends FormRequest
         return [
             'settings' => [
                 'required',
-                'array:workingDays,workStartTime,workEndTime,dailyRateDivisor,unpaidLeaveDailyRateMultiplier,annualLeaveDays,sickLeaveDays,emergencyLeaveDays,leaveWorkflow,monthlyPaidPermissionHours,permissionOverageBehavior,lateDeductionReset,lateDeductionTiers,overtimeRequiresPreapproval,overtimeMultiplier,advanceLimitSalaryPercentage,advanceSettlement,allowAdvanceInstallments,payrollPaymentDay,midMonthHirePaidDays,taskSupervisorLimit',
+                'array:workingDays,workStartTime,workEndTime,dailyRateDivisor,unpaidLeaveDailyRateMultiplier,annualLeaveDays,sickLeaveDays,emergencyLeaveDays,leaveWorkflow,monthlyPaidPermissionHours,permissionOverageBehavior,lateDeductionReset,lateDeductionTiers,overtimeRequiresPreapproval,overtimeMultiplier,advanceLimitSalaryPercentage,advanceSettlement,allowAdvanceInstallments,payrollPaymentDay,midMonthHirePaidDays,taskSupervisorLimit,afterHoursIntervalMinutes,afterHoursGraceMinutes',
             ],
             'settings.workingDays' => ['required', 'array', 'min:1', 'max:7'],
             'settings.workingDays.*' => ['required', 'string', 'distinct', 'in:sunday,monday,tuesday,wednesday,thursday,friday,saturday'],
@@ -45,6 +45,8 @@ class StoreHrPolicyRequest extends FormRequest
             'settings.allowAdvanceInstallments' => ['required', 'boolean'],
             'settings.payrollPaymentDay' => ['required', 'integer', 'between:1,31'],
             'settings.midMonthHirePaidDays' => ['required', 'integer', 'between:0,31'],
+            'settings.afterHoursIntervalMinutes' => ['sometimes', 'integer', 'between:1,1440'],
+            'settings.afterHoursGraceMinutes' => ['sometimes', 'integer', 'between:1,1440'],
             'settings.taskSupervisorLimit' => ['required', 'integer', 'in:1'],
             // Client decision 6: exactly one supervisor per task for now.
             // Future multi-supervisor support via a task_supervisors pivot table;

@@ -295,6 +295,7 @@ class TimeTrackingService
                 TimerStopReason::PAUSE,
                 TimerStopReason::HOLD,
                 TimerStopReason::CONNECTION_LOST,
+                TimerStopReason::AFTER_HOURS_TIMEOUT,
             ], true),
             422
         );
@@ -329,6 +330,7 @@ class TimeTrackingService
                 TimerStopReason::PAUSE,
                 TimerStopReason::HOLD,
                 TimerStopReason::CONNECTION_LOST,
+                TimerStopReason::AFTER_HOURS_TIMEOUT,
             ], true)
         ) {
             return null;
@@ -414,7 +416,7 @@ class TimeTrackingService
         return $attendance;
     }
 
-    private function closeTimer(
+    public function closeTimer(
         TimeEntry $timeEntry,
         TimerStopReason $reason,
         Carbon $endTime
@@ -494,6 +496,7 @@ class TimeTrackingService
             $this->closeTimer(
                 $timeEntry,
                 TimerStopReason::CONNECTION_LOST,
+                TimerStopReason::AFTER_HOURS_TIMEOUT,
                 $heartbeatAt
             );
 

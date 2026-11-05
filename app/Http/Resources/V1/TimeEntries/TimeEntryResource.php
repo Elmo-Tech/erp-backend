@@ -49,6 +49,8 @@ class TimeEntryResource extends JsonResource
             'endTime' => $this->end_time?->format('Y-m-d\TH:i:s') ?? '',
             'durationMinutes' => $this->duration_minutes ?? 0,
             'lastHeartbeatAt' => $timeEntry?->heartbeatAt()?->format('Y-m-d\TH:i:s') ?? '',
+            'afterHoursPromptAt' => $timeEntry?->after_hours_prompt_at?->toIso8601String(),
+            'afterHoursGraceMinutes' => (int) ($timeEntry?->after_hours_grace_minutes ?? config('time_tracking.after_hours_grace_minutes', 10)),
             'stopReason' => $timeEntry?->stopReason()?->value,
             'resumedFromId' => $timeEntry?->getAttribute('resumed_from_id'),
             'isActive' => $this->isActive(),

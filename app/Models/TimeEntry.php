@@ -25,6 +25,9 @@ class TimeEntry extends Model
         'trackable_type',
         'start_time',
         'last_heartbeat_at',
+        'after_hours_prompt_at',
+        'after_hours_confirmed_at',
+        'after_hours_grace_minutes',
         'end_time',
         'duration_minutes',
         'stop_reason',
@@ -41,6 +44,8 @@ class TimeEntry extends Model
         return [
             'start_time' => 'datetime',
             'last_heartbeat_at' => 'datetime',
+            'after_hours_prompt_at' => 'datetime',
+            'after_hours_confirmed_at' => 'datetime',
             'end_time' => 'datetime',
             'duration_minutes' => 'integer',
             'stop_reason' => TimerStopReason::class,

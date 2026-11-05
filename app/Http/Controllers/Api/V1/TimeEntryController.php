@@ -443,6 +443,17 @@ class TimeEntryController extends Controller
         }
     }
 
+    public function confirmAfterHours(Request $request): JsonResponse
+    {
+        $data = $request->validate(['timeEntryId' => ['required', 'integer'], 'promptAt' => ['required', 'date'], 'stop' => ['sometimes', 'boolean']]);
+        try {
+            $timer = app(\App\Services\TimeTracking\AfterHoursConfirmation::class)->confirm($request->user(), (int) $data['timeEntryId'], $data['promptAt'], $data['stop'] ?? false);
+            return ApiResponse::success(new TimeEntryResource($timer->load('trackable')), 'Timer confirmation saved');
+        } catch (\RuntimeException $exception) {
+            return ApiResponse::error($exception->getMessage(), 409);
+        }
+    }
+
     public function heartbeat(Request $request): JsonResponse
     {
         $data = $request->validate([

@@ -22,6 +22,8 @@ Artisan::command('notifications:vapid', function () {
     $this->line('WEB_PUSH_PRIVATE_KEY='.$keys['privateKey']);
 })->purpose('Generate Web Push VAPID keys once; store these in the server environment');
 
+Schedule::command('time-entries:check-after-hours')->everyMinute()->withoutOverlapping()->onOneServer();
+
 Schedule::command('time-entries:remind')->everyMinute()->withoutOverlapping()->onOneServer();
 
 // Schedule the MarkOverdueInvoicesJob to run daily at midnight
