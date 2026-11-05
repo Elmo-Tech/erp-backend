@@ -156,6 +156,21 @@ class QaReleaseGateFixesTest extends TestCase
         $this->putJson("/api/v1/projects/{$project->id}", $payload + ['deadline' => now()->subDay()->toDateString()])->assertUnprocessable()->assertJsonValidationErrors('deadline');
     }
 
+    public function test_overdue_project_can_be_completed_with_unchanged_deadline(): void
+    {
+        $manager = User::factory()->create();
+        $manager->assignRole(Role::firstOrCreate(['name' => 'admin']));
+        $manager->givePermissionTo(Permission::findOrCreate('manage_projects', 'web'));
+        $deadline = now()->subDays(3)->toDateString();
+        $project = Project::factory()->create(['deadline' => $deadline]);
+        $project->members()->create(['user_id' => $manager->id, 'role' => 'lead']);
+
+        $this->actingAs($manager, 'sanctum')->putJson("/api/v1/projects/{$project->id}", [
+            'title' => $project->title, 'status' => 'completed', 'deadline' => $deadline,
+        ])->assertOk();
+        $this->assertSame('completed', $project->fresh()->status->value);
+    }
+
     public function test_project_file_can_be_replaced_and_recorded_in_history(): void
     {
         Storage::fake('public');

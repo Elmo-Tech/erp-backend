@@ -28,12 +28,16 @@ class UpdateProjectRequest extends FormRequest
      */
     public function rules(): array
     {
+        $project = $this->route('project');
+        $unchangedDeadline = $project instanceof Project
+            && $project->deadline?->format('Y-m-d') === $this->input('deadline');
+
         return [
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['nullable', 'string', new SelectableProjectStatus($this->route('project') instanceof Project ? $this->route('project')->status?->value : null)],
             'budget' => ['nullable', 'numeric', 'gt:0'],
-            'deadline' => ['nullable', 'date', 'after_or_equal:today'],
+            'deadline' => array_filter(['nullable', 'date', $unchangedDeadline ? null : 'after_or_equal:today']),
             'projectTypeId' => [
                 'nullable',
                 'integer',
