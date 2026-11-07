@@ -246,42 +246,38 @@ class ProjectPipelineController extends Controller
         );
     }
 
-    public function updateStages(Request $request, Project $project): JsonResponse
+    public function globalSettings(Request $request): JsonResponse
     {
-        abort_unless($this->access->canManageWorkflow($request->user(), $project), 403);
+        abort_unless($request->user()->can('manage_workflow_templates'), 403);
+        return ApiResponse::success(app(\App\Services\Projects\GlobalWorkflowService::class)->snapshot());
+    }
 
+    public function updateGlobalSettings(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->can('manage_workflow_templates'), 403);
         $data = $request->validate([
+            'revision' => ['required', 'string', 'size:64'],
             'stages' => ['required', 'array', 'min:2', 'max:20'],
-            'stages.*.stageId' => ['nullable', 'integer'],
             'stages.*.name' => ['required', 'string', 'max:80'],
             'stages.*.slug' => ['required', 'alpha_dash', 'max:80', 'distinct'],
             'stages.*.color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'stages.*.category' => ['required', Rule::in(self::STAGE_CATEGORIES)],
-            'stages.*.isTerminal' => ['sometimes', 'boolean'],
+            'stages.*.isTerminal' => ['required', 'boolean'],
+            'mapping' => ['present', 'array'],
+            'mapping.*' => ['required', 'string', 'max:80'],
         ]);
-
-        $stages = $this->workflow->replaceProjectStages($project, $data['stages']);
-
-        return ApiResponse::success(
-            ['stages' => $stages->map(fn ($stage) => $this->workflow->stagePayload($stage))->all()],
-            'Project workflow updated successfully'
-        );
+        app(\App\Services\Projects\GlobalWorkflowService::class)->apply($data, $request->user());
+        return ApiResponse::success(app(\App\Services\Projects\GlobalWorkflowService::class)->snapshot(), 'Global workflow updated');
     }
 
-    public function applyTemplate(
-        Request $request,
-        Project $project,
-        WorkflowTemplate $template
-    ): JsonResponse {
-        abort_unless($this->access->canManageWorkflow($request->user(), $project), 403);
-        abort_unless($template->is_active, 422);
+    public function updateStages(Request $request, Project $project): JsonResponse
+    {
+        abort(403, 'Manage workflow centrally in settings.');
+    }
 
-        $stages = $this->workflow->applyTemplate($project, $template);
-
-        return ApiResponse::success(
-            ['stages' => $stages->map(fn ($stage) => $this->workflow->stagePayload($stage))->all()],
-            'Workflow template applied successfully'
-        );
+    public function applyTemplate(Request $request, Project $project, WorkflowTemplate $template): JsonResponse
+    {
+        abort(403, 'Manage workflow centrally in settings.');
     }
 
     public function templates(Request $request): JsonResponse
@@ -305,40 +301,7 @@ class ProjectPipelineController extends Controller
 
     public function storeTemplate(Request $request): JsonResponse
     {
-        abort_unless($request->user()->can('manage_workflow_templates'), 403);
-
-        $data = $this->validateTemplate($request);
-        $template = DB::transaction(function () use ($data): WorkflowTemplate {
-            if ($data['isDefault'] ?? false) {
-                WorkflowTemplate::query()->update(['is_default' => false]);
-            }
-
-            $template = WorkflowTemplate::create([
-                'name' => $data['name'],
-                'description' => $data['description'] ?? null,
-                'is_default' => $data['isDefault'] ?? false,
-                'is_active' => true,
-            ]);
-
-            foreach ($data['stages'] as $position => $stage) {
-                $template->stages()->create([
-                    'name' => $stage['name'],
-                    'slug' => $stage['slug'],
-                    'color' => $stage['color'],
-                    'category' => $stage['category'],
-                    'position' => $position,
-                    'is_terminal' => $stage['isTerminal'] ?? false,
-                ]);
-            }
-
-            return $template->load('stages');
-        });
-
-        return ApiResponse::success(
-            $this->templatePayload($template),
-            'Workflow template created successfully',
-            201
-        );
+        abort(403, 'Manage workflow centrally in settings.');
     }
 
     private function canAssignSupervisor(Request $request): bool

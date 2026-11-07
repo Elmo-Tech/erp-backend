@@ -42,9 +42,9 @@ class ProjectWorkflowService
             ->with('stages')
             ->firstOrFail();
 
-        $template->loadMissing('stages');
-
         DB::transaction(function () use ($project, $template): void {
+            $template = WorkflowTemplate::whereKey($template->id)->lockForUpdate()->firstOrFail();
+            $template->load('stages');
             Project::withoutGlobalScopes()->whereKey($project->id)->lockForUpdate()->firstOrFail();
 
             if (ProjectWorkflowStage::query()->where('project_id', $project->id)->exists()) {

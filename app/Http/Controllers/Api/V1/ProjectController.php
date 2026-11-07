@@ -172,6 +172,7 @@ class ProjectController extends Controller
             ])
             ->orderByRaw('CASE WHEN pinned_projects.id IS NOT NULL THEN 0 ELSE 1 END')
             ->orderBy('projects.created_at', 'desc')
+            ->orderBy('projects.id', 'desc')
             ->paginate($request->get('perPage', 15));
 
         return ApiResponse::success(

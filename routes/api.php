@@ -308,6 +308,8 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     // All routes have auth:sanctum and locale middleware applied in controllers
 
     // Project CRUD Routes
+    Route::get('workflow-settings', [ProjectPipelineController::class, 'globalSettings']);
+    Route::put('workflow-settings', [ProjectPipelineController::class, 'updateGlobalSettings']);
     Route::get('workflow-templates', [ProjectPipelineController::class, 'templates'])->name('workflow-templates.index');
     Route::post('workflow-templates', [ProjectPipelineController::class, 'storeTemplate'])->name('workflow-templates.store');
     Route::get('projects/{project}/pipeline', [ProjectPipelineController::class, 'show'])->name('projects.pipeline.show');

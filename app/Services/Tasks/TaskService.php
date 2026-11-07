@@ -27,7 +27,7 @@ class TaskService
     public function getDashboardTasks(User $user): array
     {
         $query = Task::query()->select(['id', 'project_id', 'assigned_to', 'title', 'status', 'priority', 'due_date', 'workflow_stage_id'])
-            ->with(['project:id,title', 'assignee:id,name', 'assignees.user:id,name', 'workflowStage:id,name,color'])
+            ->with(['project:id,title', 'assignee:id,name', 'assignees.user:id,name', 'workflowStage:id,name,color,position'])
             ->where(function ($query): void {
                 $query->whereNull('project_id')->orWhereIn('project_id', Project::withoutGlobalScopes()->whereNull('deleted_at')->select('id'));
             });
@@ -36,14 +36,17 @@ class TaskService
             $query->visibleToUser($user);
         }
         $statuses = LookupOption::ofType('task_status')->get()->keyBy('value');
-        return $query->orderByDesc('created_at')->orderByDesc('id')->get()->map(function (Task $task) use ($statuses): array {
+        $stagePositions = \App\Models\WorkflowTemplate::where('is_default', true)->where('is_active', true)->first()?->stages->groupBy('category')->map(fn ($stages) => $stages->first());
+        return $query->orderByDesc('created_at')->orderByDesc('id')->get()->map(function (Task $task) use ($statuses, $stagePositions): array {
             $value = $task->status?->value ?? 'todo';
             $option = $statuses->get($value);
+            $fallbackStage = $stagePositions?->get(match ($value) { 'in_progress' => 'active', 'on_hold' => 'paused', 'review', 'testing' => 'review', 'completed' => 'done', default => 'planned' });
             return [
                 'taskId' => $task->id, 'title' => $task->title,
                 'project' => $task->project?->title, 'projectId' => $task->project_id,
-                'status' => $task->workflowStage?->name ?? $option?->label ?? ucwords(str_replace('_', ' ', $value)),
-                'statusColor' => $task->workflowStage?->color ?? $option?->color,
+                'status' => $task->workflowStage?->name ?? $fallbackStage?->name ?? $option?->label ?? ucwords(str_replace('_', ' ', $value)),
+                'statusColor' => $task->workflowStage?->color ?? $fallbackStage?->color ?? $option?->color,
+                'statusPosition' => $task->workflowStage?->position ?? $fallbackStage?->position,
                 'priority' => $task->priority?->value, 'dueDate' => $task->due_date?->format('Y-m-d'),
                 'assignees' => $task->assignees->map(fn ($assignee) => $assignee->user?->name)->filter()->values()->all() ?: array_values(array_filter([$task->assignee?->name])),
             ];
