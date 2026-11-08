@@ -90,6 +90,39 @@ class ProjectPipelineAccessTest extends TestCase
             ->assertOk();
     }
 
+    public function test_reordering_in_same_stage_preserves_status_timers_and_completion(): void
+    {
+        $project = Project::factory()->create();
+        $user = $this->userWithPermissions(['view_tasks', 'edit_main_tasks', 'view_all_projects']);
+        $stage = $project->workflowStages()->where('category', 'done')->firstOrFail();
+        $done = now()->subDay()->startOfSecond();
+        $tasks = collect(range(0, 2))->map(fn ($i) => Task::factory()->for($project)->create([
+            'is_pipeline_task' => true, 'workflow_stage_id' => $stage->id, 'pipeline_position' => $i,
+            'status' => 'completed', 'completed_at' => $done,
+        ]));
+        $timer = TimeEntry::factory()->active()->create(['user_id' => $user->id, 'trackable_type' => Task::class, 'trackable_id' => $tasks[2]->id, 'start_time' => now()->subHour()]);
+        $this->actingAs($user, 'sanctum')->patchJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$tasks[2]->id}/stage", ['workflowStageId' => $stage->id, 'position' => 0])->assertOk();
+        $this->assertSame([$tasks[2]->id, $tasks[0]->id, $tasks[1]->id], $stage->tasks()->pluck('id')->all());
+        $this->assertTrue($tasks[2]->fresh()->completed_at->equalTo($done));
+        $this->assertNull($timer->fresh()->end_time);
+        $this->patchJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$tasks[2]->id}/stage", ['workflowStageId' => $stage->id, 'position' => 2])->assertOk();
+        $this->assertSame($tasks->pluck('id')->all(), $stage->tasks()->pluck('id')->all());
+    }
+
+    public function test_move_between_stages_inserts_at_target_position_and_preserves_existing_order(): void
+    {
+        $project = Project::factory()->create();
+        $user = $this->userWithPermissions(['view_tasks', 'edit_main_tasks', 'view_all_projects']);
+        $from = $project->workflowStages()->where('category', 'planned')->firstOrFail();
+        $to = $project->workflowStages()->where('category', 'active')->firstOrFail();
+        $first = Task::factory()->for($project)->create(['is_pipeline_task' => true, 'workflow_stage_id' => $to->id, 'pipeline_position' => 10]);
+        $second = Task::factory()->for($project)->create(['is_pipeline_task' => true, 'workflow_stage_id' => $to->id, 'pipeline_position' => 20]);
+        $moving = Task::factory()->for($project)->create(['is_pipeline_task' => true, 'workflow_stage_id' => $from->id, 'pipeline_position' => 100, 'status' => 'todo']);
+        $this->actingAs($user, 'sanctum')->patchJson("/api/v1/projects/{$project->id}/pipeline/tasks/{$moving->id}/stage", ['workflowStageId' => $to->id, 'position' => 1])->assertOk();
+        $this->assertSame([$first->id, $moving->id, $second->id], $to->tasks()->pluck('id')->all());
+        $this->assertSame('in_progress', $moving->fresh()->status->value);
+    }
+
     public function test_pipeline_task_is_flat_and_legacy_tasks_are_untouched(): void
     {
         $project = Project::factory()->create();

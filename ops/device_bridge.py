@@ -61,9 +61,14 @@ def collect(database, opener, device_url, initial_since):
             occurred = row.get("time") or row.get("dateTime")
             if not occurred:
                 raise ValueError("Terminal returned a punch without a timestamp")
+            event_time = dt.datetime.fromisoformat(occurred).astimezone(dt.timezone.utc)
+            # The overlap is for reliable polling, not permission to import events
+            # before the operator's explicitly chosen go-live boundary.
+            if event_time < dt.datetime.fromisoformat(initial_since).astimezone(dt.timezone.utc):
+                continue
             payload = json.dumps(row, sort_keys=True, separators=(",", ":"))
             key = hashlib.sha256(payload.encode()).hexdigest()
-            ordering_time = dt.datetime.fromisoformat(occurred).astimezone(dt.timezone.utc).isoformat()
+            ordering_time = event_time.isoformat()
             database.execute("INSERT OR IGNORE INTO events (id, occurred, payload) VALUES (?, ?, ?)", (key, ordering_time, payload))
         database.commit()  # Durable even if a later page or outbound request fails.
         position += len(rows)

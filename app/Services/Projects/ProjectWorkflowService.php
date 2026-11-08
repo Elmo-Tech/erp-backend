@@ -165,26 +165,36 @@ class ProjectWorkflowService
             abort(404);
         }
 
-        DB::transaction(function () use ($task, $stage, $actor, $position): void {
-            $targetPosition = $position ?? (((int) $stage->tasks()->max('pipeline_position')) + 1);
+        DB::transaction(function () use ($project, $task, $stage, $actor, $position): void {
+            Project::withoutGlobalScopes()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $task = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            abort_unless($task->project_id === $project->id && $task->is_pipeline_task, 404);
+            $stage = ProjectWorkflowStage::query()->where('project_id', $project->id)->whereKey($stage->id)->firstOrFail();
+            $sourceStageId = $task->workflow_stage_id;
+            $sameStage = $sourceStageId === $stage->id;
+            $targetIds = $stage->tasks()->whereKeyNot($task->id)->orderBy('id')->lockForUpdate()->pluck('id')->all();
+            $targetPosition = $position === null ? count($targetIds) : min($position, count($targetIds));
+            array_splice($targetIds, $targetPosition, 0, [$task->id]);
 
-            $stage->tasks()
-                ->where('pipeline_position', '>=', $targetPosition)
-                ->increment('pipeline_position');
-
-            $task->update([
-                'workflow_stage_id' => $stage->id,
-                'pipeline_position' => $targetPosition,
-                'status' => $this->legacyStatusFor($stage),
-                'hold_reason' => $stage->category === 'paused' ? ($task->hold_reason ?: 'Moved to On Hold') : null,
-                'completed_at' => $stage->category === 'done' ? now() : null,
-                'updated_by' => $actor->id,
-            ]);
-
-            // A finished task must not keep a running timer behind.
-            if ($stage->category === 'done') {
-                $this->timeTracking->stopTimersForTrackable($task, TimerStopReason::END);
+            if (! $sameStage && $sourceStageId) {
+                $sourceIds = Task::query()->where('project_id', $project->id)->where('workflow_stage_id', $sourceStageId)
+                    ->where('is_pipeline_task', true)->whereKeyNot($task->id)->orderBy('pipeline_position')->orderBy('id')->lockForUpdate()->pluck('id')->all();
+                foreach ($sourceIds as $index => $id) DB::table('tasks')->where('id', $id)->update(['pipeline_position' => $index]);
             }
+
+            if (! $sameStage) {
+                $task->update([
+                    'workflow_stage_id' => $stage->id,
+                    'status' => $this->legacyStatusFor($stage),
+                    'hold_reason' => $stage->category === 'paused' ? ($task->hold_reason ?: 'Moved to On Hold') : null,
+                    'completed_at' => $stage->category === 'done' ? now() : null,
+                    'updated_by' => $actor->id,
+                ]);
+                if ($stage->category === 'done') {
+                    $this->timeTracking->stopTimersForTrackable($task, TimerStopReason::END);
+                }
+            }
+            foreach ($targetIds as $index => $id) DB::table('tasks')->where('id', $id)->update(['pipeline_position' => $index]);
         });
 
         return $task->fresh()->load(['assignee', 'assignees.user', 'workflowStage']);

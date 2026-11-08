@@ -13,6 +13,8 @@ use App\Services\Devices\DeviceSyncService;
 use App\Services\Devices\HikvisionIsapiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 /**
@@ -206,6 +208,31 @@ class DeviceController extends Controller
             'deviceEmployeeNo' => $mapping->device_employee_no,
             'fingerprintEnrolled' => $mapping->fingerprint_enrolled,
         ], __('messages.device_user_linked'), 201);
+    }
+
+    /** Link a number already enrolled on the terminal without modifying the terminal. */
+    public function mapExistingUser(Request $request, Device $device): JsonResponse
+    {
+        if (! $this->canManage($request)) return ApiResponse::forbidden(__('messages.unauthorized'));
+        $data = $request->validate([
+            'userId' => ['required', 'integer', 'exists:users,id'],
+            'deviceEmployeeNo' => ['required', 'string', 'max:255'],
+        ]);
+        $number = trim($data['deviceEmployeeNo']);
+        if ($number === '') throw ValidationException::withMessages(['deviceEmployeeNo' => 'Enter the existing terminal employee number.']);
+        $mapping = DB::transaction(function () use ($device, $data, $number): DeviceUser {
+            Device::whereKey($device->id)->lockForUpdate()->firstOrFail();
+            $byNumber = DeviceUser::where('device_id', $device->id)->where('device_employee_no', $number)->first();
+            $byUser = DeviceUser::where('device_id', $device->id)->where('user_id', $data['userId'])->first();
+            if (($byNumber && $byNumber->user_id !== (int) $data['userId']) || ($byUser && $byUser->device_employee_no !== $number)) {
+                throw ValidationException::withMessages(['deviceEmployeeNo' => 'This employee or terminal number is already linked. Review the existing mapping first.']);
+            }
+            if ($byNumber) return $byNumber;
+            $mapping = DeviceUser::create(['device_id' => $device->id, 'user_id' => $data['userId'], 'device_employee_no' => $number]);
+            app(\App\Services\AuditService::class)->log('attendance', 'device_employee_mapped', $mapping, ['deviceId' => $device->id, 'userId' => (int) $data['userId'], 'deviceEmployeeNo' => $number], 'warning', 'Existing device employee linked');
+            return $mapping;
+        });
+        return ApiResponse::success(['deviceUserId' => $mapping->id, 'userId' => $mapping->user_id, 'deviceEmployeeNo' => $mapping->device_employee_no], 'Existing terminal employee linked without modifying the device');
     }
 
     /**

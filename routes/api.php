@@ -368,6 +368,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::post('devices/{device}/poll', [DeviceController::class, 'poll'])->name('devices.poll');
     Route::post('devices/{device}/users/push', [DeviceController::class, 'pushUsers'])->name('devices.users.push');
     Route::get('devices/{device}/users/pull', [DeviceController::class, 'pullUsers'])->name('devices.users.pull');
+    Route::post('devices/{device}/users/map-existing', [DeviceController::class, 'mapExistingUser']);
     Route::post('devices/{device}/users', [DeviceController::class, 'linkUser'])->name('devices.users.link');
     Route::delete('devices/{device}/users/{deviceUser}', [DeviceController::class, 'unlinkUser'])->name('devices.users.unlink');
     Route::get('devices/{device}/events', [DeviceController::class, 'events'])->name('devices.events');

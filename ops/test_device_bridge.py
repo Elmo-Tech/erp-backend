@@ -32,6 +32,14 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(self.database.execute("SELECT value FROM state").fetchone()[0], checkpoint)
         self.assertEqual(self.database.execute("SELECT COUNT(*) FROM events").fetchone()[0], 2)
 
+    def test_overlap_never_imports_before_explicit_start(self):
+        before = {**self.event(1), "time": "2026-10-25T08:55:00+03:00"}
+        after = {**self.event(2), "time": "2026-10-25T09:01:00+03:00"}
+        with patch.object(bridge, "post_json", return_value={"AcsEvent": {"InfoList": [before, after], "totalMatches": 2}}):
+            bridge.collect(self.database, object(), "http://terminal", "2026-10-25T09:00:00+03:00")
+        payloads = self.database.execute("SELECT payload FROM events").fetchall()
+        self.assertEqual([json.loads(row[0])["serialNo"] for row in payloads], [2])
+
     def test_shadow_and_failed_delivery_retain_events_then_success_marks_sent(self):
         self.database.execute("INSERT INTO events VALUES ('event', '2026-10-25', ?, 0)", (json.dumps(self.event(1)),))
         self.database.commit()

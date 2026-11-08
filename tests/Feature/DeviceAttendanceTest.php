@@ -71,6 +71,25 @@ class DeviceAttendanceTest extends TestCase
         $this->assertDatabaseHas('devices', ['name' => 'Warehouse', 'ip_address' => '10.0.0.9']);
     }
 
+    public function test_existing_employee_number_can_be_linked_without_contacting_device_and_conflicts_are_rejected(): void
+    {
+        Http::fake();
+        $device = Device::factory()->create();
+        $manager = User::factory()->create();
+        $manager->givePermissionTo('manage_devices');
+        $employee = User::factory()->create();
+        $other = User::factory()->create();
+        $payload = ['userId' => $employee->id, 'deviceEmployeeNo' => '007A'];
+        $this->actingAs($other, 'sanctum')->postJson("/api/v1/devices/{$device->id}/users/map-existing", $payload)->assertForbidden();
+        $this->actingAs($manager, 'sanctum')->postJson("/api/v1/devices/{$device->id}/users/map-existing", $payload)->assertOk();
+        $this->postJson("/api/v1/devices/{$device->id}/users/map-existing", $payload)->assertOk();
+        $this->postJson("/api/v1/devices/{$device->id}/users/map-existing", ['userId' => $other->id, 'deviceEmployeeNo' => '007A'])->assertUnprocessable();
+        $this->postJson("/api/v1/devices/{$device->id}/users/map-existing", ['userId' => $employee->id, 'deviceEmployeeNo' => 'other'])->assertUnprocessable();
+        $this->assertDatabaseCount('device_users', 1);
+        $this->assertDatabaseHas('device_users', ['device_id' => $device->id, 'user_id' => $employee->id, 'device_employee_no' => '007A']);
+        Http::assertNothingSent();
+    }
+
     public function test_device_password_is_encrypted_at_rest(): void
     {
         $device = Device::factory()->create(['password' => 'super-secret']);
