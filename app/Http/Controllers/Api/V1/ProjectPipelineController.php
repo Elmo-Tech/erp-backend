@@ -58,6 +58,9 @@ class ProjectPipelineController extends Controller
             'workflowStageId' => ['required', 'integer'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'projectTypeIds' => ['sometimes', 'array', 'max:2'],
+            'projectTypeIds.*' => ['required', 'integer', 'distinct', Rule::exists('lookup_options', 'id')->where('type', 'project_type')],
+
             'assignedTo' => ['nullable', 'integer', 'exists:users,id'],
             'assignedUserIds' => ['nullable', 'array', 'max:20'],
             'assignedUserIds.*' => ['integer', 'distinct', 'exists:users,id'],
@@ -126,6 +129,9 @@ class ProjectPipelineController extends Controller
             'workflowStageId' => ['sometimes', 'required', 'integer'],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
+            'projectTypeIds' => ['sometimes', 'array', 'max:2'],
+            'projectTypeIds.*' => ['required', 'integer', 'distinct', Rule::exists('lookup_options', 'id')->where('type', 'project_type')],
+
             'assignedTo' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
             'assignedUserIds' => ['sometimes', 'nullable', 'array', 'max:20'],
             'assignedUserIds.*' => ['integer', 'distinct', 'exists:users,id'],

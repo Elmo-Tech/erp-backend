@@ -59,6 +59,7 @@ class TaskResource extends JsonResource
             'status' => $this->status?->value ?? 'todo',
             'type' => $this->type?->value ?? 'main',
             'priority' => $this->priority?->value ?? 'medium',
+            'projectTypes' => $this->whenLoaded('projectTypes', fn () => $this->projectTypes->map(fn ($type) => ['id' => $type->id, 'label' => $type->label, 'color' => $type->color])->values()),
             'taskCategory' => $this->task_category?->value,
             'taskCategoryLabel' => $this->task_category?->label() ?? 'No Category',
             'taskCategoryColor' => $this->task_category?->color() ?? 'bg-gray-100 text-gray-800',

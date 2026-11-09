@@ -72,6 +72,8 @@ class UpdateTaskRequest extends FormRequest
             'status' => ['nullable', Rule::enum(TaskStatus::class)],
             'type' => ['nullable', Rule::enum(TaskType::class)],
             'priority' => ['nullable', Rule::enum(TaskPriority::class)],
+            'projectTypeIds' => ['sometimes', 'array', 'max:2'],
+            'projectTypeIds.*' => ['required', 'integer', 'distinct', Rule::exists('lookup_options', 'id')->where('type', 'project_type')],
             'taskCategory' => ['nullable', Rule::enum(TaskCategory::class)],
             'dueDate' => ['nullable', 'date'],
             'expectedResolutionDate' => ['nullable', 'date'],

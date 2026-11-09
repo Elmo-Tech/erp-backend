@@ -73,7 +73,7 @@ class ProjectWorkflowService
 
         $stages = $project->workflowStages()
             ->with(['tasks' => fn ($query) => app(\App\Services\Tasks\TaskVisibility::class)->scope($query, $user)->with([
-                'assignee', 'assignees.user', 'workflowStage', 'supervisor',
+                'assignee', 'assignees.user', 'workflowStage', 'supervisor', 'projectTypes',
                 'timeEntries' => fn ($entries) => $entries->whereNull('end_time')->with('user'),
             ])])
             ->get();
@@ -129,6 +129,7 @@ class ProjectWorkflowService
         ]);
 
         $this->createTaskAssignees($task, $actor, $assigneeIds);
+        $task->projectTypes()->sync($data['projectTypeIds'] ?? []);
 
         if (isset($data['supervisorId'])) {
             $this->assignPipelineSupervisor($project, $task, $actor, $data['supervisorId']);
@@ -245,6 +246,7 @@ class ProjectWorkflowService
             }
 
             $task->update($updates);
+            if (array_key_exists('projectTypeIds', $data)) $task->projectTypes()->sync($data['projectTypeIds']);
 
             if ($stage instanceof ProjectWorkflowStage && $stage->category === 'done') {
                 $this->timeTracking->stopTimersForTrackable($task, TimerStopReason::END);
@@ -379,7 +381,7 @@ class ProjectWorkflowService
     public function taskPayload(Task $task): array
     {
         $task->loadMissing([
-            'assignees.user', 'supervisor',
+            'assignees.user', 'supervisor', 'projectTypes',
             'timeEntries' => fn ($entries) => $entries->whereNull('end_time')->with('user'),
         ]);
         $assignee = $task->assignee;
@@ -391,6 +393,7 @@ class ProjectWorkflowService
             'workflowStageId' => $task->workflow_stage_id,
             'title' => $task->title,
             'description' => $task->description,
+            'projectTypes' => $task->projectTypes->map(fn ($type) => ['id' => $type->id, 'label' => $type->label, 'color' => $type->color])->values()->all(),
             'coverImageUrl' => $task->cover_image_url,
             'priority' => $task->priorityValue(),
             'assignedTo' => $task->assigned_to,

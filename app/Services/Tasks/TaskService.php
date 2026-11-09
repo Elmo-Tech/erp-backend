@@ -373,6 +373,8 @@ class TaskService
             }
         }
 
+        if (array_key_exists('projectTypeIds', $data)) $task->projectTypes()->sync($data['projectTypeIds']);
+
         // Log activity
         TaskActivity::create([
             'task_id' => $task->id,
@@ -389,7 +391,7 @@ class TaskService
 
         $this->taskNotificationService->sendTaskAssigned($task, $user, $assignedUsers);
 
-        return $task->load(['assignee', 'supervisor', 'project', 'parent', 'children', 'tags', 'assignees.user']);
+        return $task->load(['assignee', 'supervisor', 'project', 'parent', 'children', 'tags', 'assignees.user', 'projectTypes']);
     }
 
     /**
@@ -494,12 +496,14 @@ class TaskService
             $this->taskNotificationService->sendTaskStatusChanged($task, $user, $oldStatus ?? 'none', $data['status']);
         }
 
+        if (array_key_exists('projectTypeIds', $data)) $task->projectTypes()->sync($data['projectTypeIds']);
+
         // Update tags
         if (array_key_exists('tagIds', $data)) {
             $task->tags()->sync($data['tagIds'] ?? []);
         }
 
-        return $task->fresh()->load(['assignee', 'supervisor', 'project', 'parent', 'children', 'tags', 'assignees.user']);
+        return $task->fresh()->load(['assignee', 'supervisor', 'project', 'parent', 'children', 'tags', 'assignees.user', 'projectTypes']);
     }
 
     /**

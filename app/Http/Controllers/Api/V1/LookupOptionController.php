@@ -145,6 +145,7 @@ class LookupOptionController extends Controller
                 })->exists(),
             'task_status' => Task::where('status', $lookupOption->value)->exists(),
             'task_category' => Task::where('task_category', $lookupOption->value)->exists(),
+            'project_type' => Task::withTrashed()->whereHas('projectTypes', fn ($query) => $query->where('lookup_options.id', $lookupOption->id))->exists(),
             default => false,
         };
 
