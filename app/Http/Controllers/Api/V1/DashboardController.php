@@ -259,6 +259,7 @@ class DashboardController extends Controller
 
         // Recent Team Tasks
         $recentTasks = Task::with(['assignee', 'project'])
+            ->whereIn('tasks.id', app(\App\Services\Tasks\TaskVisibility::class)->accessibleIds($user))
             ->whereIn('assigned_to', $teamMemberIds)
             ->orderBy('updated_at', 'desc')
             ->limit(4)
@@ -621,6 +622,7 @@ class DashboardController extends Controller
 
         try {
             $recentTaskActivities = TaskActivity::with('task:id,title')
+                ->whereIn('task_id', app(\App\Services\Tasks\TaskVisibility::class)->accessibleIds(User::findOrFail($userId)))
                 ->where('user_id', $userId)
                 ->orderBy('created_at', 'desc')
                 ->limit(5)

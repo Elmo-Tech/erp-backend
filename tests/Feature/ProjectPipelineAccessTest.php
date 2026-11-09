@@ -19,7 +19,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_paginated_tasks_with_json_references_and_multiple_assignees_are_returned_once(): void
     {
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'view_all_projects']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'view_all_projects']);
         $one = User::factory()->create();
         $two = User::factory()->create();
         $task = Task::factory()->for($project)->create(['reference_images' => ['projects/test/reference.png']]);
@@ -37,8 +37,8 @@ class ProjectPipelineAccessTest extends TestCase
         $project = Project::factory()->create();
         $otherProject = Project::factory()->create();
         $archived = Project::factory()->create();
-        $member = $this->userWithPermissions(['view_tasks']);
-        $admin = $this->userWithPermissions(['view_tasks', 'view_all_projects', 'manage_tasks']);
+        $member = $this->userWithPermissions(['view_tasks', 'view_all_tasks']);
+        $admin = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'view_all_projects', 'manage_tasks']);
         $project->members()->create(['user_id' => $member->id, 'role' => 'member']);
         $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
         $stage->update(['name' => 'Client Review']);
@@ -62,8 +62,8 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_project_member_can_view_pipeline_but_outsider_cannot(): void
     {
         $project = Project::factory()->create();
-        $member = $this->userWithPermissions(['view_tasks']);
-        $outsider = $this->userWithPermissions(['view_tasks']);
+        $member = $this->userWithPermissions(['view_tasks', 'view_all_tasks']);
+        $outsider = $this->userWithPermissions(['view_tasks', 'view_all_tasks']);
         $project->members()->create(['user_id' => $member->id, 'role' => 'member']);
 
         $this->actingAs($member, 'sanctum')
@@ -83,7 +83,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_view_all_projects_permission_bypasses_membership_scope(): void
     {
         $project = Project::factory()->create();
-        $viewer = $this->userWithPermissions(['view_tasks', 'view_all_projects']);
+        $viewer = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'view_all_projects']);
 
         $this->actingAs($viewer, 'sanctum')
             ->getJson("/api/v1/projects/{$project->id}/pipeline")
@@ -93,7 +93,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_reordering_in_same_stage_preserves_status_timers_and_completion(): void
     {
         $project = Project::factory()->create();
-        $user = $this->userWithPermissions(['view_tasks', 'edit_main_tasks', 'view_all_projects']);
+        $user = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'edit_main_tasks', 'view_all_projects']);
         $stage = $project->workflowStages()->where('category', 'done')->firstOrFail();
         $done = now()->subDay()->startOfSecond();
         $tasks = collect(range(0, 2))->map(fn ($i) => Task::factory()->for($project)->create([
@@ -112,7 +112,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_move_between_stages_inserts_at_target_position_and_preserves_existing_order(): void
     {
         $project = Project::factory()->create();
-        $user = $this->userWithPermissions(['view_tasks', 'edit_main_tasks', 'view_all_projects']);
+        $user = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'edit_main_tasks', 'view_all_projects']);
         $from = $project->workflowStages()->where('category', 'planned')->firstOrFail();
         $to = $project->workflowStages()->where('category', 'active')->firstOrFail();
         $first = Task::factory()->for($project)->create(['is_pipeline_task' => true, 'workflow_stage_id' => $to->id, 'pipeline_position' => 10]);
@@ -126,7 +126,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_pipeline_task_is_flat_and_legacy_tasks_are_untouched(): void
     {
         $project = Project::factory()->create();
-        $user = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'assign_tasks']);
+        $user = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'create_main_tasks', 'assign_tasks']);
         $user->update(['is_employee' => true, 'is_active' => true]);
         $project->members()->create(['user_id' => $user->id, 'role' => 'member']);
         $legacyTask = Task::factory()->for($project)->create([
@@ -168,7 +168,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_selected_employees_are_assigned_and_added_to_the_project(): void
     {
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'assign_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'create_main_tasks', 'assign_tasks']);
         $employees = User::factory()->count(2)->create([
             'is_employee' => true,
             'is_active' => true,
@@ -211,7 +211,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_assigning_pipeline_employees_requires_assignment_permission(): void
     {
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'create_main_tasks']);
         $employee = User::factory()->create([
             'is_employee' => true,
             'is_active' => true,
@@ -236,7 +236,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_pipeline_assignees_must_be_active_employees(): void
     {
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'assign_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'create_main_tasks', 'assign_tasks']);
         $inactiveEmployee = User::factory()->create([
             'is_employee' => true,
             'is_active' => false,
@@ -259,6 +259,7 @@ class ProjectPipelineAccessTest extends TestCase
         $project = Project::factory()->create();
         $actor = $this->userWithPermissions([
             'view_tasks',
+            'view_all_tasks',
             'create_main_tasks',
             'edit_main_tasks',
             'assign_tasks',
@@ -310,7 +311,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_editing_pipeline_assignees_requires_assignment_permission(): void
     {
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'edit_main_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'create_main_tasks', 'edit_main_tasks']);
         $assignee = User::factory()->create([
             'is_employee' => true,
             'is_active' => true,
@@ -339,7 +340,7 @@ class ProjectPipelineAccessTest extends TestCase
     {
         $project = Project::factory()->create();
         $otherProject = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks']);
         $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $otherProject->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
@@ -369,7 +370,7 @@ class ProjectPipelineAccessTest extends TestCase
     {
         Storage::fake('public');
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'edit_main_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'edit_main_tasks']);
         $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
         $task = Task::factory()->for($project)->create([
@@ -398,8 +399,8 @@ class ProjectPipelineAccessTest extends TestCase
     {
         Storage::fake('public');
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'edit_main_tasks']);
-        $viewer = $this->userWithPermissions(['view_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'edit_main_tasks']);
+        $viewer = $this->userWithPermissions(['view_tasks', 'view_all_tasks']);
         foreach ([$actor, $viewer] as $user) $project->members()->create(['user_id' => $user->id, 'role' => 'member']);
         $task = Task::factory()->for($project)->create(['is_pipeline_task' => true]);
         $url = "/api/v1/projects/{$project->id}/pipeline/tasks/{$task->id}/references";
@@ -422,7 +423,7 @@ class ProjectPipelineAccessTest extends TestCase
     {
         Storage::fake('public');
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'edit_main_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'edit_main_tasks']);
         $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
         $coverPath = "projects/{$project->id}/tasks/cover.jpg";
@@ -446,7 +447,7 @@ class ProjectPipelineAccessTest extends TestCase
     {
         Storage::fake('public');
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks']);
         $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
         $task = Task::factory()->for($project)->create([
@@ -468,7 +469,7 @@ class ProjectPipelineAccessTest extends TestCase
         Storage::fake('public');
         $project = Project::factory()->create();
         $otherProject = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'edit_main_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'edit_main_tasks']);
         $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $otherProject->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $stage = $project->workflowStages()->where('slug', 'backlog')->firstOrFail();
@@ -489,7 +490,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_outsider_cannot_create_a_legacy_task_inside_a_hidden_project(): void
     {
         $project = Project::factory()->create();
-        $outsider = $this->userWithPermissions(['view_tasks', 'create_main_tasks']);
+        $outsider = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'create_main_tasks']);
 
         $this->actingAs($outsider, 'sanctum')
             ->postJson('/api/v1/tasks', [
@@ -509,7 +510,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_pipeline_supervisor_is_saved_atomically_and_added_to_project(): void
     {
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'edit_main_tasks', 'manage_task_team']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'create_main_tasks', 'edit_main_tasks', 'manage_task_team']);
         $supervisor = User::factory()->create(['is_employee' => true, 'is_active' => true]);
         $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $stage = $project->workflowStages()->where('category', 'backlog')->firstOrFail();
@@ -540,7 +541,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_pipeline_supervisor_assignment_requires_team_management_permission(): void
     {
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'edit_main_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'create_main_tasks', 'edit_main_tasks']);
         $supervisor = User::factory()->create(['is_employee' => true, 'is_active' => true]);
         $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $stage = $project->workflowStages()->where('category', 'backlog')->firstOrFail();
@@ -558,7 +559,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_invalid_pipeline_supervisor_rolls_back_task_and_assignee_membership(): void
     {
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks', 'create_main_tasks', 'assign_tasks', 'manage_task_team']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks', 'create_main_tasks', 'assign_tasks', 'manage_task_team']);
         $supervisor = User::factory()->create(['is_employee' => true, 'is_active' => false]);
         $assignee = User::factory()->create(['is_employee' => true, 'is_active' => true]);
         $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
@@ -576,7 +577,7 @@ class ProjectPipelineAccessTest extends TestCase
     public function test_pipeline_card_payload_includes_logged_time_and_named_active_work_sessions(): void
     {
         $project = Project::factory()->create();
-        $actor = $this->userWithPermissions(['view_tasks']);
+        $actor = $this->userWithPermissions(['view_tasks', 'view_all_tasks']);
         $project->members()->create(['user_id' => $actor->id, 'role' => 'member']);
         $stage = $project->workflowStages()->where('category', 'active')->firstOrFail();
         $task = Task::factory()->for($project)->create([

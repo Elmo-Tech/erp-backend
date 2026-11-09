@@ -103,8 +103,10 @@ class TaskDependencyController extends Controller
         Gate::authorize('view', $task);
 
         $dependencies = $task->dependencies()
-            ->with('dependsOnTask:id,title,status')
+            ->with('dependsOnTask:id,title,status,project_id,assigned_to,supervisor_id,start_date,completed_at')
             ->get()
+            ->filter(fn ($dep) => $dep->dependsOnTask && app(\App\Services\Tasks\TaskVisibility::class)->canView(request()->user(), $dep->dependsOnTask))
+            ->values()
             ->map(function ($dep) {
                 return [
                     'id' => $dep->id,
@@ -123,8 +125,10 @@ class TaskDependencyController extends Controller
             });
 
         $blockedBy = $task->blockedBy()
-            ->with('task:id,title,status')
+            ->with('task:id,title,status,project_id,assigned_to,supervisor_id,start_date,completed_at')
             ->get()
+            ->filter(fn ($dep) => $dep->task && app(\App\Services\Tasks\TaskVisibility::class)->canView(request()->user(), $dep->task))
+            ->values()
             ->map(function ($dep) {
                 return [
                     'id' => $dep->id,
@@ -213,6 +217,9 @@ class TaskDependencyController extends Controller
             ])],
             'lagDays' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        Gate::authorize('view', $task);
+        Gate::authorize('view', Task::findOrFail($validated['dependsOnTaskId']));
 
         // Prevent self-dependency
         if ($validated['dependsOnTaskId'] == $task->id) {
@@ -310,6 +317,8 @@ class TaskDependencyController extends Controller
     public function destroy(TaskDependency $dependency): JsonResponse
     {
         Gate::authorize('update', $dependency->task);
+        Gate::authorize('view', $dependency->task);
+        Gate::authorize('view', $dependency->dependsOnTask);
 
         $dependency->delete();
 

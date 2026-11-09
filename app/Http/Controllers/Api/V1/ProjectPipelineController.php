@@ -33,6 +33,11 @@ class ProjectPipelineController extends Controller
         private ProjectAccess $access
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
+        $this->middleware(function ($request, $next) {
+            $task = $request->route('task');
+            if ($task instanceof Task && ! app(\App\Services\Tasks\TaskVisibility::class)->canView($request->user(), $task)) abort(403);
+            return $next($request);
+        });
     }
 
     public function show(Request $request, Project $project): JsonResponse
@@ -40,7 +45,7 @@ class ProjectPipelineController extends Controller
         abort_unless($this->access->canViewTasks($request->user(), $project), 403);
 
         return ApiResponse::success(
-            $this->workflow->getPipeline($project),
+            $this->workflow->getPipeline($project, $request->user()),
             'Project pipeline retrieved successfully'
         );
     }

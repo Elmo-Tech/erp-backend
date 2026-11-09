@@ -33,6 +33,11 @@ class TaskSupervisionController extends Controller
         private ProjectAccess $projectAccess
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
+        $this->middleware(function ($request, $next) {
+            $task = $request->route('task') ?? $request->route('helpRequest')?->task ?? $request->route('session')?->task;
+            if ($task instanceof Task && ! app(\App\Services\Tasks\TaskVisibility::class)->canView($request->user(), $task)) abort(403);
+            return $next($request);
+        });
     }
 
     public function setSupervisor(SetTaskSupervisorRequest $request, Task $task): JsonResponse
@@ -264,9 +269,10 @@ class TaskSupervisionController extends Controller
 
     private function canViewSupervision(User $user, Task $task): bool
     {
-        return $this->canManageTask($user, $task)
-            || $this->isSupervisor($user, $task)
-            || $this->isTaskAssignee($user, $task);
+        return app(\App\Services\Tasks\TaskVisibility::class)->canView($user, $task)
+            && ($this->canManageTask($user, $task)
+                || $this->isSupervisor($user, $task)
+                || $this->isTaskAssignee($user, $task));
     }
 
     private function isSupervisor(User $user, Task $task): bool
@@ -344,11 +350,7 @@ class TaskSupervisionController extends Controller
 
     private function limitToManagedProjects(Builder $query, User $user): void
     {
-        if ($user->hasAnyRole(['admin', 'super-admin']) || $user->can('view_all_projects')) {
-            return;
-        }
-
-        $query->whereHas('task.project.members', fn (Builder $query) => $query->where('user_id', $user->id));
+        $query->whereIn('task_id', app(\App\Services\Tasks\TaskVisibility::class)->accessibleIds($user));
     }
 
     private function userSummary(?User $user): ?array

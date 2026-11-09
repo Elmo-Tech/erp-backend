@@ -38,33 +38,7 @@ class TaskPolicy
      */
     public function view(User $user, Task $task): bool
     {
-        // Clients cannot view individual tasks
-        if ($user->hasRole('client')) {
-            return false;
-        }
-
-        // Admins and super-admins can view all tasks
-        if ($user->hasAnyRole(['admin', 'super-admin'])) {
-            return true;
-        }
-
-        // Employees can view tasks they are assigned to or tasks in their projects
-        if ($user->hasRole('employee')) {
-            // Can view if assigned to this task
-            if ($task->assigned_to === $user->id) {
-                return true;
-            }
-
-            // Can view if created by this user
-            if ($task->created_by === $user->id) {
-                return true;
-            }
-
-            // Allow viewing all tasks for now (can be restricted later)
-            return true;
-        }
-
-        return false;
+        return app(\App\Services\Tasks\TaskVisibility::class)->canView($user, $task);
     }
 
     /**

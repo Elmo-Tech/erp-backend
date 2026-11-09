@@ -934,6 +934,7 @@ class AdminRoleController extends Controller
             // Task Management
             'manage_tasks' => 'Task Management',
             'view_tasks' => 'Task Management',
+            'view_all_tasks' => 'Task Management',
             'create_tasks' => 'Task Management',
             'edit_tasks' => 'Task Management',
             'delete_tasks' => 'Task Management',
@@ -1075,7 +1076,8 @@ class AdminRoleController extends Controller
 
             // Task Management
             'manage_tasks' => 'Full task management capabilities',
-            'view_tasks' => 'View task information',
+            'view_tasks' => 'View assigned or supervised tasks',
+            'view_all_tasks' => 'View all tasks in accessible projects',
             'create_tasks' => 'Create new tasks',
             'edit_tasks' => 'Edit existing tasks',
             'delete_tasks' => 'Delete tasks',

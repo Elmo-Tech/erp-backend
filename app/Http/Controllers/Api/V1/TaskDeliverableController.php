@@ -26,6 +26,13 @@ class TaskDeliverableController extends Controller
         private DeliverableService $deliverableService
     ) {
         $this->middleware(['auth:sanctum', 'locale']);
+        $this->middleware(function ($request, $next) {
+            if ($id = $request->route('taskId')) {
+                $task = Task::findOrFail($id);
+                abort_unless(app(\App\Services\Tasks\TaskVisibility::class)->canView($request->user(), $task), 403);
+            }
+            return $next($request);
+        });
     }
 
     /**

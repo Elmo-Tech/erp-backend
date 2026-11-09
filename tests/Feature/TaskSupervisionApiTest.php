@@ -227,6 +227,7 @@ class TaskSupervisionApiTest extends TestCase
         [$manager, $project, $task, $supervisor, $assignee] = $this->supervisionContext();
         $this->assignSupervisor($manager, $task, $supervisor);
         $formerRequester = User::factory()->create();
+        $formerRequester->givePermissionTo(Permission::findOrCreate('view_tasks', 'web'));
         $task->assignees()->create([
             'user_id' => $formerRequester->id,
             'role' => 'developer',
@@ -267,15 +268,17 @@ class TaskSupervisionApiTest extends TestCase
     private function supervisionContext(): array
     {
         $manager = User::factory()->create();
-        $manager->givePermissionTo(Permission::findOrCreate('manage_task_team', 'web'));
+        $manager->givePermissionTo([Permission::findOrCreate('manage_task_team', 'web'), Permission::findOrCreate('view_all_tasks', 'web')]);
 
         $project = Project::factory()->create();
         $project->members()->create(['user_id' => $manager->id, 'role' => 'lead']);
 
         $supervisor = User::factory()->create();
+        $supervisor->givePermissionTo(Permission::findOrCreate('view_tasks', 'web'));
         $project->members()->create(['user_id' => $supervisor->id, 'role' => 'member']);
 
         $assignee = User::factory()->create();
+        $assignee->givePermissionTo(Permission::findOrCreate('view_tasks', 'web'));
         $task = Task::factory()->for($project)->create(['total_time_spent' => 37]);
         $task->assignees()->create([
             'user_id' => $assignee->id,

@@ -32,9 +32,7 @@ class TaskService
                 $query->whereNull('project_id')->orWhereIn('project_id', Project::withoutGlobalScopes()->whereNull('deleted_at')->select('id'));
             });
         $this->applyProjectVisibility($query, $user);
-        if ($user->specialization && ! ($user->can('view_all_projects') && $user->can('manage_tasks'))) {
-            $query->visibleToUser($user);
-        }
+        app(TaskVisibility::class)->scope($query, $user);
         $statuses = LookupOption::ofType('task_status')->get()->keyBy('value');
         $stagePositions = \App\Models\WorkflowTemplate::where('is_default', true)->where('is_active', true)->first()?->stages->groupBy('category')->map(fn ($stages) => $stages->first());
         return $query->orderByDesc('created_at')->orderByDesc('id')->get()->map(function (Task $task) use ($statuses, $stagePositions): array {
@@ -65,9 +63,7 @@ class TaskService
         if ($user) {
             $this->applyProjectVisibility($query, $user);
         }
-        if ($user && $user->specialization) {
-            $query->visibleToUser($user);
-        }
+        if ($user) app(TaskVisibility::class)->scope($query, $user);
 
         if (! empty($filters['projectId'])) {
             $query->where('project_id', $filters['projectId']);
@@ -146,16 +142,11 @@ class TaskService
                 'children.children.tags',
                 'children.children.assignees.user',
             ])
-            ->whereHas('assignees', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
+            ->where(fn ($q) => $q->where('tasks.assigned_to', $user->id)->orWhereHas('assignees', fn ($a) => $a->where('user_id', $user->id)));
         $this->applyProjectVisibility($query, $user);
         // Removed whereNull('parent_id') to get ALL tasks where user is assigned
 
-        // Apply user specialization filtering
-        if ($user->specialization) {
-            $query->visibleToUser($user);
-        }
+        app(TaskVisibility::class)->scope($query, $user);
 
         // Apply additional filters
         if (! empty($filters['projectId'])) {
@@ -186,10 +177,9 @@ class TaskService
      */
     public function getTasksForProject(int $projectId, int $perPage = 15): LengthAwarePaginator
     {
-        return Task::query()
+        $query = Task::query()
             ->where('project_id', $projectId)
             ->where('is_pipeline_task', false)
-            ->whereNull('parent_id')
             ->with([
                 'assignee',
                 'supervisor',
@@ -205,8 +195,11 @@ class TaskService
                 'children.children.tags',
                 'children.children.assignees.user',
             ])
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+            ->orderBy('created_at', 'desc');
+        $user = auth()->user();
+        if ($user && ! app(TaskVisibility::class)->canViewAll($user)) app(TaskVisibility::class)->scope($query, $user);
+        else $query->whereNull('parent_id');
+        return $query->paginate($perPage);
     }
 
     private function applyProjectVisibility($query, User $user): void
@@ -216,16 +209,10 @@ class TaskService
         }
 
         $query->where(function ($visibilityQuery) use ($user): void {
-            $visibilityQuery
-                ->whereHas('project.members', fn ($memberQuery) => $memberQuery->where('user_id', $user->id))
-                ->orWhere(function ($unscopedQuery) use ($user): void {
-                    $unscopedQuery
-                        ->whereNull('project_id')
-                        ->where(function ($ownershipQuery) use ($user): void {
-                            $ownershipQuery
-                                ->where('assigned_to', $user->id)
-                                ->orWhere('created_by', $user->id);
-                        });
+            $visibilityQuery->whereHas('project')
+                ->orWhere(function ($assigned) use ($user): void {
+                    $assigned->whereNull('tasks.project_id')
+                        ->where(fn ($q) => $q->where('tasks.assigned_to', $user->id)->orWhere('tasks.supervisor_id', $user->id)->orWhereHas('assignees', fn ($a) => $a->where('user_id', $user->id)));
                 });
         });
     }
@@ -236,7 +223,7 @@ class TaskService
      */
     public function getTaskChildren(int $taskId): Collection
     {
-        return Task::query()
+        $query = Task::query()
             ->where('parent_id', $taskId)
             ->with([
                 'assignee',
@@ -248,8 +235,9 @@ class TaskService
                 'children.tags',
                 'children.assignees.user',
             ])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
+        if ($user = auth()->user()) app(TaskVisibility::class)->scope($query, $user);
+        return $query->get();
     }
 
     /**

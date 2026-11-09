@@ -12,7 +12,8 @@ class ProjectAccess
     {
         return $user->can('view_all_projects')
             || $user->client()->exists()
-            || $user->projectMemberships()->exists();
+            || $user->projectMemberships()->exists()
+            || Task::query()->whereNotNull('project_id')->where(function ($q) use ($user): void { $q->where('assigned_to', $user->id)->orWhere('supervisor_id', $user->id)->orWhereHas('assignees', fn ($a) => $a->where('user_id', $user->id)); })->exists();
     }
 
     public function canView(User $user, Project $project): bool
@@ -21,13 +22,12 @@ class ProjectAccess
             return true;
         }
 
-        if ($user->client?->id === $project->client_id) {
+        if ($user->client && $user->client->id === $project->client_id) {
             return true;
         }
 
-        return $project->members()
-            ->where('user_id', $user->id)
-            ->exists();
+        return $project->members()->where('user_id', $user->id)->exists()
+            || $project->tasks()->where(function ($q) use ($user): void { $q->where('assigned_to', $user->id)->orWhere('supervisor_id', $user->id)->orWhereHas('assignees', fn ($a) => $a->where('user_id', $user->id)); })->exists();
     }
 
     public function canCreate(User $user): bool
@@ -54,7 +54,7 @@ class ProjectAccess
 
     public function canViewTasks(User $user, Project $project): bool
     {
-        return ($user->can('view_tasks') || $user->can('manage_tasks'))
+        return ! $user->client()->exists() && ($user->can('view_tasks') || $user->can('manage_tasks') || $user->can('view_all_tasks'))
             && $this->canView($user, $project);
     }
 

@@ -40,6 +40,11 @@ class StoreTaskRequest extends FormRequest
             }
         }
 
+        if ($parentId = $this->input('parentId')) {
+            $parent = Task::find($parentId);
+            if (! $parent || ! app(\App\Services\Tasks\TaskVisibility::class)->canView($user, $parent)) return false;
+        }
+
         if ($user->can('manage_tasks')) {
             return true;
         }

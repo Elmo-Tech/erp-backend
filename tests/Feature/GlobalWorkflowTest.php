@@ -80,7 +80,7 @@ class GlobalWorkflowTest extends TestCase
     public function test_dashboard_uses_global_stage_for_legacy_tasks(): void
     {
         $user = User::factory()->create();
-        $user->givePermissionTo([Permission::findOrCreate('view_tasks', 'web'), Permission::findOrCreate('view_all_projects', 'web')]);
+        $user->givePermissionTo([Permission::findOrCreate('view_tasks', 'web'), Permission::findOrCreate('view_all_tasks', 'web'), Permission::findOrCreate('view_all_projects', 'web')]);
         $project = Project::factory()->create();
         $task = Task::factory()->for($project)->create(['is_pipeline_task' => false, 'workflow_stage_id' => null, 'status' => 'completed']);
         $response = $this->actingAs($user, 'sanctum')->getJson('/api/v1/tasks/dashboard-list')->assertOk()->json('data');

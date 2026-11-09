@@ -34,8 +34,12 @@ class TeamMemberScope implements Scope
 
         // Apply filtering - only show projects where user is a member
         if ($model instanceof Project) {
-            $builder->whereHas('members', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
+            $builder->where(function ($query) use ($user): void {
+                $query->whereHas('members', fn ($members) => $members->where('user_id', $user->id))
+                    ->orWhereHas('tasks', fn ($tasks) => $tasks->where(function ($tasks) use ($user): void {
+                        $tasks->where('tasks.assigned_to', $user->id)->orWhere('tasks.supervisor_id', $user->id)
+                            ->orWhereHas('assignees', fn ($assignees) => $assignees->where('user_id', $user->id));
+                    }));
             });
         }
     }

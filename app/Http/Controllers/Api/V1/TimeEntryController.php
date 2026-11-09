@@ -162,6 +162,8 @@ class TimeEntryController extends Controller
     {
         $timeEntries = QueryBuilder::for(TimeEntry::class)
             ->with(['trackable', 'user'])
+            ->where(fn ($query) => $query->where('trackable_type', '!=', Task::class)
+                ->orWhereIn('trackable_id', app(\App\Services\Tasks\TaskVisibility::class)->accessibleIds($request->user())))
             ->when(config('simplification.enabled'), fn ($query) => $query->where('trackable_type', Task::class))
             ->allowedFilters([
                 AllowedFilter::exact('user_id'),
@@ -333,6 +335,7 @@ class TimeEntryController extends Controller
                 if (
                     ! $project instanceof Project
                     || ! $this->projectAccess->canViewTasks($user, $project)
+                    || ! app(\App\Services\Tasks\TaskVisibility::class)->canView($user, $trackable)
                     || ! $user->can('start_timer')
                     || ($trackable->is_pipeline_task && ! $trackable->isAssignedTo($user))
                 ) {
@@ -828,6 +831,8 @@ class TimeEntryController extends Controller
 
         $timeEntries = QueryBuilder::for(TimeEntry::class)
             ->with(['trackable', 'user'])
+            ->where(fn ($query) => $query->where('trackable_type', '!=', Task::class)
+                ->orWhereIn('trackable_id', app(\App\Services\Tasks\TaskVisibility::class)->accessibleIds($request->user())))
             ->when(config('simplification.enabled'), fn ($query) => $query->where('trackable_type', Task::class))
             ->allowedFilters([
                 AllowedFilter::exact('user_id'),
@@ -911,7 +916,9 @@ class TimeEntryController extends Controller
         }
 
         $work = app(ActiveWorkService::class);
-        $activeTimers = $work->openTimers((bool) config('simplification.enabled'));
+        $activeTimers = $work->openTimers((bool) config('simplification.enabled'))
+            ->filter(fn ($timer) => $user->hasAnyRole(['admin', 'super-admin']) || $timer->trackable_type !== Task::class ||
+                ($timer->trackable instanceof Task && app(\App\Services\Tasks\TaskVisibility::class)->canView($user, $timer->trackable)));
 
         $timersData = $activeTimers->map(function ($timer) use ($work) {
             $elapsedMinutes = $timer->start_time->diffInMinutes(now());

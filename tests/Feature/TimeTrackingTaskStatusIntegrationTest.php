@@ -41,6 +41,7 @@ class TimeTrackingTaskStatusIntegrationTest extends TestCase
         // Create a TODO task without start_date
         $task = Task::factory()->create([
             'project_id' => $project->id,
+            'assigned_to' => $user->id,
             'status' => TaskStatus::TODO,
             'type' => TaskType::SUBTASK,
             'start_date' => null,
@@ -113,6 +114,7 @@ class TimeTrackingTaskStatusIntegrationTest extends TestCase
         // Create a TODO task with existing start_date
         $task = Task::factory()->create([
             'project_id' => $project->id,
+            'assigned_to' => $user->id,
             'status' => TaskStatus::TODO,
             'type' => TaskType::SUBTASK,
             'start_date' => $existingStartDate,
@@ -157,6 +159,7 @@ class TimeTrackingTaskStatusIntegrationTest extends TestCase
         // Create a REVIEW task without start_date
         $task = Task::factory()->create([
             'project_id' => $project->id,
+            'assigned_to' => $user->id,
             'status' => TaskStatus::REVIEW,
             'type' => TaskType::SUBTASK,
             'start_date' => null,

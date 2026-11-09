@@ -126,7 +126,7 @@ class TaskResource extends JsonResource
             'testScenarios' => $this->whenLoaded('testScenarios', fn () => TaskTestScenarioResource::collection($this->testScenarios)
             ),
 
-            'children' => $this->whenLoaded('children', fn () => TaskResource::collection($this->children)
+            'children' => $this->whenLoaded('children', fn () => TaskResource::collection($this->children->filter(fn ($child) => $user && app(\App\Services\Tasks\TaskVisibility::class)->canView($user, $child))->values())
             ),
 
             'deliverables' => $this->whenLoaded('deliverables', fn () => TaskDeliverableResource::collection($this->deliverables)
@@ -137,7 +137,7 @@ class TaskResource extends JsonResource
                 'title' => $this->project->title,
             ]),
 
-            'parent' => $this->whenLoaded('parent', fn () => $this->parent ? [
+            'parent' => $this->whenLoaded('parent', fn () => $this->parent && $user && app(\App\Services\Tasks\TaskVisibility::class)->canView($user, $this->parent) ? [
                 'taskId' => $this->parent->id,
                 'title' => $this->parent->title,
             ] : null),

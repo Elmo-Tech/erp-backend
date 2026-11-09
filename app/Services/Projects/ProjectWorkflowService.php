@@ -67,12 +67,12 @@ class ProjectWorkflowService
         return $project->workflowStages()->get();
     }
 
-    public function getPipeline(Project $project): array
+    public function getPipeline(Project $project, User $user): array
     {
         $this->ensureProjectWorkflow($project);
 
         $stages = $project->workflowStages()
-            ->with(['tasks' => fn ($query) => $query->with([
+            ->with(['tasks' => fn ($query) => app(\App\Services\Tasks\TaskVisibility::class)->scope($query, $user)->with([
                 'assignee', 'assignees.user', 'workflowStage', 'supervisor',
                 'timeEntries' => fn ($entries) => $entries->whereNull('end_time')->with('user'),
             ])])

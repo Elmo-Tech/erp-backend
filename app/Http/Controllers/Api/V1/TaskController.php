@@ -46,14 +46,12 @@ class TaskController extends Controller
                 return ApiResponse::error(__('messages.unauthorized'), 403);
             }
 
+            if (in_array($request->route()?->getName(), ['tasks.index', 'tasks.dashboard-list', 'tasks.my-assigned', 'projects.tasks'], true)
+                && ! app(\App\Services\Tasks\TaskVisibility::class)->canList($request->user())) abort(403);
             $task = $request->route('task');
-            if ($task instanceof Task) {
-                $task->loadMissing('project');
-                $project = $task->project;
-                if ($project instanceof Project && ! $this->projectAccess->canView($request->user(), $project)) {
-                    return ApiResponse::forbidden('You do not have access to this task project.');
-                }
-            }
+            $scenario = $request->route('scenario');
+            if ($scenario instanceof TaskTestScenario) $task = $scenario->task;
+            if ($task instanceof Task && ! app(\App\Services\Tasks\TaskVisibility::class)->canView($request->user(), $task)) return ApiResponse::forbidden('You do not have access to this task.');
 
             return $next($request);
         });
@@ -202,7 +200,7 @@ class TaskController extends Controller
      */
     public function dashboardTasks(Request $request): JsonResponse
     {
-        abort_unless($request->user()->can('view_tasks') || $request->user()->can('manage_tasks'), 403);
+        abort_unless($request->user()->can('view_tasks') || $request->user()->can('manage_tasks') || $request->user()->can('view_all_tasks'), 403);
         return ApiResponse::success($this->taskService->getDashboardTasks($request->user()), 'Dashboard tasks retrieved successfully');
     }
 
