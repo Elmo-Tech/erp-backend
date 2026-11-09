@@ -90,6 +90,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     // Authentication Routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('notifications/settings', [PushSubscriptionController::class, 'settings']);
+        Route::post('notifications/test-push', [PushSubscriptionController::class, 'test'])->middleware('throttle:6,1');
         Route::put('notifications/preferences', [PushSubscriptionController::class, 'preferences']);
         Route::post('notifications/push-subscriptions', [PushSubscriptionController::class, 'store']);
         Route::delete('notifications/push-subscriptions', [PushSubscriptionController::class, 'destroy']);

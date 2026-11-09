@@ -175,6 +175,8 @@ class ProjectController extends Controller
             ->orderBy('projects.id', 'desc')
             ->paginate($request->get('perPage', 15));
 
+        app(\App\Services\Projects\ProjectTaskSummaryService::class)->forProjects($projects->getCollection(), $user);
+
         return ApiResponse::success(
             new ProjectCollection($projects),
             'Projects retrieved successfully'

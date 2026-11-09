@@ -17,7 +17,12 @@ class SendWebPush implements ShouldQueue
 
     public int $tries = 3;
 
-    public function __construct(public int $userId, public array $payload, public ?int $timerId = null) {}
+    public ?string $endpointHash = null;
+
+    public function __construct(public int $userId, public array $payload, public ?int $timerId = null, ?string $endpointHash = null)
+    {
+        $this->endpointHash = $endpointHash;
+    }
 
     public function backoff(): array
     {
@@ -39,7 +44,7 @@ class SendWebPush implements ShouldQueue
             'subject' => config('webpush.subject'), 'publicKey' => config('webpush.public_key'), 'privateKey' => config('webpush.private_key'),
         ]], ['TTL' => $this->timerId ? 300 : 3600], 15);
         $retry = false;
-        foreach (WebPushSubscription::where('user_id', $this->userId)->get() as $record) {
+        foreach (WebPushSubscription::where('user_id', $this->userId)->when($this->endpointHash, fn ($query) => $query->where('endpoint_hash', $this->endpointHash))->get() as $record) {
             $report = $push->sendOneNotification(Subscription::create([
                 'endpoint' => $record->endpoint, 'publicKey' => $record->public_key,
                 'authToken' => $record->auth_token, 'contentEncoding' => 'aes128gcm',

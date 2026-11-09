@@ -52,6 +52,7 @@ class ProjectResource extends JsonResource
             'deadline' => $this->deadline?->toDateString() ?? '',
             'progress' => (float) ($this->progress ?? 0),
             'totalTimeSpent' => (int) ($this->total_time_spent ?? 0),
+            'taskSummary' => $this->when(array_key_exists('visible_task_summary', $this->resource->getAttributes()), fn () => $this->visible_task_summary),
             'isPinned' => $this->isPinnedBy($user?->id),
             'client' => $this->whenLoaded('client', function () {
                 return [
