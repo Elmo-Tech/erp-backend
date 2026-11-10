@@ -34,6 +34,8 @@ class Task extends Model implements Trackable
         'parent_id',
         'assigned_to',
         'supervisor_id',
+        'secondary_supervisor_id',
+        'description_checklist',
         'title',
         'description',
         'cover_image_path',
@@ -83,6 +85,7 @@ class Task extends Model implements Trackable
             'is_pipeline_task' => 'boolean',
             'pipeline_position' => 'integer',
             'reference_images' => 'array',
+            'description_checklist' => 'array',
         ];
     }
 
@@ -124,6 +127,16 @@ class Task extends Model implements Trackable
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function secondarySupervisor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'secondary_supervisor_id');
+    }
+
+    public function isSupervisor(User $user): bool
+    {
+        return (int) $this->supervisor_id === $user->id || (int) $this->secondary_supervisor_id === $user->id;
     }
 
     public function supervisor(): BelongsTo

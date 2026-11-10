@@ -103,7 +103,7 @@ class TaskDependencyController extends Controller
         Gate::authorize('view', $task);
 
         $dependencies = $task->dependencies()
-            ->with('dependsOnTask:id,title,status,project_id,assigned_to,supervisor_id,start_date,completed_at')
+            ->with('dependsOnTask:id,title,status,project_id,assigned_to,supervisor_id,secondary_supervisor_id,start_date,completed_at')
             ->get()
             ->filter(fn ($dep) => $dep->dependsOnTask && app(\App\Services\Tasks\TaskVisibility::class)->canView(request()->user(), $dep->dependsOnTask))
             ->values()
@@ -125,7 +125,7 @@ class TaskDependencyController extends Controller
             });
 
         $blockedBy = $task->blockedBy()
-            ->with('task:id,title,status,project_id,assigned_to,supervisor_id,start_date,completed_at')
+            ->with('task:id,title,status,project_id,assigned_to,supervisor_id,secondary_supervisor_id,start_date,completed_at')
             ->get()
             ->filter(fn ($dep) => $dep->task && app(\App\Services\Tasks\TaskVisibility::class)->canView(request()->user(), $dep->task))
             ->values()

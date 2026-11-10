@@ -47,11 +47,8 @@ class TaskSupervisionController extends Controller
         }
 
         try {
-            $task = $this->taskSupervisionService->setSupervisor(
-                $task,
-                $request->validated('supervisorId'),
-                $request->user()
-            );
+            $ids = $request->has('supervisorIds') ? $request->validated('supervisorIds') : array_values(array_filter([$request->validated('supervisorId')]));
+            $task = $this->taskSupervisionService->setSupervisors($task, $ids, $request->user());
 
             return ApiResponse::success(
                 new TaskResource($task),
@@ -70,6 +67,7 @@ class TaskSupervisionController extends Controller
 
         $task->load([
             'supervisor',
+            'secondarySupervisor',
             'helpRequests.requester',
             'helpRequests.acknowledgedBy',
             'helpRequests.resolvedBy',
@@ -79,6 +77,7 @@ class TaskSupervisionController extends Controller
 
         return ApiResponse::success([
             'supervisor' => $this->userSummary($task->supervisor),
+            'supervisors' => collect([$task->supervisor, $task->secondarySupervisor])->filter()->map(fn ($user) => $this->userSummary($user))->values(),
             'helpRequests' => TaskHelpRequestResource::collection($task->helpRequests),
             'sessions' => TaskSupervisionSessionResource::collection($task->supervisionSessions),
             'summary' => $this->taskSupervisionService->summary(
@@ -277,7 +276,7 @@ class TaskSupervisionController extends Controller
 
     private function isSupervisor(User $user, Task $task): bool
     {
-        return $task->supervisor_id === $user->id;
+        return $task->isSupervisor($user);
     }
 
     private function isTaskAssignee(User $user, Task $task): bool
@@ -330,7 +329,7 @@ class TaskSupervisionController extends Controller
         }
 
         if (isset($filters['supervisorId'])) {
-            $query->whereHas('task', fn (Builder $query) => $query->where('supervisor_id', $filters['supervisorId']));
+            $query->whereHas('task', fn (Builder $query) => $query->where(fn ($q) => $q->where('supervisor_id', $filters['supervisorId'])->orWhere('secondary_supervisor_id', $filters['supervisorId'])));
         }
 
         if (isset($filters['requestedBy'])) {

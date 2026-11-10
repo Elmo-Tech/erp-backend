@@ -105,7 +105,7 @@ class TaskObserver
 
     public function updated(Task $task): void
     {
-        if (! $task->wasChanged(['title', 'status', 'project_id', 'due_date', 'assigned_to', 'supervisor_id'])) {
+        if (! $task->wasChanged(['title', 'status', 'project_id', 'due_date', 'assigned_to', 'supervisor_id', 'secondary_supervisor_id'])) {
             return;
         }
         $publisher = app(WorkActivityPublisher::class);

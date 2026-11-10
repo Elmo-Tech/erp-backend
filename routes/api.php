@@ -405,6 +405,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('task-supervision/summary', [TaskSupervisionController::class, 'summary'])->name('task-supervision.summary');
 
     // Task CRUD Routes
+    Route::patch('tasks/{task}/checklist/{itemId}', [\App\Http\Controllers\Api\V1\TaskChecklistController::class, 'update']);
     Route::apiResource('tasks', TaskController::class);
 
     // Task Dependencies Routes

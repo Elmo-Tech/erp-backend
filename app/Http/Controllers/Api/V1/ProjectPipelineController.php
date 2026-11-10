@@ -64,6 +64,12 @@ class ProjectPipelineController extends Controller
             'assignedTo' => ['nullable', 'integer', 'exists:users,id'],
             'assignedUserIds' => ['nullable', 'array', 'max:20'],
             'assignedUserIds.*' => ['integer', 'distinct', 'exists:users,id'],
+            'supervisorIds' => ['sometimes', 'array', 'max:2'],
+            'supervisorIds.*' => ['required', 'integer', 'distinct', 'exists:users,id'],
+            'checklist' => ['sometimes', 'array', 'max:100'],
+            'checklist.*.id' => ['required', 'uuid', 'distinct'],
+            'checklist.*.text' => ['required', 'string', 'max:500'],
+            'checklist.*.completed' => ['required', 'boolean'],
             'supervisorId' => ['nullable', 'integer', 'exists:users,id'],
             'dueDate' => ['nullable', 'date'],
             'estimatedHours' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
@@ -78,7 +84,7 @@ class ProjectPipelineController extends Controller
         );
 
         abort_if(
-            isset($data['supervisorId']) && ! $this->canAssignSupervisor($request),
+            (isset($data['supervisorId']) || ! empty($data['supervisorIds'])) && ! $this->canAssignSupervisor($request),
             403
         );
 
@@ -135,6 +141,12 @@ class ProjectPipelineController extends Controller
             'assignedTo' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
             'assignedUserIds' => ['sometimes', 'nullable', 'array', 'max:20'],
             'assignedUserIds.*' => ['integer', 'distinct', 'exists:users,id'],
+            'supervisorIds' => ['sometimes', 'array', 'max:2'],
+            'supervisorIds.*' => ['required', 'integer', 'distinct', 'exists:users,id'],
+            'checklist' => ['sometimes', 'array', 'max:100'],
+            'checklist.*.id' => ['required', 'uuid', 'distinct'],
+            'checklist.*.text' => ['required', 'string', 'max:500'],
+            'checklist.*.completed' => ['required', 'boolean'],
             'supervisorId' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
             'dueDate' => ['sometimes', 'nullable', 'date'],
             'estimatedHours' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:999999.99'],
@@ -149,7 +161,7 @@ class ProjectPipelineController extends Controller
         );
 
         abort_if(
-            array_key_exists('supervisorId', $data) && ! $request->user()->can('manageTeam', $task),
+            (array_key_exists('supervisorId', $data) || array_key_exists('supervisorIds', $data)) && ! $request->user()->can('manageTeam', $task),
             403
         );
 

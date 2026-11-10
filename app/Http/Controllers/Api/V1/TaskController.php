@@ -405,7 +405,7 @@ class TaskController extends Controller
      */
     public function show(Task $task): JsonResponse
     {
-        $task->load(['assignee', 'supervisor', 'project', 'parent', 'children.assignee', 'children.supervisor', 'assignees.user', 'tags', 'projectTypes']);
+        $task->load(['assignee', 'supervisor', 'project', 'parent', 'children.assignee', 'children.supervisor', 'assignees.user', 'tags', 'projectTypes', 'secondarySupervisor']);
 
         if ($task->is_pipeline_task) {
             $task->load('workflowStage');

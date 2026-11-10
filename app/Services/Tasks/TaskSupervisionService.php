@@ -16,55 +16,40 @@ use RuntimeException;
 
 class TaskSupervisionService
 {
+    /** @param list<int> $supervisorIds */
+    public function setSupervisors(Task $task, array $supervisorIds, User $actor): Task
+    {
+        return DB::transaction(function () use ($task, $supervisorIds, $actor): Task {
+            $task = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $previousIds = array_values(array_filter([$task->supervisor_id, $task->secondary_supervisor_id]));
+            if (count($supervisorIds) > 2 || count(array_unique($supervisorIds)) !== count($supervisorIds)) {
+                throw new InvalidArgumentException('Choose up to two different supervisors.');
+            }
+            foreach ($supervisorIds as $id) {
+                $candidate = User::query()->whereKey($id)->where('is_active', true)->first();
+                if ($candidate === null) throw new InvalidArgumentException('The selected supervisor must be an active user.');
+                $isMember = $task->project_id !== null && $task->project()->withoutGlobalScopes()->first()?->members()->where('user_id', $id)->exists();
+                if (! $isMember && ! $task->assignees()->where('user_id', $id)->exists()) {
+                    throw new InvalidArgumentException('The selected supervisor must be an active project member or task assignee.');
+                }
+            }
+            $removedIds = array_diff($previousIds, $supervisorIds);
+            if ($removedIds && TaskSupervisionSession::where('task_id', $task->id)->whereIn('supervisor_id', $removedIds)->whereNull('ended_at')->exists()) {
+                throw new InvalidArgumentException('Stop the supervisor’s active session before removing them.');
+            }
+            $task->update(['supervisor_id' => $supervisorIds[0] ?? null, 'secondary_supervisor_id' => $supervisorIds[1] ?? null, 'updated_by' => $actor->id]);
+            if ($previousIds !== $supervisorIds) {
+                $this->logActivity($task, $actor, TaskActivity::TYPE_SUPERVISOR_CHANGED, $supervisorIds ? 'Changed task supervisor' : 'Removed task supervisor', [
+                    'previous_supervisor_ids' => $previousIds, 'supervisor_ids' => $supervisorIds,
+                ]);
+            }
+            return $task->fresh()->load(['supervisor', 'secondarySupervisor']);
+        });
+    }
+
     public function setSupervisor(Task $task, ?int $supervisorId, User $actor): Task
     {
-        return DB::transaction(function () use ($task, $supervisorId, $actor): Task {
-            $task = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
-            $previousSupervisorId = $task->supervisor_id;
-
-            if ($supervisorId !== null) {
-                $candidate = User::query()
-                    ->whereKey($supervisorId)
-                    ->where('is_active', true)
-                    ->first();
-
-                if ($candidate === null) {
-                    throw new InvalidArgumentException('The selected supervisor must be an active user.');
-                }
-
-                $isProjectMember = $task->project_id !== null
-                    && $task->project()->withoutGlobalScopes()->first()?->members()
-                        ->where('user_id', $candidate->id)
-                        ->exists();
-                $isTaskAssignee = $task->assignees()->where('user_id', $candidate->id)->exists();
-
-                if (! $isProjectMember && ! $isTaskAssignee) {
-                    throw new InvalidArgumentException(
-                        'The selected supervisor must be an active project member or task assignee.'
-                    );
-                }
-            }
-
-            $task->update([
-                'supervisor_id' => $supervisorId,
-                'updated_by' => $actor->id,
-            ]);
-
-            if ($previousSupervisorId !== $supervisorId) {
-                $this->logActivity(
-                    $task,
-                    $actor,
-                    TaskActivity::TYPE_SUPERVISOR_CHANGED,
-                    $supervisorId === null ? 'Removed task supervisor' : 'Changed task supervisor',
-                    [
-                        'previous_supervisor_id' => $previousSupervisorId,
-                        'supervisor_id' => $supervisorId,
-                    ]
-                );
-            }
-
-            return $task->fresh()->load('supervisor');
-        });
+        return $this->setSupervisors($task, array_values(array_filter([$supervisorId])), $actor);
     }
 
     public function createHelpRequest(Task $task, User $requester, string $message): TaskHelpRequest
@@ -72,7 +57,7 @@ class TaskSupervisionService
         return DB::transaction(function () use ($task, $requester, $message): TaskHelpRequest {
             $task = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
 
-            if ($task->supervisor_id === null) {
+            if ($task->supervisor_id === null && $task->secondary_supervisor_id === null) {
                 throw new InvalidArgumentException('A supervisor must be assigned before requesting help.');
             }
 
@@ -148,7 +133,7 @@ class TaskSupervisionService
             User::query()->whereKey($supervisor->id)->lockForUpdate()->firstOrFail();
             $task = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
 
-            if ($task->supervisor_id !== $supervisor->id) {
+            if (! $task->isSupervisor($supervisor)) {
                 throw new RuntimeException('Only the assigned supervisor can start a supervision session.');
             }
 

@@ -25,7 +25,7 @@ class TaskVisibility
         if ($this->canViewAll($user)) return $query;
         return $query->where(function ($query) use ($user): void {
             $query->where('tasks.assigned_to', $user->id)
-                ->orWhere('tasks.supervisor_id', $user->id)
+                ->orWhere('tasks.supervisor_id', $user->id)->orWhere('tasks.secondary_supervisor_id', $user->id)
                 ->orWhereHas('assignees', fn ($assignees) => $assignees->where('user_id', $user->id));
         });
     }
@@ -39,7 +39,7 @@ class TaskVisibility
             $query->whereHas('project')->orWhere(function ($standalone) use ($user): void {
                 $standalone->whereNull('tasks.project_id');
                 if (! $user->can('view_all_projects')) {
-                    $standalone->where(fn ($q) => $q->where('tasks.assigned_to', $user->id)->orWhere('tasks.supervisor_id', $user->id)
+                    $standalone->where(fn ($q) => $q->where('tasks.assigned_to', $user->id)->orWhere('tasks.supervisor_id', $user->id)->orWhere('tasks.secondary_supervisor_id', $user->id)
                         ->orWhereHas('assignees', fn ($a) => $a->where('user_id', $user->id)));
                 }
             });
@@ -53,7 +53,7 @@ class TaskVisibility
             $project = Project::withoutGlobalScope(\App\Scopes\TeamMemberScope::class)->find($task->project_id);
             if (! $project || ! app(ProjectAccess::class)->canView($user, $project)) return false;
         }
-        $assigned = (int) $task->assigned_to === $user->id || (int) $task->supervisor_id === $user->id
+        $assigned = (int) $task->assigned_to === $user->id || $task->isSupervisor($user)
             || $task->assignees()->where('user_id', $user->id)->exists();
         if ($task->project_id === null && ! $user->can('view_all_projects')) return $assigned;
         return $this->canViewAll($user) || $assigned;

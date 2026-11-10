@@ -212,7 +212,7 @@ class TaskService
             $visibilityQuery->whereHas('project')
                 ->orWhere(function ($assigned) use ($user): void {
                     $assigned->whereNull('tasks.project_id')
-                        ->where(fn ($q) => $q->where('tasks.assigned_to', $user->id)->orWhere('tasks.supervisor_id', $user->id)->orWhereHas('assignees', fn ($a) => $a->where('user_id', $user->id)));
+                        ->where(fn ($q) => $q->where('tasks.assigned_to', $user->id)->orWhere('tasks.supervisor_id', $user->id)->orWhere('tasks.secondary_supervisor_id', $user->id)->orWhereHas('assignees', fn ($a) => $a->where('user_id', $user->id)));
                 });
         });
     }
@@ -275,6 +275,7 @@ class TaskService
             'assigned_to' => $data['assignedTo'] ?? null,
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
+            'description_checklist' => $data['checklist'] ?? [],
             'acceptance_criteria' => $data['acceptanceCriteria'] ?? null,
             'status' => $data['status'] ?? TaskStatus::TODO->value,
             'type' => $data['type'] ?? TaskType::MAIN->value,
@@ -391,7 +392,7 @@ class TaskService
 
         $this->taskNotificationService->sendTaskAssigned($task, $user, $assignedUsers);
 
-        return $task->load(['assignee', 'supervisor', 'project', 'parent', 'children', 'tags', 'assignees.user', 'projectTypes']);
+        return $task->load(['assignee', 'supervisor', 'secondarySupervisor', 'project', 'parent', 'children', 'tags', 'assignees.user', 'projectTypes']);
     }
 
     /**
@@ -465,6 +466,7 @@ class TaskService
             'assignedTo' => 'assigned_to',
             'title' => 'title',
             'description' => 'description',
+            'checklist' => 'description_checklist',
             'acceptanceCriteria' => 'acceptance_criteria',
             'status' => 'status',
             'type' => 'type',
@@ -503,7 +505,7 @@ class TaskService
             $task->tags()->sync($data['tagIds'] ?? []);
         }
 
-        return $task->fresh()->load(['assignee', 'supervisor', 'project', 'parent', 'children', 'tags', 'assignees.user', 'projectTypes']);
+        return $task->fresh()->load(['assignee', 'supervisor', 'secondarySupervisor', 'project', 'parent', 'children', 'tags', 'assignees.user', 'projectTypes']);
     }
 
     /**

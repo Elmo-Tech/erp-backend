@@ -53,6 +53,8 @@ class TaskResource extends JsonResource
             'parentId' => $this->parent_id,
             'assignedTo' => $this->assigned_to,
             'supervisorId' => $this->supervisor_id,
+            'supervisors' => $this->when($this->resource->relationLoaded('supervisor') && $this->resource->relationLoaded('secondarySupervisor'), fn () => collect([$this->supervisor, $this->secondarySupervisor])->filter()->map(fn ($u) => ['userId' => $u->id, 'name' => $u->name, 'avatar' => $u->avatar])->values()),
+            'checklist' => $this->description_checklist ?? [],
             'title' => $this->title,
             'description' => $this->description ?? '',
             'acceptanceCriteria' => $this->acceptance_criteria ?? '',

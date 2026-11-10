@@ -73,7 +73,7 @@ class ProjectWorkflowService
 
         $stages = $project->workflowStages()
             ->with(['tasks' => fn ($query) => app(\App\Services\Tasks\TaskVisibility::class)->scope($query, $user)->with([
-                'assignee', 'assignees.user', 'workflowStage', 'supervisor', 'projectTypes',
+                'assignee', 'assignees.user', 'workflowStage', 'supervisor', 'secondarySupervisor', 'projectTypes',
                 'timeEntries' => fn ($entries) => $entries->whereNull('end_time')->with('user'),
             ])])
             ->get();
@@ -118,6 +118,7 @@ class ProjectWorkflowService
             'parent_id' => null,
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
+            'description_checklist' => $data['checklist'] ?? [],
             'assigned_to' => $assigneeIds[0] ?? null,
             'due_date' => $data['dueDate'] ?? null,
             'estimated_hours' => $data['estimatedHours'] ?? null,
@@ -131,8 +132,8 @@ class ProjectWorkflowService
         $this->createTaskAssignees($task, $actor, $assigneeIds);
         $task->projectTypes()->sync($data['projectTypeIds'] ?? []);
 
-        if (isset($data['supervisorId'])) {
-            $this->assignPipelineSupervisor($project, $task, $actor, $data['supervisorId']);
+        if (array_key_exists('supervisorIds', $data) || isset($data['supervisorId'])) {
+            $this->assignPipelineSupervisors($project, $task, $actor, $data['supervisorIds'] ?? array_values(array_filter([$data['supervisorId'] ?? null])));
         }
 
         return $task->load(['assignee', 'assignees.user', 'workflowStage']);
@@ -222,6 +223,7 @@ class ProjectWorkflowService
             foreach ([
                 'title' => 'title',
                 'description' => 'description',
+                'checklist' => 'description_checklist',
                 'dueDate' => 'due_date',
                 'estimatedHours' => 'estimated_hours',
                 'priority' => 'priority',
@@ -257,8 +259,8 @@ class ProjectWorkflowService
                 $this->createTaskAssignees($task, $actor, $assigneeIds);
             }
 
-            if (array_key_exists('supervisorId', $data)) {
-                $this->assignPipelineSupervisor($project, $task, $actor, $data['supervisorId']);
+            if (array_key_exists('supervisorIds', $data) || array_key_exists('supervisorId', $data)) {
+                $this->assignPipelineSupervisors($project, $task, $actor, $data['supervisorIds'] ?? array_values(array_filter([$data['supervisorId'] ?? null])));
             }
         });
 
@@ -381,7 +383,7 @@ class ProjectWorkflowService
     public function taskPayload(Task $task): array
     {
         $task->loadMissing([
-            'assignees.user', 'supervisor', 'projectTypes',
+            'assignees.user', 'supervisor', 'secondarySupervisor', 'projectTypes',
             'timeEntries' => fn ($entries) => $entries->whereNull('end_time')->with('user'),
         ]);
         $assignee = $task->assignee;
@@ -398,6 +400,8 @@ class ProjectWorkflowService
             'priority' => $task->priorityValue(),
             'assignedTo' => $task->assigned_to,
             'supervisorId' => $task->supervisor_id,
+            'supervisors' => collect([$task->supervisor, $task->secondarySupervisor])->filter()->map(fn ($u) => ['userId' => $u->id, 'name' => $u->name, 'avatar' => $u->avatar])->values()->all(),
+            'checklist' => $task->description_checklist ?? [],
             'supervisor' => $task->supervisor instanceof User ? [
                 'userId' => $task->supervisor->id,
                 'name' => $task->supervisor->name,
@@ -433,22 +437,21 @@ class ProjectWorkflowService
         ];
     }
 
-    private function assignPipelineSupervisor(Project $project, Task $task, User $actor, ?int $supervisorId): void
+    private function assignPipelineSupervisors(Project $project, Task $task, User $actor, array $ids): void
     {
-        if ($supervisorId !== null) {
+        foreach ($ids as $supervisorId) {
             $candidate = User::query()->whereKey($supervisorId)->where('is_active', true)->first();
             $isMember = $project->members()->where('user_id', $supervisorId)->exists();
-
             if ($candidate === null || (! $candidate->is_employee && ! $isMember)) {
-                throw ValidationException::withMessages([
-                    'supervisorId' => ['The supervisor must be an active employee or project member.'],
-                ]);
+                throw ValidationException::withMessages(['supervisorId' => ['Supervisors must be active employees or project members.'], 'supervisorIds' => ['Supervisors must be active employees or project members.']]);
             }
-
-            $this->addAssigneesToProject($project, [$supervisorId]);
         }
-
-        $this->supervision->setSupervisor($task, $supervisorId, $actor);
+        $this->addAssigneesToProject($project, $ids);
+        try {
+            $this->supervision->setSupervisors($task, $ids, $actor);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['supervisorIds' => [$exception->getMessage()]]);
+        }
         $task->refresh();
     }
 
