@@ -22,6 +22,15 @@ class PushSubscriptionController extends Controller
         ]);
     }
 
+    public function subscriptionStatus(Request $request): JsonResponse
+    {
+        $data = $request->validate(['endpoint' => ['required', 'string', 'max:2048']]);
+        $registered = WebPushSubscription::where('user_id', $request->user()->id)
+            ->where('endpoint_hash', hash('sha256', $data['endpoint']))->exists();
+
+        return ApiResponse::success(['registered' => $registered]);
+    }
+
     public function test(Request $request): JsonResponse
     {
         if (! config('webpush.public_key') || ! config('webpush.private_key')) {

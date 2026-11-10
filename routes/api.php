@@ -93,6 +93,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
         Route::post('notifications/test-push', [PushSubscriptionController::class, 'test'])->middleware('throttle:6,1');
         Route::put('notifications/preferences', [PushSubscriptionController::class, 'preferences']);
         Route::post('notifications/push-subscriptions', [PushSubscriptionController::class, 'store']);
+        Route::post('notifications/push-subscriptions/status', [PushSubscriptionController::class, 'subscriptionStatus']);
         Route::delete('notifications/push-subscriptions', [PushSubscriptionController::class, 'destroy']);
     });
     // Security: Rate limiting applied to prevent brute force attacks
