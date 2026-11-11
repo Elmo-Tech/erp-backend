@@ -174,7 +174,7 @@ class ProjectGoogleDriveTest extends TestCase
         $this->storeDriveConnection();
 
         Http::fake([
-            'https://www.googleapis.com/upload/drive/v3/files*' => Http::response([
+            'https://www.googleapis.com/upload/drive/v3/files*' => Http::sequence()->push('', 200, ['Location' => 'https://www.googleapis.com/upload/drive/v3/files?upload_id=test'])->push([
                 'id' => 'uploaded-1',
                 'name' => 'logo.png',
                 'mimeType' => 'image/png',
@@ -196,6 +196,30 @@ class ProjectGoogleDriveTest extends TestCase
             ->assertJsonPath('data.file.name', 'logo.png');
 
         Http::assertSent(fn ($request) => str_contains($request->url(), 'upload/drive/v3/files'));
+    }
+
+    public function test_expired_drive_connection_is_refreshed_during_status_check(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('manage_project_files');
+        $this->storeDriveConnection(expiresAt: now()->subMinute());
+        Http::fake([
+            'https://oauth2.googleapis.com/token' => Http::response(['access_token' => 'fresh-token', 'expires_in' => 3600]),
+            'https://www.googleapis.com/drive/v3/about*' => Http::response(['user' => ['emailAddress' => 'test@example.com']]),
+        ]);
+        $this->actingAs($user, 'sanctum')->getJson('/api/v1/google-drive/status')->assertOk()->assertJsonPath('data.connected', true);
+        Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://www.googleapis.com/drive/v3/about') && $request->hasHeader('Authorization', 'Bearer fresh-token'));
+    }
+
+    public function test_upload_rejects_untrusted_session_url(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->create(['google_drive_folder_id' => 'folder-123']);
+        $project->members()->create(['user_id' => $user->id, 'role' => 'member']);
+        $this->storeDriveConnection();
+        Http::fake(['https://www.googleapis.com/upload/drive/v3/files*' => Http::response('', 200, ['Location' => 'https://example.com/upload/drive/v3/files'])]);
+        $this->actingAs($user, 'sanctum')->post("/api/v1/projects/{$project->id}/drive-files", ['file' => UploadedFile::fake()->create('video.mp4', 10, 'video/mp4')])->assertStatus(502);
+        Http::assertSentCount(1);
     }
 
     public function test_expired_drive_token_is_refreshed_before_listing_files(): void

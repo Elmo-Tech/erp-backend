@@ -3,6 +3,7 @@
 namespace App\Services\Projects;
 
 use App\Jobs\DeleteProjectUploads;
+use App\Jobs\DeleteTaskAttachments;
 use App\Models\CodeReview;
 use App\Models\InnovationLog;
 use App\Models\Project;
@@ -24,6 +25,7 @@ class ProjectDeletionService
             $paths = $project->files()->whereNotNull('file_path')->pluck('file_path')
                 ->merge($tasks->pluck('cover_image_path')->filter())
                 ->merge($tasks->flatMap(fn ($task) => $task->reference_images ?? []))->unique()->values()->all();
+            $attachmentPaths = DB::table('task_attachments')->whereIn('task_id', $taskIds)->pluck('path')->all();
             $sources = [Project::class => [$project->id], Task::class => $taskIds];
             foreach ([
                 CodeReview::class => 'code_reviews',
@@ -61,8 +63,9 @@ class ProjectDeletionService
             // history, invoices, change requests, handovers and pins).
             $project->forceDelete();
             app(WorkActivityPublisher::class)->changed('project_deleted', $timerUsers);
-            DB::afterCommit(function () use ($paths): void {
+            DB::afterCommit(function () use ($paths, $attachmentPaths): void {
                 DeleteProjectUploads::dispatch($paths);
+                if ($attachmentPaths) DeleteTaskAttachments::dispatch($attachmentPaths);
             });
         });
     }

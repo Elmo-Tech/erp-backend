@@ -99,6 +99,11 @@ class Task extends Model implements Trackable
         return $this->belongsToMany(LookupOption::class, 'task_project_type', 'task_id', 'lookup_option_id')->orderBy('lookup_options.sort_order')->orderBy('lookup_options.id');
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(TaskAttachment::class);
+    }
+
     public function workflowStage(): BelongsTo
     {
         return $this->belongsTo(ProjectWorkflowStage::class, 'workflow_stage_id');

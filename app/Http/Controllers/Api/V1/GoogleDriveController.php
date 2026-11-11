@@ -8,6 +8,7 @@ use App\Models\GoogleDriveConnection;
 use App\Models\Project;
 use App\Services\GoogleDriveService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use RuntimeException;
 
@@ -42,6 +43,8 @@ class GoogleDriveController extends Controller
 
         try {
             $this->drive->storeAuthorizationCode($data['code']);
+        } catch (ConnectionException $exception) {
+            return ApiResponse::error('Could not reach Google Drive. Please try again.', 502);
         } catch (RuntimeException $exception) {
             return ApiResponse::error($exception->getMessage(), 502);
         }
@@ -75,6 +78,8 @@ class GoogleDriveController extends Controller
             return ApiResponse::success([
                 'folders' => $this->drive->folders($request->string('search')->toString() ?: null),
             ], 'Google Drive folders retrieved successfully');
+        } catch (ConnectionException $exception) {
+            return ApiResponse::error('Could not reach Google Drive. Please try again.', 502);
         } catch (RuntimeException $exception) {
             return ApiResponse::error($exception->getMessage(), 502);
         }
@@ -123,6 +128,8 @@ class GoogleDriveController extends Controller
             return ApiResponse::success([
                 'files' => $this->drive->files($project->google_drive_folder_id),
             ], 'Google Drive files retrieved successfully');
+        } catch (ConnectionException $exception) {
+            return ApiResponse::error('Could not reach Google Drive. Please try again.', 502);
         } catch (RuntimeException $exception) {
             return ApiResponse::error($exception->getMessage(), 502);
         }
@@ -141,13 +148,15 @@ class GoogleDriveController extends Controller
         }
 
         $request->validate([
-            'file' => 'required|file|max:51200',
+            'file' => 'required|file|max:102400',
         ]);
 
         try {
             return ApiResponse::success([
                 'file' => $this->drive->upload($project->google_drive_folder_id, $request->file('file')),
             ], 'File uploaded to Google Drive successfully', 201);
+        } catch (ConnectionException $exception) {
+            return ApiResponse::error('Could not reach Google Drive. Please try again.', 502);
         } catch (RuntimeException $exception) {
             return ApiResponse::error($exception->getMessage(), 502);
         }

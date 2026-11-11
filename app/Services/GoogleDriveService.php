@@ -51,153 +51,116 @@ class GoogleDriveService
     public function status(): array
     {
         $connection = GoogleDriveConnection::query()->latest('id')->first();
-
-        if (! $connection) {
-            return [
-                'connected' => false,
-                'reason' => 'Google Drive is not connected.',
-            ];
-        }
-
-        $status = [
-            'connected' => false,
-        ];
-
-        if ($connection->expires_at) {
-            $status['expiresAt'] = $connection->expires_at->toIso8601String();
-        }
-
-        if (! $connection->access_token) {
-            $status['reason'] = 'Google Drive connection is invalid. Reconnect Google Drive.';
-
-            return $status;
-        }
-
-        // Status checks never refresh or persist tokens.
-        if ($connection->expires_at?->lte(now())) {
-            $status['reason'] = 'Google Drive access has expired. Reconnect Google Drive.';
-
-            return $status;
-        }
+        if (! $connection) return ['connected' => false, 'reason' => 'Google Drive is not connected.'];
 
         try {
-            $response = Http::withToken($connection->access_token)->get(self::DRIVE_API.'/about', [
-                'fields' => 'user(emailAddress)',
-            ]);
-        } catch (ConnectionException) {
-            $status['reason'] = 'Google Drive connection could not be verified. Try again or reconnect Google Drive.';
-
-            return $status;
+            $response = $this->driveGet(self::DRIVE_API.'/about', ['fields' => 'user(emailAddress)']);
+            $data = $this->jsonOrFail($response, 'Could not verify Google Drive connection.');
+            $connection->refresh();
+            return [
+                'connected' => true,
+                'expiresAt' => $connection->expires_at?->toIso8601String(),
+                'accountEmail' => data_get($data, 'user.emailAddress'),
+            ];
+        } catch (ConnectionException $exception) {
+            return ['connected' => false, 'reason' => 'Could not reach Google Drive. Please try again.'];
+        } catch (RuntimeException $exception) {
+            return ['connected' => false, 'reason' => $exception->getMessage()];
         }
-
-        if ($response->successful()) {
-            $status['connected'] = true;
-
-            $email = data_get($response->json(), 'user.emailAddress');
-
-            if (is_string($email) && $email !== '') {
-                $status['accountEmail'] = $email;
-            }
-
-            return $status;
-        }
-
-        $status['reason'] = match ($response->status()) {
-            401 => 'Google Drive authorization is no longer valid. Reconnect Google Drive.',
-            403 => 'Google Drive authorization can no longer access Drive. Reconnect Google Drive.',
-            default => 'Google Drive connection could not be verified. Try again or reconnect Google Drive.',
-        };
-
-        return $status;
     }
 
     public function folders(?string $search = null): array
     {
         $query = "mimeType = 'application/vnd.google-apps.folder' and trashed = false";
-
-        if ($search) {
-            $query .= " and name contains '".$this->escapeQuery($search)."'";
-        }
-
-        $response = Http::withToken($this->accessToken())->get(self::DRIVE_API.'/files', [
-            'q' => $query,
-            'fields' => 'files(id,name,webViewLink)',
-            'pageSize' => 20,
-            'orderBy' => 'modifiedTime desc',
-        ]);
-
-        return collect($this->jsonOrFail($response, 'Could not load Google Drive folders')['files'] ?? [])
-            ->map(fn (array $folder) => [
-                'id' => $folder['id'],
-                'name' => $folder['name'],
-                'url' => $folder['webViewLink'] ?? null,
-            ])
-            ->all();
+        if ($search) $query .= " and name contains '".$this->escapeQuery($search)."'";
+        $files = $this->listDriveFiles($query, 'id,name,webViewLink');
+        return collect($files)->map(fn (array $folder) => [
+            'id' => $folder['id'], 'name' => $folder['name'], 'url' => $folder['webViewLink'] ?? null,
+        ])->all();
     }
 
     public function files(string $folderId): array
     {
-        $response = Http::withToken($this->accessToken())->get(self::DRIVE_API.'/files', [
-            'q' => "'".$this->escapeQuery($folderId)."' in parents and trashed = false",
-            'fields' => 'files(id,name,mimeType,size,webViewLink,webContentLink,createdTime,modifiedTime)',
-            'pageSize' => 100,
-            'orderBy' => 'modifiedTime desc',
-        ]);
+        $files = $this->listDriveFiles("'".$this->escapeQuery($folderId)."' in parents and trashed = false", 'id,name,mimeType,size,webViewLink,webContentLink,createdTime,modifiedTime');
+        return collect($files)->map(fn (array $file) => $this->mapFile($file))->all();
+    }
 
-        return collect($this->jsonOrFail($response, 'Could not load Google Drive files')['files'] ?? [])
-            ->map(fn (array $file) => $this->mapFile($file))
-            ->all();
+    private function listDriveFiles(string $query, string $fields): array
+    {
+        $files = [];
+        $pageToken = null;
+        do {
+            $response = $this->driveGet(self::DRIVE_API.'/files', array_filter([
+                'q' => $query, 'fields' => 'nextPageToken,files('.$fields.')', 'pageSize' => 100,
+                'orderBy' => 'modifiedTime desc', 'supportsAllDrives' => 'true',
+                'includeItemsFromAllDrives' => 'true', 'pageToken' => $pageToken,
+            ], fn ($value) => $value !== null));
+            $data = $this->jsonOrFail($response, 'Could not load Google Drive items.');
+            $files = array_merge($files, $data['files'] ?? []);
+            $pageToken = $data['nextPageToken'] ?? null;
+        } while ($pageToken);
+        return $files;
     }
 
     public function upload(string $folderId, UploadedFile $file): array
     {
-        $response = Http::withToken($this->accessToken())
-            ->attach('metadata', json_encode([
-                'name' => $file->getClientOriginalName(),
-                'parents' => [$folderId],
-            ]), 'metadata.json', ['Content-Type' => 'application/json; charset=UTF-8'])
-            ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName(), [
-                'Content-Type' => $file->getMimeType() ?: 'application/octet-stream',
-            ])
-            ->post('https://www.googleapis.com/upload/drive/v3/files?'.http_build_query([
-                'uploadType' => 'multipart',
-                'fields' => 'id,name,mimeType,size,webViewLink,webContentLink,createdTime,modifiedTime',
-            ]));
-
-        return $this->mapFile($this->jsonOrFail($response, 'Could not upload file to Google Drive'));
+        $mime = $file->getMimeType() ?: 'application/octet-stream';
+        $url = 'https://www.googleapis.com/upload/drive/v3/files?'.http_build_query([
+            'uploadType' => 'resumable', 'supportsAllDrives' => 'true',
+            'fields' => 'id,name,mimeType,size,webViewLink,webContentLink,createdTime,modifiedTime',
+        ]);
+        $start = fn (string $token) => Http::withToken($token)->withHeaders([
+            'X-Upload-Content-Type' => $mime, 'X-Upload-Content-Length' => (string) $file->getSize(),
+        ])->timeout(30)->post($url, ['name' => $file->getClientOriginalName(), 'parents' => [$folderId]]);
+        $response = $start($this->accessToken());
+        if ($response->status() === 401) $response = $start($this->accessToken(true));
+        $this->jsonOrFail($response, 'Could not start the Google Drive upload.');
+        $sessionUrl = $response->header('Location');
+        $parts = is_string($sessionUrl) ? parse_url($sessionUrl) : false;
+        if (! is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || ($parts['host'] ?? '') !== 'www.googleapis.com' || ! str_starts_with($parts['path'] ?? '', '/upload/drive/v3/files')) {
+            throw new RuntimeException('Google Drive did not return a valid upload session.');
+        }
+        $stream = fopen($file->getRealPath(), 'rb');
+        if ($stream === false) throw new RuntimeException('Could not read the selected file.');
+        try {
+            $uploaded = Http::withToken($this->accessToken())->withHeaders(['Content-Length' => (string) $file->getSize()])
+                ->withBody($stream, $mime)->timeout(600)->put($sessionUrl);
+            return $this->mapFile($this->jsonOrFail($uploaded, 'Could not upload the file to Google Drive.'));
+        } finally {
+            if (is_resource($stream)) fclose($stream);
+        }
     }
 
-    private function accessToken(): string
+    private function driveGet(string $url, array $query): Response
+    {
+        $response = Http::withToken($this->accessToken())->timeout(30)->get($url, $query);
+        if ($response->status() === 401) {
+            $response = Http::withToken($this->accessToken(true))->timeout(30)->get($url, $query);
+        }
+        return $response;
+    }
+
+    private function accessToken(bool $forceRefresh = false): string
     {
         $connection = GoogleDriveConnection::query()->latest('id')->first();
-
-        if (! $connection) {
-            throw new RuntimeException('Google Drive is not connected');
-        }
-
-        if (! $connection->expires_at || $connection->expires_at->gt(now()->addMinute())) {
-            return $connection->access_token;
-        }
-
-        if (! $connection->refresh_token) {
-            throw new RuntimeException('Google Drive refresh token is missing');
-        }
-
-        $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
-            'client_id' => config('services.google_drive.client_id'),
-            'client_secret' => config('services.google_drive.client_secret'),
-            'grant_type' => 'refresh_token',
-            'refresh_token' => $connection->refresh_token,
+        if (! $connection) throw new RuntimeException('Google Drive is not connected.');
+        if (! $forceRefresh && $connection->access_token && (! $connection->expires_at || $connection->expires_at->gt(now()->addMinute()))) return $connection->access_token;
+        if (! $connection->refresh_token) throw new RuntimeException('Google Drive access expired. Reconnect the Google account.');
+        $response = Http::asForm()->timeout(30)->post('https://oauth2.googleapis.com/token', [
+            'client_id' => config('services.google_drive.client_id'), 'client_secret' => config('services.google_drive.client_secret'),
+            'grant_type' => 'refresh_token', 'refresh_token' => $connection->refresh_token,
         ]);
-
-        $data = $this->jsonOrFail($response, 'Could not refresh Google Drive token');
-
+        if (! $response->successful()) {
+            throw new RuntimeException($response->status() === 400 || $response->status() === 401
+                ? 'Google Drive authorization expired. Reconnect the Google account.'
+                : 'Google Drive could not refresh its connection. Please try again.');
+        }
+        $data = $response->json();
+        if (empty($data['access_token'])) throw new RuntimeException('Google Drive returned an invalid access token. Reconnect the Google account.');
         $connection->update([
-            'access_token' => $data['access_token'],
-            'refresh_token' => $data['refresh_token'] ?? $connection->refresh_token,
+            'access_token' => $data['access_token'], 'refresh_token' => $data['refresh_token'] ?? $connection->refresh_token,
             'expires_at' => now()->addSeconds((int) ($data['expires_in'] ?? 3600)),
         ]);
-
         return $connection->access_token;
     }
 
@@ -221,11 +184,17 @@ class GoogleDriveService
             return $response->json() ?? [];
         }
 
-        throw new RuntimeException($message);
+        throw new RuntimeException(match ($response->status()) {
+            401 => 'Google Drive authorization expired. Reconnect the Google account.',
+            403 => 'Google Drive denied access. Check the connected account and folder permissions.',
+            404 => 'The Google Drive folder or file is unavailable. Check that it still exists and is shared with the connected account.',
+            429 => 'Google Drive is receiving too many requests. Please try again later.',
+            default => $message,
+        });
     }
 
     private function escapeQuery(string $value): string
     {
-        return str_replace("'", "\\'", $value);
+        return str_replace(["\\", "'"], ["\\\\", "\\'"], $value);
     }
 }

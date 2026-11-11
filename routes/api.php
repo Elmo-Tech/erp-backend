@@ -407,6 +407,10 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
     // Task CRUD Routes
     Route::patch('tasks/{task}/checklist/{itemId}', [\App\Http\Controllers\Api\V1\TaskChecklistController::class, 'update']);
+    Route::get('tasks/{task}/attachments', [\App\Http\Controllers\Api\V1\TaskAttachmentController::class, 'index']);
+    Route::post('tasks/{task}/attachments', [\App\Http\Controllers\Api\V1\TaskAttachmentController::class, 'store']);
+    Route::get('tasks/{task}/attachments/{attachment}/download', [\App\Http\Controllers\Api\V1\TaskAttachmentController::class, 'download']);
+    Route::delete('tasks/{task}/attachments/{attachment}', [\App\Http\Controllers\Api\V1\TaskAttachmentController::class, 'destroy']);
     Route::apiResource('tasks', TaskController::class);
 
     // Task Dependencies Routes
