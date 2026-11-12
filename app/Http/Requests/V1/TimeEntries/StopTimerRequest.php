@@ -24,8 +24,7 @@ class StopTimerRequest extends FormRequest
      */
     public function rules(): array
     {
-        // No additional validation needed as this uses authenticated user
-        return [];
+        return ['timeEntryId' => ['sometimes', 'nullable', 'integer', 'min:1']];
     }
 
     /**

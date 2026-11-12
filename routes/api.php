@@ -277,6 +277,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('time-entries/resumable', [TimeEntryController::class, 'resumable'])->name('time-entries.resumable');
     Route::post('time-entries/stop', [TimeEntryController::class, 'stop'])->name('time-entries.stop');
     Route::get('time-entries', [TimeEntryController::class, 'index'])->name('time-entries.index');
+    Route::get('time-entries/my-active', [TimeEntryController::class, 'myActiveTimers']);
     Route::get('time-entries/active', [TimeEntryController::class, 'active'])->name('time-entries.active');
     Route::get('time-entries/active-timers', [TimeEntryController::class, 'activeTimers'])->name('time-entries.active-timers');
     Route::post('time-entries/{id}/stop-admin', [TimeEntryController::class, 'stopTimerAdmin'])->name('time-entries.stop-admin');

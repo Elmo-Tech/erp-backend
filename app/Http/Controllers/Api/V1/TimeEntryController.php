@@ -431,7 +431,7 @@ class TimeEntryController extends Controller
             $user = $request->user();
 
             // Stop the timer
-            $timeEntry = $this->timeTrackingService->stopTimer($user);
+            $timeEntry = $this->timeTrackingService->stopTimer($user, \App\Enums\TimerStopReason::END, null, $request->input('timeEntryId') ? (int) $request->input('timeEntryId') : null);
 
             if (config('simplification.enabled') && $timeEntry->trackable_type !== Task::class) {
                 return ApiResponse::success(null, 'Timer stopped successfully');
@@ -484,8 +484,9 @@ class TimeEntryController extends Controller
 
     public function pause(Request $request): JsonResponse
     {
+        $request->validate(['timeEntryId' => ['sometimes', 'nullable', 'integer', 'min:1']]);
         try {
-            $timeEntry = $this->timeTrackingService->pauseTimer($request->user());
+            $timeEntry = $this->timeTrackingService->pauseTimer($request->user(), $request->input('timeEntryId') ? (int) $request->input('timeEntryId') : null);
 
             return ApiResponse::success(
                 new TimeEntryResource($timeEntry->load('trackable')),
@@ -500,12 +501,14 @@ class TimeEntryController extends Controller
     {
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:500'],
+            'timeEntryId' => ['sometimes', 'nullable', 'integer', 'min:1'],
         ]);
 
         try {
             $timeEntry = $this->timeTrackingService->holdTimer(
                 $request->user(),
-                $data['reason']
+                $data['reason'],
+                $request->input('timeEntryId') ? (int) $request->input('timeEntryId') : null
             );
 
             return ApiResponse::success(
@@ -521,8 +524,9 @@ class TimeEntryController extends Controller
 
     public function end(Request $request): JsonResponse
     {
+        $request->validate(['timeEntryId' => ['sometimes', 'nullable', 'integer', 'min:1']]);
         try {
-            $timeEntry = $this->timeTrackingService->endTimer($request->user());
+            $timeEntry = $this->timeTrackingService->endTimer($request->user(), $request->input('timeEntryId') ? (int) $request->input('timeEntryId') : null);
             $target = app(ActiveWorkService::class)->target($timeEntry);
 
             return ApiResponse::success(
@@ -649,6 +653,13 @@ class TimeEntryController extends Controller
      *     )
      * )
      */
+    public function myActiveTimers(Request $request): JsonResponse
+    {
+        $timers = $this->timeTrackingService->getActiveTimersForUser($request->user());
+        if (config('simplification.enabled')) $timers = $timers->where('trackable_type', Task::class);
+        return ApiResponse::success(TimeEntryResource::collection($timers->load('trackable'))->resolve(), 'Active timers retrieved successfully');
+    }
+
     public function active(Request $request): JsonResponse
     {
         $user = $request->user();

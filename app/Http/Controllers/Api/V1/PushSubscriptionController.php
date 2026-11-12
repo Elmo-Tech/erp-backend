@@ -41,14 +41,19 @@ class PushSubscriptionController extends Controller
         if (! WebPushSubscription::where('user_id', $request->user()->id)->where('endpoint_hash', $endpointHash)->exists()) {
             return ApiResponse::error('Enable desktop notifications on this browser first.', 422);
         }
-        SendWebPush::dispatch($request->user()->id, [
-            'message' => 'The Tables ERP',
-            'body' => 'Desktop notifications are working.',
-            'tag' => 'test-notification',
-            'url' => '/dashboard',
-        ], null, $endpointHash)->afterCommit();
+        try {
+            SendWebPush::dispatchSync($request->user()->id, [
+                'message' => 'The Tables ERP',
+                'body' => 'Desktop notifications are working.',
+                'tag' => 'test-notification',
+                'url' => '/dashboard',
+            ], null, $endpointHash);
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::warning('Web Push test failed.', ['user_id' => $request->user()->id, 'error_type' => get_class($exception)]);
+            return ApiResponse::error('The notification service could not accept the test. Check the browser subscription and server push configuration, then try again.', 502);
+        }
 
-        return ApiResponse::success(null, 'Test notification queued. Check your device notifications.');
+        return ApiResponse::success(null, 'Test sent to the notification service. Check your device notifications.');
     }
 
     public function preferences(Request $request): JsonResponse
@@ -73,7 +78,7 @@ class PushSubscriptionController extends Controller
             'public_key' => $data['keys']['p256dh'], 'auth_token' => $data['keys']['auth'],
         ]);
 
-        return ApiResponse::success(null, 'Desktop notifications enabled');
+        return ApiResponse::success(null, 'Browser registered for notifications');
     }
 
     public function destroy(Request $request): JsonResponse

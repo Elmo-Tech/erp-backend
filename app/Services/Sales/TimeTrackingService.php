@@ -46,13 +46,20 @@ class TimeTrackingService
         $timeEntry = DB::transaction(function () use ($user, $trackable, $resumedFromId): TimeEntry {
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
 
-            if ($this->getActiveTimer($user)) {
+            $activeTimers = $this->getActiveTimersForUser($user);
+            if ($activeTimers->contains(fn ($entry) => $entry->trackable_type === get_class($trackable) && (int) $entry->trackable_id === (int) $trackable->getKey())) {
+                throw new RuntimeException('A timer is already running for this task.');
+            }
+            if ($activeTimers->isNotEmpty() && (! $trackable instanceof Task || $activeTimers->contains(fn ($entry) => $entry->trackable_type !== Task::class))) {
                 throw new RuntimeException('User already has an active timer. Stop it before starting a new one.');
+            }
+            if ($activeTimers->count() >= 2) {
+                throw new RuntimeException('You can run up to two different task timers at the same time.');
             }
 
             if ($trackable instanceof Task) {
                 $this->validateTaskCanHaveTimer($trackable);
-                $this->updateTaskOnTimerStart($trackable, $resumedFromId !== null);
+                $this->updateTaskOnTimerStart($trackable, $resumedFromId !== null || $trackable->status === TaskStatus::ON_HOLD);
             }
 
             $this->ensureAttendanceRecord($user);
@@ -134,9 +141,10 @@ class TimeTrackingService
     public function stopTimer(
         User $user,
         TimerStopReason $reason = TimerStopReason::END,
-        ?Carbon $endTime = null
+        ?Carbon $endTime = null,
+        ?int $timeEntryId = null
     ): TimeEntry {
-        $activeTimer = $this->getActiveTimer($user);
+        $activeTimer = $this->selectActiveTimer($user, $timeEntryId);
 
         if (! $activeTimer) {
             throw new RuntimeException('No active timer found for this user.');
@@ -176,29 +184,30 @@ class TimeTrackingService
     /**
      * Get the active timer for a user.
      */
+    public function getActiveTimersForUser(User $user): \Illuminate\Support\Collection
+    {
+        $timers = TimeEntry::where('user_id', $user->id)->whereNull('end_time')->orderBy('id')->get();
+        $cutoff = now()->subSeconds((int) config('time_tracking.stale_after_seconds', 180));
+        if (config('time_tracking.expire_on_disconnect')) {
+            foreach ($timers as $timer) {
+                if ($timer->heartbeatAt()?->lt($cutoff)) $this->expireStaleTimer($timer->id, $cutoff);
+            }
+            $timers = TimeEntry::where('user_id', $user->id)->whereNull('end_time')->orderBy('id')->get();
+        }
+        return $timers;
+    }
+
     public function getActiveTimer(User $user): ?TimeEntry
     {
-        $activeTimer = TimeEntry::where('user_id', $user->id)->whereNull('end_time')
-            ->first();
-        $cutoff = now()->subSeconds((int) config('time_tracking.stale_after_seconds', 180));
-        $heartbeatAt = $activeTimer?->heartbeatAt();
+        return $this->getActiveTimersForUser($user)->first();
+    }
 
-        if (
-            config('time_tracking.expire_on_disconnect')
-            && $activeTimer !== null
-            && $heartbeatAt !== null
-            && $heartbeatAt->lt($cutoff)
-        ) {
-            if ($this->expireStaleTimer($activeTimer->id, $cutoff)) {
-                return null;
-            }
-
-            return TimeEntry::where('user_id', $user->id)
-                ->whereNull('end_time')
-                ->first();
-        }
-
-        return $activeTimer;
+    private function selectActiveTimer(User $user, ?int $timeEntryId): ?TimeEntry
+    {
+        $timers = $this->getActiveTimersForUser($user);
+        if ($timeEntryId !== null) return $timers->firstWhere('id', $timeEntryId);
+        if ($timers->count() > 1) throw new RuntimeException('Select the timer you want to stop.');
+        return $timers->first();
     }
 
     public function heartbeat(User $user, int $timeEntryId, string $sessionId): TimeEntry
@@ -219,16 +228,16 @@ class TimeTrackingService
         return $timeEntry->fresh();
     }
 
-    public function pauseTimer(User $user): TimeEntry
+    public function pauseTimer(User $user, ?int $timeEntryId = null): TimeEntry
     {
-        return $this->stopTimer($user, TimerStopReason::PAUSE);
+        return $this->stopTimer($user, TimerStopReason::PAUSE, null, $timeEntryId);
     }
 
-    public function endTimer(User $user): TimeEntry
+    public function endTimer(User $user, ?int $timeEntryId = null): TimeEntry
     {
-        return DB::transaction(function () use ($user): TimeEntry {
+        return DB::transaction(function () use ($user, $timeEntryId): TimeEntry {
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
-            $activeTimer = $this->getActiveTimer($user);
+            $activeTimer = $this->selectActiveTimer($user, $timeEntryId);
             if ($activeTimer === null) {
                 throw new RuntimeException('This timer is already stopped or no longer available. Refresh to see the latest timer status.');
             }
@@ -255,9 +264,9 @@ class TimeTrackingService
         });
     }
 
-    public function holdTimer(User $user, string $reason): TimeEntry
+    public function holdTimer(User $user, string $reason, ?int $timeEntryId = null): TimeEntry
     {
-        $activeTimer = $this->getActiveTimer($user);
+        $activeTimer = $this->selectActiveTimer($user, $timeEntryId);
 
         if ($activeTimer === null) {
             throw new RuntimeException('No active timer found for this user.');
@@ -496,7 +505,6 @@ class TimeTrackingService
             $this->closeTimer(
                 $timeEntry,
                 TimerStopReason::CONNECTION_LOST,
-                TimerStopReason::AFTER_HOURS_TIMEOUT,
                 $heartbeatAt
             );
 
