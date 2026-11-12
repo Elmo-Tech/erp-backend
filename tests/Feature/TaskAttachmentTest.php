@@ -43,6 +43,20 @@ class TaskAttachmentTest extends TestCase
         $this->actingAs($user, 'sanctum')->post("/api/v1/tasks/{$task->id}/attachments", ['file' => UploadedFile::fake()->create('slides.pptx', 5, 'application/vnd.openxmlformats-officedocument.presentationml.presentation')])->assertCreated();
     }
 
+    public function test_real_pptx_archive_is_accepted_for_an_existing_task(): void
+    {
+        Storage::fake('local');
+        Permission::firstOrCreate(['name' => 'view_tasks']);
+        $user = User::factory()->create();
+        $user->givePermissionTo('view_tasks');
+        $task = Task::factory()->create(['project_id' => null, 'assigned_to' => $user->id]);
+        $path = base_path('tests/Fixtures/task-presentation.pptx');
+        $file = new UploadedFile($path, 'slides.pptx', null, null, true);
+        $this->actingAs($user, 'sanctum')->post("/api/v1/tasks/{$task->id}/attachments", ['file' => $file])->assertCreated();
+        $attachment = $task->attachments()->firstOrFail();
+        Storage::disk('local')->assertExists($attachment->path);
+    }
+
     public function test_disallowed_files_are_rejected(): void
     {
         Storage::fake('local');

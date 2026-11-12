@@ -30,6 +30,11 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Preserve PHP's default extension configuration and load the application upload
+# limits after it. The CLI server spawned by artisan inherits this environment.
+APP_PHP_INI_DIR="$(cd "$(dirname "$0")" && pwd)/config/php"
+export PHP_INI_SCAN_DIR="${PHP_INI_SCAN_DIR:-}:${APP_PHP_INI_DIR}"
+
 echo "🚀 Starting Laravel Application..."
 echo "================================="
 
@@ -163,4 +168,4 @@ cleanup() {
 
 trap cleanup INT TERM
 
-php artisan serve --host=0.0.0.0 --port=80
+php artisan serve --no-reload --host=0.0.0.0 --port=80

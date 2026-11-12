@@ -36,13 +36,15 @@ class PushSubscriptionController extends Controller
         if (! config('webpush.public_key') || ! config('webpush.private_key')) {
             return ApiResponse::error('Desktop notifications are not configured on the server.', 503);
         }
-        $data = $request->validate(['endpoint' => ['required', 'string', 'max:2048']]);
+        $data = $request->validate(['endpoint' => ['required', 'string', 'max:2048'], 'testId' => ['sometimes', 'uuid']]);
         $endpointHash = hash('sha256', $data['endpoint']);
         if (! WebPushSubscription::where('user_id', $request->user()->id)->where('endpoint_hash', $endpointHash)->exists()) {
             return ApiResponse::error('Enable desktop notifications on this browser first.', 422);
         }
         try {
             SendWebPush::dispatchSync($request->user()->id, [
+                'type' => 'notification_test',
+                'testId' => $data['testId'] ?? null,
                 'message' => 'The Tables ERP',
                 'body' => 'Desktop notifications are working.',
                 'tag' => 'test-notification',
