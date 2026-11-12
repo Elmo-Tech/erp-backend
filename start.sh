@@ -30,10 +30,15 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Preserve PHP's default extension configuration and load the application upload
-# limits after it. The CLI server spawned by artisan inherits this environment.
+# Preserve the effective PHP scan directory, including Nix's extension config.
+# An empty entry in PHP_INI_SCAN_DIR uses the compiled-in directory, which can
+# differ from the directory configured by the PHP wrapper in production.
 APP_PHP_INI_DIR="$(cd "$(dirname "$0")" && pwd)/config/php"
-export PHP_INI_SCAN_DIR="${PHP_INI_SCAN_DIR:-}:${APP_PHP_INI_DIR}"
+if [ -z "${PHP_INI_SCAN_DIR:-}" ]; then
+    PHP_INI_SCAN_DIR="$(php --ini | sed -n 's/^Scan for additional .ini files in:[[:space:]]*//p' | tr -d '\"')"
+    [ "$PHP_INI_SCAN_DIR" != "(none)" ] || PHP_INI_SCAN_DIR=""
+fi
+export PHP_INI_SCAN_DIR="${PHP_INI_SCAN_DIR}:${APP_PHP_INI_DIR}"
 
 echo "🚀 Starting Laravel Application..."
 echo "================================="
