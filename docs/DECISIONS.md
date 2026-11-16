@@ -36,6 +36,10 @@
 ---
 
 
+### P0-03B implementation note — 2026-11-16 (ADR-022 remains PROPOSED)
+
+The P0-03B Laravel proof adds an outermost `DB::transaction` wrapper around fresh user/membership/permission authorization with row locks and PostgreSQL `set_config(..., true)`. Selected company from the session is reauthorized, not trusted. Callback queries must continue to use explicit company filters. Current application database owner/privileges are NOT a durable least-privileged RLS runtime identity. The callback is trusted backend-only code; if it executes arbitrary SQL or a malicious GUC writer, it can still switch the setting before a read. End-of-wrapper checking is only a tamper tripwire, not a preventive database security boundary. The transaction-pool and worker CI probes are development tests, not authorization to activate RLS. Independent review is required, including DB privilege separation, transaction-pooled prepared statement compatibility, worker identity lifetime and race conditions.
+
 ## ADR-020 operational elaboration — 2026-11-16 (PROPOSED details; original approval unchanged)
 
 **The six security principles in ADR-020 remain APPROVED. This addition does not approve operational specifications, code, reviewers, merges or production release.** The following implementation-specific documents are prepared for owner decision and independent security inspection:
