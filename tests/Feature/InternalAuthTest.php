@@ -41,7 +41,7 @@ final class InternalAuthTest extends TestCase
         $this->postJson('/api/v1/auth/logout')->assertOk();
         $this->getJson('/api/v1/auth/me')->assertUnauthorized();
 
-        $user->update(['is_active' => false]);
+        DB::table('users')->where('id', $user->id)->update(['is_active' => false]);
         $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'correct-password'])
             ->assertUnprocessable()->assertJsonPath('message', 'Invalid credentials.');
     }
