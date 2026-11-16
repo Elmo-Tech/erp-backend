@@ -25,14 +25,15 @@
 
 **If documentation and live repository/CI disagree, investigate before coding, update the documentation, and log the discrepancy.** Do not assume previously described work is verified.
 
-## Current handoff / first new chat
+## Current active task and cross-chat handoff (2026-11-16)
 
-**Active task: P0-02 security hardening / final review — Auth, MFA & company RBAC; [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4), [handoff](handoffs/P0-02.md), backend [draft PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6), frontend [draft PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2). Both PRs must be reviewed; no merge.**\n\n- Previous task: **P0-01 — Verify CI and build baseline**.
-- GitHub issue: https://github.com/Elmo-Tech/erp-backend/issues/1
-- Handoff: [handoffs/P0-01.md](handoffs/P0-01.md)
-- Suggested ChatGPT chat name: `ERP V2 | P0-01 | CI & Builds`.
-- Copy [NEW_CHAT_PROMPT.md](NEW_CHAT_PROMPT.md) into that chat.
-- Next task **P0-02 Auth/RBAC** must not be marked ready until CI baseline is verified, or its blocker is explicitly accepted and documented.
+**Active:** P0-02 — Auth/MFA/Company RBAC, [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4), [latest handoff](handoffs/P0-02.md), backend [Draft PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6), frontend [Draft PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2). All **Draft and UNMERGED**.
+
+- **Approved security policy principles:** [ADR-020](DECISIONS.md) — mandatory privileged MFA, verified trusted activation, audited recovery/rebind, Egypt/Italy company isolation and explicit consolidation reporting, safe key lifecycle, first-party secure sessions. This is **NOT merge approval** or approval of production configuration.
+- **Verified technical evidence:** backend atomic MFA [PostgreSQL CI #43881203049](https://github.com/Elmo-Tech/erp-backend/actions/runs/43881203049) PASS (27 tests/233 assertions); [Frontend CI #43885394399](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43885394399) PASS; [Chromium #43885394390](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43885394390) PASS against pinned atomic backend SHA `ceded61c936009105b0607c022c02967e2645a6b`. These results predate any docs-only approval commit's new CI run.
+- **Still pending:** named trusted activation approver(s), independent qualified human security review, detailed recovery/rebind runbook, exact RBAC matrix, production key/session/CORS decisions, reviewer issue resolution and separate explicit merge/deploy authorization.
+- **P0-01:** [Issue #1](https://github.com/Elmo-Tech/erp-backend/issues/1) remains open for acceptance of browser evidence in the appropriate integration baseline. Do not auto-close.
+- **Do not start P0-03.** New chats should continue P0-02 from the latest task branch and use [NEW_CHAT_PROMPT_P0-02.md](NEW_CHAT_PROMPT_P0-02.md); do not restart the scaffold.
 
 ## Rule for each new chat
 

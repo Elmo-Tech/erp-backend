@@ -14,9 +14,9 @@ Issue: https://github.com/Elmo-Tech/erp-backend/issues/4
 
 اشتغل على نفس task/p0-02-auth-rbac في الريبوين، بدون إعادة الـ Scaffold أو إنشاء Branch جديد. الـ P0-01 baseline مدموجة وCI ناجح. استخدم فقط SHAs حقيقية وثابتة للـ browser E2E، ووثّق الـ PASS/FAIL/NOT VERIFIED بدقة.
 
-الأمان: secrets encrypted/hidden، trusted first enrollment، TOTP/recovery replay + brute-force، مصر/إيطاليا RBAC، central overview بدون finance detail، consolidation grant منفصل ومقترح. لا تفرض سياسة إنتاجية غير معتمدة: سجّل PROPOSED لمراجعة مالك المشروع.
+الأمان: secrets encrypted/hidden، trusted first enrollment، TOTP/recovery replay + brute-force، مصر/إيطاليا RBAC، central overview بدون finance detail، consolidation grant منفصل. **مبادئ سياسة الأمان اعتمدها مالك المشروع في ADR-020**: privileged MFA، trusted activation مع التحقق من الهوية وموافقة مستقلة، Recovery موثّق، company isolation، key lifecycle وHTTPS/session security. **تفاصيل التنفيذ والسياسات التشغيلية** مثل اسم المسؤولين، الهوية وإعادة الربط، exact role matrix، production origins/key rotation لا تزال OPEN وليست معتمدة تلقائيًا. اقرأ ADR-020 ولا ترجع المبادئ لـ PROPOSED.
 
 حدّث كود/اختبارات والتوثيق وحالة Issue #4. ممنوع Merge إلى rebuild/erp-v2 أو main أو oberation، ممنوع Production deployment أو بيانات حقيقية، وممنوع تحويل Draft PRs إلى Ready بدون الموافقة الصريحة.
 ```
 
-Current immutable backend E2E source pin at time of writing: `0d2843ccb2df9c5df3629ce3f4ad0b56dfd44cea`. Check latest [handoff](handoffs/P0-02.md) for current CI and next atomic action; do not assume any CI pending at this text's commit has passed.
+Current immutable tested backend E2E source pin: `ceded61c936009105b0607c022c02967e2645a6b`. [Chromium #43885394390](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43885394390) PASS with pinned backend; [Backend #43881203049](https://github.com/Elmo-Tech/erp-backend/actions/runs/43881203049) PASS 27/233. Next: independent qualified human security review, finalize operator/identity/rebind/key/session runbooks and exact permission matrix, then separately request merge authorization. Check latest [handoff](handoffs/P0-02.md) and live CI in every session.
