@@ -1,5 +1,21 @@
 # Project Status — Source of Truth
 
+## P0-02 Security sign-off evidence update — 2026-11-16 (CURRENT)
+
+**Status: IN PROGRESS / OWNER-APPROVED PRINCIPLES (ADR-020) / INDEPENDENT HUMAN REVIEW NOT YET ASSIGNED OR APPROVED.** No merge, deployment, P0-03, production changes or real-user resets.
+
+- Source reviewed: backend PR #6 at prior SHA `da5d94b7c4eeb574d534a0481e86694157b4dcad`, frontend PR #2 at `653adee1c456582e8fc004d006ba62a5a2fce7c9`. Review documents now committed on the **existing backend task branch**. New documentation-only commits must not be mistaken for newly verified CI; their checks require a separate recheck.
+- Prior HEAD checks verified: [backend run #43890579327](https://github.com/Elmo-Tech/erp-backend/actions/runs/43890579327) **SUCCESS** (PostgreSQL, PHPUnit, Docker/health), [frontend #43890384964](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43890384964) **SUCCESS**, [real Chromium #43890384899](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43890384899) **SUCCESS**, with pinned backend runtime `ceded61c936009105b0607c022c02967e2645a6b`. Earlier atomic runtime [#43881203049](https://github.com/Elmo-Tech/erp-backend/actions/runs/43881203049) **27 tests/233 assertions** successful. Synthetic CI only.
+- Security review deliverables: [trusted MFA activation and recovery](security/P0-02_TRUSTED_MFA_ACTIVATION_AND_RECOVERY.md), [code-reconciled RBAC/consolidation matrix](security/P0-02_COMPANY_RBAC_MATRIX.md), [key/session/audit operations](security/P0-02_SECURITY_OPERATIONS_RUNBOOKS.md), [independent review checklist with findings SEC-01..08](security/P0-02_SECURITY_REVIEW_CHECKLIST.md). These are **DRAFT operational designs**, not owner-approved details or deployed controls.
+- Main proposed high release blockers: enforceable two-person trusted grant issuance and full audit (SEC-01), no implemented lost-device reset/global session invalidation workflow (SEC-02), explicit APP_KEY recovery-code HMAC rotation strategy (SEC-03). Further matrix/session/audit gates in checklist. These are source-review findings requiring human validation, **not** claims of failing CI.
+- Independent security reviewer: **UNASSIGNED** at inspection (GitHub PR #6/#2 requested-reviewer fields and formal reviews empty). Must be distinct from code author. Owner still must name verifier/approver/executor/auditor, approve identity checks, exact company matrix, staging/production session/cookie/origin and key/audit retention/backup details.
+- Old Draft PR #5 is a stale intake; its unique chat prompt is already preserved as newer `docs/NEW_CHAT_PROMPT_P0-02.md`; **do not merge its outdated NOT STARTED statements**. Treat PR #6's docs as current and use a superseded/closed disposition with audit comment, not a merge.
+
+**Next precise action:** Owner appoints a qualified independent human reviewer and operating-policy owners; reviewer inspects both current PR diffs and SEC-01..08, resolves blockers and records an evidence-linked verdict. Explicit merge and deployment permissions remain **separate future decisions**. Issue #4 stays OPEN.
+
+---
+
+
 ## Current decision — ADR-020 owner-approved policy principles (2026-11-16)
 
 **P0-02 IN PROGRESS; code/CI/browser verification PASS; policy principles approved; human review and deployment specifications OPEN. No PR merge/deploy/P0-03.**
