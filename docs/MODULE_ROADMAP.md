@@ -1,5 +1,12 @@
 # Module Roadmap — End-to-End ERP V2
 
+## P0-03 status addendum — 2026-11-16
+
+**F01 database security remains IN PROGRESS, NOT VERIFIED.** [Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8), [Backend Draft PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10) on `task/p0-03-db-security`, additive CHECK/exclusion constraints, parent keys and direct SQL EG↔IT tests with a rollback-only RLS sandbox. **P0-03 CI/upgrade/rollback/pooler evidence pending**, not inherited from previously successful [backend integration CI #43917199722](https://github.com/Elmo-Tech/erp-backend/actions/runs/43917199722). No frontend modification. F02 General Ledger remains NOT STARTED beyond scaffold; immutable posting, balanced journal posting, lock-state enforcement and accountant review are separate future gates. SEC-01..08 in [Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7) remain open, so no real-user/production release. See [P0-03 handoff](handoffs/P0-03.md) and PROPOSED [ADR-022](DECISIONS.md).
+
+---
+
+
 Status key: `NOT STARTED` = design only; `SCAFFOLD` = source code exists but not verified; `IN PROGRESS` = active task with evidence; `VERIFIED` = acceptance tests passed and PR reviewed; `BLOCKED` = dependency/external signoff prevents delivery.
 All statuses are as of **2026-11-16** and must be changed only with linked evidence. Full business requirements: [BUSINESS_RULES.md](BUSINESS_RULES.md).
 
