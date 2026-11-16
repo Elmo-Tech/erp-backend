@@ -21,6 +21,14 @@
 ---
 
 
+### P0-03C evidence amendment — PROPOSED; no RLS activation (2026-11-16)
+
+A separate **LOGIN** `p003c_runtime` database principal is proposed and created **only inside disposable CI** following migrations by `elmo` owner. CI test script prohibits superuser, createdb, createrole, inheritance, bypassrls, schema creation, owner membership, financial table SELECT and membership writes. Grant scope remains an explicitly reviewed allowlist, including auth/company lookup SELECT and session/queue DML. This is narrower than the prior exploratory NOLOGIN probe (which is NOT the application's executable credential). Its CI-only password is synthetic and must never become a deployment credential; future privileged provisioning and rotation need separate approval.
+
+A rollback-only RLS trial on `fiscal_years` demonstrates both EG→IT / IT→EG filtering **and** a malicious tenant switch using `set_config('app.company_id', ...)` by the non-owner restricted role. This establishes that `NOBYPASSRLS` and `NOINHERIT` do not make writable custom GUCs trustworthy. Even when `AuthenticatedDatabaseContext` locks/reauthorizes rows, SQL that directly changes the GUC before a read can leak data. Database-side trusted, non-forgeable provenance and carefully restricted privileged functions require a separate threat model; no app RLS or security-definer function is approved. All current company data reads still require an independently authorized literal company predicate. Concurrent revocation should serialize with acquired row locks and deny new transactions; owner/membership cancellation *mid-active transaction* cannot automatically invalidate reads already authorized inside that transaction. Revocation SLA and long-running transactions need operational definition.
+
+New code commits [0aba57c](https://github.com/Elmo-Tech/erp-backend/commit/0aba57c98cebfbbad53781c4bf3753fe9b16435a), [dadf6ac](https://github.com/Elmo-Tech/erp-backend/commit/dadf6ac0d5d126144c8bde690783a9e8ad5d6062); CI [#43930838117](https://github.com/Elmo-Tech/erp-backend/actions/runs/43930838117) and [#43931060344](https://github.com/Elmo-Tech/erp-backend/actions/runs/43931060344). Octane NOT RUN because dependency/server wiring is absent; HTTP multiprocess test is not Octane. **Decision still PROPOSED, Issue #7 stays open, separate approval needed before RLS/merge/deploy.**
+
 ## ADR-022 — PostgreSQL company isolation and optional RLS context (PROPOSED; 2026-11-16)
 
 **Status: PROPOSED ENGINEERING DESIGN ONLY — NOT APPROVED FOR PRODUCTION.** Cross-company physical integrity derives from already-approved ADR-003 and ADR-004. This ADR records new implementation choices for independent review, not a silent owner sign-off.
