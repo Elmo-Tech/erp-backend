@@ -1,5 +1,7 @@
 # Project Status — Source of Truth
 
+**Final live GitHub reconciliation (2026-11-16):** Draft documentation PR #5 was **CLOSED WITHOUT MERGE** as superseded; [disposition comment](https://github.com/Elmo-Tech/erp-backend/pull/5#issuecomment-6920496544). Updated continuation prompt safely remains on backend task branch. [Issue #4 review record](https://github.com/Elmo-Tech/erp-backend/issues/4#issuecomment-6920512050); Backend [PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6#issuecomment-6920513211), Frontend [PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2#issuecomment-6920514285) both linked. Latest backend docs HEAD `f8511e57b65496941605e92437666fa8a9a0a267` pre-this-sync; GitHub returned no associated workflow runs at verification, thus **post-documentation HEAD CI NOT VERIFIED**. Previous backend CI #43890579327 and unchanged frontend CI/Chromium remain SUCCESS at their specified earlier SHAs. No human review requested or submitted; reviewer UNASSIGNED. No merge/deployment/P0-03.
+
 ## P0-02 Security sign-off evidence update — 2026-11-16 (CURRENT)
 
 **Status: IN PROGRESS / OWNER-APPROVED PRINCIPLES (ADR-020) / INDEPENDENT HUMAN REVIEW NOT YET ASSIGNED OR APPROVED.** No merge, deployment, P0-03, production changes or real-user resets.
