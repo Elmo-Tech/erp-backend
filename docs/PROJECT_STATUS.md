@@ -1,5 +1,16 @@
 # Project Status — Source of Truth
 
+## P0-03D exact-code CI verified — 2026-11-16 (LATEST CHECKPOINT)
+
+[**CI #43936400738 FULL SUCCESS**](https://github.com/Elmo-Tech/erp-backend/actions/runs/43936400738) at **code SHA `a4281bb21b3d3e5ddf56c94a56be9f710d60c2e6`**, not at the later docs HEAD. PostgreSQL 18 full PHPUnit/migration checks, migration rollback/reapply, P0-03C constrained runtime/PgBouncer/parallel HTTP/revocation/queue checks, the **P0-03D direct+pooled runtime GRANT audit**, **rollback-only signed-claim spoofing probe**, Docker image build and container API health completed successfully. [#43936382989 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43936382989) at the prior synthetic fixture fix `a811416`.
+
+**Interpretation:** these passing tests demonstrate behavior only in disposable CI with synthetic identities and an owner-simulated MAC issuer. **No complete unforgeable authenticated Laravel → PostgreSQL issuer exists**; MFA/Auth least-privilege gaps, broad session/queue permissions, MAC replay/delegation/issuer isolation and human review are unresolved. Writable GUC-only RLS remains a demonstrated **FAIL** and **ADR-022 remains PROPOSED**. Later documentation-only SHAs require their own CI verification; do not attribute this run to them. Draft PR #10 / Issues #8 and #7 remain open, no merge/deploy/RLS production changes.
+
+**Next:** independent qualified human review of the trust-boundary packet at exact current SHA, then separately design and test a real trusted issuer with scoped DB capabilities and Auth/MFA/queue privilege partitioning; obtain separate owner approval before any RLS or integration.
+
+---
+
+
 ## P0-03D implementation verification addendum — 2026-11-16
 
 **P0-03D source commits:** `878e80f` initial rollback-only signed-claim probe; `adde8cd` verifier privilege-check correction; `e873a27` CI wiring; `08f4fce` review packet; `784411d`, `2915a89`, `cf6a585`, `ee0de47` status/handoff/ADR/roadmap; `dd6385d` diagnostics; `f3d492d` runtime GRANT-negative audit; `a811416` isolated EG fixture repair; `a4281bb` CI direct-PG/PgBouncer GRANT audit. Inspect `git log` for exact SHAs.
