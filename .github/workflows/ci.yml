@@ -54,6 +54,10 @@ jobs:
         run: php artisan migrate:fresh --force --no-interaction
       - name: Run PHPUnit against disposable PostgreSQL 18
         run: php artisan test --no-ansi
+      - name: Verify P0-03 migration rollback and re-apply on disposable PostgreSQL
+        run: |
+          php artisan migrate:rollback --step=1 --force --no-interaction
+          php artisan migrate --force --no-interaction
       - name: Verify disposable PostgreSQL RLS role and transaction-local context
         run: PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_DATABASE" -f database/security/p003_rls_pilot.sql
       - name: Build backend Docker image
