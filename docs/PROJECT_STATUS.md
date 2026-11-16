@@ -1,5 +1,18 @@
 # Project Status — Source of Truth
 
+## P0-03 Database Security — active development snapshot (2026-11-16)
+
+**IN PROGRESS / DRAFT PR [#10](https://github.com/Elmo-Tech/erp-backend/pull/10) / NO MERGE OR PRODUCTION RELEASE.** Task [Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8). Latest verified integration baseline Backend `5bc57535129e652f24f4991e7b90d418cef6f200` [CI #43917199722 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43917199722), Frontend `661ac4a01ecfb3f55c712575490f75cf002b160e` [CI #43916083490 SUCCESS](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43916083490). These are BASELINE checks, not evidence that P0-03 passed.
+
+Backend-only `task/p0-03-db-security` created from latest integrated HEAD. Initial commits: schema `a028648`, SQL tests `9efdd80`, disposable RLS pilot `7e14169`, CI step `3e7f3c1`. Adds candidate keys, PostgreSQL checks, fiscal/period exclusion, date containment triggers, FK indexes, direct SQL EG↔IT negatives, and a rollback-only least-privileged RLS role/policy demonstration. **P0-03 CI/test results: NOT RUN/NOT VERIFIED at this documentation snapshot;** never inherit baseline CI results. Backend PHPUnit/migrations/Docker/CI, migration upgrade/rollback, concurrency and real pooler integration must be independently verified. RLS is not enabled by application migrations; proposed approach [ADR-022](DECISIONS.md) is NOT APPROVED FOR PRODUCTION. No frontend code changes.
+
+**Open blockers:** production SEC-01..08 tracked in [Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7); independent security reviewer not assigned. RLS pilot is same-connection, rollback/synthetic only; PgBouncer/worker and external pooler behavior NOT VERIFIED. This first PR cannot be called fully accepted until CI plus concurrency/upgrade evidence, design review and approval.
+
+**Next Atomic Action:** inspect fresh PR #10 CI logs, fix any PostgreSQL migration/test errors, run disposable DB upgrade and concurrency checks, then refresh this status and [P0-03 handoff](handoffs/P0-03.md) with exact SHA/run evidence. No merge, deploy, key changes, real accounts, `main` or `oberation` changes.
+
+---
+
+
 ## P0-02 merged for DEVELOPMENT — canonical status (2026-11-16)
 
 **BOTH PRs MERGED to `rebuild/erp-v2`. Owner-authorized non-production integration under [ADR-021](DECISIONS.md). This is NOT a security sign-off or approval to deploy/use real accounts.**
