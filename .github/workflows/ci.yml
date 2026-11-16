@@ -60,6 +60,8 @@ jobs:
           php artisan migrate --force --no-interaction
       - name: Verify disposable PostgreSQL RLS role and transaction-local context
         run: PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_DATABASE" -f database/security/p003_rls_pilot.sql
+      - name: Verify two PostgreSQL sessions, company context and exclusion races
+        run: php tests/integration/p003_concurrency.php
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health
