@@ -146,6 +146,11 @@ jobs:
           DB_PGBOUNCER_TRANSACTION: 'true'
           P003C_OWNER_PASSWORD: test-only
         run: php tests/integration/p003c_runtime_race.php
+      - name: Audit runtime GRANT gaps and expected Auth/MFA denial on direct PostgreSQL and PgBouncer
+        run: |
+          for port in 5432 16432; do
+            PGPASSWORD='test-only-runtime' psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U p003c_runtime -d "$DB_DATABASE" -f database/security/p003d_runtime_grant_audit.sql
+          done
       - name: Test rollback-only signed DB tenant claim against SQL spoofing (PostgreSQL 18)
         run: |
           PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p 5432 -U elmo -d "$DB_DATABASE" -f database/security/p003d_signed_claim_disposable.sql
