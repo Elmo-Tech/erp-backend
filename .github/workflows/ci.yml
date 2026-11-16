@@ -146,6 +146,9 @@ jobs:
           DB_PGBOUNCER_TRANSACTION: 'true'
           P003C_OWNER_PASSWORD: test-only
         run: php tests/integration/p003c_runtime_race.php
+      - name: Test rollback-only signed DB tenant claim against SQL spoofing (PostgreSQL 18)
+        run: |
+          PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p 5432 -U elmo -d "$DB_DATABASE" -f database/security/p003d_signed_claim_disposable.sql
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health
