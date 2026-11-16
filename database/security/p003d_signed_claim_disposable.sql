@@ -10,6 +10,11 @@ SELECT CASE WHEN current_database() = 'elmo_erp_test' AND current_user = 'elmo'
   \quit 3
 \endif
 BEGIN;
+-- Earlier P0-03C revocation-race step revokes the EG user. Restore its
+-- synthetic membership ONLY inside this rollback-only probe transaction.
+UPDATE company_memberships SET status='active', updated_at=now()
+ WHERE user_id=(SELECT id FROM users WHERE email='p003c-eg@example.invalid')
+   AND company_id='00000000-0000-4000-8000-0000000000c1';
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE SCHEMA p003d_private;
 REVOKE ALL ON SCHEMA p003d_private FROM PUBLIC;
@@ -114,15 +119,6 @@ BEGIN
   END;
 END $block$;
 SELECT set_config('p003d.claim', :'eg_claim', true);
-SELECT CASE WHEN p003d_private.verified_company() IS NULL THEN 'NULL' ELSE 'VALID' END AS verifier_result;
-SELECT CASE WHEN split_part(current_setting('p003d.claim'), '|', 3) = txid_current()::text THEN 'SAME' ELSE 'DIFFERENT' END AS claim_transaction;
-SELECT CASE WHEN EXISTS (
-  SELECT 1 FROM public.users u
-  JOIN public.company_memberships m ON m.user_id=u.id
-  WHERE u.id::text = split_part(current_setting('p003d.claim'), '|', 2)
-  AND m.company_id = '00000000-0000-4000-8000-0000000000c1'::uuid
-  AND m.status='active' AND u.is_active
-) THEN 'ACTIVE' ELSE 'MISSING' END AS signer_membership;
 SELECT 1 / CASE WHEN
  (SELECT count(*) FROM public.p003d_rows WHERE id=1)=1 AND
  (SELECT count(*) FROM public.p003d_rows WHERE id=2)=0
