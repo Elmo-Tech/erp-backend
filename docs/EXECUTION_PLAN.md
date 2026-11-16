@@ -16,3 +16,7 @@ Lead → proposal (versioned) → approved contract → project/milestone → PM
 ## Current implementation status
 P0-01 scaffold created; backend test execution/actual database migration must be verified in a Composer/CI environment. No migrations or deploy against production.
 
+
+## Task tracking and handoff
+
+All phases/modules are indexed in [MODULE_ROADMAP.md](MODULE_ROADMAP.md). Each task follows [WORK_PROTOCOL.md](WORK_PROTOCOL.md); every new chat starts from [START_HERE.md](START_HERE.md), records progress in PROJECT_STATUS and a task-specific handoff. Initial cross-repository issue: https://github.com/Elmo-Tech/erp-backend/issues/1.

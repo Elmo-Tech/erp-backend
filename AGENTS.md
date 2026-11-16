@@ -1,3 +1,8 @@
+## Mandatory cross-chat continuity (ADR-019)
+Before any code edit or handoff, read `docs/START_HERE.md`, `docs/WORK_PROTOCOL.md`, `docs/PROJECT_STATUS.md`, `docs/MODULE_ROADMAP.md`, the relevant handoff `docs/handoffs/<TASK-ID>.md`, and actual GitHub Issue/PR/CI status.
+One chat = one scoped Issue; use dedicated `task/<task-id>-...` branches and PRs to `rebuild/erp-v2`.
+Every session must update and commit project status, task handoff, relevant roadmap and decisions, with tests and verified/unverified labels. GitHub docs are durable; chat text alone is not. Never bypass user/financial/legal approval.
+
 # ERP V2 Engineering Agreement
 
 ## Scope and safety
@@ -26,4 +31,3 @@
 - Write tests for company isolation, approvals, idempotency, money, and error handling.
 - Do not expose a financial API before its authorization, atomic posting and test suite exist.
 - Annotate unimplemented controls honestly; do not call a scaffold production-ready.
-

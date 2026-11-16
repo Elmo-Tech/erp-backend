@@ -22,6 +22,7 @@ This reflects explicit business-owner approval to start the ERP V2 rebuild.
 | 016 | Docker + Coolify; staging isolated from production; no V1 cutover until independently approved and reconciled |
 | 017 | Tailwind 4, shadcn/ui, TanStack Query/Router, React Hook Form/Zod for eventual frontend design system |
 | 018 | Phase 0 foundation then lead-to-cash, execution/HR, SaaS/support, full accounting/payroll/analytics |
+| 019 | **Approved 2026-11-16:** GitHub-first cross-chat continuity: one ChatGPT chat per tracked Issue/task, dedicated topic branches and PRs, mandatory status/decision/handoff files and test evidence. See `docs/WORK_PROTOCOL.md`. |
 
 ## Legal / accountant gates not waived
 - Egypt and Italy accountants must verify chart of accounts, legal invoice schema, tax codes, FX gains/losses, intercompany reconciliation, payroll, insurance and record retention.
@@ -31,4 +32,3 @@ This reflects explicit business-owner approval to start the ERP V2 rebuild.
 
 ## Open implementation decisions
 FX rate provider and staleness policy; allowed production/staging origins for SPA auth; object storage and retention; backup RPO/RTO; migration of historic V1 data and accounting opening balances.
-
