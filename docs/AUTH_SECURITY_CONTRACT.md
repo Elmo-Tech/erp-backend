@@ -35,3 +35,10 @@
 - Real browser with isolated Vite origin and Laravel origin must prove cookies/CSRF/CORS (positive and negative); test origin and screenshots/logs without secrets must be linked in the handoff.
 - Treat lack of browser evidence as **NOT VERIFIED**, not as CI success.
 - PR review and policy approval required before merge, and separate production rollout approval needed for any real accounts.
+
+## Test evidence and explicit limitations
+
+- Browser E2E verified in isolated GitHub Actions with Chromium, Vite localhost:5173, Laravel localhost:8000, PostgreSQL 18 and untrusted localhost:5999 origin: **PASS** https://github.com/Elmo-Tech/erp-frontend/actions/runs/43868982519.
+- Frontend typecheck/Vitest/build/Docker CI **PASS** https://github.com/Elmo-Tech/erp-frontend/actions/runs/43868982516.
+- Backend authentication, migration, company negative tests and Docker **PASS** https://github.com/Elmo-Tech/erp-backend/actions/runs/43868872071; newest security-test CI still must be checked.
+- The MFA bootstrap/enrollment policy and role matrix remain **PROPOSED**. No reviewed policy approval, no production browser or real organization account tests.
