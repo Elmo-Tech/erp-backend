@@ -6,6 +6,7 @@ use App\Domain\Auth\MfaService;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -98,7 +99,7 @@ final class AuthHardeningTest extends TestCase
         $this->assertIsString($cipher);
         $this->assertNotSame($secret, $cipher);
         $this->assertStringNotContainsString($secret, $cipher);
-        $this->assertSame($secret, decrypt($cipher));
+        $this->assertSame($secret, Crypt::decryptString($cipher));
         $this->getJson('/api/v1/auth/mfa/status')->assertDontSee($secret);
         $this->getJson('/api/v1/auth/me')->assertUnauthorized();
 
