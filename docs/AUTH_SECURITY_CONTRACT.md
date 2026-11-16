@@ -1,6 +1,6 @@
 # P0-02 — Internal Auth / MFA / Company Permissions Contract
 
-**Task:** [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4). **Status:** implementation under review; granular permission matrix **PROPOSED pending owner security-policy approval**. P0-01 remains open for browser E2E.
+**Task:** [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4). **Status:** implementation under review; granular permission matrix **PROPOSED pending owner security-policy approval**. P0-01 Issue #1 remains open pending acceptance of branch-based browser E2E evidence, not because browser CI is missing.
 
 ## Session / trust boundary
 - Internal first-party Sanctum SPA cookie sessions only (Laravel web guard, `auth:sanctum` with stateful SPA middleware). No browser bearer/localStorage tokens.
@@ -40,7 +40,7 @@
 
 - Browser E2E verified in isolated GitHub Actions with Chromium, Vite localhost:5173, Laravel localhost:8000, PostgreSQL 18 and untrusted localhost:5999 origin: **PASS** https://github.com/Elmo-Tech/erp-frontend/actions/runs/43868982519.
 - Frontend typecheck/Vitest/build/Docker CI **PASS** https://github.com/Elmo-Tech/erp-frontend/actions/runs/43868982516.
-- Backend authentication, migration, company negative tests and Docker **PASS** https://github.com/Elmo-Tech/erp-backend/actions/runs/43868872071; newest security-test CI still must be checked.
+- Backend authentication, migration, company negative tests and Docker **PASS** https://github.com/Elmo-Tech/erp-backend/actions/runs/43868872071; latest security remediation passed PostgreSQL 18 and 24 PHPUnit tests / 178 assertions, see run #43874999124.
 - The MFA bootstrap/enrollment policy and role matrix remain **PROPOSED**. No reviewed policy approval, no production browser or real organization account tests.
 
 ## Post-review security implementation (PROPOSED, not approved rollout policy)
@@ -56,3 +56,5 @@
 **Key rotation.** APP_KEY is the encryption root for existing TOTP seeds. Before production: define secure key escrow, staged compatibility/old-key read strategy, audited re-encryption, restore drills and rollback; never change encryption keys without this reviewed migration. **No key rotation was executed.**
 
 **Status:** all above controls remain in DRAFT PR #6/#2. Exact grant issuance and recovery policy, per-role permissions, production cookie origins, audit/readiness and deployment are **PROPOSED / NOT APPROVED**.
+
+**Security review E2E evidence:** [Chromium #43875272279](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43875272279) **PASS** on frontend `6b2b3f97c2dbe8321373cd7d4b195b95ed5f5869` with exact pinned backend `0d2843ccb2df9c5df3629ce3f4ad0b56dfd44cea`. New assertions include trusted first activation in Chromium, invalid/expired TOTP, single-use recovery, DOM redaction and no-store headers. [Backend #43874999124](https://github.com/Elmo-Tech/erp-backend/actions/runs/43874999124) PASS 24/178 and PostgreSQL/Docker; [frontend #43875272312](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43875272312) PASS. Policy is still **PROPOSED**.
