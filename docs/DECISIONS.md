@@ -1,5 +1,16 @@
 # Architecture Decision Register — approved 2026-11-16
 
+## ADR-022 P0-03D addendum — 2026-11-16 (PROPOSED; no security decision approved)
+
+**Proposed preference:** explicit trusted Laravel actor/membership/permission validation and mandatory company-scoped predicates with existing company FK invariants and narrowly allowed DB access. Optional RLS can only be defence-in-depth unless a separate trusted DB-side identity has been independently demonstrated. GUC-only RLS under `p003c_runtime` is *known vulnerable* via `set_config`; cannot be accepted as an authorization boundary.
+
+**Alternatives and experimental evidence:** (a) application predicates plus strict grants, (b) GUC-only RLS — rejected for authorization, (c) owner-held HMAC-signed transaction claim verified by constrained SECURITY DEFINER — **research-only rollback SQL**, with no deployed issuer, proof of end-to-end non-forgery or replay prevention, (d) per-company roles/DBs — stronger SQL separation but operational burden and would change ADR-003. See [security packet](security/P0-03D_TRUST_BOUNDARY_REVIEW.md) for trust diagram, attack capabilities, full grant matrix, negative tests and independent human review criteria.
+
+**Grant blocker:** `UPDATE(updated_at)` on `users`, `companies`, `company_memberships`, `company_role_assignments` supports `SELECT ... FOR UPDATE` but allows timestamp tampering; broad SELECT users exposes password and MFA secret; restricted runtime lacks essential MFA enrollment/recovery/user mutation GRANTs, and queue/session DML requires careful role partitioning. No production-wide GRANT approval. New probe/CI result must be checked on exact SHA, and qualified independent human security reviewer must explicitly sign off. **ADR-022 remains PROPOSED; Issue #7 open; PR #10 stays Draft, no merge/deploy/RLS enablement.**
+
+---
+
+
 **Final code CI verification:** [#43920504958](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920504958) **FULL JOB SUCCESS**, head `64b1e46d82c741de41eda6f87211a02f15082d41`: PostgreSQL 18 migrations, PHPUnit **30 tests/273 assertions**, P0-03 rollback/reapply, disposable RLS limited role/transaction-local context, two physical-session lock/exclusion/no-leak smoke, Docker build and HTTP health. This supersedes the prior step-level-only assessment. [#43920097079](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920097079) separately FULL SUCCESS on pre-two-session commit `e7773d1`. [Docs-only HEAD CI #43920822054](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920822054) had not completed at this record; any later docs-only commit requires independent CI check.
 
 **Still NOT RUN:** real PgBouncer transaction pool and Laravel reused worker/Octane integration, authenticated tenant-context propagation under actual HTTP/queue workload, cross-session privilege escalation via malicious GUC, production-like migration on nonempty legacy data, independent review. RLS not activated and no production release. **Next Atomic Action:** implement and test a trusted membership-validated `SET LOCAL` transaction wrapper with actual PgBouncer/worker reuse, prove cross-request EG↔IT no-leak and bypass negatives, and submit a narrowly scoped reviewed PR before any RLS enabling decision.
