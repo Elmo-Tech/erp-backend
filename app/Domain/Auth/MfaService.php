@@ -118,18 +118,27 @@ final class MfaService
     /** @return list<string> Plaintext codes are returned exactly once. */
     public function issueRecoveryCodes(User $user): array
     {
-        $codes = [];
-        DB::table('user_mfa_recovery_codes')->where('user_id', $user->id)->delete();
-        for ($index = 0; $index < 8; $index++) {
-            $code = strtoupper(bin2hex(random_bytes(8)));
-            $codes[] = $code;
-            DB::table('user_mfa_recovery_codes')->insert([
-                'id' => (string) Str::uuid7(),
-                'user_id' => $user->id,
-                'code_hash' => $this->recoveryHash($code),
-                'created_at' => now(),
-            ]);
-        }
-        return $codes;
+        // Also atomic when invoked outside initial enrollment (e.g. a future approved reset).
+        // Nested calls share the parent Laravel DB transaction/savepoint.
+        return DB::transaction(function () use ($user): array {
+            $codes = [];
+            $rows = [];
+            $issuedAt = now();
+            for ($index = 0; $index < 8; $index++) {
+                $code = strtoupper(bin2hex(random_bytes(8)));
+                $codes[] = $code;
+                $rows[] = [
+                    'id' => (string) Str::uuid7(),
+                    'user_id' => $user->id,
+                    'code_hash' => $this->recoveryHash($code),
+                    'created_at' => $issuedAt,
+                ];
+            }
+
+            DB::table('user_mfa_recovery_codes')->where('user_id', $user->id)->delete();
+            DB::table('user_mfa_recovery_codes')->insert($rows);
+
+            return $codes;
+        });
     }
 }
