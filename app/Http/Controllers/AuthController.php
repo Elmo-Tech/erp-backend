@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
@@ -116,18 +117,44 @@ final class AuthController extends Controller
             $this->hitMfaLimiters($request, $user);
             return response()->json(['message' => 'Invalid verification code.'], 422);
         }
-        // Atomically consume the trusted activation authorization; never silently rebind an MFA factor.
-        $claimed = DB::table('user_mfa_enrollment_authorizations')
-            ->where('user_id', $user->id)->whereNull('consumed_at')
-            ->where('expires_at', '>', now())->update(['consumed_at' => now(), 'updated_at' => now()]);
-        if ($claimed !== 1) {
+        try {
+            // One commit boundary for the grant, the encrypted factor and all recovery digests.
+            // Lock the user before claiming the grant: concurrent confirmations cannot rebind a factor.
+            $codes = DB::transaction(function () use ($user, $secret, $step, $mfa): ?array {
+                $lockedUser = User::query()->whereKey($user->id)->lockForUpdate()->first();
+                if (! $lockedUser || ! $lockedUser->is_active || $lockedUser->mfa_secret !== null) {
+                    return null;
+                }
+
+                $claimed = DB::table('user_mfa_enrollment_authorizations')
+                    ->where('user_id', $lockedUser->id)->whereNull('consumed_at')
+                    ->where('expires_at', '>', now())
+                    ->update(['consumed_at' => now(), 'updated_at' => now()]);
+                if ($claimed !== 1) {
+                    return null;
+                }
+
+                $lockedUser->mfa_secret = $secret;
+                $lockedUser->mfa_last_step = $step;
+                $lockedUser->save();
+
+                $issued = $mfa->issueRecoveryCodes($lockedUser);
+                if (count($issued) !== 8) {
+                    throw new \UnexpectedValueException('Incomplete MFA recovery-code issuance.');
+                }
+
+                return $issued;
+            });
+        } catch (\Throwable $exception) {
+            // Never log the exception object/message/SQL bindings: these may contain MFA material.
+            Log::warning('MFA enrollment persistence failed.', ['failure_type' => $exception::class]);
+            return response()->json(['message' => 'Enrollment could not be completed. Please retry.'], 503);
+        }
+
+        if ($codes === null) {
             return response()->json(['message' => 'Trusted activation required.'], 403);
         }
 
-        $user->mfa_secret = $secret;
-        $user->mfa_last_step = $step;
-        $user->save();
-        $codes = $mfa->issueRecoveryCodes($user);
         $this->clearMfaLimiters($request, $user);
         $this->completeLogin($request, $user, true);
         return response()->json(['status' => 'authenticated', 'recovery_codes' => $codes]);
