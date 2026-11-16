@@ -38,6 +38,31 @@ This reflects explicit business-owner approval to start the ERP V2 rebuild.
 | 018 | Phase 0 foundation then lead-to-cash, execution/HR, SaaS/support, full accounting/payroll/analytics |
 | 019 | **Approved 2026-11-16:** GitHub-first cross-chat continuity: one ChatGPT chat per tracked Issue/task, dedicated topic branches and PRs, mandatory status/decision/handoff files and test evidence. See `docs/WORK_PROTOCOL.md`. |
 | 020 | **Approved 2026-11-16 (POLICY PRINCIPLES ONLY):** privileged MFA, trusted first activation, audited/two-person lost-device recovery, company RBAC/consolidation isolation, protected key lifecycle, HTTPS/session security. Exact operations/security review/merges and deployments remain separately gated. |
+| 021 | **Approved 2026-11-16 (INTEGRATION ONLY):** merge P0-02 PRs #6 backend/#2 frontend to `rebuild/erp-v2`; all SEC-01..08 security work remains open; no real users/deployment. |
+
+## ADR-021 — Owner-directed P0-02 non-production integration acceptance (2026-11-16)
+
+**APPROVED: merge the two specified PRs to development integration ONLY. NOT production/sign-off.**
+
+Owner explicitly authorized integration-only squash merges of Backend PR #6 and Frontend PR #2 into their respective `rebuild/erp-v2` branches, accepting responsibility for non-production project review. This is NOT a formal independent security review, does NOT complete SEC-01..SEC-08, and does NOT authorize real privileged user onboarding, production/staging deployment, `main`/`oberation` changes, key rotation or V1 data migration. Owner approval is for the development integration action only; security production gates remain.
+
+### Exact scope
+
+- Squash merge Backend [PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6) and Frontend [PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2) into `rebuild/erp-v2` after verifying current CI and mergeability. Draft-to-ready transition solely to enable requested merge is permitted.
+- No release, deployment, production account configuration or real data; no changes to `main` or `oberation`.
+- Owner assumes accountability for integration acceptance but has **not supplied an independent security reviewer**. Do not claim independent review happened.
+
+### Deferred security and release work
+
+SEC-01 HIGH: no enforced dual-person auditable trusted MFA activation grant issuer/verifier/approver; SEC-02 HIGH: no audited lost-device rebind/reset plus full session kill and notifications; SEC-03 HIGH before key rotation: recovery HMAC derived from APP_KEY; SEC-04..08 exact RBAC (including own-company company_manager finance.view), session expiry/revocation, audit integrity, staging-origin checks and concurrency/qualified security review remain OPEN. No production readiness claim. Keep Issue #4 OPEN or transfer each unresolved item to tracked follow-up Issues.
+
+### Verified prior code
+
+Verified prior to docs: Backend CI #43895840430 SUCCESS at `12abef38eb2dd4fa5c5a6dc6ee971c58e7d9827d`; Frontend CI #43890384964 and Chromium #43890384899 SUCCESS at `653adee1c456582e8fc004d006ba62a5a2fce7c9`; Chromium pinned atomic backend `ceded61c936009105b0607c022c02967e2645a6b`. New docs-only commit requires its own CI check.
+
+Actual merge SHAs and post-merge CI results must be recorded in the task handoff/status after the operation; approval by itself is not evidence of a merge.
+
+---
 
 ## ADR-020 — Owner-approved P0-02 security policy principles (2026-11-16)
 

@@ -3,6 +3,8 @@
 Status key: `NOT STARTED` = design only; `SCAFFOLD` = source code exists but not verified; `IN PROGRESS` = active task with evidence; `VERIFIED` = acceptance tests passed and PR reviewed; `BLOCKED` = dependency/external signoff prevents delivery.
 All statuses are as of **2026-11-16** and must be changed only with linked evidence. Full business requirements: [BUSINESS_RULES.md](BUSINESS_RULES.md).
 
+**ADR-021:** Owner approved non-production PR integration only; F01 stays IN PROGRESS (SEC-01..08 are NOT resolved). No real-user enrollment or deployment. See [security checklist](security/P0-02_SECURITY_REVIEW_CHECKLIST.md) and [ADR-021](DECISIONS.md).
+
 | ID | Module / capability | Prerequisite(s) | Initial delivery gate | Status |
 |---|---|---|---|---|
 | F00 | Platform, CI, Docker, PostgreSQL, Redis | None | Real CI/build/migration smoke tests | VERIFIED (automated CI/build/migration checks; no production release) |

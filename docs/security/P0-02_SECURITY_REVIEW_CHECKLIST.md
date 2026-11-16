@@ -2,6 +2,14 @@
 
 **Date:** 2026-11-16. **Status:** PRE-REVIEW / AI-assisted static source inspection only; **NOT a qualified human security sign-off**. Backend PR #6, Frontend PR #2, old docs PR #5 remain Draft and unmerged at inspection. No deployment or P0-03.
 
+## ADR-021 integration-only decision (2026-11-16)
+
+Owner explicitly authorized integration-only squash merges of Backend PR #6 and Frontend PR #2 into their respective `rebuild/erp-v2` branches, accepting responsibility for non-production project review. This is NOT a formal independent security review, does NOT complete SEC-01..SEC-08, and does NOT authorize real privileged user onboarding, production/staging deployment, `main`/`oberation` changes, key rotation or V1 data migration. Owner approval is for the development integration action only; security production gates remain.
+
+SEC-01 HIGH: no enforced dual-person auditable trusted MFA activation grant issuer/verifier/approver; SEC-02 HIGH: no audited lost-device rebind/reset plus full session kill and notifications; SEC-03 HIGH before key rotation: recovery HMAC derived from APP_KEY; SEC-04..08 exact RBAC (including own-company company_manager finance.view), session expiry/revocation, audit integrity, staging-origin checks and concurrency/qualified security review remain OPEN. No production readiness claim. Keep Issue #4 OPEN or transfer each unresolved item to tracked follow-up Issues.
+
+**Findings below remain OPEN, not resolved by this approval.**
+
 ## Evidence reviewed (specific versions)
 
 - Backend PR #6 HEAD at start: `da5d94b7c4eeb574d534a0481e86694157b4dcad` (subsequent commits here **docs-only**). Latest backend run [#43890579327](https://github.com/Elmo-Tech/erp-backend/actions/runs/43890579327) SUCCESS for that HEAD: PostgreSQL migration, PHPUnit, Docker/health job steps PASS.

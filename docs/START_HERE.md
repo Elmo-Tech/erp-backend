@@ -25,6 +25,12 @@
 
 **If documentation and live repository/CI disagree, investigate before coding, update the documentation, and log the discrepancy.** Do not assume previously described work is verified.
 
+## Latest owner authorization — ADR-021 (2026-11-16)
+
+Owner explicitly authorized integration-only squash merges of Backend PR #6 and Frontend PR #2 into their respective `rebuild/erp-v2` branches, accepting responsibility for non-production project review. This is NOT a formal independent security review, does NOT complete SEC-01..SEC-08, and does NOT authorize real privileged user onboarding, production/staging deployment, `main`/`oberation` changes, key rotation or V1 data migration. Owner approval is for the development integration action only; security production gates remain.
+
+Check live GitHub PR/base SHAs and newest Project Status/Handoff for actual merge result. Historical 'no merge' text below applies to older state and is superseded ONLY for these development integrations.
+
 ## Current active task and cross-chat handoff (2026-11-16)
 
 **Active:** P0-02 — Auth/MFA/Company RBAC, [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4), [latest handoff](handoffs/P0-02.md), backend [Draft PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6), frontend [Draft PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2). All **Draft and UNMERGED**.
