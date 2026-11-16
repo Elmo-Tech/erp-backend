@@ -15,6 +15,9 @@ GRANT CONNECT ON DATABASE elmo_erp_test TO p003c_runtime;
 GRANT USAGE ON SCHEMA public TO p003c_runtime;
 GRANT SELECT ON users, companies, company_memberships, company_role_assignments,
   global_role_assignments TO p003c_runtime;
+-- SELECT ... FOR UPDATE requires UPDATE privilege in PostgreSQL. Limit it to an
+-- inert timestamp column, never status, role_key, company_id or is_active.
+GRANT UPDATE (updated_at) ON users, company_memberships, company_role_assignments TO p003c_runtime;
 -- HTTP cookie sessions and queue infrastructure, not membership/grant administration.
 GRANT SELECT, INSERT, UPDATE, DELETE ON sessions, jobs, failed_jobs TO p003c_runtime;
 GRANT USAGE, SELECT ON SEQUENCE jobs_id_seq, failed_jobs_id_seq TO p003c_runtime;
