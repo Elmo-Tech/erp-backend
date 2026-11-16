@@ -6,7 +6,7 @@ All statuses are as of **2026-11-16** and must be changed only with linked evide
 | ID | Module / capability | Prerequisite(s) | Initial delivery gate | Status |
 |---|---|---|---|---|
 | F00 | Platform, CI, Docker, PostgreSQL, Redis | None | Real CI/build/migration smoke tests | VERIFIED (automated CI/build/migration checks; no production release) |
-| F01 | Company model, permissions, internal auth/MFA | F00 | Company scoping and unauthorized-access negatives | IN PROGRESS ([Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4), backend draft PR #6 and frontend draft PR #2; security remediations implemented; backend 24 tests PASS, pinned Chromium first-enrollment E2E PASS, independent review and formal security-policy approval pending) |
+| F01 | Company model, permissions, internal auth/MFA | F00 | Company scoping and unauthorized-access negatives | IN PROGRESS ([Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4), backend draft PR #6 and frontend draft PR #2; security remediations implemented; backend atomic MFA rollback PostgreSQL 27 tests/233 assertions PASS; older pinned Chromium PASS only for pre-atomic code (new SHA E2E NOT VERIFIED); independent security review and owner policy approval pending) |
 | F02 | General Ledger foundational controls | F00, F01 | Balanced immutable posting, locked periods, reversals | NOT STARTED (schema scaffold) |
 | F03 | Audit, outbox, idempotency, notifications base | F00, F01 | Verified retry/deduplication and audit | NOT STARTED (tables scaffold) |
 | M01 | CRM / leads / contacts / attribution | F01 | Sales/social/platform/acquired-by/manager activity history | NOT STARTED |

@@ -1,5 +1,19 @@
 # Project Status — Source of Truth
 
+## Latest verification — P0-02 atomic MFA enrollment follow-up (2026-11-16)
+
+**State:** IN PROGRESS / security sign-off requested / not approved / no merge or deployment. Latest runtime code commit: `ceded61c936009105b0607c022c02967e2645a6b` on backend `task/p0-02-auth-rbac` ([Draft PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6)); frontend [Draft PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2) unchanged. Stale documentation [Draft PR #5](https://github.com/Elmo-Tech/erp-backend/pull/5) remains unmerged and must not overwrite new handoff/status.
+
+**New review finding:** [independent follow-up issue comment #6918381867](https://github.com/Elmo-Tech/erp-backend/pull/6#issuecomment-6918381867) correctly flagged non-transactional grant consumption vs user factor write and recovery-code issuance. **FIXED in code**: `AuthController::enrollConfirm` now locks the user row with `lockForUpdate`; conditionally consumes a single-use unexpired grant; updates Eloquent-encrypted TOTP and last step; and issues eight recovery digests within one `DB::transaction`. The inner `MfaService::issueRecoveryCodes` is also transactional with one bulk insert, so future standalone code rotations roll back safely. On DB failure: generic HTTP 503, sanitized exception **class only** in warning (no secret or SQL bindings), no successful login, grant and pending challenge remain available for retry. Concurrency/role/policy review remains required.
+
+**Backend evidence:** [CI #43881203049](https://github.com/Elmo-Tech/erp-backend/actions/runs/43881203049) **SUCCESS** at runtime SHA `ceded61c936009105b0607c022c02967e2645a6b`: PostgreSQL 18 migrations, PHPUnit **27 PASS / 233 assertions** including three DB-trigger failure-injection rollback/retry tests, Docker build and health smoke.
+
+**Browser reproducibility LIMITATION — NOT VERIFIED for this new commit:** Latest successful [Chromium #43876191068](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43876191068) exercised **old backend `0d2843ccb2df9c5df3629ce3f4ad0b56dfd44cea`**, not atomic code `ceded61c...`. This is confirmed by the frontend workflow at `.github/workflows/browser-e2e.yml`; Git compare demonstrates runtime files differ. Two attempts to update that workflow through the connected GitHub write interface were blocked; do not falsely claim a refreshed E2E pass. **Required:** update both pinned SHA occurrences (checkout ref and `git rev-parse` assertion) to `ceded61c936009105b0607c022c02967e2645a6b`, then run Chromium on disposable PostgreSQL and record exact frontend SHA and successful job logs.
+
+**Release blockers:** independent qualified human security review (**requested in PR conversation, not yet completed**); explicit owner approval of all **PROPOSED** MFA activation/rebind, roles/consolidation, operational key rotation/retention/logging and real hosting/session policies. The old PR #5 must not be merged over the latest docs. Issue #4 remains OPEN; P0-03 NOT STARTED.
+
+---
+
 ## Latest: P0-02 security review remediation — 2026-11-16
 
 **IN PROGRESS / DRAFT / NO MERGE.** Backend [Draft PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6) and frontend [Draft PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2) continue on existing `task/p0-02-auth-rbac` branches targeting `rebuild/erp-v2`. Source of truth for this task: [handoff](handoffs/P0-02.md) and [proposed security contract](AUTH_SECURITY_CONTRACT.md).
