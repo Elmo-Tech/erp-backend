@@ -47,4 +47,13 @@ final class CompanyController extends Controller
         }
         return response()->json(['authorized' => true, 'company_id' => $companyId, 'permission' => $area]);
     }
+
+    public function consolidationAccess(Request $request, CompanyAuthorization $access): JsonResponse
+    {
+        if (! $access->canViewConsolidation($request->user())) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+        // Authorization-only proof: no consolidated financial amounts exposed in P0-02.
+        return response()->json(['authorized' => true, 'permission' => 'consolidation.view']);
+    }
 }

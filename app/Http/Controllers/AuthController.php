@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Domain\Auth\MfaService;
 use App\Domain\Companies\CompanyAuthorization;
 use App\Models\User;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -18,17 +20,25 @@ final class AuthController extends Controller
     public function login(Request $request, MfaService $mfa): JsonResponse
     {
         $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
-        $key = 'erp-login:'.hash('sha256', Str::lower($data['email']).'|'.$request->ip());
-        if (RateLimiter::tooManyAttempts($key, 5)) {
+        $email = Str::lower($data['email']);
+        $ip = (string) $request->ip();
+        $ipKey = 'erp-login-ip:'.hash('sha256', $ip);
+        $accountKey = 'erp-login-account:'.hash('sha256', $email);
+        $pairKey = 'erp-login-pair:'.hash('sha256', $email.'|'.$ip);
+        if (RateLimiter::tooManyAttempts($ipKey, 20) ||
+            RateLimiter::tooManyAttempts($accountKey, 5) ||
+            RateLimiter::tooManyAttempts($pairKey, 5)) {
             return response()->json(['message' => 'Too many attempts. Try again later.'], 429);
         }
 
-        $user = User::query()->where('email', $data['email'])->first();
+        $user = User::query()->where('email', $email)->first();
         if (! $user || ! $user->is_active || ! Hash::check($data['password'], $user->password)) {
-            RateLimiter::hit($key, 60);
+            RateLimiter::hit($ipKey, 300);
+            RateLimiter::hit($accountKey, 300);
+            RateLimiter::hit($pairKey, 300);
             return response()->json(['message' => 'Invalid credentials.'], 422);
         }
-        RateLimiter::clear($key);
+        RateLimiter::clear($pairKey);
         Auth::guard('web')->logout();
         Auth::guard('sanctum')->forgetUser();
         $request->session()->invalidate();
@@ -51,6 +61,7 @@ final class AuthController extends Controller
         if (! $user) {
             return response()->json(['message' => 'Challenge expired.'], 401);
         }
+
         return response()->json(['status' => 'mfa_required', 'enrollment_required' => $user->mfa_secret === null]);
     }
 
@@ -63,40 +74,80 @@ final class AuthController extends Controller
         if ($user->mfa_secret !== null) {
             return response()->json(['message' => 'MFA already enrolled.'], 409);
         }
+        if (! $this->hasEnrollmentGrant($user)) {
+            return response()->json(['message' => 'Trusted activation required.'], 403);
+        }
+        $key = 'erp-enroll-start:'.$user->id;
+        if (RateLimiter::tooManyAttempts($key, 3)) {
+            return response()->json(['message' => 'Too many attempts. Try again later.'], 429);
+        }
+        RateLimiter::hit($key, 300);
+
         $secret = $mfa->makeSecret();
-        $request->session()->put('erp.enrollment_secret', $secret);
+        // The session may use Redis/DB with SESSION_ENCRYPT=false: encrypt this value independently.
+        $request->session()->put('erp.enrollment_secret', Crypt::encryptString($secret));
         return response()->json(['secret' => $secret, 'otpauth_uri' => $mfa->provisioningUri($user, $secret)]);
     }
 
     public function enrollConfirm(Request $request, MfaService $mfa): JsonResponse
     {
-        $data = $request->validate(['code' => ['required', 'regex:/^[0-9]{6}$/D']]);
         $user = $this->pendingUser($request);
-        $secret = $request->session()->get('erp.enrollment_secret');
-        if (! $user || ! is_string($secret) || $user->mfa_secret !== null) {
+        if (! $user) {
             return response()->json(['message' => 'Challenge expired.'], 401);
         }
-        if ($this->challengeLimited($request) || ($step = $mfa->matchingStep($secret, $data['code'])) === null) {
+        if ($this->mfaThrottled($request, $user)) {
+            return response()->json(['message' => 'Too many attempts. Try again later.'], 429);
+        }
+        $data = $request->validate(['code' => ['required', 'regex:/^[0-9]{6}$/D']]);
+        if (! $this->hasEnrollmentGrant($user) || $user->mfa_secret !== null) {
+            return response()->json(['message' => 'Trusted activation required.'], 403);
+        }
+        $encrypted = $request->session()->get('erp.enrollment_secret');
+        try {
+            $secret = is_string($encrypted) ? Crypt::decryptString($encrypted) : null;
+        } catch (DecryptException) {
+            $secret = null;
+        }
+        if (! is_string($secret)) {
+            return response()->json(['message' => 'Challenge expired.'], 401);
+        }
+        $step = $mfa->matchingStep($secret, $data['code']);
+        if ($step === null) {
+            $this->hitMfaLimiters($request, $user);
             return response()->json(['message' => 'Invalid verification code.'], 422);
         }
+        // Atomically consume the trusted activation authorization; never silently rebind an MFA factor.
+        $claimed = DB::table('user_mfa_enrollment_authorizations')
+            ->where('user_id', $user->id)->whereNull('consumed_at')
+            ->where('expires_at', '>', now())->update(['consumed_at' => now(), 'updated_at' => now()]);
+        if ($claimed !== 1) {
+            return response()->json(['message' => 'Trusted activation required.'], 403);
+        }
+
         $user->mfa_secret = $secret;
         $user->mfa_last_step = $step;
         $user->save();
         $codes = $mfa->issueRecoveryCodes($user);
+        $this->clearMfaLimiters($request, $user);
         $this->completeLogin($request, $user, true);
         return response()->json(['status' => 'authenticated', 'recovery_codes' => $codes]);
     }
 
     public function verify(Request $request, MfaService $mfa): JsonResponse
     {
-        $data = $request->validate(['code' => ['required', 'string', 'max:64']]);
         $user = $this->pendingUser($request);
         if (! $user || $user->mfa_secret === null) {
             return response()->json(['message' => 'Challenge expired.'], 401);
         }
-        if ($this->challengeLimited($request) || ! $mfa->verifyAndConsume($user, $data['code'])) {
+        if ($this->mfaThrottled($request, $user)) {
+            return response()->json(['message' => 'Too many attempts. Try again later.'], 429);
+        }
+        $data = $request->validate(['code' => ['required', 'string', 'max:64']]);
+        if (! $mfa->verifyAndConsume($user, $data['code'])) {
+            $this->hitMfaLimiters($request, $user);
             return response()->json(['message' => 'Invalid verification code.'], 422);
         }
+        $this->clearMfaLimiters($request, $user);
         $this->completeLogin($request, $user, true);
         return response()->json($this->identity($user, new CompanyAuthorization()));
     }
@@ -118,21 +169,49 @@ final class AuthController extends Controller
     private function pendingUser(Request $request): ?User
     {
         if ($request->session()->get('erp.pending_until', 0) < now()->timestamp) {
-            $request->session()->forget(['erp.pending_user', 'erp.enrollment_secret']);
+            $request->session()->forget(['erp.pending_user', 'erp.pending_until', 'erp.enrollment_secret']);
             return null;
         }
         $id = $request->session()->get('erp.pending_user');
         return $id ? User::query()->where('is_active', true)->find($id) : null;
     }
 
-    private function challengeLimited(Request $request): bool
+    private function hasEnrollmentGrant(User $user): bool
     {
-        $key = 'erp-mfa:'.hash('sha256', (string) $request->session()->get('erp.pending_user').'|'.$request->ip());
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            return true;
+        return DB::table('user_mfa_enrollment_authorizations')
+            ->where('user_id', $user->id)->whereNull('consumed_at')
+            ->where('expires_at', '>', now())->exists();
+    }
+
+    private function mfaKeys(Request $request, User $user): array
+    {
+        return [
+            'erp-mfa-account:'.$user->id,
+            'erp-mfa-ip:'.hash('sha256', (string) $request->ip()),
+            'erp-mfa-challenge:'.hash('sha256', $request->session()->getId()),
+        ];
+    }
+
+    private function mfaThrottled(Request $request, User $user): bool
+    {
+        [$account, $ip, $challenge] = $this->mfaKeys($request, $user);
+        return RateLimiter::tooManyAttempts($account, 5) ||
+            RateLimiter::tooManyAttempts($ip, 30) ||
+            RateLimiter::tooManyAttempts($challenge, 5);
+    }
+
+    private function hitMfaLimiters(Request $request, User $user): void
+    {
+        foreach ($this->mfaKeys($request, $user) as $key) {
+            RateLimiter::hit($key, 300);
         }
-        RateLimiter::hit($key, 300);
-        return false;
+    }
+
+    private function clearMfaLimiters(Request $request, User $user): void
+    {
+        [$account, , $challenge] = $this->mfaKeys($request, $user);
+        RateLimiter::clear($account);
+        RateLimiter::clear($challenge);
     }
 
     private function completeLogin(Request $request, User $user, bool $mfaVerified): void
@@ -143,13 +222,13 @@ final class AuthController extends Controller
         $request->session()->put('erp.mfa_verified', $mfaVerified);
     }
 
-    /** @return array<string, mixed> */
     private function identity(User $user, CompanyAuthorization $access): array
     {
         return [
             'user' => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email],
             'companies' => $access->companyList($user),
             'global_management' => $access->isCentralManager($user),
+            'consolidation_authorized' => $access->canViewConsolidation($user),
         ];
     }
 }

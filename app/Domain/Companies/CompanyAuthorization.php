@@ -6,8 +6,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Every request re-reads grants; project participation NEVER grants finance/payroll.
- * Role mapping is intentionally explicit and deny-by-default.
+ * Company membership and global role grants are separate authorization boundaries.
+ * No actual ledgers, payroll or consolidated values are returned by this module.
  */
 final class CompanyAuthorization
 {
@@ -23,29 +23,32 @@ final class CompanyAuthorization
 
     public function isCentralManager(User $user): bool
     {
-        return DB::table('global_role_assignments')
+        return $user->is_active && DB::table('global_role_assignments')
             ->where('user_id', $user->id)
             ->where('role_key', 'central_management')
             ->where('status', 'active')
             ->exists();
     }
 
-    /** @return list<string> */
+    public function canViewConsolidation(User $user): bool
+    {
+        return $this->isCentralManager($user) && DB::table('global_role_assignments')
+            ->where('user_id', $user->id)->where('role_key', 'consolidation_viewer')
+            ->where('status', 'active')->exists();
+    }
+
     public function accessibleCompanyIds(User $user): array
     {
         if (! $user->is_active) {
             return [];
         }
-
         if ($this->isCentralManager($user)) {
             return DB::table('companies')->where('status', 'active')->pluck('id')->all();
         }
-
         return DB::table('company_memberships as m')
             ->join('companies as c', 'c.id', '=', 'm.company_id')
             ->where('m.user_id', $user->id)
-            ->where('m.status', 'active')
-            ->where('c.status', 'active')
+            ->where('m.status', 'active')->where('c.status', 'active')
             ->pluck('c.id')->all();
     }
 
@@ -54,22 +57,17 @@ final class CompanyAuthorization
         return in_array($companyId, $this->accessibleCompanyIds($user), true);
     }
 
-    /** @return list<string> */
     public function permissions(User $user, string $companyId): array
     {
         if (! $this->canSelect($user, $companyId)) {
             return [];
         }
-
         $roles = DB::table('company_role_assignments as r')
             ->join('company_memberships as m', function ($join): void {
-                $join->on('m.id', '=', 'r.membership_id')
-                    ->on('m.company_id', '=', 'r.company_id');
+                $join->on('m.id', '=', 'r.membership_id')->on('m.company_id', '=', 'r.company_id');
             })
-            ->where('m.user_id', $user->id)
-            ->where('m.status', 'active')
-            ->where('r.company_id', $companyId)
-            ->pluck('r.role_key');
+            ->where('m.user_id', $user->id)->where('m.status', 'active')
+            ->where('r.company_id', $companyId)->pluck('r.role_key');
 
         $permissions = [];
         foreach ($roles as $role) {
@@ -77,12 +75,9 @@ final class CompanyAuthorization
                 $permissions[$permission] = true;
             }
         }
-
-        // Global management authorizes company overview/switching, not payroll or financial data.
         if ($this->isCentralManager($user)) {
             $permissions['company.view'] = true;
         }
-
         return array_keys($permissions);
     }
 
@@ -91,14 +86,12 @@ final class CompanyAuthorization
         return in_array($permission, $this->permissions($user, $companyId), true);
     }
 
-    /** @return list<array<string, mixed>> */
     public function companyList(User $user): array
     {
         $ids = $this->accessibleCompanyIds($user);
         if ($ids === []) {
             return [];
         }
-
         return DB::table('companies')->whereIn('id', $ids)->orderBy('code')
             ->get(['id', 'code', 'legal_name', 'country_code'])
             ->map(fn ($company): array => [
