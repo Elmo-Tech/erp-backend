@@ -44,3 +44,11 @@ The current baseline **does not yet implement** Auth/MFA/RBAC, immutable GL post
 ## Mandatory session handoff
 
 For every task, read [START_HERE.md](START_HERE.md), [WORK_PROTOCOL.md](WORK_PROTOCOL.md), the relevant [handoff](handoffs/P0-01.md) and both `AGENTS.md`. Record issue/PR/CI URLs, exact pass/fail outcomes, unresolved gates and precise next step. GitHub is authoritative over chat memory.
+
+## 2026-11-16 — P0-02 task intake
+
+- [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4) prepared for internal Sanctum login, MFA, server-side company-scoped RBAC and browser integration; **implementation NOT STARTED**.
+- Verified the Backend [PR #2](https://github.com/Elmo-Tech/erp-backend/pull/2) and documentation [PR #3](https://github.com/Elmo-Tech/erp-backend/pull/3) plus Frontend [PR #1](https://github.com/Elmo-Tech/erp-frontend/pull/1) are merged into `rebuild/erp-v2`.
+- Confirmed [Backend CI #43861153721](https://github.com/Elmo-Tech/erp-backend/actions/runs/43861153721) = **SUCCESS** on `89f862d044ef7b241426bc8eac8985bc22df96b6`; [Frontend CI #43860361496](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43860361496) = **SUCCESS** on `f3e74934c7b0547a531197fa5a67c61055945e7c`.
+- [P0-01 Issue #1](https://github.com/Elmo-Tech/erp-backend/issues/1) stays **OPEN** for a real browser SPA→API connection test, not replaced by CI evidence. P0-02 must include cookie/CORS/CSRF E2E and link evidence to #1.
+- **Next atomic action:** open a new chat `ERP V2 | P0-02 | Auth & RBAC`, read [handoffs/P0-02.md](handoffs/P0-02.md) and Issue #4, confirm current code/CI, create dedicated topic branch(es), then implement smallest tested Sanctum Login/Me/Logout slice. No production/main/oberation writes.

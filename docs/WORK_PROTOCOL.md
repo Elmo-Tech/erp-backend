@@ -57,6 +57,6 @@ A PR may be open while a task remains `IN PROGRESS`. PR merge does not equal pro
 Suggested chat name `ERP V2 | M01-01 | Lead Sources`; branch `task/m01-01-lead-sources`; handoff `docs/handoffs/M01-01.md`.
 See [HANDOFF_TEMPLATE.md](HANDOFF_TEMPLATE.md).
 
-## 7 — Current task
+## 7 — Current next task
 
-Start with https://github.com/Elmo-Tech/erp-backend/issues/1; status and tested facts live at [PROJECT_STATUS.md](PROJECT_STATUS.md) and [handoffs/P0-01.md](handoffs/P0-01.md).
+P0-02 Auth/MFA/company RBAC: [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4) and [handoff](handoffs/P0-02.md). P0-01 [Issue #1](https://github.com/Elmo-Tech/erp-backend/issues/1) remains open for the real browser SPA→API test. See [PROJECT_STATUS.md](PROJECT_STATUS.md).

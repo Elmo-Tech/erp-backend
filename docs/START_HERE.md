@@ -25,14 +25,11 @@
 
 **If documentation and live repository/CI disagree, investigate before coding, update the documentation, and log the discrepancy.** Do not assume previously described work is verified.
 
-## Current handoff / first new chat
+## Current next chat (2026-11-16)
 
-- Task: **P0-01 — Verify CI and build baseline**.
-- GitHub issue: https://github.com/Elmo-Tech/erp-backend/issues/1
-- Handoff: [handoffs/P0-01.md](handoffs/P0-01.md)
-- Suggested ChatGPT chat name: `ERP V2 | P0-01 | CI & Builds`.
-- Copy [NEW_CHAT_PROMPT.md](NEW_CHAT_PROMPT.md) into that chat.
-- Next task **P0-02 Auth/RBAC** must not be marked ready until CI baseline is verified, or its blocker is explicitly accepted and documented.
+- **P0-02 — Auth, MFA & company-scoped RBAC:** [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4); [handoff](handoffs/P0-02.md); proposed chat title `ERP V2 | P0-02 | Auth & RBAC`.
+- **P0-01** has merged code and passing CI, but [Issue #1](https://github.com/Elmo-Tech/erp-backend/issues/1) remains **OPEN** for real browser SPA→API connectivity. Never claim its E2E test passed; P0-02 must include auth/CORS/cookie browser testing and link evidence to #1.
+- Current task is **NOT STARTED** until implementation PRs exist. Use the new [P0-02 prompt](NEW_CHAT_PROMPT_P0-02.md).
 
 ## Rule for each new chat
 
