@@ -1,5 +1,19 @@
 # Architecture Decision Register — approved 2026-11-16
 
+## ADR-020 operational elaboration — 2026-11-16 (PROPOSED details; original approval unchanged)
+
+**The six security principles in ADR-020 remain APPROVED. This addition does not approve operational specifications, code, reviewers, merges or production release.** The following implementation-specific documents are prepared for owner decision and independent security inspection:
+
+- [Trusted MFA activation/recovery](security/P0-02_TRUSTED_MFA_ACTIVATION_AND_RECOVERY.md): assign four named roles (identity verifier, second independent approver, authorized issuer, auditor); approve independent verification channels and non-secret evidence/retention; define grant TTL and auditable issuance/reset/rebind. Existing grant row is NOT proof of independent human approval.
+- [Company RBAC matrix](security/P0-02_COMPANY_RBAC_MATRIX.md): source-derived mapping (notably `company_manager` own-company `finance.view`), company isolation and strictly separate global `central_management` + `consolidation_viewer` for future report authorization. No financial aggregation is implemented.
+- [Key/session/audit operational runbooks](security/P0-02_SECURITY_OPERATIONS_RUNBOOKS.md): custom recovery-code HMAC currently uses `APP_KEY`; key rotation must preserve or consciously reissue digests, **not** simply assume encrypted-cast old-key support. Production origins/timeouts, all-device session invalidation, audit/event retention and owner roles remain undecided.
+- [Security review checklist](security/P0-02_SECURITY_REVIEW_CHECKLIST.md): SEC-01..SEC-08 source observations, separate human reviewer, code/findings evidence and independent verdict required.
+
+**Decision gates OPEN:** precise role matrix; names/identity verification/second authorization; auditable recovery and forced-session revocation implementation; key custody/rotation/backups; approved production cookie/sessions/CORS; audit/retention; qualified independent reviewer. No new approved ADR or implicit technical authorization is recorded by these proposals.
+
+---
+
+
 This reflects explicit business-owner approval to start the ERP V2 rebuild.
 
 | ADR | Decision |
