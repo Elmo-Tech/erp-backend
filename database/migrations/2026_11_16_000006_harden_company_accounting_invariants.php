@@ -71,7 +71,7 @@ return new class extends Migration {
         // PostgreSQL CHECK cannot query a parent row. Triggers protect cross-row date
         // containment, including updates to the parent after children already exist.
         DB::unprepared(<<<'SQL'
-CREATE FUNCTION p003_validate_period_dates() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION p003_validate_period_dates() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE fiscal_start date; fiscal_end date;
 BEGIN
     SELECT starts_on, ends_on INTO fiscal_start, fiscal_end
@@ -86,7 +86,7 @@ SQL);
         DB::statement('CREATE TRIGGER p003_period_dates_trg BEFORE INSERT OR UPDATE OF company_id, fiscal_year_id, starts_on, ends_on ON accounting_periods FOR EACH ROW EXECUTE FUNCTION p003_validate_period_dates()');
 
         DB::unprepared(<<<'SQL'
-CREATE FUNCTION p003_validate_journal_date() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION p003_validate_journal_date() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE period_start date; period_end date;
 BEGIN
     SELECT starts_on, ends_on INTO period_start, period_end
@@ -101,7 +101,7 @@ SQL);
         DB::statement('CREATE TRIGGER p003_journal_date_trg BEFORE INSERT OR UPDATE OF company_id, period_id, entry_date ON journal_entries FOR EACH ROW EXECUTE FUNCTION p003_validate_journal_date()');
 
         DB::unprepared(<<<'SQL'
-CREATE FUNCTION p003_guard_fiscal_dates() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION p003_guard_fiscal_dates() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM accounting_periods p WHERE p.fiscal_year_id = OLD.id
@@ -116,7 +116,7 @@ SQL);
         DB::statement('CREATE TRIGGER p003_guard_fiscal_trg BEFORE UPDATE OF company_id, starts_on, ends_on ON fiscal_years FOR EACH ROW EXECUTE FUNCTION p003_guard_fiscal_dates()');
 
         DB::unprepared(<<<'SQL'
-CREATE FUNCTION p003_guard_period_dates() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION p003_guard_period_dates() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM journal_entries j WHERE j.period_id = OLD.id
