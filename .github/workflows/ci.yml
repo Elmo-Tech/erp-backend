@@ -66,12 +66,13 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y pgbouncer
+          sudo systemctl stop pgbouncer || true
           cat > /tmp/p003b-pgbouncer.ini <<'EOF'
           [databases]
           elmo_erp_test = host=127.0.0.1 port=5432 dbname=elmo_erp_test user=elmo password=test-only
           [pgbouncer]
           listen_addr = 127.0.0.1
-          listen_port = 6432
+          listen_port = 16432
           auth_type = trust
           auth_file = /tmp/p003b-auth.txt
           admin_users = elmo
@@ -85,18 +86,18 @@ jobs:
           pgbouncer /tmp/p003b-pgbouncer.ini > /tmp/p003b-pgbouncer.log 2>&1 &
           sleep 2
           cat /tmp/p003b-pgbouncer.log
-          PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 6432 -U elmo pgbouncer -Atc 'SHOW CONFIG' | grep -E '^pool_mode[|]transaction[|]'
+          PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 16432 -U elmo pgbouncer -Atc 'SHOW CONFIG' | grep -E '^pool_mode[|]transaction[|]'
       - name: Run authenticated-context tests through actual PgBouncer
         env:
-          DB_PORT: '6432'
+          DB_PORT: '16432'
         run: php artisan test --no-ansi tests/P003B/P003AuthenticatedContextTest.php
       - name: Verify two parallel clients through real transaction pool
         env:
-          DB_PORT: '6432'
+          DB_PORT: '16432'
         run: php tests/integration/p003_pool_clients.php
       - name: Run five jobs inside one reused Laravel queue worker through PgBouncer
         env:
-          DB_PORT: '6432'
+          DB_PORT: '16432'
           QUEUE_CONNECTION: database
           P003_EVIDENCE_FILE: /tmp/p003b-queue-evidence.jsonl
         run: |

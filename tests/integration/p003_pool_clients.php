@@ -5,7 +5,7 @@ declare(strict_types=1);
 // P0-03B: actual two-client / transaction-pooling concurrency smoke.
 // No SQL writes, no live DB, no claim of Laravel HTTP concurrency acceptance.
 if (getenv('APP_ENV') !== 'testing' || getenv('DB_DATABASE') !== 'elmo_erp_test'
-    || getenv('DB_PORT') !== '6432') {
+    || getenv('DB_PORT') !== '16432') {
     fwrite(STDERR, "REFUSED: actual PgBouncer disposable environment required.\n");
     exit(2);
 }
@@ -20,7 +20,7 @@ foreach ([$eg,$it] as $tenant) {
     if ($pid===-1) {throw new RuntimeException('Unable to fork pooled client');}
     if ($pid===0) {
         try {
-            $pdo=new PDO('pgsql:host=127.0.0.1;port=6432;dbname=elmo_erp_test',
+            $pdo=new PDO('pgsql:host=127.0.0.1;port=16432;dbname=elmo_erp_test',
                 getenv('DB_USERNAME')?:'elmo',getenv('DB_PASSWORD')?:'',[
                     PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_EMULATE_PREPARES=>true,
