@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AuthorizedCompanyReadController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Middleware\EnsureActiveErpSession;
 use App\Http\Middleware\NoStoreSensitiveResponses;
@@ -27,6 +28,7 @@ Route::middleware([NoStoreSensitiveResponses::class])->group(function (): void {
         Route::get('/companies', [CompanyController::class, 'index']);
         Route::post('/companies/switch', [CompanyController::class, 'switch']);
         Route::get('/companies/context', [CompanyController::class, 'context']);
+        Route::get('/companies/authorized-read', [AuthorizedCompanyReadController::class, 'show']);
         Route::get('/companies/authorize/{area}', [CompanyController::class, 'authorizeArea']);
         Route::get('/companies/consolidation/access', [CompanyController::class, 'consolidationAccess']);
     });

@@ -62,6 +62,41 @@ jobs:
         run: PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_DATABASE" -f database/security/p003_rls_pilot.sql
       - name: Verify two PostgreSQL sessions, company context and exclusion races
         run: php tests/integration/p003_concurrency.php
+      - name: Start real PgBouncer in transaction pooling mode (disposable only)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y pgbouncer
+          cat > /tmp/p003b-pgbouncer.ini <<'EOF'
+          [databases]
+          elmo_erp_test = host=127.0.0.1 port=5432 dbname=elmo_erp_test user=elmo password=test-only
+          [pgbouncer]
+          listen_addr = 127.0.0.1
+          listen_port = 6432
+          auth_type = trust
+          auth_file = /tmp/p003b-auth.txt
+          admin_users = elmo
+          pool_mode = transaction
+          default_pool_size = 2
+          max_client_conn = 100
+          server_reset_query = DISCARD ALL
+          EOF
+          printf '"elmo" "test-only"\\n' > /tmp/p003b-auth.txt
+          pgbouncer -d /tmp/p003b-pgbouncer.ini
+          PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 6432 -U elmo pgbouncer -Atc 'SHOW CONFIG' | grep -E '^pool_mode[|]transaction[|]'
+      - name: Run authenticated-context tests through actual PgBouncer
+        env:
+          DB_PORT: '6432'
+        run: php artisan test --no-ansi --filter=P003AuthenticatedContextTest
+      - name: Run five jobs inside one reused Laravel queue worker through PgBouncer
+        env:
+          DB_PORT: '6432'
+          QUEUE_CONNECTION: database
+          P003_EVIDENCE_FILE: /tmp/p003b-queue-evidence.jsonl
+        run: |
+          rm -f /tmp/p003b-queue-evidence.jsonl
+          php tests/integration/p003_queue_seed.php
+          php artisan queue:work database --queue=p003b --stop-when-empty --tries=1 --sleep=1 --timeout=30 --max-time=120
+          php tests/integration/p003_queue_assert.php
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health
