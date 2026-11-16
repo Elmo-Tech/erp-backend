@@ -1,5 +1,16 @@
 # Project Status — Source of Truth
 
+## Latest verified — P0-02 atomic MFA browser integration (2026-11-16)
+
+**In progress; no merge/deployment, no security policy approval.** This is the latest status; older E2E blocks below describe historical states.
+
+- **Atomic MFA code verified:** backend `ceded61c936009105b0607c022c02967e2645a6b` — [PostgreSQL 18 + 27 PHPUnit tests / 233 assertions + Docker CI #43881203049](https://github.com/Elmo-Tech/erp-backend/actions/runs/43881203049) **SUCCESS**. Backend documentation-only HEAD before this update: `2b663033e7a5fb4db4e953635ff04e8b89dd38d3`; [post-doc CI #43882194690](https://github.com/Elmo-Tech/erp-backend/actions/runs/43882194690) **SUCCESS**.
+- **Browser pin updated and tested:** frontend `.github/workflows/browser-e2e.yml` now pins **both** checkout `ref` and `git rev-parse HEAD` assertion to `ceded61c936009105b0607c022c02967e2645a6b`. Change commit: [`85141d4dab62ff13f778971fa7fd2beb28ac2de3`](https://github.com/Elmo-Tech/erp-frontend/commit/85141d4dab62ff13f778971fa7fd2beb28ac2de3).
+- **Real Chromium E2E against atomic code:** [Frontend browser run #43884430301](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43884430301) **SUCCESS** at frontend `85141d4dab62ff13f778971fa7fd2beb28ac2de3`; GitHub job step `Verify immutable backend revision` **SUCCESS**, `Run real Chromium origin, CSRF, login, authorization and logout checks` **SUCCESS**. Synthetic localhost origins and disposable PostgreSQL only; NOT a production audit.
+- **Frontend pipeline:** [CI #43884430300](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43884430300) **SUCCESS** at same frontend SHA.
+- **Still BLOCKED for acceptance:** independent qualified human security review has not been completed or assigned; owner policy approvals (trusted enrollment operators/identity verification, recovery/rebind, company roles and central consolidation, key rotation, production cookie/sessions) are **PROPOSED**. Backend PR #6, frontend PR #2, old intake docs PR #5 remain Draft/unmerged. No permission to merge, deploy or start P0-03. [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4) stays OPEN.
+- **Next precise action:** obtain owner policy decisions and assign a qualified independent human security reviewer to inspect current backend+frontend PR diffs, then resolve findings and request separate explicit merge approval.
+
 ## Latest verification — P0-02 atomic MFA enrollment follow-up (2026-11-16)
 
 **State:** IN PROGRESS / security sign-off requested / not approved / no merge or deployment. Latest runtime code commit: `ceded61c936009105b0607c022c02967e2645a6b` on backend `task/p0-02-auth-rbac` ([Draft PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6)); frontend [Draft PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2) unchanged. Stale documentation [Draft PR #5](https://github.com/Elmo-Tech/erp-backend/pull/5) remains unmerged and must not overwrite new handoff/status.
@@ -8,7 +19,7 @@
 
 **Backend evidence:** [CI #43881203049](https://github.com/Elmo-Tech/erp-backend/actions/runs/43881203049) **SUCCESS** at runtime SHA `ceded61c936009105b0607c022c02967e2645a6b`: PostgreSQL 18 migrations, PHPUnit **27 PASS / 233 assertions** including three DB-trigger failure-injection rollback/retry tests, Docker build and health smoke.
 
-**Browser reproducibility LIMITATION — NOT VERIFIED for this new commit:** Latest successful [Chromium #43876191068](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43876191068) exercised **old backend `0d2843ccb2df9c5df3629ce3f4ad0b56dfd44cea`**, not atomic code `ceded61c...`. This is confirmed by the frontend workflow at `.github/workflows/browser-e2e.yml`; Git compare demonstrates runtime files differ. Two attempts to update that workflow through the connected GitHub write interface were blocked; do not falsely claim a refreshed E2E pass. **Required:** update both pinned SHA occurrences (checkout ref and `git rev-parse` assertion) to `ceded61c936009105b0607c022c02967e2645a6b`, then run Chromium on disposable PostgreSQL and record exact frontend SHA and successful job logs.
+**Historical browser gap (closed by later run #43884430301):** Earlier successful Chromium #43876191068 had tested backend `0d2843c...`, not the atomic code. Frontend workflow pin was subsequently updated on `85141d4`; [Chromium #43884430301](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43884430301) now **PASS** on immutable atomic backend `ceded61c936009105b0607c022c02967e2645a6b`. Do not treat the old blocker as current.
 
 **Release blockers:** independent qualified human security review (**requested in PR conversation, not yet completed**); explicit owner approval of all **PROPOSED** MFA activation/rebind, roles/consolidation, operational key rotation/retention/logging and real hosting/session policies. The old PR #5 must not be merged over the latest docs. Issue #4 remains OPEN; P0-03 NOT STARTED.
 
