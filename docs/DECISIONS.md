@@ -23,6 +23,14 @@
 
 ## ADR-022 — PostgreSQL company isolation and optional RLS context (PROPOSED; 2026-11-16)
 
+### Current evidence / P0-03D decision gate (2026-11-16)
+
+**Status remains PROPOSED — NO RLS ACTIVATION OR PRODUCTION ACCEPTANCE.** [CI #43932289785](https://github.com/Elmo-Tech/erp-backend/actions/runs/43932289785) **FULL SUCCESS** at `0ae9e61b0407bb336703b5c01ab34b1363be1310`: disposable non-owner DB role, PgBouncer, active-transaction revocation, EG/IT parallel HTTP, reused queue worker, PostgreSQL migrations, PHPUnit, Docker/health. [CI #43931902210](https://github.com/Elmo-Tech/erp-backend/actions/runs/43931902210) previously FULL SUCCESS at code commit `3ec9796`. Later docs-only HEADs need independently verified CI.
+
+**Unresolved threat:** any actor able to execute SQL as the shared runtime credential can write custom `app.company_id` and defeat GUC-only RLS before an application end-of-transaction check. `NOBYPASSRLS` alone does not repair that trust boundary. Also `SELECT ... FOR UPDATE` currently relies on explicitly granted `UPDATE(updated_at)` for four auth/company tables, a real writable permission; audit full production GRANT/default privilege/owner/MFA/session/queue footprints. Independent security review **NOT COMPLETED**.
+
+**P0-03D design decision required (not approved here):** document attacker capabilities, effective DB authentication principal, tenant identity provenance, how tenant context can or cannot be forged, fail-closed SQL write/read tests, alternative architectures, pool/worker handling and migration rollback. Treat RLS as OPTIONAL defence in depth unless a genuinely trusted DB-side mechanism is independently demonstrated. No permanent policy, runtime production credentials, merge or deployment is authorized.
+
 ### P0-03C evidence amendment — PROPOSED; no RLS activation (2026-11-16)
 
 A separate **LOGIN** `p003c_runtime` database principal is proposed and created **only inside disposable CI** following migrations by `elmo` owner. CI test script prohibits superuser, createdb, createrole, inheritance, bypassrls, schema creation, owner membership, financial table SELECT and membership writes. Grant scope remains an explicitly reviewed allowlist, including auth/company lookup SELECT and session/queue DML. This is narrower than the prior exploratory NOLOGIN probe (which is NOT the application's executable credential). Its CI-only password is synthetic and must never become a deployment credential; future privileged provisioning and rotation need separate approval.
