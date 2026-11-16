@@ -65,7 +65,7 @@ return [
     |
     */
 
-    'timezone' => 'Africa/Cairo',
+    'timezone' => 'UTC',
 
     /*
     |--------------------------------------------------------------------------
@@ -83,10 +83,6 @@ return [
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
-
-    'frontend_url' => env('FRONTEND_URL', 'https://elmo-erp.elmotechsoft.online'),
-
-    'auth_cookie_domain' => env('AUTH_COOKIE_DOMAIN', env('SESSION_DOMAIN')),
 
     /*
     |--------------------------------------------------------------------------
@@ -118,7 +114,7 @@ return [
     | manage Laravel's "maintenance mode" status. The "cache" driver will
     | allow maintenance mode to be controlled across multiple machines.
     |
-    | Supported drivers: "file", "cache"
+    | Supported drivers: "file", "cache", "array"
     |
     */
 

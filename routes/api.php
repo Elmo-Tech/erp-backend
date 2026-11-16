@@ -1,13 +1,12 @@
 <?php
 
-use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
-Broadcast::routes(['middleware' => ['auth:sanctum']]);
+// Public operational probe only. Never expose secrets or database connection data.
+Route::get('/health', fn () => response()->json([
+    'status' => 'ok',
+    'service' => 'elmo-erp-api',
+    'version' => 'v2-foundation',
+]));
+// Protected company and accounting endpoints are intentionally NOT exposed yet.
 
-Route::prefix('v1')->group(function () {
-    // Health check endpoint
-    Route::get('/health', function () {
-        return response()->json(['status' => 'ok', 'timestamp' => now()]);
-    })->name('api.v1.health');
-});
