@@ -1,13 +1,22 @@
 # P0-02 — Internal Auth / MFA / Company Permissions Contract
 
-**Task:** [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4). **Status:** implementation under review; granular permission matrix **PROPOSED pending owner security-policy approval**. P0-01 Issue #1 remains open pending acceptance of branch-based browser E2E evidence, not because browser CI is missing.
+**Task:** [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4). **Status:** owner-approved security **PRINCIPLES** in [ADR-020](DECISIONS.md); detailed role/permission matrix and operational implementation remain **PROPOSED**, independent security review pending. P0-01 Issue #1 remains open pending acceptance of branch-based browser E2E evidence, not because browser CI is missing.
 
+## Owner-approved policy baseline — ADR-020 (2026-11-16)
+
+**APPROVED PRINCIPLES:** privileged MFA for central/company management, Finance, HR and external accountants; first enrollment requires identity-verified trusted operator authorization and independent approval; lost-device recovery prioritizes single-use codes, otherwise verified admin plus independent approval and revocation/audit; Egypt/Italy separate finance/payroll grants; central overview does not imply detail access; `consolidation_viewer` explicitly gates future summary reports; safe key lifecycle and first-party HTTPS/CSRF/cookie/CORS/session safeguards.
+
+**STILL PROPOSED / OPEN:** named operator/approver, documented identity check and reset implementation, exact role-to-permission matrix, audit/retention, key custody and rotation procedures, staging/production hostnames/session durations, qualified human security review, and separate merge/deployment approvals. No unaudited production changes or actual consolidated figures are authorized.
+
+**Latest verified browser evidence:** [Chromium #43885394390](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43885394390) SUCCESS, frontend `8012bdf226c247c7350b851b11601135903a55a4`, immutably pinned atomic backend code `ceded61c936009105b0607c022c02967e2645a6b`. [Backend CI #43881203049](https://github.com/Elmo-Tech/erp-backend/actions/runs/43881203049) PASS (27 tests/233 assertions). Previous `NOT VERIFIED` browser warning near the bottom of this document is **historical and superseded**.
+
+---
 ## Session / trust boundary
 - Internal first-party Sanctum SPA cookie sessions only (Laravel web guard, `auth:sanctum` with stateful SPA middleware). No browser bearer/localStorage tokens.
 - Call `GET /sanctum/csrf-cookie` before state-changing requests and send cookie credentials plus `X-XSRF-TOKEN`; environment-specific exact SPA origins are an allowlist, never `*`.
 - Use a common site/domain for SPA/API; localhost ports 5173/8000 are test-only. Cross-site hosting requires separately reviewed `SameSite=None; Secure` and a compatible HTTPS cookie-domain policy.
 - `POST /api/v1/auth/login`: generic bad-credential response, IP+email limiter, regenerate session. Returns 200 authenticated user or 202 pending MFA; no account password recovery/registration in this task.
-- `GET /api/v1/auth/mfa/status`, `POST /api/v1/auth/mfa/enroll/start`, `POST /api/v1/auth/mfa/enroll/confirm`, `POST /api/v1/auth/mfa/verify`: password-verified pending challenge for at most five minutes. MFA challenge must finish BEFORE authenticated session. TOTP six digits / 30 seconds / ±one step, consumed monotonically; eight hashed single-use recovery codes shown once. Privileged enrollment has **no access bypass**. Initial password-only enrollment ownership policy remains **PROPOSED** (approval required before production).
+- `GET /api/v1/auth/mfa/status`, `POST /api/v1/auth/mfa/enroll/start`, `POST /api/v1/auth/mfa/enroll/confirm`, `POST /api/v1/auth/mfa/verify`: password-verified pending challenge for at most five minutes. MFA challenge must finish BEFORE authenticated session. TOTP six digits / 30 seconds / ±one step, consumed monotonically; eight hashed single-use recovery codes shown once. Privileged enrollment has **no access bypass**. Password-only initial enrollment is forbidden by approved ADR-020; exact trusted-operator identity-verification/approval procedures are still **PROPOSED** pending specification.
 - `GET /api/v1/auth/me`, `POST /api/v1/auth/logout`: must have authenticated and active session; invalidated on logout; server-enforced session idle lifetime.
 - `GET /api/v1/companies`, `POST /api/v1/companies/switch` (body `company_id` UUID), `GET /api/v1/companies/context`, `GET /api/v1/companies/authorize/{area}` (authorization-only probe, no business data).
 - Company context exists **only** in the server session and must be revalidated on every request; client headers, URLs and body values cannot switch company implicitly. Revocation immediately denies company access. Existing session forced to reauthenticate if privileged MFA was not completed.
@@ -41,7 +50,7 @@
 - Browser E2E verified in isolated GitHub Actions with Chromium, Vite localhost:5173, Laravel localhost:8000, PostgreSQL 18 and untrusted localhost:5999 origin: **PASS** https://github.com/Elmo-Tech/erp-frontend/actions/runs/43868982519.
 - Frontend typecheck/Vitest/build/Docker CI **PASS** https://github.com/Elmo-Tech/erp-frontend/actions/runs/43868982516.
 - Backend authentication, migration, company negative tests and Docker **PASS** https://github.com/Elmo-Tech/erp-backend/actions/runs/43868872071; latest security remediation passed PostgreSQL 18 and 24 PHPUnit tests / 178 assertions, see run #43874999124.
-- The MFA bootstrap/enrollment policy and role matrix remain **PROPOSED**. No reviewed policy approval, no production browser or real organization account tests.
+- The owner approved MFA/bootstrap and company-isolation principles in ADR-020; exact operational recovery/enrollment process and detailed role matrix remain **PROPOSED**. No reviewed policy approval, no production browser or real organization account tests.
 
 ## Post-review security implementation (PROPOSED, not approved rollout policy)
 
@@ -67,4 +76,4 @@ Review [PR #6 finding #6918381867](https://github.com/Elmo-Tech/erp-backend/pull
 
 **Browser SHA warning:** The previously successful [Chromium #43876191068](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43876191068) checks out immutable backend `0d2843ccb2df9c5df3629ce3f4ad0b56dfd44cea`, which predates atomic commits. To validate current code, update both frontend E2E workflow SHA occurrences to `ceded61c936009105b0607c022c02967e2645a6b`, then run CI and record the result. This update was blocked by the connected GitHub write tool at handoff, so E2E for new code is **NOT VERIFIED**.
 
-All first-activation issuance, recovery/rebind, RBAC/consolidation, key rotation and staging/prod security controls remain **PROPOSED** pending owner and independent reviewer approval; no merge or release authorized.
+ADR-020 approves the high-level first-activation, recovery, RBAC/consolidation, key lifecycle and session-security principles; exact execution procedures and production configuration remain **PROPOSED** pending independent review and separate deployment approval; no merge or release authorized.

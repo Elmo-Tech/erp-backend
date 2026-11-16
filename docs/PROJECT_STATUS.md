@@ -1,5 +1,17 @@
 # Project Status — Source of Truth
 
+## Current decision — ADR-020 owner-approved policy principles (2026-11-16)
+
+**P0-02 IN PROGRESS; code/CI/browser verification PASS; policy principles approved; human review and deployment specifications OPEN. No PR merge/deploy/P0-03.**
+
+- Owner explicitly approved the recommended MFA, trusted activation/identity verification, recovery/rebind, company RBAC and consolidated-report isolation, encryption key management and first-party session/HTTPS/CSRF/CORS **principles**. See [ADR-020](DECISIONS.md) and [security contract](AUTH_SECURITY_CONTRACT.md).
+- Operational details **not** approved by this message: named issuer and independent approver, identity-check evidence, reset implementation, exact role-permission matrix, key-rotation/backup procedure, production origins and idle/absolute timeouts. Independent qualified human security review has not been assigned/completed.
+- Verified at current previous code heads: [Backend CI #43885210439](https://github.com/Elmo-Tech/erp-backend/actions/runs/43885210439) SUCCESS (prior docs), [Frontend CI #43885394399](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43885394399) SUCCESS, [real Chromium #43885394390](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43885394390) SUCCESS with pinned atomic backend `ceded61c936009105b0607c022c02967e2645a6b`. This *documentation-only* ADR change will trigger its own CI; report result separately.
+- **Next atomic action:** nominate a qualified independent reviewer for [Backend Draft PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6) and [Frontend Draft PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2), document exact operating procedures for approval, reconcile stale Draft PR #5; then seek **separate explicit merge approval**. [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4) stays OPEN.
+
+**Historical note:** older text below saying "owner policy approvals NOT APPROVED" was written before ADR-020 and is superseded for principles only. CI/review/production gates are unchanged.
+
+---
 ## Latest verified — P0-02 atomic MFA browser integration (2026-11-16)
 
 **In progress; no merge/deployment, no security policy approval.** This is the latest status; older E2E blocks below describe historical states.

@@ -23,7 +23,40 @@ This reflects explicit business-owner approval to start the ERP V2 rebuild.
 | 017 | Tailwind 4, shadcn/ui, TanStack Query/Router, React Hook Form/Zod for eventual frontend design system |
 | 018 | Phase 0 foundation then lead-to-cash, execution/HR, SaaS/support, full accounting/payroll/analytics |
 | 019 | **Approved 2026-11-16:** GitHub-first cross-chat continuity: one ChatGPT chat per tracked Issue/task, dedicated topic branches and PRs, mandatory status/decision/handoff files and test evidence. See `docs/WORK_PROTOCOL.md`. |
+| 020 | **Approved 2026-11-16 (POLICY PRINCIPLES ONLY):** privileged MFA, trusted first activation, audited/two-person lost-device recovery, company RBAC/consolidation isolation, protected key lifecycle, HTTPS/session security. Exact operations/security review/merges and deployments remain separately gated. |
 
+## ADR-020 — Owner-approved P0-02 security policy principles (2026-11-16)
+
+**Status: APPROVED — policy principles ONLY.** The ERP owner explicitly replied "اعتمدتها" to the proposed MFA, recovery, RBAC, cryptography and session-security principles. This is **NOT** approval of a specific operator, exact role-permission matrix, infrastructure/production parameters, completed human security review, PR merge, release, deployment or migration of real accounts.
+
+### Approved requirements
+
+1. **Mandatory MFA:** require TOTP/MFA for `central_management`, `company_manager` (Egypt/Italy), `finance`, `hr`, and `external_accountant` users; no privileged bypass. Once enrolled, MFA cannot silently be disabled to avoid step-up.
+2. **Trusted first activation:** password alone cannot register an initial privileged factor. A designated, accountable trusted operator must verify identity and issue a time-limited, single-use, auditable and revocable authorization after independent authorization/approval. No public grant-issuance API.
+3. **Account recovery/rebinding:** prioritize valid single-use recovery codes. Lost device with no code requires verified identity, a trusted administrator and a second independent approval, followed by invalidation of old MFA factors/codes/sessions as appropriate, audit entry and user notification. No self-service bypass or undocumented emergency reset.
+4. **Egypt / Italy and consolidated RBAC:** separate legal-company membership and financial/payroll permissions. Managers and external accountants remain scoped to their company, with external accountants denied payroll. Global `central_management` may view/select both companies but has **no implied raw finance/payroll access**. Future consolidated-report permission requires an additional explicit `consolidation_viewer` global grant; detailed financial data still needs company-specific authorization. The actual consolidated report computation is outside P0-02.
+5. **Encryption key management:** protect encryption keys in approved secret storage, maintain secure recoverable backups, document old-key compatibility, audited/staged rotation/re-encryption, recovery/restore testing and rollback before production. **No APP_KEY change/rotation is authorized by this decision.**
+6. **Session/security baseline:** first-party Sanctum cookie sessions, CSRF, HTTPS and Secure/HttpOnly cookie attributes as appropriate, a restricted CORS origin allowlist, explicit server-enforced session expiry/revocation and sensitive-response no-store controls. The browser is never the authorization source of truth.
+
+### Still OPEN — requires detailed specification, implementation or separate approval
+
+- Named operator and independent approver, identity evidence requirements, issuance/revocation UI or operator procedure, audit/retention and incident/lockout runbooks.
+- Exact recovery/rebind administrative implementation, approval evidence, factor invalidation and notification channels.
+- Precise per-role/grant permission matrix and consolidated report fields/data classes (the granular matrix in `AUTH_SECURITY_CONTRACT.md` is still **PROPOSED** until separately reviewed).
+- Key custody architecture, backups/restore drill, rotation schedule, dual-key strategy and monitoring (no production rotation now).
+- Exact staging/production hostnames/CORS/cookie domains, SameSite/Secure handling, session idle/absolute timeout, account provisioning and rate-limit lockout response.
+- **Independent qualified human security reviewer**, fixes and sign-off of the backend/frontend diffs. Passing CI is evidence, not a human review.
+- **Separate explicit owner authorization** for PR merging and, later, for staging/production deployment. Issue #4 remains OPEN and all related PRs remain Draft until gates are closed.
+
+### Evidence/status at time of approval
+
+- Backend atomic code `ceded61c936009105b0607c022c02967e2645a6b` validated by [CI #43881203049](https://github.com/Elmo-Tech/erp-backend/actions/runs/43881203049): PostgreSQL 18, 27 PHPUnit tests / 233 assertions, Docker.
+- Frontend browser flow and immutable backend pin validated by [Chromium #43885394390](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43885394390) and [Frontend CI #43885394399](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43885394399).
+- Backend documentation head before this decision: `df24ef918e535e37e15a42d749cfd894ab847144`; [CI #43885210439](https://github.com/Elmo-Tech/erp-backend/actions/runs/43885210439) PASS.
+
+**Supersession rule:** Previous P0-02 `ALL PROPOSED / NONE APPROVED` passages below are historical drafts. They do **not** override this decision. Their unchecked boxes indicate operational/review work still outstanding, **not** rejection of these approved principles.
+
+---
 ## Legal / accountant gates not waived
 - Egypt and Italy accountants must verify chart of accounts, legal invoice schema, tax codes, FX gains/losses, intercompany reconciliation, payroll, insurance and record retention.
 - Official submission and statutory filings are intentionally outside the application initially.
@@ -33,14 +66,14 @@ This reflects explicit business-owner approval to start the ERP V2 rebuild.
 ## Open implementation decisions
 FX rate provider and staleness policy; allowed production/staging origins for SPA auth; object storage and retention; backup RPO/RTO; migration of historic V1 data and accounting opening balances.
 
-## P0-02 security implementation proposals — NOT APPROVED (2026-11-16)
+## P0-02 earlier implementation proposals — HISTORICAL; see approved ADR-020 (2026-11-16)
 
 The existing approved ADR-005 company-scoped RBAC and ADR-006 first-party Sanctum cookie/MFA remain binding. Implementation details below are **PROPOSED**, not a new approved ADR:
 - Granular role/permission matrix and global management limited to company overview until explicit company finance/payroll membership is granted (see `AUTH_SECURITY_CONTRACT.md`).
 - First privileged login uses password-verified, five-minute MFA enrollment with TOTP/recovery codes. Production bootstrap/recovery and administrator reset procedure require explicit security-owner signoff before rollout.
 - Dev SPA and API origins localhost:5173 and localhost:8000 are isolated CI/test values only. Production origins, domains and cookie settings are still NOT APPROVED.
 
-## P0-02 independent security-review response — **PROPOSED, NOT APPROVED** (2026-11-16)
+## P0-02 earlier security-review response — HISTORICAL PROPOSALS (2026-11-16)
 
 These are implementation candidates in draft PR #6/#2 and **not** approved business/security policy. The user must explicitly approve the final decisions before P0-02 is merged:
 
@@ -51,11 +84,11 @@ These are implementation candidates in draft PR #6/#2 and **not** approved busin
 5. **Data protection:** Laravel `encrypted` cast stores TOTP secrets encrypted under the application encryption key; `mfa_secret`, `mfa_last_step` are hidden from model serialization. Temporary enrollment seed is individually `Crypt::encryptString`-encrypted in sessions regardless of `SESSION_ENCRYPT`. `/enroll/start` intentionally returns the seed **once per start** so the user's authenticator can be configured; no-store response required. Recovery codes are HMAC-digested at rest and shown once on confirmation. **Key rotation** requires an approved backup/restore and dual-key compatibility plan with a staged re-encryption and fail-safe rollback; changing `APP_KEY` without this could make existing MFA secrets unrecoverable. Do not rotate production keys as part of this PR.
 6. **Brute-force controls:** login per-IP (20/5 min), per-account and per IP/account pair (5/5 min). MFA invalid attempt per-account and per-session (5/5 min), per-IP (30/5 min), with start-enrollment throttled at 3/5 min. Cache-store persistence and operational response to intentionally locked accounts need a production review.
 
-This appendix records **PROPOSED** choices and code status, not a new approved ADR. No real-user enrollment or production rollout is authorized.
+This historical appendix predates ADR-020. Its underlying high-level principles were subsequently approved in ADR-020; detailed operational choices still require review. No real-user enrollment or production rollout is authorized.
 
-## P0-02 final owner approval checklist — **ALL PROPOSED / NONE APPROVED** (2026-11-16)
+## P0-02 remaining operational approval checklist — PRINCIPLES APPROVED in ADR-020; DETAILS OPEN (2026-11-16)
 
-**Do not treat previous CI or implemented defaults as policy approval.** Proposed choices for explicit approval/adjustment by the ERP owner and separately qualified security reviewer:
+**ADR-020 grants owner approval to the six security policy principles only.** Unchecked tasks below represent precise policy procedures, thresholds, ownership, evidence or deployment settings awaiting specification and independent review; do not interpret them as unapproved principles. Previous code defaults are not automatically production-approved:
 
 - [ ] **Mandatory privileged MFA:** require TOTP/recovery for central management, Egypt/Italy company managers, finance, HR and external accountants; determine whether any additional staff roles or temporary step-up exceptions need coverage and whether optional MFA stays enforceable once enrolled.
 - [ ] **Trusted initial activation:** identify named accountable operator(s), an independent second approver and proof-of-identity method; confirm 10-minute authorization TTL vs five-minute password challenge, approval reference/audit retention, notification, revoke/reissue pathway and emergency lockout response. The current code has **no public issuance API** and does not implement human verification.
@@ -65,4 +98,4 @@ This appendix records **PROPOSED** choices and code status, not a new approved A
 - [ ] **Sessions/environments:** approve real staging/production SPA/API origins, HTTPS Secure/SameSite/domain settings, idle/absolute session lifetime, clock skew and production account provisioning/revocation. CI localhost origins do not authorize a deployment.
 - [ ] **Independent sign-off and release separation:** assign a qualified human security reviewer different from the implementer to inspect transaction/race behavior, secret handling, browser pin and role isolation. Resolve findings before marking Ready; obtain separate **explicit owner permission for merge**, then separate deployment permission. No authorization implied by this checklist.
 
-**Atomicity implementation is engineering remediation, not an owner security policy approval.** PostgreSQL #43881203049 PASS at `ceded61c936009105b0607c022c02967e2645a6b` (27/233, including rollback/retry injection); Chromium #43876191068 pinned previous `0d2843c` and has **NOT** tested the atomic code. Browser workflow update is blocked; keep Draft and **NOT VERIFIED** for new pin. No changes to approved ADRs 001–019.
+**Atomicity implementation is engineering remediation, not an owner security policy approval.** PostgreSQL #43881203049 PASS at `ceded61c936009105b0607c022c02967e2645a6b` (27/233, including rollback/retry injection); Chromium #43876191068 pinned previous `0d2843c` (historical only); the newer [Chromium #43885394390](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43885394390) has successfully tested atomic code `ceded61c` with an immutable pin. ADR-020 is now approved for *principles*; keep PRs Draft until independent review and separate merge approval.
