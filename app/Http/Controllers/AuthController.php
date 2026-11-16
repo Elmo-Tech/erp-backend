@@ -30,6 +30,7 @@ final class AuthController extends Controller
         }
         RateLimiter::clear($key);
         Auth::guard('web')->logout();
+        Auth::guard('sanctum')->forgetUser();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         $request->session()->regenerate();
@@ -108,6 +109,7 @@ final class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         Auth::guard('web')->logout();
+        Auth::guard('sanctum')->forgetUser();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return response()->json(['status' => 'logged_out']);
