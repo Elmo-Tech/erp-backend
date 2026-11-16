@@ -1,5 +1,12 @@
 # Module Roadmap — End-to-End ERP V2
 
+## P0-03D security gate clarification — 2026-11-16 (LATEST)
+
+F01 company authorization/DB security remains **IN PROGRESS / not security accepted**, despite [P0-03C CI #43933833495 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43933833495) on prior SHA `1ba473ef`. The next P0-03D signed-claim SQL probe is rollback-only with a simulated owner issuer; NOT end-to-end proven, not a production design. GUC-only RLS unsafe; full Auth/MFA/queue grants and independent human review outstanding. See [P0-03D security packet](security/P0-03D_TRUST_BOUNDARY_REVIEW.md), [Draft PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10), [Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8). F02 accounting remains NOT STARTED beyond schema scaffold. No RLS deployment/merge.
+
+---
+
+
 **Final code CI verification:** [#43920504958](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920504958) **FULL JOB SUCCESS**, head `64b1e46d82c741de41eda6f87211a02f15082d41`: PostgreSQL 18 migrations, PHPUnit **30 tests/273 assertions**, P0-03 rollback/reapply, disposable RLS limited role/transaction-local context, two physical-session lock/exclusion/no-leak smoke, Docker build and HTTP health. This supersedes the prior step-level-only assessment. [#43920097079](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920097079) separately FULL SUCCESS on pre-two-session commit `e7773d1`. [Docs-only HEAD CI #43920822054](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920822054) had not completed at this record; any later docs-only commit requires independent CI check.
 
 **Still NOT RUN:** real PgBouncer transaction pool and Laravel reused worker/Octane integration, authenticated tenant-context propagation under actual HTTP/queue workload, cross-session privilege escalation via malicious GUC, production-like migration on nonempty legacy data, independent review. RLS not activated and no production release. **Next Atomic Action:** implement and test a trusted membership-validated `SET LOCAL` transaction wrapper with actual PgBouncer/worker reuse, prove cross-request EG↔IT no-leak and bypass negatives, and submit a narrowly scoped reviewed PR before any RLS enabling decision.
