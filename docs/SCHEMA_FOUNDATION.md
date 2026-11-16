@@ -1,5 +1,16 @@
 # Phase 0 Schema Contract — first migration increment
 
+## P0-03 additive constraint implementation — 2026-11-16 (DRAFT PR #10)
+
+Latest physical migrations were inspected on backend integration SHA `5bc57535129e652f24f4991e7b90d418cef6f200`. Company-owned finance parents already have same-company composite FKs in the appropriate child tables; P0-03 does not duplicate them. `2026_11_16_000006_harden_company_accounting_invariants.php` adds missing `UNIQUE(company_id,id)` for company role assignments, journal lines and idempotency requests; restrictive CHECK constraints on status/domain, valid debit-versus-credit, nonzero currency snapshot when present, positive line numbers, and timestamp coherency; indexed same-company FK lookups; `btree_gist` company-specific fiscal/period non-overlap; trigger guards on parent and child date boundaries. `audit_logs` and `outbox_events` remain nullable global/company-scoped; no fabricated company scope for global events.
+
+This does **not** implement balanced/immutable posting, issued invoices, allowed period-state transitions, currency rounding/posting, or GL API. Those gates remain blocked pending F02 and review. PostgreSQL 18-only migration needs extension creation privilege; run against disposable DB first and confirm upgrade/rollback before any production migration. P0-03 migration/test CI is NOT VERIFIED as of this snapshot.
+
+**Least privilege RLS pilot is opt-in and disposable only:** `database/security/p003_rls_pilot.sql` creates a `NOLOGIN NOBYPASSRLS` read-only role for `fiscal_years`, guards policy with transaction-local `app.company_id`, tests EG/IT directions and no-context behavior with savepoint rollback, then rolls back *everything*. Laravel application pool and production DB roles are untouched. This test cannot prove PgBouncer or real queue/worker safety; application membership checks remain authoritative. See [P0-03 handoff](handoffs/P0-03.md).
+
+---
+
+
 **Schema is partial by design.** It establishes the security and accounting-shaped base, not final tax posting or issued invoices.
 
 ## Implemented first tables
