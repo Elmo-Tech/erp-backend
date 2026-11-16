@@ -150,7 +150,7 @@ final class P003DatabaseSecurityTest extends TestCase
         $this->rejects(fn () => DB::table('accounting_periods')->where('id', $p)->update(['ends_on' => '2026-01-31']));
         $this->rejects(fn () => DB::table('fiscal_years')->where('id', $fy)->update(['starts_on' => '2026-02-02']));
         $this->rejects(fn () => DB::table('journal_entries')->where('id', $j)->update(['status' => 'posted']));
-        $this->rejects(fn () => DB::table('ledger_accounts')->where('id', $acc)->update(['normal_balance' => 'invalid']));
+        $this->rejects(fn () => DB::table('ledger_accounts')->where('id', $acc)->update(['normal_balance' => 'wrong']));
 
         DB::table('journal_lines')->insert($this->line($eg, $j, $acc, 1));
         $this->assertSame(1, DB::table('journal_lines')->count());
