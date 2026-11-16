@@ -1,5 +1,20 @@
 # Architecture Decision Register — approved 2026-11-16
 
+## ADR-022 — PostgreSQL company isolation and optional RLS context (PROPOSED; 2026-11-16)
+
+**Status: PROPOSED ENGINEERING DESIGN ONLY — NOT APPROVED FOR PRODUCTION.** Cross-company physical integrity derives from already-approved ADR-003 and ADR-004. This ADR records new implementation choices for independent review, not a silent owner sign-off.
+
+**Proposal:** keep `company_id NOT NULL` on legal rows and composite same-company foreign keys, with additive parent candidate keys; enforce safe accounting domains, positive single-sided journal lines, date containment and company-scoped exclusion ranges in PostgreSQL 18. No posting APIs or immutable journal assertions are claimed. Allow nullable company_id only on explicitly global audit/outbox events and global user/MFA/currency entities, never as a loophole to write legal ledger rows.
+
+**RLS option under evaluation:** a distinct NOLOGIN/NOBYPASSRLS, non-table-owner least-privileged runtime role can use `current_setting('app.company_id',true)` only after *trusted membership authorization* and per-transaction `SET LOCAL`, and only for a transaction encompassing all company SQL. Missing tenant context must return zero legal rows. Do NOT allow clients to select arbitrary company context by directly writing a GUC: RLS based solely on a writable custom GUC is not authorization. Global auth, user login/MFA and cross-company consolidation flows need separate vetted context boundaries. A rollback-only disposable fiscal_years SELECT policy probe is included in P0-03; no application RLS is activated.
+
+**Alternatives:** application-only scoping (insufficient defence in depth), unconditional RLS now (unsafe for unaudited session/worker pool paths), security-definer context functions (require separate threat modeling), and database-per-company (greater operational overhead, conflicts with chosen ADR-003 shared schema). **Decision gate:** prove actual Laravel/queue/PgBouncer transaction-pool behavior, separate app/migration roles and GRANT matrix, authorized context provenance, concurrency and role-bypass negatives before requesting explicit approval for durable RLS. No production roles/key/secret changes authorized.
+
+**Evidence:** [P0-03 Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8), [Draft PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10), [handoff](handoffs/P0-03.md). Base CI [#43917199722](https://github.com/Elmo-Tech/erp-backend/actions/runs/43917199722) PASS; new P0-03 CI NOT VERIFIED in this snapshot. Production blockers SEC-01..08 remain open in [Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7). No Merge/Deploy approval.
+
+---
+
+
 ## ADR-020 operational elaboration — 2026-11-16 (PROPOSED details; original approval unchanged)
 
 **The six security principles in ADR-020 remain APPROVED. This addition does not approve operational specifications, code, reviewers, merges or production release.** The following implementation-specific documents are prepared for owner decision and independent security inspection:
