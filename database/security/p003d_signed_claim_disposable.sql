@@ -114,6 +114,15 @@ BEGIN
   END;
 END $block$;
 SELECT set_config('p003d.claim', :'eg_claim', true);
+SELECT CASE WHEN p003d_private.verified_company() IS NULL THEN 'NULL' ELSE 'VALID' END AS verifier_result;
+SELECT CASE WHEN split_part(current_setting('p003d.claim'), '|', 3) = txid_current()::text THEN 'SAME' ELSE 'DIFFERENT' END AS claim_transaction;
+SELECT CASE WHEN EXISTS (
+  SELECT 1 FROM public.users u
+  JOIN public.company_memberships m ON m.user_id=u.id
+  WHERE u.id::text = split_part(current_setting('p003d.claim'), '|', 2)
+  AND m.company_id = '00000000-0000-4000-8000-0000000000c1'::uuid
+  AND m.status='active' AND u.is_active
+) THEN 'ACTIVE' ELSE 'MISSING' END AS signer_membership;
 SELECT 1 / CASE WHEN
  (SELECT count(*) FROM public.p003d_rows WHERE id=1)=1 AND
  (SELECT count(*) FROM public.p003d_rows WHERE id=2)=0
