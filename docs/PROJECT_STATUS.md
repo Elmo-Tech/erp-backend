@@ -1,5 +1,18 @@
 # Project Status — Source of Truth
 
+## P0-03D trusted DB context investigation — 2026-11-16 (LATEST, awaiting new CI)
+
+**IN PROGRESS; SECURITY NOT SIGNED OFF.** Confirmed documentation baseline `1ba473ef567f10acc87c42c62e3da2b6aa5fd4e4` with [CI #43933833495 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43933833495). This success is **before** P0-03D changes. Existing Draft [PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10) and open [Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8); [security Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7) remains open. Branch `task/p0-03-db-security`; no merge/deploy/main/oberation/production changes.
+
+**Added:** [P0-03D threat model + grant matrix + independent review packet](security/P0-03D_TRUST_BOUNDARY_REVIEW.md); rollback-only [signed-claim disposable PostgreSQL probe](../database/security/p003d_signed_claim_disposable.sql), and CI step on PostgreSQL 18. No app RLS or migration added. The probe owner-simulates an issuer to investigate SQL-level signature/GUC tampering; **real authenticated signer and unforgeable end-to-end provenance NOT IMPLEMENTED/VERIFIED**. No permanent context or production credential is created. **New P0-03D CI: NOT VERIFIED until exact-head result is checked.**
+
+**HIGH open findings:** GUC-only RLS is bypassable; existing `UPDATE(updated_at)` on four membership/auth/company tables is an actual write grant; full SELECT on `users` includes MFA secret/password hash; restricted role currently lacks MFA code/grant and user MFA mutation privileges, and database session/queue broad DML is a separate integrity risk. Explicit authorized company queries + composite FKs/least-privilege denies remain required. ADR-022 **PROPOSED**. Qualified independent human review and production-like nonempty database test **NOT VERIFIED**; Octane **NOT RUN**.
+
+**Next:** inspect P0-03D new exact-head CI, repair only on task branch, then obtain independent reviewer findings on trusted issuer, GRANT matrix and cross-company negatives; no RLS activation or sign-off before owner approval.
+
+---
+
+
 ## P0-03C verified final CI and P0-03D next security gate (2026-11-16; LATEST)
 
 **Status: P0-03 IN PROGRESS, NOT ACCEPTED / NO MERGE OR DEPLOYMENT.** [Backend Draft PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10), [Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8). Exact tested task-branch code/documentation HEAD: `0ae9e61b0407bb336703b5c01ab34b1363be1310` — [**GitHub Actions #43932289785 FULL SUCCESS**](https://github.com/Elmo-Tech/erp-backend/actions/runs/43932289785). Previous code HEAD `3ec9796bc16560a1fc6474d2fc15ef38067f3872` also [**CI #43931902210 FULL SUCCESS**](https://github.com/Elmo-Tech/erp-backend/actions/runs/43931902210). These verified results supersede historical "CI pending/final Docker not verified" notes below **for those SHAs only**.
