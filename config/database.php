@@ -97,6 +97,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // PgBouncer transaction pooling cannot retain PDO named server prepares between transactions.
+            // Enable only on explicitly configured pooled connections, not direct PostgreSQL.
+            'options' => filter_var(env('DB_PGBOUNCER_TRANSACTION', false), FILTER_VALIDATE_BOOLEAN)
+                ? [\PDO::ATTR_EMULATE_PREPARES => true] : [],
         ],
 
         'sqlsrv' => [

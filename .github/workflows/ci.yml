@@ -90,6 +90,7 @@ jobs:
       - name: Run authenticated-context tests through actual PgBouncer
         env:
           DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
         run: php artisan test --no-ansi tests/P003B/P003AuthenticatedContextTest.php
       - name: Verify two parallel clients through real transaction pool
         env:
@@ -98,6 +99,7 @@ jobs:
       - name: Run five jobs inside one reused Laravel queue worker through PgBouncer
         env:
           DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
           QUEUE_CONNECTION: database
           P003_EVIDENCE_FILE: /tmp/p003b-queue-evidence.jsonl
         run: |
