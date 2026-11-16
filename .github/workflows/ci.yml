@@ -89,6 +89,10 @@ jobs:
         env:
           DB_PORT: '6432'
         run: php artisan test --no-ansi tests/P003B/P003AuthenticatedContextTest.php
+      - name: Verify two parallel clients through real transaction pool
+        env:
+          DB_PORT: '6432'
+        run: php tests/integration/p003_pool_clients.php
       - name: Run five jobs inside one reused Laravel queue worker through PgBouncer
         env:
           DB_PORT: '6432'
