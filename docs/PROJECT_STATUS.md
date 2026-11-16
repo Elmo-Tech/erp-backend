@@ -1,6 +1,6 @@
 # Project Status — Source of Truth
 
-**Last verified snapshot:** 2026-11-16. GitHub is the canonical record; always re-check current branch heads and latest CI before beginning a new chat.
+**Last verified snapshot:** 2026-11-16. **P0-02 is IN PROGRESS in draft PRs; no release or merge approved.** GitHub is the canonical record; always re-check current branch heads and latest CI before beginning a new chat.
 
 ## Milestone
 
@@ -44,3 +44,14 @@ The current baseline **does not yet implement** Auth/MFA/RBAC, immutable GL post
 ## Mandatory session handoff
 
 For every task, read [START_HERE.md](START_HERE.md), [WORK_PROTOCOL.md](WORK_PROTOCOL.md), the relevant [handoff](handoffs/P0-01.md) and both `AGENTS.md`. Record issue/PR/CI URLs, exact pass/fail outcomes, unresolved gates and precise next step. GitHub is authoritative over chat memory.
+
+## P0-02 live task handoff — 2026-11-16
+
+- [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4) is OPEN, owning security/auth work. Backend [draft PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6) and frontend [draft PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2), both targeting `rebuild/erp-v2`; integration branch has **not** changed.
+- Branches: `task/p0-02-auth-rbac` in each repo, created from backend `89f862d044ef7b241426bc8eac8985bc22df96b6` and frontend `f3e74934c7b0547a531197fa5a67c61055945e7c`.
+- Implemented in branches: Sanctum stateful middleware, CORS origin allowlist, session-based login/logout/me, pending MFA/TOTP/recovery enrollment, global/company role checks, company context/switch, authorization-only probe, and React login/MFA/switcher. **Not merged, not production.**
+- Proposed security policy `docs/AUTH_SECURITY_CONTRACT.md` requires explicit approval (initial MFA enrollment/recovery procedure and exact company role matrix). No actual finance/payroll data endpoints.
+- Backend PostgreSQL 18 migrations **PASS** on [earlier P0-02 CI](https://github.com/Elmo-Tech/erp-backend/actions/runs/43868089491), while two authentication feature tests initially **FAILED**, and repairs were committed. Latest Backend [run #43868602769](https://github.com/Elmo-Tech/erp-backend/actions/runs/43868602769) to verify; do not claim it passed until conclusion.
+- Frontend branch [CI #43868097441](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43868097441) **SUCCESS** for typecheck, unit tests, Vite build, Docker/Nginx. New Chromium/real API cross-origin E2E [run #43868534979](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43868534979) was started and is **NOT YET VERIFIED** until its concluded results are inspected.
+- [P0-01 Issue #1](https://github.com/Elmo-Tech/erp-backend/issues/1) remains **OPEN**: only a successful real browser-backed SPA→Laravel integration should resolve its residual requirement; do not close automatically.
+- See [P0-02 handoff](handoffs/P0-02.md) for precise latest check ledger and single next action. No formal review/approval yet.

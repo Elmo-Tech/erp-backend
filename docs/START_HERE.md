@@ -27,7 +27,7 @@
 
 ## Current handoff / first new chat
 
-- Task: **P0-01 — Verify CI and build baseline**.
+**Active task: P0-02 — Auth, MFA & company RBAC; [Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4), [handoff](handoffs/P0-02.md), backend [draft PR #6](https://github.com/Elmo-Tech/erp-backend/pull/6), frontend [draft PR #2](https://github.com/Elmo-Tech/erp-frontend/pull/2). Both PRs must be reviewed; no merge.**\n\n- Previous task: **P0-01 — Verify CI and build baseline**.
 - GitHub issue: https://github.com/Elmo-Tech/erp-backend/issues/1
 - Handoff: [handoffs/P0-01.md](handoffs/P0-01.md)
 - Suggested ChatGPT chat name: `ERP V2 | P0-01 | CI & Builds`.
