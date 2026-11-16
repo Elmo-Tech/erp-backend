@@ -13,6 +13,16 @@ final class RoleBoundariesTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withHeaders([
+            'Origin' => 'http://localhost:5173',
+            'Referer' => 'http://localhost:5173/',
+            'Accept' => 'application/json',
+        ]);
+    }
+
     private function companies(): array
     {
         DB::table('currencies')->insert([
