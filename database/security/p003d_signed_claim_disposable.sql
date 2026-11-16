@@ -98,7 +98,7 @@ SELECT 1 / CASE WHEN (SELECT count(*) FROM public.p003d_rows) = 0
  THEN 1 ELSE 0 END AS missing_claim_denied;
 SELECT 1 / CASE WHEN NOT has_table_privilege(current_user,'p003d_private.keys','SELECT')
  AND NOT has_schema_privilege(current_user,'p003d_private','CREATE')
- AND NOT has_function_privilege(current_user,'p003d_private.verified_company()','ALTER')
+ AND (SELECT p.proowner <> (SELECT oid FROM pg_roles WHERE rolname=current_user) FROM pg_proc p WHERE p.oid = 'p003d_private.verified_company()'::regprocedure)
  THEN 1 ELSE 0 END AS private_signing_boundary;
 DO $block$
 BEGIN
