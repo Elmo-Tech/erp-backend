@@ -3,10 +3,12 @@
 Status key: `NOT STARTED` = design only; `SCAFFOLD` = source code exists but not verified; `IN PROGRESS` = active task with evidence; `VERIFIED` = acceptance tests passed and PR reviewed; `BLOCKED` = dependency/external signoff prevents delivery.
 All statuses are as of **2026-11-16** and must be changed only with linked evidence. Full business requirements: [BUSINESS_RULES.md](BUSINESS_RULES.md).
 
+**ADR-021:** Owner approved non-production PR integration only; F01 stays IN PROGRESS (SEC-01..08 are NOT resolved). No real-user enrollment or deployment. See [security checklist](security/P0-02_SECURITY_REVIEW_CHECKLIST.md) and [ADR-021](DECISIONS.md).
+
 | ID | Module / capability | Prerequisite(s) | Initial delivery gate | Status |
 |---|---|---|---|---|
 | F00 | Platform, CI, Docker, PostgreSQL, Redis | None | Real CI/build/migration smoke tests | VERIFIED (automated CI/build/migration checks; no production release) |
-| F01 | Company model, permissions, internal auth/MFA | F00 | Company scoping and unauthorized-access negatives | NOT STARTED (schema scaffold) |
+| F01 | Company model, permissions, internal auth/MFA | F00 | Company scoping and unauthorized-access negatives | IN PROGRESS ([Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4); backend Draft PR #6, frontend Draft PR #2; ADR-020 policy principles approved; backend atomic 27 tests/233 assertions PASS and pinned real Chromium PASS; [security sign-off checklist](security/P0-02_SECURITY_REVIEW_CHECKLIST.md) documents SEC-01..SEC-08; independent human review and detailed MFA/recovery/RBAC/ops policy approvals PENDING; NO MERGE/DEPLOY/P0-03) |
 | F02 | General Ledger foundational controls | F00, F01 | Balanced immutable posting, locked periods, reversals | NOT STARTED (schema scaffold) |
 | F03 | Audit, outbox, idempotency, notifications base | F00, F01 | Verified retry/deduplication and audit | NOT STARTED (tables scaffold) |
 | M01 | CRM / leads / contacts / attribution | F01 | Sales/social/platform/acquired-by/manager activity history | NOT STARTED |
@@ -43,4 +45,4 @@ These phases are **dependency groups**, not promises that statutory accounting/p
 - Never mark a module `VERIFIED` merely because files or UI exist. Update only after repeatable tests and review.
 - If a feature crosses backend and frontend, link BOTH PRs under the same Issue. Avoid duplicate module definitions in the second repository.
 
-**2026-11-16 P0-01 merge evidence:** [backend **merged** PR #2](https://github.com/Elmo-Tech/erp-backend/pull/2), [frontend **merged** PR #1](https://github.com/Elmo-Tech/erp-frontend/pull/1), [backend CI PASS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43858463818), [frontend post-merge CI PASS](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43860361496). F00 initial automated checks are **VERIFIED**; P0-01 Issue remains OPEN on unverified live browser SPA/API connectivity. F01/Auth remains NOT STARTED. No real-user deployments.
+**2026-11-16 P0-01 merge evidence:** [backend **merged** PR #2](https://github.com/Elmo-Tech/erp-backend/pull/2), [frontend **merged** PR #1](https://github.com/Elmo-Tech/erp-frontend/pull/1), [backend CI PASS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43858463818), [frontend post-merge CI PASS](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43860361496). F00 initial automated checks are **VERIFIED**; P0-01 Issue remains OPEN on unverified live browser SPA/API connectivity. F01/Auth is IN PROGRESS on draft PR #6 and frontend PR #2; security review/approval pending. No real-user deployments.

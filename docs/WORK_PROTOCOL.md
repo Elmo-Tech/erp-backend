@@ -59,4 +59,4 @@ See [HANDOFF_TEMPLATE.md](HANDOFF_TEMPLATE.md).
 
 ## 7 — Current task
 
-Start with https://github.com/Elmo-Tech/erp-backend/issues/1; status and tested facts live at [PROJECT_STATUS.md](PROJECT_STATUS.md) and [handoffs/P0-01.md](handoffs/P0-01.md).
+Active P0-02: https://github.com/Elmo-Tech/erp-backend/issues/4; continue from [handoffs/P0-02.md](handoffs/P0-02.md), with draft backend PR #6 and frontend PR #2. P0-01 issue #1 remains open for live-browser evidence. Read latest [PROJECT_STATUS.md](PROJECT_STATUS.md).
