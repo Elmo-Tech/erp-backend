@@ -26,7 +26,7 @@ See [P0-01 handoff](handoffs/P0-01.md), [Project status](PROJECT_STATUS.md), bac
 
 ## User-authorized integration — 2026-11-16
 
-- [Backend merged PR #2](https://github.com/Elmo-Tech/erp-backend/pull/2), merge commit `97ed18fbb7d644f90ca3a10323e5bee0f0469264`; [last PR CI SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43858463818). [Post-merge Backend CI #43860404956](https://github.com/Elmo-Tech/erp-backend/actions/runs/43860404956) was **IN PROGRESS** when this note was written.
+- [Backend merged PR #2](https://github.com/Elmo-Tech/erp-backend/pull/2), merge commit `97ed18fbb7d644f90ca3a10323e5bee0f0469264`; [last PR CI SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43858463818). [Post-merge Backend CI #43860404956](https://github.com/Elmo-Tech/erp-backend/actions/runs/43860404956) completed **SUCCESS** on the merged integration commit.
 - [Frontend merged PR #1](https://github.com/Elmo-Tech/erp-frontend/pull/1), merge commit `f3e74934c7b0547a531197fa5a67c61055945e7c`; [post-merge Frontend CI SUCCESS #43860361496](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43860361496).
 - Formal GitHub reviews: none. Merge explicitly authorized by project owner in chat.
 - F00 CI/build/migrations gates verified. **NOT VERIFIED**: actual browser SPA to API connectivity; unchanged `main`, `oberation`, production, customer data. Issue #1 stays OPEN for this remaining evidence.
