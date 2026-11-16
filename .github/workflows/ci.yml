@@ -79,14 +79,16 @@ jobs:
           default_pool_size = 2
           max_client_conn = 100
           server_reset_query = DISCARD ALL
+          max_prepared_statements = 100
           EOF
           printf '"elmo" "test-only"\\n' > /tmp/p003b-auth.txt
-          pgbouncer -d /tmp/p003b-pgbouncer.ini
+          pgbouncer /tmp/p003b-pgbouncer.ini > /tmp/p003b-pgbouncer.log 2>&1 &
+          sleep 2
           PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 6432 -U elmo pgbouncer -Atc 'SHOW CONFIG' | grep -E '^pool_mode[|]transaction[|]'
       - name: Run authenticated-context tests through actual PgBouncer
         env:
           DB_PORT: '6432'
-        run: php artisan test --no-ansi --filter=P003AuthenticatedContextTest
+        run: php artisan test --no-ansi tests/P003B/P003AuthenticatedContextTest.php
       - name: Run five jobs inside one reused Laravel queue worker through PgBouncer
         env:
           DB_PORT: '6432'

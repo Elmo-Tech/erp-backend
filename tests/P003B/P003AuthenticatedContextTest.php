@@ -58,7 +58,7 @@ final class P003AuthenticatedContextTest extends TestCase
     public function test_two_legal_companies_remain_isolated_across_reused_connection_and_forged_session(): void
     {
         [$eg, $it] = $this->seedCompanies();
-        $actor = User::factory()->create();
+        $actor = User::factory()->create(['password' => 'correct-password']);
         $this->membership($actor, $eg);
         $context = app(AuthenticatedDatabaseContext::class);
 
@@ -72,7 +72,11 @@ final class P003AuthenticatedContextTest extends TestCase
             $this->assertNull($this->contextSetting());
         }
 
-        $this->actingAs($actor, 'web')->withSession(['erp.company_id' => $eg]);
+        $this->withHeaders(['Origin' => 'http://localhost:5173', 'Referer' => 'http://localhost:5173/']);
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $actor->email, 'password' => 'correct-password',
+        ])->assertOk();
+        $this->withSession(['erp.company_id' => $eg]);
         $this->getJson('/api/v1/companies/authorized-read')->assertOk()
             ->assertJsonPath('company.id', $eg);
         $this->withSession(['erp.company_id' => $it]);
