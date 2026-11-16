@@ -21,6 +21,8 @@
 ---
 
 
+## ADR-022 — PostgreSQL company isolation and optional RLS context (PROPOSED; 2026-11-16)
+
 ### P0-03C evidence amendment — PROPOSED; no RLS activation (2026-11-16)
 
 A separate **LOGIN** `p003c_runtime` database principal is proposed and created **only inside disposable CI** following migrations by `elmo` owner. CI test script prohibits superuser, createdb, createrole, inheritance, bypassrls, schema creation, owner membership, financial table SELECT and membership writes. Grant scope remains an explicitly reviewed allowlist, including auth/company lookup SELECT and session/queue DML. This is narrower than the prior exploratory NOLOGIN probe (which is NOT the application's executable credential). Its CI-only password is synthetic and must never become a deployment credential; future privileged provisioning and rotation need separate approval.
@@ -29,7 +31,13 @@ A rollback-only RLS trial on `fiscal_years` demonstrates both EG→IT / IT→EG 
 
 New code commits [0aba57c](https://github.com/Elmo-Tech/erp-backend/commit/0aba57c98cebfbbad53781c4bf3753fe9b16435a), [dadf6ac](https://github.com/Elmo-Tech/erp-backend/commit/dadf6ac0d5d126144c8bde690783a9e8ad5d6062); CI [#43930838117](https://github.com/Elmo-Tech/erp-backend/actions/runs/43930838117) and [#43931060344](https://github.com/Elmo-Tech/erp-backend/actions/runs/43931060344). Octane NOT RUN because dependency/server wiring is absent; HTTP multiprocess test is not Octane. **Decision still PROPOSED, Issue #7 stays open, separate approval needed before RLS/merge/deploy.**
 
-## ADR-022 — PostgreSQL company isolation and optional RLS context (PROPOSED; 2026-11-16)
+### P0-03C corrected runtime privilege and CI evidence addendum (2026-11-16)
+
+Code fixes after original role commit: [6a99a1c](https://github.com/Elmo-Tech/erp-backend/commit/6a99a1c538b4ad52e41a43cfa152d7a501c018f7) handles empty Sanctum 204 responses; [0e1b575](https://github.com/Elmo-Tech/erp-backend/commit/0e1b575e82281155da372a513adaaf1f145ffbc8) and [3ec9796](https://github.com/Elmo-Tech/erp-backend/commit/3ec9796bc16560a1fc6474d2fc15ef38067f3872) grant UPDATE of **updated_at ONLY** on users, companies, company_memberships, company_role_assignments because PostgreSQL `SELECT ... FOR UPDATE` requires UPDATE privileges on locked tables (including joined companies). **Not read-only credentials:** these four timestamp columns can be modified by the runtime role; all status/company/role columns remain denied. Explicit tests exercise forbidden membership status mutation. This is a CI-limited proof, **not** a complete approved least-privilege production grant matrix or verified MFA enrollment/recovery runtime. Review timestamp-write risk, privilege partitioning and all API/queue paths before treating role as deployable.
+
+[#43931060344](https://github.com/Elmo-Tech/erp-backend/actions/runs/43931060344) failed only the newly added HTTP probe before the 204/parser fix. [#43931343718](https://github.com/Elmo-Tech/erp-backend/actions/runs/43931343718) reproduced the missing `FOR UPDATE` users UPDATE grant. [#43931678496](https://github.com/Elmo-Tech/erp-backend/actions/runs/43931678496) then reproduced the joined-companies lock privilege. The current role/HTTP/revocation steps passed on [#43931902210](https://github.com/Elmo-Tech/erp-backend/actions/runs/43931902210) at code commit `3ec9796`; full-job Docker/health conclusion must be checked before marking the entire run SUCCESS. The legacy P0-03B tests and migrations in the same run also completed successfully. No new RLS approval.
+
+
 
 **Status: PROPOSED ENGINEERING DESIGN ONLY — NOT APPROVED FOR PRODUCTION.** Cross-company physical integrity derives from already-approved ADR-003 and ADR-004. This ADR records new implementation choices for independent review, not a silent owner sign-off.
 
