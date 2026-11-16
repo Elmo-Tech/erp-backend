@@ -29,7 +29,7 @@ SELECT 1 / CASE WHEN
   AND NOT pg_has_role('p003c_runtime','elmo','MEMBER')
   AND NOT has_schema_privilege('p003c_runtime','public','CREATE')
   AND NOT has_table_privilege('p003c_runtime','fiscal_years','SELECT')
-  AND NOT has_table_privilege('p003c_runtime','company_memberships','UPDATE')
+  AND NOT has_column_privilege('p003c_runtime','company_memberships','status','UPDATE')
   AND has_table_privilege('p003c_runtime','company_memberships','SELECT')
   THEN 1 ELSE 0 END AS runtime_grant_matrix;
 \echo 'PASS: separate restricted runtime identity provisioned only in disposable CI'
