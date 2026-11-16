@@ -6,7 +6,7 @@ All statuses are as of **2026-11-16** and must be changed only with linked evide
 | ID | Module / capability | Prerequisite(s) | Initial delivery gate | Status |
 |---|---|---|---|---|
 | F00 | Platform, CI, Docker, PostgreSQL, Redis | None | Real CI/build/migration smoke tests | VERIFIED (automated CI/build/migration checks; no production release) |
-| F01 | Company model, permissions, internal auth/MFA | F00 | Company scoping and unauthorized-access negatives | IN PROGRESS ([Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4), backend draft PR #6 and frontend draft PR #2; security review/browser E2E gates outstanding) |
+| F01 | Company model, permissions, internal auth/MFA | F00 | Company scoping and unauthorized-access negatives | IN PROGRESS ([Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4), backend draft PR #6 and frontend draft PR #2; security remediations implemented; backend 24 tests PASS, new Chromium enrollment E2E and formal security-policy approval pending) |
 | F02 | General Ledger foundational controls | F00, F01 | Balanced immutable posting, locked periods, reversals | NOT STARTED (schema scaffold) |
 | F03 | Audit, outbox, idempotency, notifications base | F00, F01 | Verified retry/deduplication and audit | NOT STARTED (tables scaffold) |
 | M01 | CRM / leads / contacts / attribution | F01 | Sales/social/platform/acquired-by/manager activity history | NOT STARTED |
@@ -43,4 +43,4 @@ These phases are **dependency groups**, not promises that statutory accounting/p
 - Never mark a module `VERIFIED` merely because files or UI exist. Update only after repeatable tests and review.
 - If a feature crosses backend and frontend, link BOTH PRs under the same Issue. Avoid duplicate module definitions in the second repository.
 
-**2026-11-16 P0-01 merge evidence:** [backend **merged** PR #2](https://github.com/Elmo-Tech/erp-backend/pull/2), [frontend **merged** PR #1](https://github.com/Elmo-Tech/erp-frontend/pull/1), [backend CI PASS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43858463818), [frontend post-merge CI PASS](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43860361496). F00 initial automated checks are **VERIFIED**; P0-01 Issue remains OPEN on unverified live browser SPA/API connectivity. F01/Auth remains NOT STARTED. No real-user deployments.
+**2026-11-16 P0-01 merge evidence:** [backend **merged** PR #2](https://github.com/Elmo-Tech/erp-backend/pull/2), [frontend **merged** PR #1](https://github.com/Elmo-Tech/erp-frontend/pull/1), [backend CI PASS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43858463818), [frontend post-merge CI PASS](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43860361496). F00 initial automated checks are **VERIFIED**; P0-01 Issue remains OPEN on unverified live browser SPA/API connectivity. F01/Auth is IN PROGRESS on draft PR #6 and frontend PR #2; security review/approval pending. No real-user deployments.

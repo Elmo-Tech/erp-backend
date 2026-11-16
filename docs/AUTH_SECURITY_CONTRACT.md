@@ -42,3 +42,17 @@
 - Frontend typecheck/Vitest/build/Docker CI **PASS** https://github.com/Elmo-Tech/erp-frontend/actions/runs/43868982516.
 - Backend authentication, migration, company negative tests and Docker **PASS** https://github.com/Elmo-Tech/erp-backend/actions/runs/43868872071; newest security-test CI still must be checked.
 - The MFA bootstrap/enrollment policy and role matrix remain **PROPOSED**. No reviewed policy approval, no production browser or real organization account tests.
+
+## Post-review security implementation (PROPOSED, not approved rollout policy)
+
+**Encrypted storage.** `User::mfa_secret` is an Eloquent `encrypted` cast and omitted, along with `mfa_last_step`, from `User::toArray()`/`toJson()`. Raw `users.mfa_secret` database value is Laravel ciphertext, not the TOTP seed. The pending `erp.enrollment_secret` is separately encrypted via `Crypt::encryptString` before session storage and decrypts only at confirmation (including when `SESSION_ENCRYPT=false`). A setup seed is **intentionally returned only by `POST /auth/mfa/enroll/start`** to pair an authenticator. Auth API responses use private/no-store cache policy and do not serialize the saved seed. Recovery codes are digests at rest and shown once in confirm response. No secrets in handoff, logs or CI summaries.
+
+**Activation.** For first privileged enrollment, `user_mfa_enrollment_authorizations` must have an unconsumed, future-expiring entry with an internal non-PII `approved_reference`. The API does not issue these authorizations; trusted human identity/approval, issuance, audit and rebind/recovery procedure need an explicit policy decision. Expiration/revocation rejects enrollment; grant consumed on successful confirmation. Challenge after password lasts five minutes. No password-only MFA enrollment bypass.
+
+**Limits.** Login: per-IP 20 failures / 300s and per-account + per-(IP,account) 5 failures / 300s. MFA: per-account + per-challenge 5 failures / 300s and per-IP 30 / 300s; enrollment start 3 / 300s. Correct credentials do not bypass an existing lock. Cache-store persistence, operational unlock/escalation and potential denial-of-service considerations require security approval.
+
+**Consolidation.** `central_management` grants selection/overview of all active companies, not finance/payroll details. A separate active `consolidation_viewer` global grant plus central role is required to authorize **future** `consolidation.view` requests. `GET /api/v1/companies/consolidation/access` is a boolean probe only (no financial data). Correct intercompany elimination/report computations belong to M16; not implemented by P0-02. Actual finance/payroll access requires explicit same-company role regardless of central report permissions.
+
+**Key rotation.** APP_KEY is the encryption root for existing TOTP seeds. Before production: define secure key escrow, staged compatibility/old-key read strategy, audited re-encryption, restore drills and rollback; never change encryption keys without this reviewed migration. **No key rotation was executed.**
+
+**Status:** all above controls remain in DRAFT PR #6/#2. Exact grant issuance and recovery policy, per-role permissions, production cookie origins, audit/readiness and deployment are **PROPOSED / NOT APPROVED**.
