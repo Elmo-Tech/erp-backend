@@ -5,7 +5,7 @@ All statuses are as of **2026-11-16** and must be changed only with linked evide
 
 | ID | Module / capability | Prerequisite(s) | Initial delivery gate | Status |
 |---|---|---|---|---|
-| F00 | Platform, CI, Docker, PostgreSQL, Redis | None | Real CI/build/migration smoke tests | SCAFFOLD |
+| F00 | Platform, CI, Docker, PostgreSQL, Redis | None | Real CI/build/migration smoke tests | IN PROGRESS (P0-01 draft PRs; NOT VERIFIED) |
 | F01 | Company model, permissions, internal auth/MFA | F00 | Company scoping and unauthorized-access negatives | NOT STARTED (schema scaffold) |
 | F02 | General Ledger foundational controls | F00, F01 | Balanced immutable posting, locked periods, reversals | NOT STARTED (schema scaffold) |
 | F03 | Audit, outbox, idempotency, notifications base | F00, F01 | Verified retry/deduplication and audit | NOT STARTED (tables scaffold) |
@@ -42,3 +42,5 @@ These phases are **dependency groups**, not promises that statutory accounting/p
 - Split a large module into small tasks `M01-01`, `M01-02` with explicit acceptance criteria, dependencies, code PRs and test evidence.
 - Never mark a module `VERIFIED` merely because files or UI exist. Update only after repeatable tests and review.
 - If a feature crosses backend and frontend, link BOTH PRs under the same Issue. Avoid duplicate module definitions in the second repository.
+
+**2026-11-16 P0-01 progress evidence:** [backend draft PR #2](https://github.com/Elmo-Tech/erp-backend/pull/2), [frontend draft PR #1](https://github.com/Elmo-Tech/erp-frontend/pull/1). CI checks still **NOT VERIFIED**, so F00 is not complete and F01 remains NOT STARTED.

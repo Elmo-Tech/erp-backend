@@ -1,10 +1,10 @@
 # Project Status — Source of Truth
 
-**Last documented:** 2026-11-16. This is a snapshot, not a live status feed. Every task owner MUST update it after a completed or interrupted session, using real git/CI evidence.
+**Last documented:** 2026-11-16 (P0-01 working session, draft PRs). This is a snapshot, not a live status feed. Every task owner MUST update it after a completed or interrupted session, using real git/CI evidence.
 
 ## Current milestone
 
-**Phase 0 — Foundation / P0-01 scaffold created, NOT verified.**
+**Phase 0 — Foundation / P0-01 IN PROGRESS, NOT VERIFIED.**
 The initial Laravel 13 and Vite React skeletons are on `rebuild/erp-v2`. Foundational migrations and unit/health test source files exist, but successful execution has NOT been confirmed.
 
 | Checkpoint | Status | Evidence |
@@ -15,15 +15,15 @@ The initial Laravel 13 and Vite React skeletons are on `rebuild/erp-v2`. Foundat
 | React/Vite UI shell | Code committed; unverified | Frontend `src/App.tsx` |
 | Company + GL foundation migrations | Written; **not migration-tested** | Backend `database/migrations/` |
 | Docker and CI files | Written; **not build-tested** | `Dockerfile`, `compose.yaml`, workflows |
-| Backend GitHub Actions | **FAILURE** initial run | https://github.com/Elmo-Tech/erp-backend/actions/runs/43843737400 |
-| Frontend GitHub Actions | **FAILURE** initial run | https://github.com/Elmo-Tech/erp-frontend/actions/runs/43843105601 |
+| Backend GitHub Actions | **FAILURE** last integration run; PR run check pending at session update | https://github.com/Elmo-Tech/erp-backend/actions/runs/43846548484 · https://github.com/Elmo-Tech/erp-backend/actions/runs/43857111861 |
+| Frontend GitHub Actions | **FAILURE** last integration run; PR run check pending at session update | https://github.com/Elmo-Tech/erp-frontend/actions/runs/43846673824 · https://github.com/Elmo-Tech/erp-frontend/actions/runs/43857118913 |
 | Auth/RBAC and complete financial posting | **NOT IMPLEMENTED** | Scheduled in P0-02 / P0-04 |
 | Staging and production | **NOT DEPLOYED** | Requires release approval |
 
 GitHub connector log requests for those initial failures yielded no actionable logs; **root cause unknown**. Current branch heads, new CI runs and Issue states must be rechecked before work.
 
 ## Active / next task
-**[P0-01 — CI + reproducible builds](https://github.com/Elmo-Tech/erp-backend/issues/1) — OPEN, ready for a new chat.**
+**[P0-01 — CI + reproducible builds](https://github.com/Elmo-Tech/erp-backend/issues/1) — OPEN, IN PROGRESS, NOT VERIFIED.**
 Start at [handoffs/P0-01.md](handoffs/P0-01.md). First goal: obtain real CI errors or reproduce locally, commit authentic lockfiles, validate migrations and app builds, and get passing CI runs for both repos.
 
 ## Blockers / gates
@@ -41,3 +41,17 @@ Start at [handoffs/P0-01.md](handoffs/P0-01.md). First goal: obtain real CI erro
 5. Report **verified vs unverified** and don't equate a commit with a passed test.
 
 **Project status is not "done" until its acceptance criteria are evidenced.**
+
+## P0-01 working session — 2026-11-16 (evidence-backed)
+
+- Backend HEAD before this task: `2479f339d1702da22a9bcad4aac279451ebe1a24`; frontend HEAD: `341fc7cd8abd98b6c7865c754984d26bb68dd111`. No pre-existing PRs found during review.
+- Created **topic branches, not integration commits**: `task/p0-01-ci-baseline` in both repositories.
+- Draft PRs: [backend #2](https://github.com/Elmo-Tech/erp-backend/pull/2) and [frontend #1](https://github.com/Elmo-Tech/erp-frontend/pull/1). Backend code commit: [`9108692`](https://github.com/Elmo-Tech/erp-backend/commit/9108692309176723a39f1ce13440166df82838af); frontend commit: [`c3ab5d4`](https://github.com/Elmo-Tech/erp-frontend/commit/c3ab5d45dd0b48111066a0aee877f8c7a4d4a639).
+- Backend change: explicit Composer lockfile gate, PostgreSQL 18 disposable migration + test runner, Docker image and health smoke steps, company-access and composite-FK negative tests.
+- Frontend change: explicit npm lockfile gate, `npm ci` in CI and Docker, Docker/Nginx smoke, frontend health-request unit tests, `.dockerignore`.
+- Last integrated CI runs: [backend **failure**](https://github.com/Elmo-Tech/erp-backend/actions/runs/43846548484) and [frontend **failure**](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43846673824). Both lasted approximately 3–4 seconds, with no reported job steps. Log downloads returned GitHub BlobNotFound; 2 check annotations per job could not be fetched through the connector. **Root cause NOT VERIFIED.**
+- Newly triggered draft PR workflows, status checked once while **in_progress**: [backend run](https://github.com/Elmo-Tech/erp-backend/actions/runs/43857111861), [frontend run](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43857118913). Passing CI **NOT VERIFIED**.
+- Static checks locally: `php -l tests/Feature/CompanyIsolationTest.php` passed, Python YAML parser loaded both CI workflows; these are **not PHPUnit/migration/build results**.
+- Runtime blockers in isolated local container: no Composer executable, Docker daemon/binary or PostgreSQL 18; no outbound DNS to GitHub/registries. Do not handcraft lockfiles. `composer.lock` / `package-lock.json` **NOT GENERATED** and CI workflows intentionally fail at lockfile gates once runner starts.
+- **Risk:** no CI, PHPUnit, PostgreSQL migration, Docker startup, typecheck, Vitest, real backend API-to-frontend connectivity or security acceptance criteria proven. Draft PRs must not merge or deploy.
+- **Immediate next action inside P0-01:** inspect Actions annotation text in GitHub UI / runner availability; generate authentic Composer 2 and npm 10 lockfiles with registry access on this same task branch, rerun test/migration/build checks and attach green-run URLs. **Only after the P0-01 acceptance gate** start the next task, **P0-02 — Auth/RBAC**.
