@@ -3,9 +3,25 @@ on:
   push:
     branches: [rebuild/erp-v2]
   pull_request:
+    branches: [rebuild/erp-v2]
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_DATABASE: elmo_erp_test
+      DB_USERNAME: elmo
+      DB_PASSWORD: test-only
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
     services:
       postgres:
         image: postgres:18
@@ -15,24 +31,44 @@ jobs:
           POSTGRES_DB: elmo_erp_test
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U elmo" --health-interval 10s --health-timeout 5s --health-retries 10
+          --health-cmd "pg_isready -U elmo -d elmo_erp_test" --health-interval 10s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
+      - name: Require an authentic Composer lockfile
+        run: |
+          test -s composer.lock || { echo '::error::composer.lock missing; generate using Composer 2 with registry access and commit it'; exit 1; }
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, pdo_pgsql, redis, pcntl, bcmath, intl
+          extensions: mbstring, pdo_pgsql, pdo_sqlite, redis, pcntl, bcmath, intl
           coverage: none
-      - run: composer install --no-interaction --prefer-dist
-      - run: cp .env.example .env
-      - run: php artisan key:generate
-      - run: php artisan test
-      - run: php artisan migrate --force
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: '5432'
-          DB_DATABASE: elmo_erp_test
-          DB_USERNAME: elmo
-          DB_PASSWORD: test-only
-
+      - name: Validate and install locked PHP dependencies
+        run: |
+          composer validate --strict
+          composer install --no-interaction --prefer-dist --no-progress
+      - name: Configure isolated test application
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+      - name: Verify PostgreSQL 18 migrations
+        run: php artisan migrate:fresh --force --no-interaction
+      - name: Run PHPUnit against disposable PostgreSQL 18
+        run: php artisan test --no-ansi
+      - name: Build backend Docker image
+        run: docker build --tag elmo-erp-backend:p0-01 .
+      - name: Smoke-test container API health
+        shell: bash
+        run: |
+          set -euo pipefail
+          key="$(php artisan key:generate --show)"
+          docker run --detach --rm --name erp-v2-backend-ci --publish 18000:8000 \
+            --env APP_ENV=testing --env "APP_KEY=$key" elmo-erp-backend:p0-01
+          trap 'docker rm --force erp-v2-backend-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://127.0.0.1:18000/api/v1/health | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs erp-v2-backend-ci
+          exit 1
