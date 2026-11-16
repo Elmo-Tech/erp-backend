@@ -1,11 +1,10 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\P003B;
 
 use App\Domain\Companies\AuthenticatedDatabaseContext;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use LogicException;
@@ -14,8 +13,17 @@ use Tests\TestCase;
 
 final class P003AuthenticatedContextTest extends TestCase
 {
-    // Unlike RefreshDatabase, this does NOT nest the service inside a test transaction.
-    use DatabaseTruncation;
+    // Avoid RefreshDatabase's wrapping transaction and DatabaseTruncation's
+    // schema rebuild through transaction-pooling; use only pre-existing disposable migrations.
+    protected function setUp(): void
+    {
+        parent::setUp();
+        if (app()->environment('testing') && getenv('DB_DATABASE') === 'elmo_erp_test') {
+            DB::statement('TRUNCATE TABLE users, currencies, companies RESTART IDENTITY CASCADE');
+        } else {
+            throw new RuntimeException('P0-03B tests require the disposable PostgreSQL fixture.');
+        }
+    }
 
     private function seedCompanies(): array
     {
