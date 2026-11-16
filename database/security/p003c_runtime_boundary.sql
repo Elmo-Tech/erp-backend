@@ -5,7 +5,7 @@ SELECT 1 / CASE WHEN current_user='p003c_runtime'
  AND NOT (SELECT rolbypassrls OR rolsuper OR rolcreatedb OR rolcreaterole FROM pg_roles WHERE rolname=current_user)
  AND NOT has_schema_privilege(current_user,'public','CREATE')
  AND NOT has_table_privilege(current_user,'fiscal_years','SELECT')
- AND NOT has_table_privilege(current_user,'company_memberships','UPDATE')
+ AND NOT has_column_privilege(current_user,'company_memberships','status','UPDATE')
  AND NOT pg_has_role(current_user,'elmo','MEMBER')
  THEN 1 ELSE 0 END AS restricted_runtime_identity;
 DO $plpgsql$
