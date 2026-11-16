@@ -1,4 +1,6 @@
-# Current continuation prompt — P0-02 Auth/MFA/RBAC security review
+# Historical continuation prompt — P0-02 Auth/MFA/RBAC security review
+
+**P0-02 was squash-merged to the development integration branches. For new database work use [NEW_CHAT_PROMPT_P0-03.md](NEW_CHAT_PROMPT_P0-03.md), not this historical P0-02 prompt. Security Issue #7 is still open.**
 
 Suggested chat title: `ERP V2 | P0-02 | Auth & RBAC`
 

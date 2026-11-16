@@ -40,6 +40,14 @@ This reflects explicit business-owner approval to start the ERP V2 rebuild.
 | 020 | **Approved 2026-11-16 (POLICY PRINCIPLES ONLY):** privileged MFA, trusted first activation, audited/two-person lost-device recovery, company RBAC/consolidation isolation, protected key lifecycle, HTTPS/session security. Exact operations/security review/merges and deployments remain separately gated. |
 | 021 | **Approved 2026-11-16 (INTEGRATION ONLY):** merge P0-02 PRs #6 backend/#2 frontend to `rebuild/erp-v2`; all SEC-01..08 security work remains open; no real users/deployment. |
 
+## ADR-021 execution record — non-production P0-02 merges (2026-11-16)
+
+Owner-authorized merges were **EXECUTED**: Backend PR #6 squash [`6c2894d`](https://github.com/Elmo-Tech/erp-backend/commit/6c2894d46ec5f48fca8f769010698c29631dff20) and Frontend PR #2 squash [`661ac4a`](https://github.com/Elmo-Tech/erp-frontend/commit/661ac4a01ecfb3f55c712575490f75cf002b160e), both on `rebuild/erp-v2`. **No independent security review was performed, no production or staging deployment authorized.** SEC-01..08 remain open in [Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7). Development can continue on [P0-03 Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8) without activating real privileged users.
+
+This execution record supersedes ADR-021's earlier future-tense "merge pending" text but **does not** waive any production gate.
+
+---
+
 ## ADR-021 — Owner-directed P0-02 non-production integration acceptance (2026-11-16)
 
 **APPROVED: merge the two specified PRs to development integration ONLY. NOT production/sign-off.**
