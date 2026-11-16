@@ -81,9 +81,10 @@ jobs:
           server_reset_query = DISCARD ALL
           max_prepared_statements = 100
           EOF
-          printf '"elmo" "test-only"\\n' > /tmp/p003b-auth.txt
+          echo '"elmo" "test-only"' > /tmp/p003b-auth.txt
           pgbouncer /tmp/p003b-pgbouncer.ini > /tmp/p003b-pgbouncer.log 2>&1 &
           sleep 2
+          cat /tmp/p003b-pgbouncer.log
           PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 6432 -U elmo pgbouncer -Atc 'SHOW CONFIG' | grep -E '^pool_mode[|]transaction[|]'
       - name: Run authenticated-context tests through actual PgBouncer
         env:
