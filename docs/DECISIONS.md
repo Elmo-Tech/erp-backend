@@ -1,5 +1,20 @@
 # Architecture Decision Register — approved 2026-11-16
 
+## P0-03D implementation verification addendum — 2026-11-16
+
+**P0-03D source commits:** `878e80f` initial rollback-only signed-claim probe; `adde8cd` verifier privilege-check correction; `e873a27` CI wiring; `08f4fce` review packet; `784411d`, `2915a89`, `cf6a585`, `ee0de47` status/handoff/ADR/roadmap; `dd6385d` diagnostics; `f3d492d` runtime GRANT-negative audit; `a811416` isolated EG fixture repair; `a4281bb` CI direct-PG/PgBouncer GRANT audit. Inspect `git log` for exact SHAs.
+
+**Failure + correction evidence:** [CI #43935671594 FAILURE](https://github.com/Elmo-Tech/erp-backend/actions/runs/43935671594) and [#43936123774 FAILURE](https://github.com/Elmo-Tech/erp-backend/actions/runs/43936123774) exposed `eg_signed_scope` failure because earlier revocation-race CI permanently revoked the synthetic EG membership *inside its disposable runner*, not because a forged claim succeeded. `a811416` restores only that synthetic membership within the signed-probe `BEGIN … ROLLBACK`. No persistent business record changed.
+
+**New P0-03D step-level evidence:** [CI #43936400738](https://github.com/Elmo-Tech/erp-backend/actions/runs/43936400738), code SHA `a4281bb21b3d3e5ddf56c94a56be9f710d60c2e6`: runtime GRANT audit (direct PostgreSQL and actual transaction-pooled PgBouncer) **STEP PASS**, signed-claim rollback-only spoofing tests **STEP PASS**, previous direct/pooled role boundary and parallel HTTP/revocation tests **STEP PASS**. Full-job Docker/health and any later documentation HEAD CI must be checked separately before claiming FULL SUCCESS. These are CI tests using synthetic actors and an owner-simulated issuer; not full signed identity provenance.
+
+**Security verdict remains NO SIGN-OFF:** GUC-only RLS is a reproduced FAIL. A valid user/company MAC signed in a single owner-controlled transaction is a proof of concept and does not establish that a deployable Laravel trusted issuer cannot be spoofed, replayed, or compromised. Restricted runtime MFA workflows remain incompatible without reviewed grants/function isolation. Human security review, Octane and production-like migration still NOT VERIFIED. ADR-022 PROPOSED; PR #10 Draft; Issues #8/#7 OPEN.
+
+**Next:** commission an independent qualified reviewer to inspect [packet](security/P0-03D_TRUST_BOUNDARY_REVIEW.md), challenge issuer and privilege model, then build a separately approved trusted issuer implementation and negative end-to-end tests before any RLS approval.
+
+---
+
+
 ## ADR-022 P0-03D addendum — 2026-11-16 (PROPOSED; no security decision approved)
 
 **Proposed preference:** explicit trusted Laravel actor/membership/permission validation and mandatory company-scoped predicates with existing company FK invariants and narrowly allowed DB access. Optional RLS can only be defence-in-depth unless a separate trusted DB-side identity has been independently demonstrated. GUC-only RLS under `p003c_runtime` is *known vulnerable* via `set_config`; cannot be accepted as an authorization boundary.
