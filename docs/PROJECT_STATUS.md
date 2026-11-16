@@ -4,41 +4,42 @@
 
 ## Milestone
 
-**Phase 0 — F00 platform CI baseline: automated checks PASS on both task branches; P0-01 is IN PROGRESS pending PR review and cross-repo connectivity evidence.** No production or staging deployment authorized.
+**Phase 0 — F00 CI/build baseline VERIFIED in merged code on `rebuild/erp-v2`; P0-01 Issue OPEN only for the expressly unverified live browser SPA→API connectivity requirement.** No staging or production deployment authorized.
 
 | Checkpoint | Status | Evidence |
 |---|---|---|
-| Integration branches | Existing, unchanged by this task | Backend `2479f339d1702da22a9bcad4aac279451ebe1a24`; frontend `341fc7cd8abd98b6c7865c754984d26bb68dd111` before task |
+| Integration branches | **BOTH MERGED** | Backend `97ed18fbb7d644f90ca3a10323e5bee0f0469264`; frontend `f3e74934c7b0547a531197fa5a67c61055945e7c` |
 | Dedicated task branches | Created in both repos | `task/p0-01-ci-baseline` (per repo; both based on `rebuild/erp-v2`) |
-| Backend draft PR | OPEN, awaiting human review | https://github.com/Elmo-Tech/erp-backend/pull/2 |
-| Frontend draft PR | OPEN, awaiting human review | https://github.com/Elmo-Tech/erp-frontend/pull/1 |
-| Authentic dependency lockfiles | GENERATED and committed via hosted package managers | [Composer lock](https://github.com/Elmo-Tech/erp-backend/blob/task/p0-01-ci-baseline/composer.lock), [npm lock](https://github.com/Elmo-Tech/erp-frontend/blob/task/p0-01-ci-baseline/package-lock.json) |
-| Backend Composer install/validation | **PASS** | https://github.com/Elmo-Tech/erp-backend/actions/runs/43857654487 |
+| Backend PR | **MERGED** (user explicitly requested merge; no formal GitHub reviews) | https://github.com/Elmo-Tech/erp-backend/pull/2 |
+| Frontend PR | **MERGED** (same authorization) | https://github.com/Elmo-Tech/erp-frontend/pull/1 |
+| Authentic dependency lockfiles | **COMMITTED to integration branches** using real Composer/npm registry resolution | [Composer lock](https://github.com/Elmo-Tech/erp-backend/blob/rebuild/erp-v2/composer.lock), [npm lock](https://github.com/Elmo-Tech/erp-frontend/blob/rebuild/erp-v2/package-lock.json) |
+| Backend Composer install/validation | **PASS on PR HEAD** | https://github.com/Elmo-Tech/erp-backend/actions/runs/43858463818 |
 | Backend PostgreSQL 18 migrations | **PASS** `migrate:fresh` on disposable CI DB | Same run |
 | Backend PHPUnit | **PASS — 6 tests, 9 assertions** | Same run |
 | Backend Docker build and API health smoke | **PASS** | Same run |
-| Frontend `npm ci`, typecheck, Vitest, Vite build | **PASS — 4 tests in 2 files** | https://github.com/Elmo-Tech/erp-frontend/actions/runs/43857835260 |
+| Frontend `npm ci`, typecheck, Vitest, Vite build | **PASS — 4 tests in 2 files; post-merge integration CI SUCCESS** | https://github.com/Elmo-Tech/erp-frontend/actions/runs/43860361496 |
 | Frontend Docker/Nginx smoke | **PASS** | Same run |
 | Live browser SPA-to-backend, cookie/CORS E2E | **NOT VERIFIED** | Separate smoke checks and mocked frontend health tests do not establish full end-to-end connectivity |
+| Backend post-merge CI | **SUCCESS on merged integration commit**; latest PR HEAD CI **PASS** | https://github.com/Elmo-Tech/erp-backend/actions/runs/43860404956 · https://github.com/Elmo-Tech/erp-backend/actions/runs/43858463818 |
 | Production/staging | **NOT DEPLOYED** | No release approval |
 
 ## Active task and interpretation
 
-[P0-01 — CI & reproducible builds](https://github.com/Elmo-Tech/erp-backend/issues/1) is still **IN PROGRESS** until both draft PRs are reviewed and accepted and any remaining acceptance gap is resolved or explicitly approved. All CI gates on the implementation commits above have real successful GitHub Actions evidence. Avoid interpreting this as permission to merge or deploy.
+[P0-01 — CI & reproducible builds](https://github.com/Elmo-Tech/erp-backend/issues/1): **both PRs MERGED after the user's explicit approval**. Core build/CI acceptance is VERIFIED in GitHub Actions. The GitHub Issue remains **OPEN**, because the live browser SPA-to-real-backend connectivity/cookie-CORS end-to-end requirement is **NOT VERIFIED**. The user authorized merging, **not** claiming that this missing test passed. Formal PR review submissions were absent; record the explicit user merge approval as authorization, not a code review.
 
 Old integration-branch CI runs [Backend #43846548484](https://github.com/Elmo-Tech/erp-backend/actions/runs/43846548484) and [Frontend #43846673824](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43846673824) failed before producing accessible job steps or logs; their *original* failure reason is **NOT VERIFIED**. Newly created PR pipelines did expose missing lockfiles and passed after genuine locks were generated. The first npm 10.9.9 lock generation attempt failed with `Cannot read properties of null (reading 'edgesOut')`; npm **11.21.2** generated the lockfile and passed `npm ci`, and is pinned for frontend CI/Docker.
 
 ## Decisions and safety
 
-No change to approved business architecture/ADR register in this task. Implementation-only CI tooling now pins npm 11.21.2 for compatibility with Node 22; backend remains PHP 8.4 / Composer 2, PostgreSQL 18. Temporary CI lockfile bootstrap workflows have been **removed** from both task branches. Accounting and legal isolation decisions remain unchanged. No new auth, financial posting API, customer data, or live migrations were used.
+No change to approved business architecture/ADR register in this task. Implementation-only CI tooling now pins npm 11.21.2 for compatibility with Node 22; backend remains PHP 8.4 / Composer 2, PostgreSQL 18. Temporary CI lockfile bootstrap workflows have been **removed** from both merged code trees. Accounting and legal isolation decisions remain unchanged. No new auth, financial posting API, customer data, or live migrations were used.
 
 The current baseline **does not yet implement** Auth/MFA/RBAC, immutable GL posting, billing, audit outbox processing or an authorized staging rollout. The financial test validates company membership and a cross-company composite FK; broader authorization/transaction behavior remains for later tasks.
 
 ## Next exact action
 
-**Stay on P0-01:** review and approve [backend PR #2](https://github.com/Elmo-Tech/erp-backend/pull/2) and [frontend PR #1](https://github.com/Elmo-Tech/erp-frontend/pull/1); confirm latest CI for their current commits; run or explicitly defer the real SPA/API connectivity smoke test with an isolated first-party test origin. Update Issue #1 and this status before closing P0-01. Do not merge without review.
+**Finish P0-01 on the already merged integration branches:** re-check [post-merge Backend CI #43860404956](https://github.com/Elmo-Tech/erp-backend/actions/runs/43860404956), then perform a real isolated browser SPA→API health request and verify the intended development origin/cross-origin behavior. A passing independent API health smoke and a mocked frontend test **do not** prove this. Keep [Issue #1](https://github.com/Elmo-Tech/erp-backend/issues/1) OPEN until this evidence exists or the requirement is explicitly moved/accepted with a recorded decision. Do not deploy.
 
-**Next distinct task only after P0-01 closure:** **P0-02 — first-party Sanctum Auth, MFA, company membership and scoped RBAC**. See [EXECUTION_PLAN.md](EXECUTION_PLAN.md) and [MODULE_ROADMAP.md](MODULE_ROADMAP.md).
+**Next distinct task:** **P0-02 — Sanctum SPA auth / MFA / company-scoped RBAC**. Authentication-specific CORS/cookies must be tested there regardless of P0-01's health connectivity check. Start in a **new chat** per work protocol.
 
 ## Mandatory session handoff
 
