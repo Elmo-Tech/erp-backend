@@ -37,7 +37,8 @@ def client(company, slug):
                 headers["X-XSRF-TOKEN"] = urllib.parse.unquote(xsrf)
         try:
             with opener.open(urllib.request.Request(BASE + path, data=data, headers=headers), timeout=15) as resp:
-                return resp.status, json.loads(resp.read())
+                body = resp.read()
+                return resp.status, json.loads(body) if body else {}
         except urllib.error.HTTPError as exc:
             return exc.code, json.loads(exc.read())
 
