@@ -1,3 +1,9 @@
+## P0-03H CI #44084156000 failed on fixture workspace permissions; correction (2026-11-17)
+
+[Exact-head CI #44084156000](https://github.com/Elmo-Tech/erp-backend/actions/runs/44084156000) at `87824bd3abcd8968eb3e728d5ce74a37a00033fa` **FAIL** in the new P0-03H UID/socket stage, because Linux system UIDs correctly cannot traverse GitHub Actions runner-private checkout directories (`python3: can't open file ... Permission denied`); all prior P0-03F/G tests in that run passed. This was a **test fixture packaging failure**, not evidence that the broker transport/assurance boundary passed or failed. Lock DoS probe and Docker checks skipped. Corrected by copying **only synthetic public test executable files** into `/tmp/p003h-fixtures` and leaving broker secrets in UID-owned 0700/0600 directory; follow-on CI **NOT VERIFIED** until its exact-SHA run finishes. No security approval, merge, deploy, production credentials or main/oberation changes.
+
+---
+
 # P0-03H — Bounded OS UID / Unix socket MFA broker isolation spike
 
 **Date:** 2026-11-17. **Status:** IMPLEMENTED EXPERIMENT; new exact-head CI **NOT VERIFIED until GitHub Actions completes**. **Security verdict: NO GO**. PR #10 remains Draft/Unmerged, Issue #8 and SEC-01..08 Issue #7 OPEN. ADR-023 PROPOSED. Synthetic PostgreSQL 18 data only; no deploy or production secrets.
