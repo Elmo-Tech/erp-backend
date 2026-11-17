@@ -1,3 +1,9 @@
+## P0-03F continuation — 2026-11-17 (NOT SECURITY SIGN-OFF)
+
+Laravel runtime split-role experiments have been added after the P0-03E SQL-only probe. See [P0-03F SQL, role and risk ledger](P0-03F_RUNTIME_ROLE_INTEGRATION.md). A separate MFA database connection in the same PHP process is not a secure service boundary. Do not attribute P0-03E success to P0-03F code; human review and release authorization remain outstanding.
+
+---
+
 # P0-03E — Trusted Issuer decision and DB permissions review (2026-11-17)
 
 ## P0-03E post-run verification and P0-03F handoff (2026-11-17; NEWEST CHECKPOINT)

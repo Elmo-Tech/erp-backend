@@ -1,3 +1,15 @@
+## P0-03F — Laravel Runtime Role Integration (2026-11-17, latest checkpoint)
+
+**IN PROGRESS / NO SECURITY SIGN-OFF.** Verified predecessor P0-03E docs HEAD `ed90ca6`: [CI #44044766275 FULL SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44044766275). That run did not test P0-03F.
+
+P0-03F on same task branch adds projected `WebUser` (Web SELECT users id/name/email/password/is_active only), explicit MFA connection with transactional atomic grant/factor/recovery writes, separate Session/Queue SQL connection configuration, and a fixed-shape transaction-only PostgreSQL SECURITY DEFINER lock helper for revocation serialization without Web `UPDATE(updated_at)`. New direct and transaction-pooled PgBouncer CI tests include real HTTP MFA first enrollment, recovery/TOTP replay, EG/IT isolation, and five jobs in reused Laravel worker. Earlier code commits had real CI failures: [#44066321009](https://github.com/Elmo-Tech/erp-backend/actions/runs/44066321009) (PHP syntax), [#44066982810](https://github.com/Elmo-Tech/erp-backend/actions/runs/44066982810) (WebUser table), [#44067293836](https://github.com/Elmo-Tech/erp-backend/actions/runs/44067293836) (MFA exists SELECT * denied), [#44067852530](https://github.com/Elmo-Tech/erp-backend/actions/runs/44067852530) (test wrong HTTP method); fixes committed but **no final P0-03F PASS yet**. Exact next-head CI must be checked independently.
+
+**Security blockers:** MFA credentials and factor decryption remain in same PHP process as Web; SQL connection partition alone does NOT isolate secrets or constitute a protected MFA command boundary. Password hashes still readable via Web. SECURITY DEFINER helper needs independent human review. Writable GUC-only RLS remains FAIL, no permanent RLS and no Trusted Issuer. ADR-022 PROPOSED (recommend defer). Issue #7 SEC-01..08 OPEN, Issue #8 OPEN, PR #10 DRAFT/OPEN/UNMERGED. No Merge/Deploy/production/main/oberation edits. See [P0-03F security inventory](security/P0-03F_RUNTIME_ROLE_INTEGRATION.md).
+
+**Next atomic action:** review the exact new CI on latest SHA, repair first failing split-role HTTP/queue/revocation step without adding broad GRANTs, then request independent review of MFA/lock function/process boundary.
+
+---
+
 ## P0-03E exact-HEAD CI confirmed / P0-03F runtime integration intake (2026-11-17; NEWEST CHECKPOINT)
 
 **P0-03E engineering CI = FULL SUCCESS, SECURITY RELEASE = NOT APPROVED.** Exact tested task HEAD `3ac66658fb1508893fa3e58a6d98491f2ac24f3a` passed [GitHub Actions #44043335598](https://github.com/Elmo-Tech/erp-backend/actions/runs/44043335598): PostgreSQL 18 migrations/PHPUnit/rollback, existing EG↔IT tests/PgBouncer concurrency/worker reuse, P0-03D disposable probes, all **four P0-03E isolated SQL principals** verified on direct PostgreSQL and actual transaction-pooled PgBouncer, Docker build, API health. A later docs-only SHA needs its **own** CI; never attribute this result to it.

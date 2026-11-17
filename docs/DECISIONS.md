@@ -1,3 +1,9 @@
+## ADR-022 P0-03F addendum — 2026-11-17 (PROPOSED, NOT APPROVED)
+
+**DEFER permanent RLS and Trusted Issuer.** P0-03F tests narrowed SQL role privileges and introduced projected Web credentials, dedicated MFA/Session/Queue connections, atomic MFA enrollment, and a PostgreSQL SECURITY DEFINER lock in *disposable CI only*. This does NOT provide independent MFA process/secret isolation; the same compromised PHP process can use MFA credentials. SQL injection may still read Web password hashes and selector tables. Independent human review of the helper and MFA security boundary is mandatory before any deployment. [P0-03F role/SQL ledger](security/P0-03F_RUNTIME_ROLE_INTEGRATION.md). Earlier P0-03E docs CI [#44044766275](https://github.com/Elmo-Tech/erp-backend/actions/runs/44044766275) passed at `ed90ca6`, not this runtime integration. ADR remains PROPOSED; PR #10 DRAFT; Issues #8/#7 OPEN; no merge/deploy/permanent RLS/production/main/oberation changes.
+
+---
+
 ## P0-03E exact-HEAD CI confirmed / P0-03F runtime integration intake (2026-11-17; NEWEST CHECKPOINT)
 
 **P0-03E engineering CI = FULL SUCCESS, SECURITY RELEASE = NOT APPROVED.** Exact tested task HEAD `3ac66658fb1508893fa3e58a6d98491f2ac24f3a` passed [GitHub Actions #44043335598](https://github.com/Elmo-Tech/erp-backend/actions/runs/44043335598): PostgreSQL 18 migrations/PHPUnit/rollback, existing EG↔IT tests/PgBouncer concurrency/worker reuse, P0-03D disposable probes, all **four P0-03E isolated SQL principals** verified on direct PostgreSQL and actual transaction-pooled PgBouncer, Docker build, API health. A later docs-only SHA needs its **own** CI; never attribute this result to it.
