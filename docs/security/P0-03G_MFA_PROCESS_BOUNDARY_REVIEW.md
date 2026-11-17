@@ -1,3 +1,9 @@
+## P0-03G executable PoC verification update (2026-11-17)
+
+**Exact-code SHA `66cf966c4d95c4a7790b75d8b5332015aed75208` — [GitHub Actions #44076378155 FULL SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44076378155).** P0-03G CLI broker smoke, PostgreSQL 18 + PgBouncer negative Web privilege tests, broker-owned password/challenge, TOTP single-use/replay, cross-user tokens, expiry, revocation, audit/error-trigger atomic rollback, parallel consumption all succeeded within the full run, alongside prior P0-03F integration and Docker/health. **This does NOT prove OS/process isolation, credential custody, protected service transport, trusted Laravel session issuance or production security.** Earlier negative CI #44075692788 exposed fault-injection constraint setup, #44076009406 exposed missing read-only audit inspection grant; corrected. All newer documentation SHAs require independent exact-head CI. Human review still absent, PR Draft, Issues #8/#7 open, Production NO GO.
+
+---
+
 # P0-03G — MFA process-compromise threat model, command boundary and disposable proof
 
 **2026-11-17. Status: PROPOSED / engineering PoC pending exact-head CI; no human security sign-off.** Related: Draft [PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10), open [Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8), release blockers [Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7), proposed ADR-022 (defer permanent RLS/Trusted Issuer). Pre-P0-03G handoff SHA `07822a1e1941d68ed65d384490055675390d8386`: [CI #44072342218 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44072342218) on that exact SHA.
