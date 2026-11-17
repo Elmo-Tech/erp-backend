@@ -18,7 +18,7 @@ $rolePgsql = static function (string $role): array {
         'search_path' => 'public',
         'sslmode' => env($prefix.'SSLMODE', env('DB_SSLMODE', 'prefer')),
         'options' => filter_var(env($prefix.'PGBOUNCER_TRANSACTION', false), FILTER_VALIDATE_BOOLEAN)
-            ? [\\PDO::ATTR_EMULATE_PREPARES => true] : [],
+            ? [\PDO::ATTR_EMULATE_PREPARES => true] : [],
     ];
 };
 
