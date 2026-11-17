@@ -62,7 +62,7 @@ New files:
 | --- | --- |
 | P0-03F pre-G code `dbc0f7e`, CI #44069174715 | **PASS** on exact SHA |
 | Pre-G docs handoff HEAD `07822a1`, CI #44072342218 | **PASS** on exact SHA |
-| P0-03G new SQL/CLI/Python integration | **NOT VERIFIED until exact-head CI** |
+| P0-03G new SQL/CLI/Python integration | **FAIL on initial G runs #44075692788 and #44076009406; corrected G run NOT VERIFIED** |
 | PgBouncer transaction pool, PostgreSQL18 existing suite | **PASS on pre-G baseline**; G additions pending |
 | SQL-only GUC spoofing | **FAIL** as a security boundary (reproduced earlier) |
 | Real OS/process and credential isolation | **NOT VERIFIED** |
