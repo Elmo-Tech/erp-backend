@@ -1,3 +1,13 @@
+## P0-03G corrected executable PoC — exact-code CI PASS (2026-11-17)
+
+**Engineering PASS on exact code SHA `66cf966c4d95c4a7790b75d8b5332015aed75208`: [CI #44076378155 FULL SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44076378155)**, including PostgreSQL 18 migrations/PHPUnit/rollback, P0-03F Auth/MFA/Session/Queue + concurrent revocation + fault-injection rollback through actual PgBouncer, the **NEW P0-03G synthetic broker challenge/permission/replay/revocation/expiration/concurrency/transaction-rollback suite**, Docker build and container health. Previous failed G CI: [#44075692788](https://github.com/Elmo-Tech/erp-backend/actions/runs/44075692788) fault-injection CHECK setup; [#44076009406](https://github.com/Elmo-Tech/erp-backend/actions/runs/44076009406) missing broker SELECT on audit for test inspection. Fixed in `0bb6d5b` and `66cf966`; no Web grants widened. **This documentation update requires its own exact-head CI; do not assign this code run to later docs SHAs.**
+
+**Scope, not security release:** broker PoC uses a test CLI spawned under SAME CI OS account, test-only admin commands and synthetic broker-owned identities. It does NOT prove distinct OS credentials, protected process/service transport, real Laravel session assurance, user/password authority reconciliation, operational key custody, SEC-01..08 or independent human sign-off. HIGH compromised-Web-process bypass remains **OPEN**, despite successful scripted challenge checks. [Full threat review](security/P0-03G_MFA_PROCESS_BOUNDARY_REVIEW.md). ADR-023 **PROPOSED**, ADR-022 **PROPOSED/DEFER RLS**, PR #10 **DRAFT/UNMERGED**, Issues #8/#7 OPEN. Development merge is review/owner-authorization candidate only; **Production NO GO**. No merge/deploy/permanent RLS/prod/main/oberation changes.
+
+**Next atomic action:** independent qualified reviewer of lock-helper caller-chosen targets/DoS/owner/EXECUTE and protocol/session issuer, followed by real separate-UID/process/transport test and trusted Laravel session integration on synthetic CI before production readiness reconsideration.
+
+---
+
 ## P0-03G — MFA process/credential boundary review (2026-11-17; NOT SECURITY APPROVED)
 
 **Baseline verified:** [CI #44072342218 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44072342218) on pre-G handoff SHA `07822a1e1941d68ed65d384490055675390d8386`; preceding P0-03F `dbc0f7e` CI #44069174715 SUCCESS. **P0-03G new-code CI**: first [#44075692788 FAILURE](https://github.com/Elmo-Tech/erp-backend/actions/runs/44075692788) at new fault-injection test (existing successful audit rows invalidated newly added CHECK); corrected in `0bb6d5b` using `NOT VALID`. **Exact new head and complete CI pending independent check; do NOT claim success yet.**
