@@ -273,6 +273,41 @@ jobs:
           export P003G_FACTOR_KEY="$(python3 -c 'import secrets,base64;print(base64.b64encode(secrets.token_bytes(32)).decode())')"
           php -l tests/integration/p003g_broker_poc.php
           python3 tests/integration/p003g_broker_poc.py
+      - name: P0-03H isolated broker OS UID and authenticated Unix socket spike (disposable)
+        run: |
+          set -euo pipefail
+          # The earlier P0-03G trust-mode pool must not remain a path for broker impersonation.
+          grep -v '^"p003g_broker"' /tmp/p003b-auth.txt > /tmp/p003b-auth-new.txt
+          mv /tmp/p003b-auth-new.txt /tmp/p003b-auth.txt
+          PGPASSWORD='test-only' psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 16432 -U elmo pgbouncer -c RELOAD
+          # A second disposable transaction pool uses SCRAM, never trust, for broker SQL.
+          cat > /tmp/p003h-pgbouncer.ini <<'EOF'
+          [databases]
+          elmo_erp_test = host=127.0.0.1 port=5432 dbname=elmo_erp_test
+          [pgbouncer]
+          listen_addr = 127.0.0.1
+          listen_port = 16433
+          auth_type = scram-sha-256
+          auth_file = /tmp/p003h-auth.txt
+          admin_users = elmo
+          pool_mode = transaction
+          default_pool_size = 2
+          max_client_conn = 30
+          server_reset_query = DISCARD ALL
+          max_prepared_statements = 100
+          EOF
+          printf '"p003g_broker" "ci-only-broker"\n"p003e_web" "ci-only-web"\n' > /tmp/p003h-auth.txt
+          chmod 600 /tmp/p003h-auth.txt
+          pgbouncer /tmp/p003h-pgbouncer.ini > /tmp/p003h-pgbouncer.log 2>&1 &
+          pool_pid=$!
+          trap 'kill "$pool_pid" 2>/dev/null || true; tail -n 40 /tmp/p003h-pgbouncer.log' EXIT
+          for i in {1..30}; do
+            if PGPASSWORD='ci-only-broker' psql -X -h 127.0.0.1 -p 16433 -U p003g_broker -d elmo_erp_test -Atc 'SELECT 1' 2>/dev/null | grep -qx 1; then break; fi
+            sleep 1
+          done
+          php -l tests/integration/p003g_broker_poc.php
+          python3 -m py_compile tests/integration/p003h_uid_socket_spike.py
+          sudo --preserve-env=APP_ENV,DB_DATABASE python3 tests/integration/p003h_uid_socket_spike.py run
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health
