@@ -22,6 +22,10 @@ try {
     $mfa->confirmEnrollment($user,$mfa->makeSecret(),intdiv(now()->timestamp,30));
     throw new RuntimeException('Rollback test unexpectedly committed MFA.');
 } catch (QueryException $e) {
+    // Only the deliberate synthetic recovery trigger is acceptable here.
+    if (! str_contains($e->getMessage(), 'P003F synthetic recovery failure')) {
+        throw new RuntimeException('Unexpected MFA rollback error type.');
+    }
     // Do not log exception SQL/bindings or any factor material.
 }
 $db=DB::connection('pgsql_mfa');

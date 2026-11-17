@@ -23,7 +23,7 @@ DB::table('user_mfa_enrollment_authorizations')->insert([
 ]);
 DB::unprepared(<<<'SQL'
 CREATE OR REPLACE FUNCTION public.p003f_reject_recovery_insert() RETURNS trigger
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $
 BEGIN
   IF NEW.user_id = (SELECT id FROM public.users WHERE email = 'p003f-rollback@example.invalid') THEN
     RAISE EXCEPTION 'P003F synthetic recovery failure';
