@@ -308,6 +308,11 @@ jobs:
           php -l tests/integration/p003g_broker_poc.php
           python3 -m py_compile tests/integration/p003h_uid_socket_spike.py
           sudo --preserve-env=APP_ENV,DB_DATABASE python3 tests/integration/p003h_uid_socket_spike.py run
+      - name: P0-03H detect arbitrary Web SQL SECURITY DEFINER lock-target DoS (expected security FAIL)
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tests/integration/p003h_lock_helper_probe.py
+          python3 tests/integration/p003h_lock_helper_probe.py
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health
