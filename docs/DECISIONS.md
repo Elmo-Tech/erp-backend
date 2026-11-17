@@ -1,3 +1,9 @@
+## ADR-022 P0-03F CI evidence — 2026-11-17 (PROPOSED, NO DECISION APPROVAL)
+
+Engineering split-role tests **FULL SUCCESS** on code `d7b3114` at [CI #44068168985](https://github.com/Elmo-Tech/erp-backend/actions/runs/44068168985): PostgreSQL 18 and PgBouncer Web/MFA/Session/Queue real Laravel operations, enrollment/recovery/TOTP/login/logout, EG↔IT, five reused jobs, migrations/rollback/Docker. Later revocation race `e8f7201` requires independent exact-head CI. This is not independent human security review or production proof. **Remain PROPOSED; recommendation DEFER permanent RLS / Trusted Issuer.** No MFA process isolation, issuer or production signoff. PR #10 Draft, Issues #8/#7 OPEN.
+
+---
+
 ## ADR-022 P0-03F addendum — 2026-11-17 (PROPOSED, NOT APPROVED)
 
 **DEFER permanent RLS and Trusted Issuer.** P0-03F tests narrowed SQL role privileges and introduced projected Web credentials, dedicated MFA/Session/Queue connections, atomic MFA enrollment, and a PostgreSQL SECURITY DEFINER lock in *disposable CI only*. This does NOT provide independent MFA process/secret isolation; the same compromised PHP process can use MFA credentials. SQL injection may still read Web password hashes and selector tables. Independent human review of the helper and MFA security boundary is mandatory before any deployment. [P0-03F role/SQL ledger](security/P0-03F_RUNTIME_ROLE_INTEGRATION.md). Earlier P0-03E docs CI [#44044766275](https://github.com/Elmo-Tech/erp-backend/actions/runs/44044766275) passed at `ed90ca6`, not this runtime integration. ADR remains PROPOSED; PR #10 DRAFT; Issues #8/#7 OPEN; no merge/deploy/permanent RLS/production/main/oberation changes.

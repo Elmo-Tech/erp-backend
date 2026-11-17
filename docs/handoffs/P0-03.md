@@ -1,3 +1,13 @@
+## P0-03F exact-code CI pass / extra revocation test pending — 2026-11-17 (NEWEST)
+
+**PASS engineering (code SHA `d7b3114b291f532075bc41f1aef323226c815a89`):** [CI #44068168985 FULL SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44068168985). This includes PostgreSQL 18/PHPUnit/rollback, original security and direct/PgBouncer split-principal GRANT negatives, real Laravel Login/MFA first enrollment + TOTP/recovery single-use + Logout on distinct Web/MFA/Session SQL principals, both-way EG↔IT HTTP denial, five Queue jobs with separate Queue role inside reused Laravel worker, Docker build + health. The new separate-web-role revocation/concurrency probe `tests/integration/p003f_runtime_race.php` was committed later at `e8f7201` and needs exact-head CI; **do not count it PASS on the earlier SHA**.
+
+**Security release STILL FAIL / NOT SIGNED OFF:** MFA SQL credentials and decrypted factors still available in the Web PHP process; role connection isolation is not process isolation. No independent authenticated MFA command broker, no human review of SECURITY DEFINER locking helper and credential handling, no permanent RLS/issuer or production acceptance. APP_KEY recovery-HMAC, trusted activation and recovery/reset gates remain Issue #7 OPEN. ADR-022 PROPOSED / defer RLS; PR #10 DRAFT and Issue #8 OPEN. No merge/deploy/production/main/oberation edits.
+
+**Next:** confirm CI for `e8f7201` including new split-role concurrent revocation; repair or document any failure and preserve restricted grants.
+
+---
+
 ## P0-03F — Laravel Runtime Role Integration (2026-11-17, latest checkpoint)
 
 **IN PROGRESS / NO SECURITY SIGN-OFF.** Verified predecessor P0-03E docs HEAD `ed90ca6`: [CI #44044766275 FULL SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44044766275). That run did not test P0-03F.
