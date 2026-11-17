@@ -1,4 +1,58 @@
+## P0-03G — MFA command boundary investigation (2026-11-17)
+
+F01 authentication/company-security remains **IN PROGRESS / NOT SECURITY VERIFIED**. A disposable PostgreSQL 18/PgBouncer command-broker PoC is under CI verification, not wired to Laravel/Auth/production and not OS-credential isolated; see [security packet](security/P0-03G_MFA_PROCESS_BOUNDARY_REVIEW.md). First new PoC CI #44075692788 failed on test fault-injection setup, fixed at `0bb6d5b`; later SHA needs its own evidence. Do not mark as production ready. ADR-023 and ADR-022 PROPOSED, permanent RLS deferred, Issues #8/#7 open, PR #10 Draft/unmerged, human security approval missing.
+
+---
+
+## P0-03E — DB permissions hardening (2026-11-17; IN PROGRESS)
+
+**Engineering recommendation: DEFER RLS; do not create a Trusted Issuer now.** Existing Laravel membership/role/permission validation plus explicit legal-company predicates and composite FKs remain mandatory. This does NOT protect unscoped data from arbitrary SQL injection. Review packet: [P0-03E role partition](security/P0-03E_ROLE_PARTITION_REVIEW.md). Existing `p003c_runtime` can read all `users` columns, change four `updated_at` columns and mutate sessions/queue; MFA grant gaps are known FAILs. Proposed separate Web/MFA/Queue/Session principals are CI-only, not wired Auth/MFA flows.
+
+- **Verified baseline:** [CI #43941237508](https://github.com/Elmo-Tech/erp-backend/actions/runs/43941237508) **SUCCESS** at exact previous documentation HEAD `3eb340f08941827b03ce3c425a6669b726c9836b` (PG18/PgBouncer/migrations/rollback/CI Auth/queue/isolation/Docker). It must **NOT** be attributed to P0-03E changes.
+- **New P0-03E files:** `database/security/p003e_role_partition_disposable.sql`, `database/security/p003e_role_partition_checks.sql`, and CI `.github/workflows/ci.yml`; test-only four SQL principals through PG18 direct and PgBouncer. **New CI: NOT VERIFIED pending exact-head result**; no claimed Laravel workflow integration.
+- **Real Auth/MFA under proposed principals: FAIL / NOT COMPATIBLE as currently implemented**: unscoped Eloquent user reads and `lockForUpdate` need access the new Web role deliberately denies; separate MFA operations and session/queue connections are not yet wired. The old p003c role's MFA grant audit deliberately expects denied writes. No blanket grants to bypass.
+- **Open:** EG↔IT app tests under each new role; forged/replayed issuer claims (no production issuer); external permission/key custody; role revocation/concurrency under new principal architecture; production-like upgrade; independent human reviewer. Issues [#8](https://github.com/Elmo-Tech/erp-backend/issues/8) and [#7](https://github.com/Elmo-Tech/erp-backend/issues/7) OPEN, PR [#10](https://github.com/Elmo-Tech/erp-backend/pull/10) DRAFT. ADR-022 PROPOSED.
+- **Next atomic action:** inspect exact new CI; repair any failing disposable role probes; then refactor scoped Web auth projection and dedicated isolated MFA/session/queue connections, replacing unsafe timestamp UPDATE/row lock interaction only with evidence-backed serialization tests. Require a qualified independent HUMAN review before release approval.
+- **Forbidden:** no Merge, Deployment, production or real credentials, permanent RLS, `main`, `oberation`.
+
+---
+
 # Module Roadmap — End-to-End ERP V2
+
+## P0-03D security gate clarification — 2026-11-16 (LATEST)
+
+F01 company authorization/DB security remains **IN PROGRESS / not security accepted**, despite [P0-03C CI #43933833495 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/43933833495) on prior SHA `1ba473ef`. The next P0-03D signed-claim SQL probe is rollback-only with a simulated owner issuer; NOT end-to-end proven, not a production design. GUC-only RLS unsafe; full Auth/MFA/queue grants and independent human review outstanding. See [P0-03D security packet](security/P0-03D_TRUST_BOUNDARY_REVIEW.md), [Draft PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10), [Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8). F02 accounting remains NOT STARTED beyond schema scaffold. No RLS deployment/merge.
+
+---
+
+
+**Final code CI verification:** [#43920504958](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920504958) **FULL JOB SUCCESS**, head `64b1e46d82c741de41eda6f87211a02f15082d41`: PostgreSQL 18 migrations, PHPUnit **30 tests/273 assertions**, P0-03 rollback/reapply, disposable RLS limited role/transaction-local context, two physical-session lock/exclusion/no-leak smoke, Docker build and HTTP health. This supersedes the prior step-level-only assessment. [#43920097079](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920097079) separately FULL SUCCESS on pre-two-session commit `e7773d1`. [Docs-only HEAD CI #43920822054](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920822054) had not completed at this record; any later docs-only commit requires independent CI check.
+
+**Still NOT RUN:** real PgBouncer transaction pool and Laravel reused worker/Octane integration, authenticated tenant-context propagation under actual HTTP/queue workload, cross-session privilege escalation via malicious GUC, production-like migration on nonempty legacy data, independent review. RLS not activated and no production release. **Next Atomic Action:** implement and test a trusted membership-validated `SET LOCAL` transaction wrapper with actual PgBouncer/worker reuse, prove cross-request EG↔IT no-leak and bypass negatives, and submit a narrowly scoped reviewed PR before any RLS enabling decision.
+
+
+
+## P0-03 verified CI and open gates — 2026-11-16 (latest evidence)
+
+**Task IN PROGRESS, Draft [PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10) UNMERGED, Issue #8 OPEN.** Initial CI [#43919415460](https://github.com/Elmo-Tech/erp-backend/actions/runs/43919415460) **FAIL**: PostgreSQL trigger function persisted after Laravel `migrate:fresh` table reset; fixed with `CREATE OR REPLACE FUNCTION` in `93ba16a`. Next run [#43919771317](https://github.com/Elmo-Tech/erp-backend/actions/runs/43919771317) **FAIL**: new test used overlength `normal_balance='invalid'` (SQLSTATE 22001) instead of an in-range invalid value; corrected to `wrong` in `63afa0d`. These were test/integration failures, not security bypasses.
+
+**Verified PASS on code commit `e7773d147dbc209721a43f2f3e2c0c3fe30dcae2`:** [Backend CI #43920097079](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920097079) SUCCESS: PostgreSQL 18 migration, **30 PHPUnit tests / 273 assertions**, P0-03 migration rollback/reapply, rollback-only least-privilege RLS probe, Docker build and container API health.
+
+**Additional two-connection code** `cdecfa3` plus CI wiring `64b1e46d82c741de41eda6f87211a02f15082d41`: [CI #43920504958](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920504958) checked PostgreSQL 18 migration, PHPUnit, rollback/reapply, RLS pilot, and **two physical PostgreSQL connections / transaction-local company context reset / exclusion race** successfully at the step level. Whole-job Docker/final conclusion must be rechecked separately before stating overall PASS for this newer SHA.
+
+**NOT RUN / NOT VERIFIED:** real PgBouncer transaction pooling, Laravel Octane/reused queue workers, cross-request concurrency under actual deployment and controlled tenant-context setter; immutable posting/accounting review, historical data upgrade and independent human sign-off. The SQL probe does NOT enable RLS in the app, and RLS custom GUC alone is NOT an authorization mechanism. SEC-01..08 Issue #7 open. ADR-022 PROPOSED only. **No merge/deployment/production role, user, or key changes.**
+
+**Next Atomic Action:** verify completed full-job result of CI #43920504958 and the final docs-only commit CI; then implement an authenticated transaction-bound context integration covering actual PgBouncer/queue-worker reuse in a separately reviewed increment before considering production RLS. Keep PR #10 draft and Issue #8 open.
+
+---
+
+
+## P0-03 status addendum — 2026-11-16
+
+**F01 database security remains IN PROGRESS, NOT VERIFIED.** [Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8), [Backend Draft PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10) on `task/p0-03-db-security`, additive CHECK/exclusion constraints, parent keys and direct SQL EG↔IT tests with a rollback-only RLS sandbox. **P0-03 CI/upgrade/rollback/pooler evidence pending**, not inherited from previously successful [backend integration CI #43917199722](https://github.com/Elmo-Tech/erp-backend/actions/runs/43917199722). No frontend modification. F02 General Ledger remains NOT STARTED beyond scaffold; immutable posting, balanced journal posting, lock-state enforcement and accountant review are separate future gates. SEC-01..08 in [Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7) remain open, so no real-user/production release. See [P0-03 handoff](handoffs/P0-03.md) and PROPOSED [ADR-022](DECISIONS.md).
+
+---
+
 
 Status key: `NOT STARTED` = design only; `SCAFFOLD` = source code exists but not verified; `IN PROGRESS` = active task with evidence; `VERIFIED` = acceptance tests passed and PR reviewed; `BLOCKED` = dependency/external signoff prevents delivery.
 All statuses are as of **2026-11-16** and must be changed only with linked evidence. Full business requirements: [BUSINESS_RULES.md](BUSINESS_RULES.md).

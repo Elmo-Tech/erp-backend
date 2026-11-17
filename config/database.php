@@ -3,6 +3,25 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+// P0-03F explicit restricted principals; do not silently inherit Web credentials.
+$rolePgsql = static function (string $role): array {
+    $prefix = 'DB_'.strtoupper($role).'_';
+    return [
+        'driver' => 'pgsql',
+        'url' => env($prefix.'URL'),
+        'host' => env($prefix.'HOST', env('DB_HOST', '127.0.0.1')),
+        'port' => env($prefix.'PORT', env('DB_PORT', '5432')),
+        'database' => env($prefix.'DATABASE', env('DB_DATABASE', 'laravel')),
+        'username' => env($prefix.'USERNAME'),
+        'password' => env($prefix.'PASSWORD'),
+        'charset' => 'utf8', 'prefix' => '', 'prefix_indexes' => true,
+        'search_path' => 'public',
+        'sslmode' => env($prefix.'SSLMODE', env('DB_SSLMODE', 'prefer')),
+        'options' => filter_var(env($prefix.'PGBOUNCER_TRANSACTION', false), FILTER_VALIDATE_BOOLEAN)
+            ? [\PDO::ATTR_EMULATE_PREPARES => true] : [],
+    ];
+};
+
 return [
 
     /*
@@ -97,7 +116,15 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // PgBouncer transaction pooling cannot retain PDO named server prepares between transactions.
+            // Enable only on explicitly configured pooled connections, not direct PostgreSQL.
+            'options' => filter_var(env('DB_PGBOUNCER_TRANSACTION', false), FILTER_VALIDATE_BOOLEAN)
+                ? [\PDO::ATTR_EMULATE_PREPARES => true] : [],
         ],
+
+        'pgsql_mfa' => $rolePgsql('mfa'),
+        'pgsql_queue' => $rolePgsql('queue'),
+        'pgsql_session' => $rolePgsql('session'),
 
         'sqlsrv' => [
             'driver' => 'sqlsrv',

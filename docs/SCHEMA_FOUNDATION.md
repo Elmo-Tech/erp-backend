@@ -1,5 +1,37 @@
 # Phase 0 Schema Contract — first migration increment
 
+**Final code CI verification:** [#43920504958](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920504958) **FULL JOB SUCCESS**, head `64b1e46d82c741de41eda6f87211a02f15082d41`: PostgreSQL 18 migrations, PHPUnit **30 tests/273 assertions**, P0-03 rollback/reapply, disposable RLS limited role/transaction-local context, two physical-session lock/exclusion/no-leak smoke, Docker build and HTTP health. This supersedes the prior step-level-only assessment. [#43920097079](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920097079) separately FULL SUCCESS on pre-two-session commit `e7773d1`. [Docs-only HEAD CI #43920822054](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920822054) had not completed at this record; any later docs-only commit requires independent CI check.
+
+**Still NOT RUN:** real PgBouncer transaction pool and Laravel reused worker/Octane integration, authenticated tenant-context propagation under actual HTTP/queue workload, cross-session privilege escalation via malicious GUC, production-like migration on nonempty legacy data, independent review. RLS not activated and no production release. **Next Atomic Action:** implement and test a trusted membership-validated `SET LOCAL` transaction wrapper with actual PgBouncer/worker reuse, prove cross-request EG↔IT no-leak and bypass negatives, and submit a narrowly scoped reviewed PR before any RLS enabling decision.
+
+
+
+## P0-03 verified CI and open gates — 2026-11-16 (latest evidence)
+
+**Task IN PROGRESS, Draft [PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10) UNMERGED, Issue #8 OPEN.** Initial CI [#43919415460](https://github.com/Elmo-Tech/erp-backend/actions/runs/43919415460) **FAIL**: PostgreSQL trigger function persisted after Laravel `migrate:fresh` table reset; fixed with `CREATE OR REPLACE FUNCTION` in `93ba16a`. Next run [#43919771317](https://github.com/Elmo-Tech/erp-backend/actions/runs/43919771317) **FAIL**: new test used overlength `normal_balance='invalid'` (SQLSTATE 22001) instead of an in-range invalid value; corrected to `wrong` in `63afa0d`. These were test/integration failures, not security bypasses.
+
+**Verified PASS on code commit `e7773d147dbc209721a43f2f3e2c0c3fe30dcae2`:** [Backend CI #43920097079](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920097079) SUCCESS: PostgreSQL 18 migration, **30 PHPUnit tests / 273 assertions**, P0-03 migration rollback/reapply, rollback-only least-privilege RLS probe, Docker build and container API health.
+
+**Additional two-connection code** `cdecfa3` plus CI wiring `64b1e46d82c741de41eda6f87211a02f15082d41`: [CI #43920504958](https://github.com/Elmo-Tech/erp-backend/actions/runs/43920504958) checked PostgreSQL 18 migration, PHPUnit, rollback/reapply, RLS pilot, and **two physical PostgreSQL connections / transaction-local company context reset / exclusion race** successfully at the step level. Whole-job Docker/final conclusion must be rechecked separately before stating overall PASS for this newer SHA.
+
+**NOT RUN / NOT VERIFIED:** real PgBouncer transaction pooling, Laravel Octane/reused queue workers, cross-request concurrency under actual deployment and controlled tenant-context setter; immutable posting/accounting review, historical data upgrade and independent human sign-off. The SQL probe does NOT enable RLS in the app, and RLS custom GUC alone is NOT an authorization mechanism. SEC-01..08 Issue #7 open. ADR-022 PROPOSED only. **No merge/deployment/production role, user, or key changes.**
+
+**Next Atomic Action:** verify completed full-job result of CI #43920504958 and the final docs-only commit CI; then implement an authenticated transaction-bound context integration covering actual PgBouncer/queue-worker reuse in a separately reviewed increment before considering production RLS. Keep PR #10 draft and Issue #8 open.
+
+---
+
+
+## P0-03 additive constraint implementation — 2026-11-16 (DRAFT PR #10)
+
+Latest physical migrations were inspected on backend integration SHA `5bc57535129e652f24f4991e7b90d418cef6f200`. Company-owned finance parents already have same-company composite FKs in the appropriate child tables; P0-03 does not duplicate them. `2026_11_16_000006_harden_company_accounting_invariants.php` adds missing `UNIQUE(company_id,id)` for company role assignments, journal lines and idempotency requests; restrictive CHECK constraints on status/domain, valid debit-versus-credit, nonzero currency snapshot when present, positive line numbers, and timestamp coherency; indexed same-company FK lookups; `btree_gist` company-specific fiscal/period non-overlap; trigger guards on parent and child date boundaries. `audit_logs` and `outbox_events` remain nullable global/company-scoped; no fabricated company scope for global events.
+
+This does **not** implement balanced/immutable posting, issued invoices, allowed period-state transitions, currency rounding/posting, or GL API. Those gates remain blocked pending F02 and review. PostgreSQL 18-only migration needs extension creation privilege; run against disposable DB first and confirm upgrade/rollback before any production migration. P0-03 migration/test CI is NOT VERIFIED as of this snapshot.
+
+**Least privilege RLS pilot is opt-in and disposable only:** `database/security/p003_rls_pilot.sql` creates a `NOLOGIN NOBYPASSRLS` read-only role for `fiscal_years`, guards policy with transaction-local `app.company_id`, tests EG/IT directions and no-context behavior with savepoint rollback, then rolls back *everything*. Laravel application pool and production DB roles are untouched. This test cannot prove PgBouncer or real queue/worker safety; application membership checks remain authoritative. See [P0-03 handoff](handoffs/P0-03.md).
+
+---
+
+
 **Schema is partial by design.** It establishes the security and accounting-shaped base, not final tax posting or issued invoices.
 
 ## Implemented first tables

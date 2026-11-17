@@ -54,6 +54,270 @@ jobs:
         run: php artisan migrate:fresh --force --no-interaction
       - name: Run PHPUnit against disposable PostgreSQL 18
         run: php artisan test --no-ansi
+      - name: Verify P0-03 migration rollback and re-apply on disposable PostgreSQL
+        run: |
+          php artisan migrate:rollback --step=1 --force --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Verify disposable PostgreSQL RLS role and transaction-local context
+        run: PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_DATABASE" -f database/security/p003_rls_pilot.sql
+      - name: Verify two PostgreSQL sessions, company context and exclusion races
+        run: php tests/integration/p003_concurrency.php
+      - name: Start real PgBouncer in transaction pooling mode (disposable only)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y pgbouncer
+          sudo systemctl stop pgbouncer || true
+          cat > /tmp/p003b-pgbouncer.ini <<'EOF'
+          [databases]
+          elmo_erp_test = host=127.0.0.1 port=5432 dbname=elmo_erp_test
+          [pgbouncer]
+          listen_addr = 127.0.0.1
+          listen_port = 16432
+          auth_type = trust
+          auth_file = /tmp/p003b-auth.txt
+          admin_users = elmo
+          pool_mode = transaction
+          default_pool_size = 2
+          max_client_conn = 100
+          server_reset_query = DISCARD ALL
+          max_prepared_statements = 100
+          EOF
+          printf '"elmo" "test-only"\n"p003c_runtime" "test-only-runtime"\n"p003e_web" "ci-only-web"\n"p003e_mfa" "ci-only-mfa"\n"p003e_queue" "ci-only-queue"\n"p003e_session" "ci-only-session"\n"p003g_broker" "ci-only-broker"\n' > /tmp/p003b-auth.txt
+          pgbouncer /tmp/p003b-pgbouncer.ini > /tmp/p003b-pgbouncer.log 2>&1 &
+          sleep 2
+          cat /tmp/p003b-pgbouncer.log
+          PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 16432 -U elmo pgbouncer -Atc 'SHOW CONFIG' | grep -E '^pool_mode[|]transaction[|]'
+      - name: Run authenticated-context tests through actual PgBouncer
+        env:
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+        run: php artisan test --no-ansi tests/P003B/P003AuthenticatedContextTest.php
+      - name: Verify two parallel clients through real transaction pool
+        env:
+          DB_PORT: '16432'
+        run: php tests/integration/p003_pool_clients.php
+      - name: Run five jobs inside one reused Laravel queue worker through PgBouncer
+        env:
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+          QUEUE_CONNECTION: database
+          P003_EVIDENCE_FILE: /tmp/p003b-queue-evidence.jsonl
+        run: |
+          rm -f /tmp/p003b-queue-evidence.jsonl
+          php tests/integration/p003_queue_seed.php
+          php artisan queue:work database --queue=p003b --stop-when-empty --tries=1 --sleep=1 --timeout=30 --max-time=120
+          php tests/integration/p003_queue_assert.php
+      - name: Seed synthetic EG / IT users using migration-owner credentials
+        run: php tests/integration/p003c_seed.php
+      - name: Provision restricted PostgreSQL runtime role (CI database only)
+        run: |
+          PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -v runtime_password='test-only-runtime' -h "$DB_HOST" -p 5432 -U elmo -d "$DB_DATABASE" -f database/security/p003c_runtime_role.sql
+      - name: Prove runtime role cannot DDL, impersonate owner, rewrite grants or read raw finance (direct)
+        run: |
+          PGPASSWORD='test-only-runtime' psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U p003c_runtime -d "$DB_DATABASE" -f database/security/p003c_runtime_boundary.sql
+      - name: Prove disposable RLS scope and reproduce the writable-GUC bypass (NOT production RLS)
+        run: |
+          PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U elmo -d "$DB_DATABASE" -f database/security/p003c_runtime_rls_disposable.sql
+      - name: Prove runtime role boundary via actual PgBouncer transaction pooling
+        run: |
+          PGPASSWORD='test-only-runtime' psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 16432 -U p003c_runtime -d "$DB_DATABASE" -f database/security/p003c_runtime_boundary.sql
+      - name: Run parallel authenticated HTTP sessions against runtime-only PgBouncer connection
+        env:
+          DB_USERNAME: p003c_runtime
+          DB_PASSWORD: test-only-runtime
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+          SESSION_DRIVER: database
+          PHP_CLI_SERVER_WORKERS: '4'
+        run: |
+          php -S 127.0.0.1:18031 -t public public/index.php > /tmp/p003c-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; cat /tmp/p003c-http.log' EXIT
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18031/api/v1/health | grep -q '"status":"ok"'; then break; fi
+            sleep 1
+          done
+          python3 tests/integration/p003c_http_parallel.py
+      - name: Prove concurrent revocation waits for live transaction and subsequent tenant access is denied
+        env:
+          DB_USERNAME: p003c_runtime
+          DB_PASSWORD: test-only-runtime
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+          P003C_OWNER_PASSWORD: test-only
+        run: php tests/integration/p003c_runtime_race.php
+      - name: Audit runtime GRANT gaps and expected Auth/MFA denial on direct PostgreSQL and PgBouncer
+        run: |
+          for port in 5432 16432; do
+            PGPASSWORD='test-only-runtime' psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U p003c_runtime -d "$DB_DATABASE" -f database/security/p003d_runtime_grant_audit.sql
+          done
+      - name: Test rollback-only signed DB tenant claim against SQL spoofing (PostgreSQL 18)
+        run: |
+          PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p 5432 -U elmo -d "$DB_DATABASE" -f database/security/p003d_signed_claim_disposable.sql
+      - name: Provision P0-03E split-principal permission probe (disposable CI only)
+        run: |
+          PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 \
+            -v web_password='ci-only-web' -v mfa_password='ci-only-mfa' \
+            -v queue_password='ci-only-queue' -v session_password='ci-only-session' \
+            -h 127.0.0.1 -p 5432 -U elmo -d "$DB_DATABASE" \
+            -f database/security/p003e_role_partition_disposable.sql
+      - name: Verify P0-03E split role grants on direct PostgreSQL and transaction-pooled PgBouncer
+        run: |
+          for role in web mfa queue session; do
+            case "$role" in
+              web) password='ci-only-web' ;;
+              mfa) password='ci-only-mfa' ;;
+              queue) password='ci-only-queue' ;;
+              session) password='ci-only-session' ;;
+            esac
+            for port in 5432 16432; do
+              PGPASSWORD="$password" psql -v ON_ERROR_STOP=1 \
+                -v expected_role="p003e_$role" \
+                -h 127.0.0.1 -p "$port" -U "p003e_$role" -d "$DB_DATABASE" \
+                -f database/security/p003e_role_partition_checks.sql
+            done
+          done
+      - name: Seed disposable P0-03F first-time enrollment grant
+        run: php tests/integration/p003f_seed.php
+      - name: Run real P0-03F split-principal Auth/MFA/Session HTTP through PgBouncer
+        env:
+          DB_USERNAME: p003e_web
+          DB_PASSWORD: ci-only-web
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+          SESSION_DRIVER: database
+          SESSION_CONNECTION: pgsql_session
+          DB_SESSION_USERNAME: p003e_session
+          DB_SESSION_PASSWORD: ci-only-session
+          DB_SESSION_PORT: '16432'
+          DB_SESSION_PGBOUNCER_TRANSACTION: 'true'
+          ERP_ROLE_PARTITION_REQUIRED: 'true'
+          ERP_MFA_DB_CONNECTION: pgsql_mfa
+          DB_MFA_USERNAME: p003e_mfa
+          DB_MFA_PASSWORD: ci-only-mfa
+          DB_MFA_PORT: '16432'
+          DB_MFA_PGBOUNCER_TRANSACTION: 'true'
+          PHP_CLI_SERVER_WORKERS: '4'
+        run: |
+          php -S 127.0.0.1:18032 -t public public/index.php > /tmp/p003f-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; tail -n 100 /tmp/p003f-http.log' EXIT
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18032/api/v1/health | grep -q '"status":"ok"'; then break; fi
+            sleep 1
+          done
+          python3 tests/integration/p003f_http.py
+      - name: Run five reused Laravel worker jobs with dedicated Queue SQL role through PgBouncer
+        env:
+          DB_USERNAME: p003e_web
+          DB_PASSWORD: ci-only-web
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+          ERP_ROLE_PARTITION_REQUIRED: 'true'
+          ERP_MFA_DB_CONNECTION: pgsql_mfa
+          DB_MFA_USERNAME: p003e_mfa
+          DB_MFA_PASSWORD: ci-only-mfa
+          DB_MFA_PORT: '16432'
+          DB_MFA_PGBOUNCER_TRANSACTION: 'true'
+          DB_QUEUE_CONNECTION: pgsql_queue
+          DB_QUEUE_USERNAME: p003e_queue
+          DB_QUEUE_PASSWORD: ci-only-queue
+          DB_QUEUE_PORT: '16432'
+          DB_QUEUE_PGBOUNCER_TRANSACTION: 'true'
+          DB_FAILED_CONNECTION: pgsql_queue
+          QUEUE_CONNECTION: database
+          P003_EVIDENCE_FILE: /tmp/p003f-queue-evidence.jsonl
+        run: |
+          rm -f /tmp/p003f-queue-evidence.jsonl
+          php tests/integration/p003f_queue_seed.php
+          php artisan queue:work database --queue=p003f --stop-when-empty --tries=1 --sleep=1 --timeout=30 --max-time=120
+          php tests/integration/p003f_queue_assert.php
+      - name: Prove P0-03F split Web role concurrent revocation using limited row-lock helper
+        env:
+          DB_USERNAME: p003e_web
+          DB_PASSWORD: ci-only-web
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+          ERP_ROLE_PARTITION_REQUIRED: 'true'
+          ERP_MFA_DB_CONNECTION: pgsql_mfa
+          DB_MFA_USERNAME: p003e_mfa
+          DB_MFA_PASSWORD: ci-only-mfa
+          DB_MFA_PORT: '16432'
+          DB_MFA_PGBOUNCER_TRANSACTION: 'true'
+          P003C_OWNER_PASSWORD: test-only
+        run: php tests/integration/p003f_runtime_race.php
+      - name: Install disposable fault injection for P0-03F split-MFA rollback
+        run: php tests/integration/p003f_rollback_prepare.php
+      - name: Prove atomic MFA grant factor and recovery rollback with restricted MFA SQL role
+        env:
+          DB_USERNAME: p003e_web
+          DB_PASSWORD: ci-only-web
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+          ERP_ROLE_PARTITION_REQUIRED: 'true'
+          ERP_MFA_DB_CONNECTION: pgsql_mfa
+          DB_MFA_USERNAME: p003e_mfa
+          DB_MFA_PASSWORD: ci-only-mfa
+          DB_MFA_PORT: '16432'
+          DB_MFA_PGBOUNCER_TRANSACTION: 'true'
+        run: php tests/integration/p003f_rollback_probe.php
+      - name: P0-03G disposable MFA broker challenge and negative security PoC (PostgreSQL 18 and PgBouncer)
+        run: |
+          set -euo pipefail
+          PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -v broker_password='ci-only-broker' -h 127.0.0.1 -p 5432 -U elmo -d "$DB_DATABASE" -f database/security/p003g_broker_poc_disposable.sql
+          export P003G_BROKER_HOST=127.0.0.1
+          export P003G_BROKER_PORT=16432
+          export P003G_BROKER_USERNAME=p003g_broker
+          export P003G_BROKER_PASSWORD=ci-only-broker
+          export P003G_TEST_ADMIN=1
+          export P003G_FACTOR_KEY="$(python3 -c 'import secrets,base64;print(base64.b64encode(secrets.token_bytes(32)).decode())')"
+          php -l tests/integration/p003g_broker_poc.php
+          python3 tests/integration/p003g_broker_poc.py
+      - name: P0-03H isolated broker OS UID and authenticated Unix socket spike (disposable)
+        run: |
+          set -euo pipefail
+          # The earlier P0-03G trust-mode pool must not remain a path for broker impersonation.
+          grep -v '^"p003g_broker"' /tmp/p003b-auth.txt > /tmp/p003b-auth-new.txt
+          mv /tmp/p003b-auth-new.txt /tmp/p003b-auth.txt
+          PGPASSWORD='test-only' psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 16432 -U elmo pgbouncer -c RELOAD
+          # A second disposable transaction pool uses SCRAM, never trust, for broker SQL.
+          cat > /tmp/p003h-pgbouncer.ini <<'EOF'
+          [databases]
+          elmo_erp_test = host=127.0.0.1 port=5432 dbname=elmo_erp_test
+          [pgbouncer]
+          listen_addr = 127.0.0.1
+          listen_port = 16433
+          auth_type = scram-sha-256
+          auth_file = /tmp/p003h-auth.txt
+          admin_users = elmo
+          pool_mode = transaction
+          default_pool_size = 2
+          max_client_conn = 30
+          server_reset_query = DISCARD ALL
+          max_prepared_statements = 100
+          EOF
+          printf '"p003g_broker" "ci-only-broker"\n"p003e_web" "ci-only-web"\n' > /tmp/p003h-auth.txt
+          chmod 600 /tmp/p003h-auth.txt
+          pgbouncer /tmp/p003h-pgbouncer.ini > /tmp/p003h-pgbouncer.log 2>&1 &
+          pool_pid=$!
+          trap 'kill "$pool_pid" 2>/dev/null || true; tail -n 40 /tmp/p003h-pgbouncer.log' EXIT
+          for i in {1..30}; do
+            if PGPASSWORD='ci-only-broker' psql -X -h 127.0.0.1 -p 16433 -U p003g_broker -d elmo_erp_test -Atc 'SELECT 1' 2>/dev/null | grep -qx 1; then break; fi
+            sleep 1
+          done
+          php -l tests/integration/p003g_broker_poc.php
+          python3 -m py_compile tests/integration/p003h_uid_socket_spike.py
+          # GitHub checkout parent directories are runner-private: copy only synthetic
+          # executable fixtures, never grant Web access to the checkout or broker keys.
+          sudo install -d -m 755 /tmp/p003h-fixtures
+          sudo install -m 644 tests/integration/p003h_uid_socket_spike.py /tmp/p003h-fixtures/p003h_uid_socket_spike.py
+          sudo install -m 644 tests/integration/p003g_broker_poc.php /tmp/p003h-fixtures/p003g_broker_poc.php
+          sudo --preserve-env=APP_ENV,DB_DATABASE python3 /tmp/p003h-fixtures/p003h_uid_socket_spike.py run
+      - name: P0-03H detect arbitrary Web SQL SECURITY DEFINER lock-target DoS (expected security FAIL)
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tests/integration/p003h_lock_helper_probe.py
+          python3 tests/integration/p003h_lock_helper_probe.py
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health

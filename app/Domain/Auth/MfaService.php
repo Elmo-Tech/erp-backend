@@ -3,11 +3,85 @@
 namespace App\Domain\Auth;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Connection;
+use LogicException;
+use RuntimeException;
 use Illuminate\Support\Str;
 
 final class MfaService
 {
+    /**
+     * P0-03F: factor material stays off the Web SQL principal. This connection
+     * remains in the same PHP process; it is not a compromise-proof MFA broker.
+     */
+    private function factorDb(): Connection
+    {
+        $name = config('erp_runtime.mfa_connection');
+        if (config('erp_runtime.partition_required') && $name !== 'pgsql_mfa') {
+            throw new LogicException('Split runtime requires a dedicated MFA connection.');
+        }
+
+        return DB::connection($name ?: null);
+    }
+
+    public function hasFactor(User $user): bool
+    {
+        return $this->factorDb()->table('users')->where('id', $user->getKey())
+            ->whereNotNull('mfa_secret')->value('id') !== null;
+    }
+
+    public function hasEnrollmentGrant(User $user): bool
+    {
+        return $this->factorDb()->table('user_mfa_enrollment_authorizations')
+            ->where('user_id', $user->getKey())->whereNull('consumed_at')
+            ->where('expires_at', '>', now())->exists();
+    }
+
+    /**
+     * The same MFA connection owns factor, one-time grant and recovery inserts.
+     * A concurrent confirmation is serialized by the grant's conditional UPDATE.
+     * Returning null before any write or throwing rolls back the entire operation.
+     *
+     * @return list<string>|null
+     */
+    public function confirmEnrollment(User $user, string $secret, int $step): ?array
+    {
+        $db = $this->factorDb();
+
+        try {
+            return $db->transaction(function () use ($db, $user, $secret, $step): ?array {
+                $claimed = $db->table('user_mfa_enrollment_authorizations')
+                    ->where('user_id', $user->getKey())->whereNull('consumed_at')
+                    ->where('expires_at', '>', now())->update(['consumed_at' => now()]);
+                if ($claimed !== 1) {
+                    return null;
+                }
+
+                $updated = $db->table('users')->where('id', $user->getKey())
+                    ->where('is_active', true)->whereNull('mfa_secret')
+                    ->update([
+                        'mfa_secret' => Crypt::encryptString($secret),
+                        'mfa_last_step' => $step,
+                    ]);
+                if ($updated !== 1) {
+                    // The grant UPDATE must also roll back if the factor was already set.
+                    throw new MfaEnrollmentConflict();
+                }
+
+                $codes = $this->issueRecoveryCodes($user);
+                if (count($codes) !== 8) {
+                    throw new RuntimeException('Incomplete MFA recovery-code issuance.');
+                }
+
+                return $codes;
+            }, 1);
+        } catch (MfaEnrollmentConflict) {
+            return null;
+        }
+    }
+
     public function requiresMfa(User $user): bool
     {
         if (DB::table('global_role_assignments')->where('user_id', $user->id)
@@ -94,20 +168,25 @@ final class MfaService
 
     public function verifyAndConsume(User $user, string $code): bool
     {
-        if ($user->mfa_secret !== null) {
-            $step = $this->matchingStep($user->mfa_secret, $code);
-            if ($step !== null) {
-                $updated = DB::table('users')->where('id', $user->id)
-                    ->where(fn ($query) => $query->whereNull('mfa_last_step')->orWhere('mfa_last_step', '<', $step))
-                    ->update(['mfa_last_step' => $step]);
-                return $updated === 1;
-            }
+        // Never depend on a stale or all-column WebUser object for MFA state.
+        $db = $this->factorDb();
+        $encrypted = $db->table('users')->where('id', $user->getKey())
+            ->where('is_active', true)->value('mfa_secret');
+        if ($encrypted === null) {
+            return false;
+        }
+        $step = $this->matchingStep(Crypt::decryptString($encrypted), $code);
+        if ($step !== null) {
+            return $db->table('users')->where('id', $user->getKey())
+                ->where('is_active', true)
+                ->where(fn ($q) => $q->whereNull('mfa_last_step')->orWhere('mfa_last_step', '<', $step))
+                ->update(['mfa_last_step' => $step]) === 1;
         }
 
-        // Constant-length hashed recovery secrets; single-use deletion is atomic.
-        $hash = $this->recoveryHash($code);
-        return DB::table('user_mfa_recovery_codes')
-            ->where('user_id', $user->id)->where('code_hash', $hash)->delete() === 1;
+        // Single-use recovery code: a single DELETE is an atomic consume.
+        return $db->table('user_mfa_recovery_codes')
+            ->where('user_id', $user->getKey())
+            ->where('code_hash', $this->recoveryHash($code))->delete() === 1;
     }
 
     private function recoveryHash(string $code): string
@@ -120,7 +199,7 @@ final class MfaService
     {
         // Also atomic when invoked outside initial enrollment (e.g. a future approved reset).
         // Nested calls share the parent Laravel DB transaction/savepoint.
-        return DB::transaction(function () use ($user): array {
+        return $this->factorDb()->transaction(function () use ($user): array {
             $codes = [];
             $rows = [];
             $issuedAt = now();
@@ -135,8 +214,9 @@ final class MfaService
                 ];
             }
 
-            DB::table('user_mfa_recovery_codes')->where('user_id', $user->id)->delete();
-            DB::table('user_mfa_recovery_codes')->insert($rows);
+            $db = $this->factorDb();
+            $db->table('user_mfa_recovery_codes')->where('user_id', $user->id)->delete();
+            $db->table('user_mfa_recovery_codes')->insert($rows);
 
             return $codes;
         });
