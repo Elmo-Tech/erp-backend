@@ -83,7 +83,7 @@ def main():
     # Force a broker audit INSERT error. Successful factor consume MUST roll back.
     racing=cmd("begin",email="p003g-c@example.invalid",password="synthetic-secret-c")
     digest=hashlib.sha256(racing["challenge"].encode()).hexdigest()
-    owner("ALTER TABLE public.p003g_audit ADD CONSTRAINT p003g_inject_failure CHECK (event <> 'factor_verified')")
+    owner("ALTER TABLE public.p003g_audit ADD CONSTRAINT p003g_inject_failure CHECK (event <> 'factor_verified') NOT VALID")
     failed=subprocess.run(["php","tests/integration/p003g_broker_poc.php"],
         input=json.dumps({"op":"verify","email":"p003g-c@example.invalid",
                           "challenge":racing["challenge"],"code":otp(carol["test_factor"])}),
