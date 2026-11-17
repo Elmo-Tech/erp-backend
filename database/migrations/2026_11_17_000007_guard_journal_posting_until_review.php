@@ -14,8 +14,10 @@ return new class extends Migration {
             throw new RuntimeException('P0-04 journal guards require PostgreSQL 18.');
         }
 
+        // Laravel migrate:fresh drops tables/triggers but not standalone PL/pgSQL
+        // functions: replace the same implementation on repeat test migrations.
         DB::unprepared(<<<'SQL'
-CREATE FUNCTION public.p004_guard_journal_entry_mutation()
+CREATE OR REPLACE FUNCTION public.p004_guard_journal_entry_mutation()
 RETURNS trigger LANGUAGE plpgsql
 SET search_path = pg_catalog, public
 AS $$
@@ -48,7 +50,7 @@ $$;
 SQL);
 
         DB::unprepared(<<<'SQL'
-CREATE FUNCTION public.p004_guard_journal_line_mutation()
+CREATE OR REPLACE FUNCTION public.p004_guard_journal_line_mutation()
 RETURNS trigger LANGUAGE plpgsql
 SET search_path = pg_catalog, public
 AS $$
