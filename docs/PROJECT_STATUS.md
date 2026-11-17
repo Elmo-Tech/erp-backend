@@ -1,5 +1,15 @@
 # Project Status — Source of Truth
 
+## Latest verified P0-03 integration / P0-04 start (2026-11-17; CURRENT)
+
+**P0-03 DEVELOPMENT MERGED AND INTEGRATION CI PASS:** Owner-approved narrow [PR #12](https://github.com/Elmo-Tech/erp-backend/pull/12) squash-merged to backend `rebuild/erp-v2` [`21a085f5b101126cb6f535fdb03f204cb99d0405`](https://github.com/Elmo-Tech/erp-backend/commit/21a085f5b101126cb6f535fdb03f204cb99d0405). [**Postmerge CI #44115915862 SUCCESS**](https://github.com/Elmo-Tech/erp-backend/actions/runs/44115915862) on exact merge SHA. Its 9-file scope covers PG18 accounting CHECK/unique/period exclusion/date triggers/indexes, synthetic EG/IT nonempty migration rollback/reapply, direct concurrency and PgBouncer + Laravel regression. Composite FKs were already in P0-02 baseline.
+
+**What was not merged:** exploratory P0-03 [PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10) remains Draft/unmerged; CI-only role partitions, signed claims, RLS, Linux UID/socket broker PoCs and unsafe `SECURITY DEFINER p003f_lock_authorization_scope` are excluded from integration. `SEC-01..08` [Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7), [P0-03 residual #8](https://github.com/Elmo-Tech/erp-backend/issues/8) and [trusted broker/lock #11](https://github.com/Elmo-Tech/erp-backend/issues/11) remain OPEN. ADR-022/023 PROPOSED; no permanent RLS, real-user MFA, production migration or deployment. Historical candidate NO GO/draft text below is superseded **only** for the executed owner-approved development PR #12 merge.
+
+**NEW ACTIVE TASK:** [P0-04 / F02 Issue #13](https://github.com/Elmo-Tech/erp-backend/issues/13) on fresh `task/p0-04-ledger-posting` branch. Small P0-04A safety gate is under development: immutable posted journals and fail-closed direct posting until a reviewed service is created. **No financial posting APIs, no real postings and no new CI claimed before exact-head workflow success.** [P0-04 Handoff](handoffs/P0-04.md). This update itself is on a task branch and requires CI/review before integration.
+
+---
+
 ## P0-03 Development Integration Candidate — 2026-11-17 (DRAFT / NOT MERGE APPROVED)
 
 **Candidate code CI:** exact commit `8110437be702e3a6553f63acc0d68cb281e19543` [GitHub Actions #44110104136](https://github.com/Elmo-Tech/erp-backend/actions/runs/44110104136) **COMPLETED SUCCESS** (PG18 migrate, PHPUnit, populated synthetic Egypt/Italy upgrade + rollback/reapply, direct and pooled concurrency, PgBouncer Auth/MFA and database Session/Queue-driver regression, Docker build and API health). **Still NOT VERIFIED:** dedicated restricted-role queue worker, independent security review, production-like populated database and unsafe `SECURITY DEFINER` replacement. This documentation-only update is a new SHA and must be verified independently; do not attribute the prior code CI to it. No merge approval.
