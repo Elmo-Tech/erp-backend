@@ -30,7 +30,7 @@ PRIVATE = ROOT / "broker-private"
 SOCKET_DIR = ROOT / "ipc"
 SOCKET = str(SOCKET_DIR / "mfa.sock")
 ENV_FILE = PRIVATE / "broker.json"
-CLI = "tests/integration/p003g_broker_poc.php"
+CLI = "/tmp/p003h-fixtures/p003g_broker_poc.php"
 PATH = "/usr/local/bin:/usr/bin:/bin"
 
 
