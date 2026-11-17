@@ -232,6 +232,20 @@ jobs:
           php tests/integration/p003f_queue_seed.php
           php artisan queue:work database --queue=p003f --stop-when-empty --tries=1 --sleep=1 --timeout=30 --max-time=120
           php tests/integration/p003f_queue_assert.php
+      - name: Prove P0-03F split Web role concurrent revocation using limited row-lock helper
+        env:
+          DB_USERNAME: p003e_web
+          DB_PASSWORD: ci-only-web
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+          ERP_ROLE_PARTITION_REQUIRED: 'true'
+          ERP_MFA_DB_CONNECTION: pgsql_mfa
+          DB_MFA_USERNAME: p003e_mfa
+          DB_MFA_PASSWORD: ci-only-mfa
+          DB_MFA_PORT: '16432'
+          DB_MFA_PGBOUNCER_TRANSACTION: 'true'
+          P003C_OWNER_PASSWORD: test-only
+        run: php tests/integration/p003f_runtime_race.php
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health
