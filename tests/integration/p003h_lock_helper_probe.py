@@ -17,7 +17,7 @@ def run(role, sql, port, timeout=15):
 
 meta = run("elmo", """SELECT p.prosecdef::text||'|'||pg_get_userbyid(p.proowner)||'|'||
                     coalesce(array_to_string(p.proconfig,','),'')||'|'||
-                    has_function_privilege('PUBLIC',p.oid,'EXECUTE')::text||'|'||
+                    EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl WHERE acl.grantee=0 AND acl.privilege_type='EXECUTE')::text||'|'||
                     has_function_privilege('p003e_web',p.oid,'EXECUTE')::text
                     FROM pg_proc p WHERE p.oid='public.p003f_lock_authorization_scope(bigint,uuid)'::regprocedure""",5432)
 assert meta.returncode == 0,meta.stderr
