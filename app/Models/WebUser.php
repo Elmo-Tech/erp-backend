@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 final class WebUser extends User
 {
+    protected $table = 'users';
+
     protected static function booted(): void
     {
         static::addGlobalScope('safe_web_projection', function (Builder $builder): void {
