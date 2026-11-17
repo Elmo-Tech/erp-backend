@@ -212,6 +212,9 @@ def deny_web_direct_database():
            "-U", "p003g_broker", "-d", "elmo_erp_test", "-Atc", "SELECT 1"]
     denied = subprocess.run(raw, text=True, capture_output=True, timeout=10)
     assert denied.returncode != 0, "web impersonated broker on SQL transport"
+    legacy = raw.copy()
+    legacy[legacy.index("16433")] = "16432"
+    assert subprocess.run(legacy, capture_output=True, text=True, timeout=10).returncode != 0, ("legacy trust pool permits broker impersonation")
     raw[7] = "PGPASSWORD=ci-only-web"
     raw[raw.index("p003g_broker")] = "p003e_web"
     raw[-1] = "SELECT count(*) FROM public.p003g_accounts"
