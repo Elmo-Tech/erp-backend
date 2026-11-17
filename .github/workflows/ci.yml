@@ -177,6 +177,36 @@ jobs:
                 -f database/security/p003e_role_partition_checks.sql
             done
           done
+      - name: Seed disposable P0-03F first-time enrollment grant
+        run: php tests/integration/p003f_seed.php
+      - name: Run real P0-03F split-principal Auth/MFA/Session HTTP through PgBouncer
+        env:
+          DB_USERNAME: p003e_web
+          DB_PASSWORD: ci-only-web
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+          SESSION_DRIVER: database
+          SESSION_CONNECTION: pgsql_session
+          DB_SESSION_USERNAME: p003e_session
+          DB_SESSION_PASSWORD: ci-only-session
+          DB_SESSION_PORT: '16432'
+          DB_SESSION_PGBOUNCER_TRANSACTION: 'true'
+          ERP_ROLE_PARTITION_REQUIRED: 'true'
+          ERP_MFA_DB_CONNECTION: pgsql_mfa
+          DB_MFA_USERNAME: p003e_mfa
+          DB_MFA_PASSWORD: ci-only-mfa
+          DB_MFA_PORT: '16432'
+          DB_MFA_PGBOUNCER_TRANSACTION: 'true'
+          PHP_CLI_SERVER_WORKERS: '4'
+        run: |
+          php -S 127.0.0.1:18032 -t public public/index.php > /tmp/p003f-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; tail -n 100 /tmp/p003f-http.log' EXIT
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18032/api/v1/health | grep -q '"status":"ok"'; then break; fi
+            sleep 1
+          done
+          python3 tests/integration/p003f_http.py
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health
