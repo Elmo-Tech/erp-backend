@@ -55,7 +55,7 @@ class Client:
 
 def assert_status(value, expected):
     if value[0] != expected:
-        raise AssertionError(f"Expected HTTP {expected}, got {value}")
+        raise AssertionError(f"Expected HTTP {expected}, got HTTP {value[0]}")
 
 
 def totp(secret):

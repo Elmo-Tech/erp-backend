@@ -29,7 +29,7 @@ final class MfaService
     public function hasFactor(User $user): bool
     {
         return $this->factorDb()->table('users')->where('id', $user->getKey())
-            ->whereNotNull('mfa_secret')->exists();
+            ->whereNotNull('mfa_secret')->value('id') !== null;
     }
 
     public function hasEnrollmentGrant(User $user): bool

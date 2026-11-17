@@ -16,6 +16,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
+// Earlier P0-03C revocation race intentionally revoked the synthetic EG actor.
+// Restore ONLY the disposable synthetic membership for new-role HTTP/worker tests.
+DB::table('company_memberships')
+    ->where('company_id', '00000000-0000-4000-8000-0000000000c1')
+    ->where('user_id', DB::table('users')->where('email', 'p003c-eg@example.invalid')->value('id'))
+    ->update(['status' => 'active']);
+
 $user = DB::table('users')->insertGetId([
     'name' => 'P003F synthetic privileged',
     'email' => 'p003f-mfa@example.invalid',
