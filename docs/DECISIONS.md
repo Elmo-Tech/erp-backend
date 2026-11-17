@@ -1,3 +1,11 @@
+## P0-03H verified test stages / production gate split — 2026-11-17
+
+**Exact H code SHA `d71dddc158e132725f5dcc5bfea8c6f611f05888`: [CI #44084976584](https://github.com/Elmo-Tech/erp-backend/actions/runs/44084976584) currently IN PROGRESS for Docker build / health; previous migration/PHPUnit/PG18/PgBouncer/P0-03F real HTTP, queue and P0-03G steps PASS; P0-03H UID/Unix socket isolation step PASS; adversarial `p003f_lock_authorization_scope` SQL/DoS detector PASS (meaning **SECURITY FAIL detected**, not remediated). Full CI conclusion and Docker health are **NOT VERIFIED as of this addendum**. Earlier [CI #44084156000](https://github.com/Elmo-Tech/erp-backend/actions/runs/44084156000) FAIL on synthetic script path permissions; [#44084615496](https://github.com/Elmo-Tech/erp-backend/actions/runs/44084615496) FAIL only on invalid `PUBLIC` test-role lookup after isolation step PASS; both fixture errors corrected. No previous run should be attributed to this later documentation SHA.
+
+**Separate production blocker:** [Issue #11 — independent trusted MFA assurance/session issuer](https://github.com/Elmo-Tech/erp-backend/issues/11) created. A compromised Laravel Web process can still mint sessions and `erp.mfa_verified`; the new socket PoC does not enforce sessions or implement real broker-linked Laravel HTTP. No human security review. **Development merge only candidate pending explicit owner authorization and review; Production NO GO.** Issues #7/#8 remain open, PR #10 Draft/Unmerged; ADR-022/023 PROPOSED, permanent RLS deferred. No production secrets/deploy/main/oberation.
+
+---
+
 ## ADR-023 P0-03H implementation evidence addendum — PROPOSED ONLY (2026-11-17)
 
 **Not approved / no release authorization.** [P0-03H limited runtime isolation experiment](security/P0-03H_BROKER_RUNTIME_ISOLATION_SPIKE.md) adds distinct Linux UIDs, broker-only synthetic credentials/key files, kernel peer authentication on a Unix socket, SCRAM PgBouncer with legacy trust broker access removed, and adversarial disposable CI checks. The pre-existing P0-03G CLI is reused without runtime redesign. At this documentation commit **new exact-head CI is NOT VERIFIED**; no claim of full security PASS.
