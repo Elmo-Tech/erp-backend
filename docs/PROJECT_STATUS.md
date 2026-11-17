@@ -1,5 +1,19 @@
 # Project Status — Source of Truth
 
+## P0-04A code CI verified / exact SHA — 2026-11-17 (CURRENT)
+
+**P0-04A FIRST SAFETY SLICE: code CI PASS, PR STILL DRAFT/UNMERGED.** [P0-04 Draft PR #14](https://github.com/Elmo-Tech/erp-backend/pull/14) code HEAD `f880d7ce8d6e82dd12d0140a3548bab4d1f140f8` completed [**CI #44119384809 SUCCESS**](https://github.com/Elmo-Tech/erp-backend/actions/runs/44119384809) on that exact SHA. All GitHub Actions steps passed: PostgreSQL 18 migrations, PHPUnit (including P004 journal guard tests), nonempty synthetic EG/IT P0-03 upgrade/rollback/reapply, concurrency, real PgBouncer pooling and Laravel Auth/MFA session/queue regressions, Docker build and API health.
+
+**First run failure and fix, not hidden:** `9467db4` [CI #44118832932 FAILED](https://github.com/Elmo-Tech/erp-backend/actions/runs/44118832932) at PHPUnit because Laravel repeated migrate:fresh preserved independent `CREATE FUNCTION` objects (PostgreSQL `42723`). `f880d7ce8d6e82dd12d0140a3548bab4d1f140f8` changes P0-04 trigger functions to `CREATE OR REPLACE FUNCTION`; fresh CI then passed. P0-04A deliberately DISABLES new posting/reversal until authorized P0-04B; it only makes historical posted journal headers/lines immutable and serializes draft lines. **No functional money posting, no financial API, no real-ledger data**.
+
+**Development scope:** Backend P0-03 narrow [PR #12 MERGED](https://github.com/Elmo-Tech/erp-backend/pull/12) as `21a085f5`, [postmerge CI #44115915862 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44115915862). Owner approval for that merge does NOT authorize PR #14 or any deployment. [P0-04 issue #13](https://github.com/Elmo-Tech/erp-backend/issues/13) IN PROGRESS / F02 IN PROGRESS. Need human source review and separate owner approval before P0-04A merge. Release blockers SEC-01..08 [#7](https://github.com/Elmo-Tech/erp-backend/issues/7), broker/lock [#11](https://github.com/Elmo-Tech/erp-backend/issues/11) and P0-03 residual [#8](https://github.com/Elmo-Tech/erp-backend/issues/8) remain OPEN; ADR-022/023/024 PROPOSED. No Production.
+
+**Next atomic action:** review P0-04A guard triggers + targeted two-client write/posting race test; then P0-04B service design (balanced atomic posting, locked fiscal periods and same-company accounts), and coordinate idempotency/outbox with P0-05. Do not enable posting before these gates.
+
+**Note:** this documentation-only update is a new HEAD and needs its own CI; #44119384809 only proves preceding code commit `f880d7c`.
+
+---
+
 ## Latest verified P0-03 integration / P0-04 start (2026-11-17; CURRENT)
 
 **P0-03 DEVELOPMENT MERGED AND INTEGRATION CI PASS:** Owner-approved narrow [PR #12](https://github.com/Elmo-Tech/erp-backend/pull/12) squash-merged to backend `rebuild/erp-v2` [`21a085f5b101126cb6f535fdb03f204cb99d0405`](https://github.com/Elmo-Tech/erp-backend/commit/21a085f5b101126cb6f535fdb03f204cb99d0405). [**Postmerge CI #44115915862 SUCCESS**](https://github.com/Elmo-Tech/erp-backend/actions/runs/44115915862) on exact merge SHA. Its 9-file scope covers PG18 accounting CHECK/unique/period exclusion/date triggers/indexes, synthetic EG/IT nonempty migration rollback/reapply, direct concurrency and PgBouncer + Laravel regression. Composite FKs were already in P0-02 baseline.

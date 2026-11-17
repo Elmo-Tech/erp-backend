@@ -3,6 +3,16 @@
 > **Canonical project handoff:** read this page at the beginning of EVERY fresh chat, task, or engineering session.
 > Scope: both repositories, not just the backend. **GitHub is the durable source of truth, not conversation memory.**
 
+## Latest engineering state — 2026-11-17
+
+- **P0-03 development integration FINISHED:** Backend PR #12 squash-merged to `rebuild/erp-v2` as `21a085f5b101126cb6f535fdb03f204cb99d0405`; [post-merge CI #44115915862 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44115915862).
+- **P0-04/F02 actively building (non-production):** [Issue #13](https://github.com/Elmo-Tech/erp-backend/issues/13), [Draft PR #14](https://github.com/Elmo-Tech/erp-backend/pull/14) on `task/p0-04-ledger-posting`. Initial P0-04A immutable journal guard [code commit `f880d7c`](https://github.com/Elmo-Tech/erp-backend/commit/f880d7ce8d6e82dd12d0140a3548bab4d1f140f8) passed [full CI #44119384809](https://github.com/Elmo-Tech/erp-backend/actions/runs/44119384809) including PG18, PHPUnit, P0-03 migration rollback/PgBouncer, Auth/MFA, Docker/API health. A later docs-only commit needs its own CI.
+- **P0-04A safety boundary ONLY:** direct posted/reversed journal writes disabled until reviewed posting service; historic posted headers/lines immutable. This is **not** balanced posting, reversal, idempotency, audit/outbox or a permitted financial API.
+- **Security/production NOT approved:** exploratory P0-03 PR #10 remains draft/unmerged; SEC-01..08 [Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7), P0-03 residual [#8](https://github.com/Elmo-Tech/erp-backend/issues/8) and MFA broker/lock [#11](https://github.com/Elmo-Tech/erp-backend/issues/11) OPEN; ADR-022/023/024 PROPOSED. No deployment/real user MFA/financial posting, no permanent RLS, no `main`/`oberation` changes.
+- **Read [P0-04 Handoff](handoffs/P0-04.md) and live GitHub PR/CI before continuing.** Earlier 'P0-02 active' text farther below is a historical pre-merge snapshot superseded by this section.
+
+---
+
 ## Where the system lives
 
 | Code | URL | Primary purpose |
