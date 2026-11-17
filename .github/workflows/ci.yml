@@ -82,7 +82,7 @@ jobs:
           server_reset_query = DISCARD ALL
           max_prepared_statements = 100
           EOF
-          printf '"elmo" "test-only"\n"p003c_runtime" "test-only-runtime"\n' > /tmp/p003b-auth.txt
+          printf '"elmo" "test-only"\n"p003c_runtime" "test-only-runtime"\n"p003e_web" "ci-only-web"\n"p003e_mfa" "ci-only-mfa"\n"p003e_queue" "ci-only-queue"\n"p003e_session" "ci-only-session"\n' > /tmp/p003b-auth.txt
           pgbouncer /tmp/p003b-pgbouncer.ini > /tmp/p003b-pgbouncer.log 2>&1 &
           sleep 2
           cat /tmp/p003b-pgbouncer.log
@@ -154,6 +154,29 @@ jobs:
       - name: Test rollback-only signed DB tenant claim against SQL spoofing (PostgreSQL 18)
         run: |
           PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p 5432 -U elmo -d "$DB_DATABASE" -f database/security/p003d_signed_claim_disposable.sql
+      - name: Provision P0-03E split-principal permission probe (disposable CI only)
+        run: |
+          PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 \
+            -v web_password='ci-only-web' -v mfa_password='ci-only-mfa' \
+            -v queue_password='ci-only-queue' -v session_password='ci-only-session' \
+            -h 127.0.0.1 -p 5432 -U elmo -d "$DB_DATABASE" \
+            -f database/security/p003e_role_partition_disposable.sql
+      - name: Verify P0-03E split role grants on direct PostgreSQL and transaction-pooled PgBouncer
+        run: |
+          for role in web mfa queue session; do
+            case "$role" in
+              web) password='ci-only-web' ;;
+              mfa) password='ci-only-mfa' ;;
+              queue) password='ci-only-queue' ;;
+              session) password='ci-only-session' ;;
+            esac
+            for port in 5432 16432; do
+              PGPASSWORD="$password" psql -v ON_ERROR_STOP=1 \
+                -v expected_role="p003e_$role" \
+                -h 127.0.0.1 -p "$port" -U "p003e_$role" -d "$DB_DATABASE" \
+                -f database/security/p003e_role_partition_checks.sql
+            done
+          done
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health
