@@ -1,3 +1,16 @@
+## ADR-022 — P0-03E disposition (2026-11-17; PROPOSED, NOT APPROVED)
+
+**Decision proposal: DEFER persistent RLS and DO NOT implement Trusted DB Issuer in this phase.** Application authorization plus explicit company-scoped queries, existing composite FKs, and increasingly narrow DB privileges are the interim design. A custom writable GUC cannot authenticate actors; an issuer is justified only if DB-enforced tenant identity against arbitrary runtime SQL becomes a requirement and independent provenance can be proven. No owner/security acceptance or permanent RLS activation is implied. The SQL role partition is a disposable CI proposal, not real Laravel integration.
+
+- **Verified baseline:** [CI #43941237508](https://github.com/Elmo-Tech/erp-backend/actions/runs/43941237508) **SUCCESS** at exact previous documentation HEAD `3eb340f08941827b03ce3c425a6669b726c9836b` (PG18/PgBouncer/migrations/rollback/CI Auth/queue/isolation/Docker). It must **NOT** be attributed to P0-03E changes.
+- **New P0-03E files:** `database/security/p003e_role_partition_disposable.sql`, `database/security/p003e_role_partition_checks.sql`, and CI `.github/workflows/ci.yml`; test-only four SQL principals through PG18 direct and PgBouncer. **New CI: NOT VERIFIED pending exact-head result**; no claimed Laravel workflow integration.
+- **Real Auth/MFA under proposed principals: FAIL / NOT COMPATIBLE as currently implemented**: unscoped Eloquent user reads and `lockForUpdate` need access the new Web role deliberately denies; separate MFA operations and session/queue connections are not yet wired. The old p003c role's MFA grant audit deliberately expects denied writes. No blanket grants to bypass.
+- **Open:** EG↔IT app tests under each new role; forged/replayed issuer claims (no production issuer); external permission/key custody; role revocation/concurrency under new principal architecture; production-like upgrade; independent human reviewer. Issues [#8](https://github.com/Elmo-Tech/erp-backend/issues/8) and [#7](https://github.com/Elmo-Tech/erp-backend/issues/7) OPEN, PR [#10](https://github.com/Elmo-Tech/erp-backend/pull/10) DRAFT. ADR-022 PROPOSED.
+- **Next atomic action:** inspect exact new CI; repair any failing disposable role probes; then refactor scoped Web auth projection and dedicated isolated MFA/session/queue connections, replacing unsafe timestamp UPDATE/row lock interaction only with evidence-backed serialization tests. Require a qualified independent HUMAN review before release approval.
+- **Forbidden:** no Merge, Deployment, production or real credentials, permanent RLS, `main`, `oberation`.
+
+---
+
 # Architecture Decision Register — approved 2026-11-16
 
 ## ADR-022 implementation evidence / P0-03E open decision gate (2026-11-16; CURRENT)
