@@ -41,7 +41,7 @@ CREATE TABLE public.p003g_audit (
 REVOKE ALL ON public.p003g_accounts, public.p003g_challenges, public.p003g_audit FROM PUBLIC;
 REVOKE ALL ON SEQUENCE public.p003g_audit_id_seq FROM PUBLIC;
 GRANT SELECT, INSERT, UPDATE ON public.p003g_accounts, public.p003g_challenges TO p003g_broker;
-GRANT INSERT ON public.p003g_audit TO p003g_broker;
+GRANT SELECT, INSERT ON public.p003g_audit TO p003g_broker;
 GRANT USAGE ON SEQUENCE public.p003g_audit_id_seq TO p003g_broker;
 -- Existing CI Web/MFA/Queue/Session SQL roles must not own broker state.
 SELECT 1 / CASE WHEN
