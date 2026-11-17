@@ -307,7 +307,12 @@ jobs:
           done
           php -l tests/integration/p003g_broker_poc.php
           python3 -m py_compile tests/integration/p003h_uid_socket_spike.py
-          sudo --preserve-env=APP_ENV,DB_DATABASE python3 tests/integration/p003h_uid_socket_spike.py run
+          # GitHub checkout parent directories are runner-private: copy only synthetic
+          # executable fixtures, never grant Web access to the checkout or broker keys.
+          sudo install -d -m 755 /tmp/p003h-fixtures
+          sudo install -m 644 tests/integration/p003h_uid_socket_spike.py /tmp/p003h-fixtures/p003h_uid_socket_spike.py
+          sudo install -m 644 tests/integration/p003g_broker_poc.php /tmp/p003h-fixtures/p003g_broker_poc.php
+          sudo --preserve-env=APP_ENV,DB_DATABASE python3 /tmp/p003h-fixtures/p003h_uid_socket_spike.py run
       - name: P0-03H detect arbitrary Web SQL SECURITY DEFINER lock-target DoS (expected security FAIL)
         run: |
           set -euo pipefail
