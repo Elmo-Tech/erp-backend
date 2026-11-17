@@ -82,7 +82,7 @@ jobs:
           server_reset_query = DISCARD ALL
           max_prepared_statements = 100
           EOF
-          printf '"elmo" "test-only"\n"p003c_runtime" "test-only-runtime"\n"p003e_web" "ci-only-web"\n"p003e_mfa" "ci-only-mfa"\n"p003e_queue" "ci-only-queue"\n"p003e_session" "ci-only-session"\n' > /tmp/p003b-auth.txt
+          printf '"elmo" "test-only"\n"p003c_runtime" "test-only-runtime"\n"p003e_web" "ci-only-web"\n"p003e_mfa" "ci-only-mfa"\n"p003e_queue" "ci-only-queue"\n"p003e_session" "ci-only-session"\n"p003g_broker" "ci-only-broker"\n' > /tmp/p003b-auth.txt
           pgbouncer /tmp/p003b-pgbouncer.ini > /tmp/p003b-pgbouncer.log 2>&1 &
           sleep 2
           cat /tmp/p003b-pgbouncer.log
@@ -261,6 +261,18 @@ jobs:
           DB_MFA_PORT: '16432'
           DB_MFA_PGBOUNCER_TRANSACTION: 'true'
         run: php tests/integration/p003f_rollback_probe.php
+      - name: P0-03G disposable MFA broker challenge and negative security PoC (PostgreSQL 18 and PgBouncer)
+        run: |
+          set -euo pipefail
+          PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -v broker_password='ci-only-broker' -h 127.0.0.1 -p 5432 -U elmo -d "$DB_DATABASE" -f database/security/p003g_broker_poc_disposable.sql
+          export P003G_BROKER_HOST=127.0.0.1
+          export P003G_BROKER_PORT=16432
+          export P003G_BROKER_USERNAME=p003g_broker
+          export P003G_BROKER_PASSWORD=ci-only-broker
+          export P003G_TEST_ADMIN=1
+          export P003G_FACTOR_KEY="$(python3 -c 'import secrets,base64;print(base64.b64encode(secrets.token_bytes(32)).decode())')"
+          php -l tests/integration/p003g_broker_poc.php
+          python3 tests/integration/p003g_broker_poc.py
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health
