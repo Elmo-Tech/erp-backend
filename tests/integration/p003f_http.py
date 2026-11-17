@@ -74,7 +74,7 @@ def main():
     creds = {"email": "p003f-mfa@example.invalid", "password": "p003f-test-only"}
     assert_status(mfa.call(auth + "/login", creds), 202)
     assert_status(mfa.call(auth + "/mfa/status"), 200)
-    start = mfa.call(auth + "/mfa/enroll/start")
+    start = mfa.call(auth + "/mfa/enroll/start", {})
     assert_status(start, 200)
     secret = start[1]["secret"]
     first, enrolled_step = totp(secret)
