@@ -13,6 +13,7 @@ SELECT 1 / CASE WHEN
  AND (CASE current_user
    WHEN 'p003e_web' THEN
       has_column_privilege(current_user,'users','password','SELECT')
+      AND NOT has_column_privilege(current_user,'users','remember_token','SELECT')
       AND NOT has_column_privilege(current_user,'users','mfa_secret','SELECT')
       AND NOT has_column_privilege(current_user,'users','updated_at','UPDATE')
       AND NOT has_table_privilege(current_user,'sessions','SELECT')
@@ -21,6 +22,7 @@ SELECT 1 / CASE WHEN
    WHEN 'p003e_mfa' THEN
       has_column_privilege(current_user,'users','mfa_secret','SELECT')
       AND has_column_privilege(current_user,'users','mfa_last_step','UPDATE')
+      AND NOT has_column_privilege(current_user,'users','updated_at','UPDATE')
       AND NOT has_column_privilege(current_user,'users','password','SELECT')
       AND NOT has_table_privilege(current_user,'jobs','SELECT')
       AND NOT has_table_privilege(current_user,'sessions','SELECT')

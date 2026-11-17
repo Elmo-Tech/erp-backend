@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use App\Domain\Auth\MfaService;
 use App\Domain\Companies\CompanyAuthorization;
 use App\Models\User;
+use App\Models\WebUser;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -32,7 +32,7 @@ final class AuthController extends Controller
             return response()->json(['message' => 'Too many attempts. Try again later.'], 429);
         }
 
-        $user = User::query()->where('email', $email)->first();
+        $user = WebUser::query()->where('email', $email)->first();
         if (! $user || ! $user->is_active || ! Hash::check($data['password'], $user->password)) {
             RateLimiter::hit($ipKey, 300);
             RateLimiter::hit($accountKey, 300);
@@ -46,24 +46,25 @@ final class AuthController extends Controller
         $request->session()->regenerateToken();
         $request->session()->regenerate();
 
-        if ($mfa->requiresMfa($user) || $user->mfa_secret !== null) {
+        $hasFactor = $mfa->hasFactor($user);
+        if ($mfa->requiresMfa($user) || $hasFactor) {
             $request->session()->put('erp.pending_user', $user->id);
             $request->session()->put('erp.pending_until', now()->addMinutes(5)->timestamp);
-            return response()->json(['status' => 'mfa_required', 'enrollment_required' => $user->mfa_secret === null], 202);
+            return response()->json(['status' => 'mfa_required', 'enrollment_required' => ! $hasFactor], 202);
         }
 
         $this->completeLogin($request, $user, false);
         return response()->json($this->identity($user, new CompanyAuthorization()));
     }
 
-    public function mfaStatus(Request $request): JsonResponse
+    public function mfaStatus(Request $request, MfaService $mfa): JsonResponse
     {
         $user = $this->pendingUser($request);
         if (! $user) {
             return response()->json(['message' => 'Challenge expired.'], 401);
         }
 
-        return response()->json(['status' => 'mfa_required', 'enrollment_required' => $user->mfa_secret === null]);
+        return response()->json(['status' => 'mfa_required', 'enrollment_required' => ! $mfa->hasFactor($user)]);
     }
 
     public function enrollStart(Request $request, MfaService $mfa): JsonResponse
@@ -72,10 +73,10 @@ final class AuthController extends Controller
         if (! $user) {
             return response()->json(['message' => 'Challenge expired.'], 401);
         }
-        if ($user->mfa_secret !== null) {
+        if ($mfa->hasFactor($user)) {
             return response()->json(['message' => 'MFA already enrolled.'], 409);
         }
-        if (! $this->hasEnrollmentGrant($user)) {
+        if (! $mfa->hasEnrollmentGrant($user)) {
             return response()->json(['message' => 'Trusted activation required.'], 403);
         }
         $key = 'erp-enroll-start:'.$user->id;
@@ -100,7 +101,7 @@ final class AuthController extends Controller
             return response()->json(['message' => 'Too many attempts. Try again later.'], 429);
         }
         $data = $request->validate(['code' => ['required', 'regex:/^[0-9]{6}$/D']]);
-        if (! $this->hasEnrollmentGrant($user) || $user->mfa_secret !== null) {
+        if (! $mfa->hasEnrollmentGrant($user) || $mfa->hasFactor($user)) {
             return response()->json(['message' => 'Trusted activation required.'], 403);
         }
         $encrypted = $request->session()->get('erp.enrollment_secret');
@@ -118,33 +119,7 @@ final class AuthController extends Controller
             return response()->json(['message' => 'Invalid verification code.'], 422);
         }
         try {
-            // One commit boundary for the grant, the encrypted factor and all recovery digests.
-            // Lock the user before claiming the grant: concurrent confirmations cannot rebind a factor.
-            $codes = DB::transaction(function () use ($user, $secret, $step, $mfa): ?array {
-                $lockedUser = User::query()->whereKey($user->id)->lockForUpdate()->first();
-                if (! $lockedUser || ! $lockedUser->is_active || $lockedUser->mfa_secret !== null) {
-                    return null;
-                }
-
-                $claimed = DB::table('user_mfa_enrollment_authorizations')
-                    ->where('user_id', $lockedUser->id)->whereNull('consumed_at')
-                    ->where('expires_at', '>', now())
-                    ->update(['consumed_at' => now(), 'updated_at' => now()]);
-                if ($claimed !== 1) {
-                    return null;
-                }
-
-                $lockedUser->mfa_secret = $secret;
-                $lockedUser->mfa_last_step = $step;
-                $lockedUser->save();
-
-                $issued = $mfa->issueRecoveryCodes($lockedUser);
-                if (count($issued) !== 8) {
-                    throw new \UnexpectedValueException('Incomplete MFA recovery-code issuance.');
-                }
-
-                return $issued;
-            });
+            $codes = $mfa->confirmEnrollment($user, $secret, $step);
         } catch (\Throwable $exception) {
             // Never log the exception object/message/SQL bindings: these may contain MFA material.
             Log::warning('MFA enrollment persistence failed.', ['failure_type' => $exception::class]);
@@ -163,7 +138,7 @@ final class AuthController extends Controller
     public function verify(Request $request, MfaService $mfa): JsonResponse
     {
         $user = $this->pendingUser($request);
-        if (! $user || $user->mfa_secret === null) {
+        if (! $user || ! $mfa->hasFactor($user)) {
             return response()->json(['message' => 'Challenge expired.'], 401);
         }
         if ($this->mfaThrottled($request, $user)) {
@@ -200,14 +175,7 @@ final class AuthController extends Controller
             return null;
         }
         $id = $request->session()->get('erp.pending_user');
-        return $id ? User::query()->where('is_active', true)->find($id) : null;
-    }
-
-    private function hasEnrollmentGrant(User $user): bool
-    {
-        return DB::table('user_mfa_enrollment_authorizations')
-            ->where('user_id', $user->id)->whereNull('consumed_at')
-            ->where('expires_at', '>', now())->exists();
+        return $id ? WebUser::query()->where('is_active', true)->find($id) : null;
     }
 
     private function mfaKeys(Request $request, User $user): array

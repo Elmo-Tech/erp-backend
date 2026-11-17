@@ -33,9 +33,10 @@ final class AuthenticatedDatabaseContext
         }
 
         return $connection->transaction(function () use ($connection, $actor, $companyId, $permission, $work): mixed {
-            // Re-query and lock. A deserialized job user or an old HTTP session is not authority.
-            $liveActor = User::query()->whereKey($actor->getKey())
-                ->where('is_active', true)->lockForUpdate()->first();
+            // FOR SHARE blocks concurrent UPDATE/DELETE revocation without Web UPDATE privilege.
+            // Re-query and lock. A deserialized job user or old session is not authority.
+            $liveActor = User::query()->select(['id', 'is_active'])->whereKey($actor->getKey())
+                ->where('is_active', true)->sharedLock()->first();
             if (! $liveActor) {
                 throw new AuthorizationException('Company access denied.');
             }
@@ -46,7 +47,7 @@ final class AuthenticatedDatabaseContext
                 ->where('m.company_id', $companyId)
                 ->where('m.status', 'active')
                 ->where('c.status', 'active')
-                ->lockForUpdate()->first(['m.id']);
+                ->sharedLock()->first(['m.id']);
             if (! $membership) {
                 // Even a global central-management grant is not a legal-ledger membership.
                 throw new AuthorizationException('Company access denied.');
@@ -56,7 +57,7 @@ final class AuthenticatedDatabaseContext
             $connection->table('company_role_assignments')
                 ->where('membership_id', $membership->id)
                 ->where('company_id', $companyId)
-                ->lockForUpdate()->get(['id']);
+                ->sharedLock()->get(['id']);
 
             if (! (new CompanyAuthorization())->has($liveActor, $companyId, $permission)) {
                 throw new AuthorizationException('Company access denied.');

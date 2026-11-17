@@ -20,16 +20,15 @@ CREATE ROLE p003e_admin NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATIO
 GRANT CONNECT ON DATABASE elmo_erp_test TO p003e_web, p003e_mfa, p003e_queue, p003e_session;
 GRANT USAGE ON SCHEMA public TO p003e_web, p003e_mfa, p003e_queue, p003e_session;
 -- Web needs hash for existing Hash::check; no MFA secret and no SELECT * users.
-GRANT SELECT (id, name, email, password, remember_token, email_verified_at, is_active,
- created_at, updated_at) ON public.users TO p003e_web;
+GRANT SELECT (id, name, email, password, is_active) ON public.users TO p003e_web;
 GRANT SELECT ON public.companies, public.company_memberships,
  public.company_role_assignments, public.global_role_assignments TO p003e_web;
 -- MFA SQL credentials must not be available to arbitrary SQL on the Web connection.
 -- Enrollment/verification permissions below REQUIRE separate authenticated dispatch.
 GRANT SELECT (id, is_active, mfa_secret, mfa_last_step) ON public.users TO p003e_mfa;
-GRANT UPDATE (mfa_secret, mfa_last_step, updated_at) ON public.users TO p003e_mfa;
+GRANT UPDATE (mfa_secret, mfa_last_step) ON public.users TO p003e_mfa;
 GRANT SELECT ON public.user_mfa_enrollment_authorizations TO p003e_mfa;
-GRANT UPDATE (consumed_at, updated_at) ON public.user_mfa_enrollment_authorizations TO p003e_mfa;
+GRANT UPDATE (consumed_at) ON public.user_mfa_enrollment_authorizations TO p003e_mfa;
 GRANT SELECT, INSERT, DELETE ON public.user_mfa_recovery_codes TO p003e_mfa;
 -- Queue infrastructure only, not company context/domain tables.
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.jobs, public.failed_jobs TO p003e_queue;
