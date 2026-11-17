@@ -33,31 +33,45 @@ final class AuthenticatedDatabaseContext
         }
 
         return $connection->transaction(function () use ($connection, $actor, $companyId, $permission, $work): mixed {
-            // FOR SHARE blocks concurrent UPDATE/DELETE revocation without Web UPDATE privilege.
-            // Re-query and lock. A deserialized job user or old session is not authority.
-            $liveActor = User::query()->select(['id', 'is_active'])->whereKey($actor->getKey())
-                ->where('is_active', true)->sharedLock()->first();
-            if (! $liveActor) {
-                throw new AuthorizationException('Company access denied.');
+            if (config('erp_runtime.partition_required')) {
+                // Reviewed, fixed-shape SECURITY DEFINER helper locks authorization
+                // rows; Web principal gets EXECUTE but zero UPDATE column privileges.
+                $locked = $connection->selectOne(
+                    'SELECT public.p003f_lock_authorization_scope(?, ?::uuid) AS allowed',
+                    [$actor->getKey(), $companyId]
+                );
+                if (! $locked?->allowed) {
+                    throw new AuthorizationException('Company access denied.');
+                }
+                $liveActor = User::query()->select(['id', 'is_active'])
+                    ->whereKey($actor->getKey())->where('is_active', true)->first();
+                if (! $liveActor) {
+                    throw new AuthorizationException('Company access denied.');
+                }
+            } else {
+                // Legacy runtime maintains transaction-held row locks. FOR SHARE
+                // still needs UPDATE privilege in PostgreSQL: never use this
+                // branch with the isolated Web SQL role.
+                $liveActor = User::query()->select(['id', 'is_active'])
+                    ->whereKey($actor->getKey())->where('is_active', true)
+                    ->sharedLock()->first();
+                if (! $liveActor) {
+                    throw new AuthorizationException('Company access denied.');
+                }
+                $membership = $connection->table('company_memberships as m')
+                    ->join('companies as c', 'c.id', '=', 'm.company_id')
+                    ->where('m.user_id', $liveActor->getKey())
+                    ->where('m.company_id', $companyId)
+                    ->where('m.status', 'active')->where('c.status', 'active')
+                    ->sharedLock()->first(['m.id']);
+                if (! $membership) {
+                    throw new AuthorizationException('Company access denied.');
+                }
+                $connection->table('company_role_assignments')
+                    ->where('membership_id', $membership->id)
+                    ->where('company_id', $companyId)
+                    ->sharedLock()->get(['id']);
             }
-
-            $membership = $connection->table('company_memberships as m')
-                ->join('companies as c', 'c.id', '=', 'm.company_id')
-                ->where('m.user_id', $liveActor->getKey())
-                ->where('m.company_id', $companyId)
-                ->where('m.status', 'active')
-                ->where('c.status', 'active')
-                ->sharedLock()->first(['m.id']);
-            if (! $membership) {
-                // Even a global central-management grant is not a legal-ledger membership.
-                throw new AuthorizationException('Company access denied.');
-            }
-
-            // Lock role rows as well; revocation must serialize with the in-flight work.
-            $connection->table('company_role_assignments')
-                ->where('membership_id', $membership->id)
-                ->where('company_id', $companyId)
-                ->sharedLock()->get(['id']);
 
             if (! (new CompanyAuthorization())->has($liveActor, $companyId, $permission)) {
                 throw new AuthorizationException('Company access denied.');

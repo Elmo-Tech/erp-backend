@@ -16,6 +16,8 @@ SELECT 1 / CASE WHEN
       AND NOT has_column_privilege(current_user,'users','remember_token','SELECT')
       AND NOT has_column_privilege(current_user,'users','mfa_secret','SELECT')
       AND NOT has_column_privilege(current_user,'users','updated_at','UPDATE')
+      AND NOT has_column_privilege(current_user,'user_mfa_enrollment_authorizations','updated_at','UPDATE')
+      AND has_function_privilege(current_user,'public.p003f_lock_authorization_scope(bigint,uuid)','EXECUTE')
       AND NOT has_table_privilege(current_user,'sessions','SELECT')
       AND NOT has_table_privilege(current_user,'jobs','SELECT')
       AND NOT has_table_privilege(current_user,'user_mfa_recovery_codes','DELETE')

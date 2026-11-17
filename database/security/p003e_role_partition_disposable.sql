@@ -19,6 +19,35 @@ WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=role_name) \gexec
 CREATE ROLE p003e_admin NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOINHERIT NOBYPASSRLS;
 GRANT CONNECT ON DATABASE elmo_erp_test TO p003e_web, p003e_mfa, p003e_queue, p003e_session;
 GRANT USAGE ON SCHEMA public TO p003e_web, p003e_mfa, p003e_queue, p003e_session;
+-- Restricted fixed-shape transaction-bound row-lock helper. It must only
+-- lock rows: it does not authorize an arbitrary SQL caller or grant finance reads.
+-- SECURITY DEFINER is owned by disposable migration owner; never deploy as-is.
+CREATE OR REPLACE FUNCTION public.p003f_lock_authorization_scope(
+    p_user_id bigint, p_company_id uuid
+) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp AS $func$
+DECLARE
+    member_id uuid;
+BEGIN
+    -- No dynamic SQL, no arbitrary identifiers and no secret returned.
+    PERFORM 1 FROM public.users
+      WHERE id = p_user_id AND is_active = true FOR SHARE;
+    IF NOT FOUND THEN RETURN false; END IF;
+    PERFORM 1 FROM public.companies
+      WHERE id = p_company_id AND status = 'active' FOR SHARE;
+    IF NOT FOUND THEN RETURN false; END IF;
+    SELECT m.id INTO member_id FROM public.company_memberships AS m
+      WHERE m.user_id = p_user_id AND m.company_id = p_company_id
+        AND m.status = 'active' FOR SHARE;
+    IF member_id IS NULL THEN RETURN false; END IF;
+    PERFORM 1 FROM public.company_role_assignments AS r
+      WHERE r.company_id = p_company_id AND r.membership_id = member_id
+      FOR SHARE;
+    RETURN true;
+END
+$func$;
+REVOKE ALL ON FUNCTION public.p003f_lock_authorization_scope(bigint, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.p003f_lock_authorization_scope(bigint, uuid) TO p003e_web;
 -- Web needs hash for existing Hash::check; no MFA secret and no SELECT * users.
 GRANT SELECT (id, name, email, password, is_active) ON public.users TO p003e_web;
 GRANT SELECT ON public.companies, public.company_memberships,
