@@ -97,6 +97,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Transaction-pool mode only: prevent server-side prepared statement reuse.
+            'options' => filter_var(env('DB_PGBOUNCER_TRANSACTION', false), FILTER_VALIDATE_BOOLEAN)
+                ? [\PDO::ATTR_EMULATE_PREPARES => true] : [],
         ],
 
         'sqlsrv' => [

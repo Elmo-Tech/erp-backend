@@ -54,6 +54,61 @@ jobs:
         run: php artisan migrate:fresh --force --no-interaction
       - name: Run PHPUnit against disposable PostgreSQL 18
         run: php artisan test --no-ansi
+      - name: P0-03 verify populated EG/IT upgrade, rollback and reapply (synthetic database only)
+        run: |
+          set -euo pipefail
+          php artisan migrate:rollback --step=1 --force --no-interaction
+          php tests/integration/p003_nonempty_upgrade.php seed
+          php artisan migrate --force --no-interaction
+          php tests/integration/p003_nonempty_upgrade.php up
+          php artisan migrate:rollback --step=1 --force --no-interaction
+          php tests/integration/p003_nonempty_upgrade.php down
+          php artisan migrate --force --no-interaction
+          php tests/integration/p003_nonempty_upgrade.php up
+          php tests/integration/p003_nonempty_upgrade.php cleanup
+      - name: P0-03 direct PostgreSQL two-connection overlap and EG/IT isolation
+        run: php tests/integration/p003_concurrency.php
+      - name: P0-03 start disposable transaction-pooled PgBouncer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y pgbouncer
+          sudo systemctl stop pgbouncer || true
+          cat > /tmp/p003-dev-pgbouncer.ini <<'EOF'
+          [databases]
+          elmo_erp_test = host=127.0.0.1 port=5432 dbname=elmo_erp_test
+          [pgbouncer]
+          listen_addr = 127.0.0.1
+          listen_port = 16432
+          auth_type = trust
+          auth_file = /tmp/p003-dev-auth.txt
+          pool_mode = transaction
+          default_pool_size = 2
+          max_client_conn = 100
+          server_reset_query = DISCARD ALL
+          EOF
+          printf '"elmo" "test-only"\n' > /tmp/p003-dev-auth.txt
+          pgbouncer /tmp/p003-dev-pgbouncer.ini > /tmp/p003-dev-pgbouncer.log 2>&1 &
+          sleep 2
+          PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 16432 -U elmo -d elmo_erp_test -Atc 'SELECT 1' | grep -qx 1
+      - name: P0-03 concurrent pooled clients and transaction-local context cleanup
+        env:
+          DB_PORT: '16432'
+        run: php tests/integration/p003_pool_clients.php
+      - name: P0-03 Laravel Auth/MFA and database Session/Queue regressions via real PgBouncer
+        env:
+          DB_PORT: '16432'
+          DB_PGBOUNCER_TRANSACTION: 'true'
+          SESSION_DRIVER: database
+          QUEUE_CONNECTION: database
+        run: php artisan test --no-ansi
+      - name: P0-03 ensure dangerous experimental runtime is absent from integration candidate
+        run: |
+          set -euo pipefail
+          test ! -e database/security/p003e_role_partition_disposable.sql
+          test ! -e database/security/p003g_broker_poc_disposable.sql
+          test ! -e app/Domain/Companies/AuthenticatedDatabaseContext.php
+          test ! -e config/erp_runtime.php
+          test ! -e tests/integration/p003h_uid_socket_spike.py
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health

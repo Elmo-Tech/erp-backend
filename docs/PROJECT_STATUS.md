@@ -1,5 +1,20 @@
 # Project Status — Source of Truth
 
+## P0-03 Development Integration Candidate — 2026-11-17 (DRAFT / NOT MERGE APPROVED)
+
+**Candidate code CI:** exact commit `8110437be702e3a6553f63acc0d68cb281e19543` [GitHub Actions #44110104136](https://github.com/Elmo-Tech/erp-backend/actions/runs/44110104136) **COMPLETED SUCCESS** (PG18 migrate, PHPUnit, populated synthetic Egypt/Italy upgrade + rollback/reapply, direct and pooled concurrency, PgBouncer Auth/MFA and database Session/Queue-driver regression, Docker build and API health). **Still NOT VERIFIED:** dedicated restricted-role queue worker, independent security review, production-like populated database and unsafe `SECURITY DEFINER` replacement. This documentation-only update is a new SHA and must be verified independently; do not attribute the prior code CI to it. No merge approval.
+
+Candidate branch: `task/p0-03-development-integration-review` from verified integration baseline `5bc57535129e652f24f4991e7b90d418cef6f200`; separate from [P0-03 exploratory PR #10](https://github.com/Elmo-Tech/erp-backend/pull/10). Scope: PostgreSQL 18 accounting/check/exclusion constraints, existing composite-FK verification (not new composite FKs), Egypt/Italy direct SQL rejection, synthetic nonempty upgrade/rollback/reapply, concurrency, pooled Laravel Auth/MFA regressions, a narrow optional PgBouncer PDO compatibility option. No expanded SQL grants, no MFA broker, no Unix UID/socket, no permanent RLS, no SECURITY DEFINER, no role partition feature flag. Laravel least-privilege role integration is deferred because `p003f_lock_authorization_scope` is demonstrated DoS-prone; no replacement is accepted here.
+
+Evidence from **other, wider PR**: exact `77cd6efa` [CI #44085735213](https://github.com/Elmo-Tech/erp-backend/actions/runs/44085735213) completed SUCCESS for 41 steps, but its P0-03H negative test detected a security design FAIL. It is NOT evidence for this separated candidate. The candidate's own CI is **NOT VERIFIED until its Draft PR run finishes**. Prior P0-03F tests cover split SQL role operation only on the unsafe experimental fixture and must not be carried over as a sign-off. Synthetic populated upgrade and rollback is newly introduced here and must pass candidate CI.
+
+Risk gates: migration DDL locks, invalid existing rows on nonempty upgrades, cross-company isolation, auth/session/queue compatibility, lack of independent Web-process credential isolation and trusted MFA/session issuer; SEC-01..08 [Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7) and [Production gate #11](https://github.com/Elmo-Tech/erp-backend/issues/11) remain OPEN. ADR-022/023 PROPOSED, Production NO GO, no release or merge approval. No production/staging, real data, permanent RLS, `main` or `oberation` writes.
+
+**Next action:** review candidate-only CI, add proven real pooled queue worker and safe least-privileged Web design as a separate approved step, request explicit owner authorization before any development merge.
+
+---
+
+
 ## P0-02 merged for DEVELOPMENT — canonical status (2026-11-16)
 
 **BOTH PRs MERGED to `rebuild/erp-v2`. Owner-authorized non-production integration under [ADR-021](DECISIONS.md). This is NOT a security sign-off or approval to deploy/use real accounts.**
