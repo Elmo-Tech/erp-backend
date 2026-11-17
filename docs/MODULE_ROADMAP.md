@@ -1,3 +1,9 @@
+## P0-03G — MFA command boundary investigation (2026-11-17)
+
+F01 authentication/company-security remains **IN PROGRESS / NOT SECURITY VERIFIED**. A disposable PostgreSQL 18/PgBouncer command-broker PoC is under CI verification, not wired to Laravel/Auth/production and not OS-credential isolated; see [security packet](security/P0-03G_MFA_PROCESS_BOUNDARY_REVIEW.md). First new PoC CI #44075692788 failed on test fault-injection setup, fixed at `0bb6d5b`; later SHA needs its own evidence. Do not mark as production ready. ADR-023 and ADR-022 PROPOSED, permanent RLS deferred, Issues #8/#7 open, PR #10 Draft/unmerged, human security approval missing.
+
+---
+
 ## P0-03E — DB permissions hardening (2026-11-17; IN PROGRESS)
 
 **Engineering recommendation: DEFER RLS; do not create a Trusted Issuer now.** Existing Laravel membership/role/permission validation plus explicit legal-company predicates and composite FKs remain mandatory. This does NOT protect unscoped data from arbitrary SQL injection. Review packet: [P0-03E role partition](security/P0-03E_ROLE_PARTITION_REVIEW.md). Existing `p003c_runtime` can read all `users` columns, change four `updated_at` columns and mutate sessions/queue; MFA grant gaps are known FAILs. Proposed separate Web/MFA/Queue/Session principals are CI-only, not wired Auth/MFA flows.
