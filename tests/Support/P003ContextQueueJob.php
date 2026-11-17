@@ -30,7 +30,7 @@ final class P003ContextQueueJob implements ShouldQueue
         if (! app()->environment('testing') || getenv('DB_DATABASE') !== 'elmo_erp_test') {
             throw new RuntimeException('P0-03B synthetic queue probe refuses a non-test database.');
         }
-        $actor = User::query()->findOrFail($this->actorId);
+        $actor = User::query()->select(['id', 'is_active'])->findOrFail($this->actorId);
         try {
             $seen = $context->run($actor, $this->companyId, 'company.view',
                 fn (string $id) => DB::selectOne(
