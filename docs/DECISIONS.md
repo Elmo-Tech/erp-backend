@@ -1,3 +1,9 @@
+## ADR-022 verified P0-03F engineering evidence — 2026-11-17 (REMAINS PROPOSED)
+
+[CI #44069174715 FULL SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44069174715) at exact code `dbc0f7efac700a3fabb11d270df14977481c6b98` covers restricted Web/MFA/Session/Queue actual Laravel operations, PG18/PgBouncer, MFA enrollment/TOTP/recovery/rollback, EG↔IT, concurrency/revocation, reused worker and Docker. **Engineering PASS is not security approval**. A dedicated DB connection inside the same Web PHP process is NOT secret or command isolation. The narrow SECURITY DEFINER lock helper needs independent review, as does process credential custody. **ADR-022 is still PROPOSED; recommendation DEFER permanent RLS and avoid a Trusted Issuer until independently justified**; no approved release change. Security issue #7 OPEN, task Issue #8 OPEN, PR #10 DRAFT, no merge/deploy/production/main/oberation. This subsequent documentation commit requires its own exact-head CI.
+
+---
+
 ## ADR-022 P0-03F CI evidence — 2026-11-17 (PROPOSED, NO DECISION APPROVAL)
 
 Engineering split-role tests **FULL SUCCESS** on code `d7b3114` at [CI #44068168985](https://github.com/Elmo-Tech/erp-backend/actions/runs/44068168985): PostgreSQL 18 and PgBouncer Web/MFA/Session/Queue real Laravel operations, enrollment/recovery/TOTP/login/logout, EG↔IT, five reused jobs, migrations/rollback/Docker. Later revocation race `e8f7201` requires independent exact-head CI. This is not independent human security review or production proof. **Remain PROPOSED; recommendation DEFER permanent RLS / Trusted Issuer.** No MFA process isolation, issuer or production signoff. PR #10 Draft, Issues #8/#7 OPEN.

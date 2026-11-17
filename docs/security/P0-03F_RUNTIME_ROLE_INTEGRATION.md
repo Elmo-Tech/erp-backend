@@ -1,3 +1,9 @@
+## P0-03F code-HEAD integration verification — 2026-11-17
+
+**ENGINEERING PASS:** full [CI #44069174715](https://github.com/Elmo-Tech/erp-backend/actions/runs/44069174715) at exact code `dbc0f7efac700a3fabb11d270df14977481c6b98`. PostgreSQL 18/PgBouncer, real restricted Web/MFA/Session/Queue Laravel HTTP+worker, concurrent revocation, and synthetic restricted MFA failure-injection rollback all passed. Fault-injection scope: trigger deliberately fails recovery INSERT only for a synthetic disposable user; test asserts the consumed grant, encrypted factor, last TOTP step, and recovery hashes were all rolled back, and checks for the expected synthetic trigger error. Role negative probes and prior migrations/rollback, PHPUnit, Docker smoke passed. **This is NOT security signoff; same PHP process secret exposure, SQL helper review, and SEC-01..08 remain open.** A later docs-only commit must receive a distinct CI result.
+
+---
+
 # P0-03F — Laravel Runtime Roles: Query/Grant and Threat Inventory
 
 **2026-11-17. IN PROGRESS / NOT SECURITY SIGN-OFF.** Draft PR #10 and Issue #8. Issue #7 SEC-01..08 remains OPEN; ADR-022 PROPOSED (defer permanent RLS, do not build a Trusted Issuer now). Only synthetic users, disposable PostgreSQL 18, PgBouncer, and CI-only grants. No actual production role grants or credentials.
