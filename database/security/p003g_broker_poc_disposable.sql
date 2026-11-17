@@ -17,7 +17,10 @@ CREATE TABLE public.p003g_accounts (
     password_hash text NOT NULL,
     otp_cipher text NOT NULL,
     active boolean NOT NULL DEFAULT true,
-    revocation_epoch bigint NOT NULL DEFAULT 0
+    revocation_epoch bigint NOT NULL DEFAULT 0,
+    last_totp_step bigint NOT NULL DEFAULT -1,
+    failed_passwords integer NOT NULL DEFAULT 0,
+    locked_until_epoch bigint NOT NULL DEFAULT 0
 );
 CREATE TABLE public.p003g_challenges (
     token_hash char(64) PRIMARY KEY,
