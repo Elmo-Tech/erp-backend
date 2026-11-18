@@ -68,6 +68,8 @@ jobs:
           php tests/integration/p003_nonempty_upgrade.php cleanup
       - name: P0-03 direct PostgreSQL two-connection overlap and EG/IT isolation
         run: php tests/integration/p003_concurrency.php
+      - name: P0-04A real PostgreSQL 18 journal-lock and immutability race tests
+        run: php tests/integration/p004_guard_concurrency.php
       - name: P0-03 start disposable transaction-pooled PgBouncer
         run: |
           sudo apt-get update -qq
@@ -94,6 +96,10 @@ jobs:
         env:
           DB_PORT: '16432'
         run: php tests/integration/p003_pool_clients.php
+      - name: P0-04A journal guards through PgBouncer transaction pooling
+        env:
+          DB_PORT: '16432'
+        run: php tests/integration/p004_guard_concurrency.php
       - name: P0-03 Laravel Auth/MFA and database Session/Queue regressions via real PgBouncer
         env:
           DB_PORT: '16432'
