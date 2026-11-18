@@ -60,6 +60,8 @@ jobs:
         run: php tests/integration/p004b_lock_protocol.php
       - name: P0-04 COMPOSITION direct real eligibility vs child writers
         run: php tests/integration/p004_composition_eligibility_races.php
+      - name: P0-04 COMPOSITION synthetic restricted-role TRUNCATE and trigger DDL probe
+        run: php tests/integration/p004_composition_acl_probe.php
       - name: P0-04-FX direct PG18 raw INSERT/UPDATE and pg_constraint regression
         run: php tests/integration/p004_fx_sql_clients.php
       - name: P0-04-FX synthetic populated bad-row preflight, rollback and reapply (PG18 only)
