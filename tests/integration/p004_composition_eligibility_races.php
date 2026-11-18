@@ -38,7 +38,8 @@ $check = static function (bool $ok, string $why): void {
 $tag = $port === '16432' ? 'c3' : 'c2';
 $id = static fn (int $n): string => sprintf('00000000-0000-4000-8000-000000%s%04d', $tag, $n);
 $eg = ['company' => $id(101), 'year' => $id(102), 'period' => $id(103),
-    'account' => $id(104), 'entry' => $id(105), 'debit' => $id(106), 'credit' => $id(107)];
+    'account' => $id(104), 'entry' => $id(105), 'debit' => $id(106), 'credit' => $id(107),
+    'other_entry' => $id(108), 'other_line' => $id(109)];
 $it = ['company' => $id(201), 'year' => $id(202), 'period' => $id(203),
     'account' => $id(204), 'entry' => $id(205), 'debit' => $id(206), 'credit' => $id(207)];
 $temporary = $id(301);
@@ -129,6 +130,19 @@ try {
         ]);
     }
 
+    // Same-company reparent fixture: a second EG draft has a distinct line,
+    // and the destination EG entry sorts first under the P0-04A header order.
+    DB::table('journal_entries')->insert([
+        'id' => $eg['other_entry'], 'company_id' => $eg['company'],
+        'period_id' => $eg['period'], 'entry_date' => '2026-02-02',
+        'status' => 'draft', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('journal_lines')->insert([
+        'id' => $eg['other_line'], 'company_id' => $eg['company'],
+        'entry_id' => $eg['other_entry'], 'account_id' => $eg['account'],
+        'line_no' => 3, 'debit_base' => '1.0000', 'credit_base' => '0',
+    ]);
+
     // Actual internal validator runs inside an outer transaction. The nested
     // DB::transaction returns but its header FOR UPDATE lock survives to outer
     // transaction end. Other PostgreSQL backend is independent.
@@ -140,7 +154,7 @@ try {
             "DELETE FROM journal_lines WHERE id='{$eg['credit']}'",
             "INSERT INTO journal_lines(id,company_id,entry_id,account_id,line_no,debit_base,credit_base)
                 VALUES('{$temporary}','{$eg['company']}','{$eg['entry']}','{$eg['account']}',3,1,0)",
-            "UPDATE journal_lines SET entry_id='{$eg['entry']}' WHERE id='{$it['debit']}'",
+            "UPDATE journal_lines SET entry_id='{$eg['entry']}' WHERE id='{$eg['other_line']}'",
         ] as $sql) {
             // Reparent may also hit FK, but parent-header lock should be
             // encountered first in P0-04A trigger's deterministic ordering.
