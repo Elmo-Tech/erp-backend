@@ -10,6 +10,10 @@ if (getenv('APP_ENV') !== 'testing' || !in_array(getenv('DB_DATABASE'), ['elmo_e
 require __DIR__.'/../../vendor/autoload.php';
 $app = require __DIR__.'/../../bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+if (\Illuminate\Support\Facades\DB::selectOne('SELECT session_user AS username')->username !== 'elmo') {
+    fwrite(STDERR, "REFUSED: fixture connection is not the migration owner\n");
+    exit(2);
+}
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 
