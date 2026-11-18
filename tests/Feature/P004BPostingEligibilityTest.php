@@ -181,20 +181,28 @@ final class P004BPostingEligibilityTest extends TestCase
     public function test_multicurrency_snapshot_and_inactive_currency_fail_closed(): void
     {
         $s = $this->seedLedger();
-        // P0-03 CHECK uses SQL three-valued logic and accepts NULL in this
-        // incomplete FX case. Eligibility must fail closed independently.
+        // Composition-only change: P0-04-FX now blocks the legacy NULL FX
+        // row at INSERT (23514), before the P0-04B validator can inspect it.
+        try {
+            DB::transaction(function () use ($s): void {
+                $this->addLine($s, 1, '10', '0', [
+                    'transaction_currency' => 'EUR', 'amount_currency' => '10',
+                    'fx_rate_snapshot' => null,
+                ]);
+            });
+            $this->fail('P0-04-FX must reject incomplete FX at database boundary.');
+        } catch (QueryException $exception) {
+            $this->assertStringContainsString('SQLSTATE[23514]', $exception->getMessage());
+        }
+
         $this->addLine($s, 1, '10', '0', [
             'transaction_currency' => 'EUR', 'amount_currency' => '10',
-            'fx_rate_snapshot' => null,
+            'fx_rate_snapshot' => '1.000000000000',
         ]);
         $this->addLine($s, 2, '0', '10');
-        $this->rejects(fn () => $this->validate($s), 'Journal lines');
-        DB::table('journal_lines')->where('entry_id', $s['journal'])
-            ->where('line_no', 1)->update(['fx_rate_snapshot' => '1.000000000000']);
         $this->validate($s);
         DB::table('currencies')->where('code', 'EUR')->update(['active' => false]);
         $this->rejects(fn () => $this->validate($s), 'Inactive ledger currency');
-
     }
 
     public function test_rollback_preserves_draft_and_no_financial_side_effects(): void
@@ -215,14 +223,26 @@ final class P004BPostingEligibilityTest extends TestCase
         $this->validate($s);
     }
 
-    public function test_non_draft_journal_is_not_eligible_even_with_balanced_lines(): void
+    public function test_a_guard_blocks_posting_even_when_b_eligibility_passes(): void
     {
         $s = $this->seedLedger();
         $this->balanced($s);
-        // Only P0-03 exists on this independent base; P0-04A's DRAFT guards are unmerged.
-        DB::table('journal_entries')->where('id', $s['journal'])->update([
-            'status' => 'posted', 'posted_at' => now(),
-        ]);
-        $this->rejects(fn () => $this->validate($s), 'Own-company draft');
+        $this->validate($s); // advisory only; must leave the journal draft
+
+        // Composition-only: the P0-04A DB guard now rejects the transition.
+        try {
+            DB::transaction(fn () => DB::table('journal_entries')
+                ->where('id', $s['journal'])
+                ->update(['status' => 'posted', 'posted_at' => now()]));
+            $this->fail('P0-04A fail-closed guard must deny direct posting.');
+        } catch (QueryException $exception) {
+            $this->assertStringContainsString('SQLSTATE[23514]', $exception->getMessage());
+        }
+
+        $this->assertSame('draft',
+            DB::table('journal_entries')->where('id', $s['journal'])->value('status'));
+        $this->assertNull(
+            DB::table('journal_entries')->where('id', $s['journal'])->value('posted_at'));
+        $this->validate($s);
     }
 }
