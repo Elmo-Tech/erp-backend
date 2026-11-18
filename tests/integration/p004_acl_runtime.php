@@ -112,15 +112,15 @@ $check($db->query("SELECT pg_has_role(current_user,'elmo','MEMBER')")->fetchColu
  'Runtime is a member of migration owner role');
 foreach (['journal_entries','journal_lines'] as $table) {
     foreach (['TRUNCATE','REFERENCES','TRIGGER'] as $priv) {
-        $check(!$db->query("SELECT has_table_privilege(current_user,'public.{$table}','{$priv}')")->fetchColumn(),
+        $check(in_array($db->query("SELECT has_table_privilege(current_user,'public.{$table}','{$priv}')")->fetchColumn(), [false,'f','0',0], true),
             "Unexpected {$priv} privilege on {$table}");
     }
 }
-$check(!$db->query("SELECT has_database_privilege(current_user,current_database(),'CREATE')")->fetchColumn(),
+$check(in_array($db->query("SELECT has_database_privilege(current_user,current_database(),'CREATE')")->fetchColumn(), [false,'f','0',0], true),
     'Runtime has database CREATE');
-$check(!$db->query("SELECT has_database_privilege(current_user,current_database(),'TEMP')")->fetchColumn(),
+$check(in_array($db->query("SELECT has_database_privilege(current_user,current_database(),'TEMP')")->fetchColumn(), [false,'f','0',0], true),
     'Runtime has TEMP');
-$check(!$db->query("SELECT has_schema_privilege(current_user,'public','CREATE')")->fetchColumn(),
+$check(in_array($db->query("SELECT has_schema_privilege(current_user,'public','CREATE')")->fetchColumn(), [false,'f','0',0], true),
     'Runtime has schema CREATE');
 $expectDenied($db,'TRUNCATE public.journal_lines','TRUNCATE');
 $expectDenied($db,'ALTER TABLE public.journal_entries DISABLE TRIGGER ALL','trigger-disable');
