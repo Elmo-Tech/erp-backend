@@ -44,9 +44,17 @@ $it = ['company' => $id(201), 'year' => $id(202), 'period' => $id(203),
 $temporary = $id(301);
 $validator = new JournalPostingEligibilityValidator();
 
-// Separate connection is forbidden to silently share Laravel's transaction.
-$check(DB::getPdo()->query('SELECT pg_backend_pid()')->fetchColumn() !==
-    $other->query('SELECT pg_backend_pid()')->fetchColumn(), 'connections not distinct');
+// PgBouncer may reuse a backend between sequential autocommit queries.
+// Pin both sessions at the same time before comparing server PIDs.
+DB::beginTransaction();
+$other->beginTransaction();
+try {
+    $check(DB::getPdo()->query('SELECT pg_backend_pid()')->fetchColumn() !==
+        $other->query('SELECT pg_backend_pid()')->fetchColumn(), 'concurrent backend sessions not distinct');
+} finally {
+    $other->rollBack();
+    DB::rollBack();
+}
 
 $rejected = static function (string $expected, callable $operation) use ($other, $check): void {
     $other->beginTransaction();
