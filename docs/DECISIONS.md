@@ -1,5 +1,12 @@
 # Architecture Decision Register — approved 2026-11-16
 
+## P0-04-FX design note (2026-11-18) — ADR-024 still **PROPOSED**
+
+Issue #17 proposes a separate irreversible-to-history (no row rewrites), reversible-in-schema P0-04-FX migration adding a new validated CHECK beside P0-03 `p003_currency_snapshot_chk`, with explicit `IS TRUE` to reject SQL UNKNOWN. The old check stays for rollback compatibility. Rejecting populated invalid historical FX rows is mandatory; there is no automatic correction. Single-transaction `ALTER TABLE ADD CHECK` incurs `ACCESS EXCLUSIVE` plus a full validation scan; synthetic tests do not establish safe real-data lock windows. No decision here approves posting, API, release, merge, production DDL or ADR-024. Future production-grade online validation requires a separate reviewed migration plan.
+
+---
+
+
 ## ADR-020 operational elaboration — 2026-11-16 (PROPOSED details; original approval unchanged)
 
 **The six security principles in ADR-020 remain APPROVED. This addition does not approve operational specifications, code, reviewers, merges or production release.** The following implementation-specific documents are prepared for owner decision and independent security inspection:
