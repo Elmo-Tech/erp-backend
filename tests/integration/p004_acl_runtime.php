@@ -109,6 +109,14 @@ foreach (['rolsuper','rolcreatedb','rolcreaterole','rolreplication','rolbypassrl
 $ownership=(int)$db->query("SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace
  AND relkind IN ('r','p','S','v','m','f') AND pg_get_userbyid(relowner)=current_user")->fetchColumn();
 $check($ownership===0,'Runtime owns a schema object');
+$members=(int)$db->query("SELECT count(*) FROM pg_auth_members WHERE member=(SELECT oid FROM pg_roles WHERE rolname=current_user)")->fetchColumn();
+$check($members===0,'Runtime has forbidden role memberships');
+$executable=(int)$db->query("SELECT count(*) FROM pg_proc
+ WHERE pronamespace='public'::regnamespace
+   AND has_function_privilege(current_user,oid,'EXECUTE')")->fetchColumn();
+$expectedFunctions=$mode==='worker-probe' ? 0 : 3;
+$check($executable===$expectedFunctions, "Unexpected executable public functions: {$executable}");
+
 $check($db->query("SELECT pg_has_role(current_user,'elmo','MEMBER')")->fetchColumn() === false
  || $db->query("SELECT pg_has_role(current_user,'elmo','MEMBER')")->fetchColumn() === 'f',
  'Runtime is a member of migration owner role');

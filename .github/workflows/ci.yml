@@ -173,6 +173,15 @@ jobs:
             SESSION_DRIVER=database QUEUE_CONNECTION=database CACHE_STORE=array \
             php artisan test --no-ansi --filter=RestrictedRuntimeTest
           php tests/integration/p004_laravel_fixture.php cleanup
+      - name: P0-04-ACL restricted Laravel Auth/MFA/Session/Queue via SCRAM PgBouncer
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/integration/p004_laravel_fixture.php seed
+          DB_USERNAME=elmo_runtime DB_PASSWORD="$RUNTIME_DB_PASSWORD" DB_PORT=16433 \
+            DB_PGBOUNCER_TRANSACTION=true SESSION_DRIVER=database QUEUE_CONNECTION=database CACHE_STORE=array \
+            php artisan test --no-ansi --filter=RestrictedRuntimeTest
+          php tests/integration/p004_laravel_fixture.php cleanup
       - name: P0-04-ACL verify runtime cannot migrate
         shell: bash
         run: |
