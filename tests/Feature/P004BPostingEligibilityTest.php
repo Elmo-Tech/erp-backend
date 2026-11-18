@@ -181,25 +181,20 @@ final class P004BPostingEligibilityTest extends TestCase
     public function test_multicurrency_snapshot_and_inactive_currency_fail_closed(): void
     {
         $s = $this->seedLedger();
-        try {
-            DB::transaction(function () use ($s): void {
-                $this->addLine($s, 1, '10', '0', [
-                    'transaction_currency' => 'EUR', 'amount_currency' => '10',
-                    'fx_rate_snapshot' => null,
-                ]);
-            });
-            $this->fail('Expected incomplete FX snapshot to fail PostgreSQL CHECK.');
-        } catch (QueryException $exception) {
-            $this->assertStringContainsString('23514', $exception->getMessage());
-        }
+        // P0-03 CHECK uses SQL three-valued logic and accepts NULL in this
+        // incomplete FX case. Eligibility must fail closed independently.
         $this->addLine($s, 1, '10', '0', [
             'transaction_currency' => 'EUR', 'amount_currency' => '10',
-            'fx_rate_snapshot' => '1.000000000000',
+            'fx_rate_snapshot' => null,
         ]);
         $this->addLine($s, 2, '0', '10');
+        $this->rejects(fn () => $this->validate($s), 'Journal lines');
+        DB::table('journal_lines')->where('entry_id', $s['journal'])
+            ->where('line_no', 1)->update(['fx_rate_snapshot' => '1.000000000000']);
         $this->validate($s);
         DB::table('currencies')->where('code', 'EUR')->update(['active' => false]);
         $this->rejects(fn () => $this->validate($s), 'Inactive ledger currency');
+
     }
 
     public function test_rollback_preserves_draft_and_no_financial_side_effects(): void
