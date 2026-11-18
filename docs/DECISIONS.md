@@ -1,5 +1,14 @@
 # Architecture Decision Register — approved 2026-11-16
 
+## ADR-024 — Financial posting protocol / P0-04B addendum (PROPOSED ONLY; 2026-11-18)
+
+Proposed—not accepted, merged, or approved for production. Independent Draft PR #16 implements exact draft arithmetic and transient internal read-only eligibility only. PostgreSQL NUMERIC is authoritative for sums; do not convert values to PHP float or overflowing integer accumulators. Proposed lock acquisition order: journal header FOR UPDATE; own company, fiscal year and accounting period, then currencies/accounts using consistent ordered shared locks; read journal_lines without child tuple FOR UPDATE. Parent-row locking does **not** prove child-row stability on the independent integration base (P0-04A PR #14 remains unmerged), and P0-04A's BEFORE ROW trigger may already hold updated child tuple before parent. Two-session test is protocol evidence only, **NOT** real posting-vs-editing proof.
+
+P0-03 `p003_currency_snapshot_chk` permits incomplete NULL FX snapshots because PostgreSQL CHECK accepts UNKNOWN; P0-04B adds `IS NOT TRUE` to reject at eligibility boundary. Require separately reviewed database CHECK strengthening/privilege restrictions, trusted Finance authorization, source idempotency, atomic audit/outbox, clear currency/FX policies and safe mutation protocol before any posting. Do not bypass P0-04A fail-closed guard; no state transition or API. Security #7/#8/#11 remain OPEN.
+
+---
+
+
 ## ADR-020 operational elaboration — 2026-11-16 (PROPOSED details; original approval unchanged)
 
 **The six security principles in ADR-020 remain APPROVED. This addition does not approve operational specifications, code, reviewers, merges or production release.** The following implementation-specific documents are prepared for owner decision and independent security inspection:
