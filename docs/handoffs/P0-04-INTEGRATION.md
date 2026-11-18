@@ -28,13 +28,15 @@ Branch `task/p0-04-composition-rehearsal` was created from the integration base 
 |---|---|
 | Prior individual A/B/FX full runs | PASS on separate SHAs; **not** composition proof |
 | Initial composition CI [#44331223086](https://github.com/Elmo-Tech/erp-backend/actions/runs/44331223086) | **FAIL**: FX journal FK expected 23503; A guard first raises 23514 |
-| Latest combined PG18 fresh + PHPUnit | NOT VERIFIED until exact-head CI |
-| Synthetic populated upgrade, rollback, reapply, SQLSTATE | NOT VERIFIED until exact-head CI |
-| Direct PG18 + PgBouncer actual advisory validator/child writes | NOT VERIFIED until exact-head CI |
-| DDL/TRUNCATE synthetic role probe | NOT VERIFIED until exact-head CI |
+| Combined PG18 fresh + PHPUnit | **PASS** on `177ab035` [CI #44332634462](https://github.com/Elmo-Tech/erp-backend/actions/runs/44332634462) |
+| Synthetic populated upgrade, rollback, reapply, SQLSTATE | **PASS** #44332634462 on `177ab035` |
+| Direct PG18 + PgBouncer actual advisory validator/child writes | **PASS** #44332634462 on `177ab035` (no real posting) |
+| DDL/TRUNCATE synthetic role probe | **PASS** #44332634462 on `177ab035`, **real runtime NOT VERIFIED** |
 | Real runtime least privilege, true posting-vs-child tuple deadlock, real data/volume DDL budget | NOT RUN / NOT VERIFIED |
 | Independent human security review and accountant sign-off | NOT RUN |
 | Posting Service, Finance authorization, true source idempotency and atomic audit/outbox | NOT IMPLEMENTED |
+
+**Complete code+docs SHA verification:** [CI #44332634462](https://github.com/Elmo-Tech/erp-backend/actions/runs/44332634462) **SUCCESS** on `177ab035b4ba2225ca2bc92f6cbff48df3c4594f`. Individual negative steps succeeded, including direct and pooled real eligibility attempts and synthetic ACL. This subsequent evidence-documentation commit requires a distinct exact-head run. Automation is not a human review.
 
 ## Merge readiness / explicit next action
 

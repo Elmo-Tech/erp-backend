@@ -1,6 +1,6 @@
 # Module Roadmap — End-to-End ERP V2
 
-**P0-04-INTEGRATION rehearsal (2026-11-18):** independent [Draft #20](https://github.com/Elmo-Tech/erp-backend/pull/20), [Issue #19](https://github.com/Elmo-Tech/erp-backend/issues/19) tests P0-04A #14 + B #16 + FX #18 **without merging anything**. Combined CI pending at authoring. Original PRs remain Draft; F02 is IN PROGRESS but real Posting Service, audit/outbox and independent review are NOT IMPLEMENTED. [Handoff](handoffs/P0-04-INTEGRATION.md).
+**P0-04-INTEGRATION rehearsal (2026-11-18):** independent [Draft #20](https://github.com/Elmo-Tech/erp-backend/pull/20), [Issue #19](https://github.com/Elmo-Tech/erp-backend/issues/19) tests P0-04A #14 + B #16 + FX #18 **without merging anything**. Combined full CI [#44332634462 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44332634462) on `177ab035`; latest documentation-only checkpoint requires its own CI. Original PRs remain Draft; F02 is IN PROGRESS but real Posting Service, audit/outbox and independent review are NOT IMPLEMENTED. [Handoff](handoffs/P0-04-INTEGRATION.md).
 
 
 Status key: `NOT STARTED` = design only; `SCAFFOLD` = source code exists but not verified; `IN PROGRESS` = active task with evidence; `VERIFIED` = acceptance tests passed and PR reviewed; `BLOCKED` = dependency/external signoff prevents delivery.
