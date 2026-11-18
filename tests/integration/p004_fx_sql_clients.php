@@ -146,11 +146,16 @@ SQL)->fetchAll();
             'rejected update must leave valid line unchanged');
     }
 
-    // Existing same-company composite FKs still deny EG -> IT and IT -> EG.
-    $reject($a, '23503', fn () => $exec($a, $insertSql,
+    // P0-04A child trigger checks own-company parent *before* journal FK.
+    $reject($a, '23514', fn () => $exec($a, $insertSql,
         [$invalid,$eg,$entryIt,$accountEg,2,null,null,null]));
-    $reject($b, '23503', fn () => $exec($b, $insertSql,
+    $reject($b, '23514', fn () => $exec($b, $insertSql,
         [$invalid,$it,$entryEg,$accountIt,2,null,null,null]));
+    // Independently verify the composite account FK still emits 23503.
+    $reject($a, '23503', fn () => $exec($a, $insertSql,
+        [$invalid,$eg,$entryEg,$accountIt,2,null,null,null]));
+    $reject($b, '23503', fn () => $exec($b, $insertSql,
+        [$invalid,$it,$entryIt,$accountEg,2,null,null,null]));
 
     echo "PASS: {$port} raw PG18/PgBouncer inserts, updates, 23514, EG/IT FK isolation and validated pg_constraint.\n";
 } finally {

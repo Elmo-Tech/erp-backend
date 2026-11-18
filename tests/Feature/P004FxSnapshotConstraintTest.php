@@ -189,9 +189,19 @@ SQL);
     {
         $owners = $this->seedFxCompanies();
         foreach ([['EG', 'IT'], ['IT', 'EG']] as [$own, $other]) {
+            // P0-04A guard fails closed before the journal FK on a missing
+            // same-company parent; this is 23514, not the old 23503.
             $this->rejectsWithSqlstate(
                 fn () => $this->rawInsert($owners[$own], 1, 'EUR', '10', '1',
                     entry: $owners[$other]['entry']),
+                '23514'
+            );
+            // FK remains independently enforceable when own journal exists
+            // but the referenced account belongs to the opposite company.
+            $wrongAccount = $owners[$own];
+            $wrongAccount['account'] = $owners[$other]['account'];
+            $this->rejectsWithSqlstate(
+                fn () => $this->rawInsert($wrongAccount, 1, 'EUR', '10', '1'),
                 '23503'
             );
         }
