@@ -1,5 +1,9 @@
 # P0-04-ACL — Runtime Database Principal Isolation (NON-PRODUCTION PoC)
 
+## Exact-code CI evidence — 2026-11-18
+
+**VERIFIED first complete candidate:** [GitHub Actions #44375723500](https://github.com/Elmo-Tech/erp-backend/actions/runs/44375723500) COMPLETED SUCCESS on exact commit 9da30bdbfeeda5591daa74547b8f069de08f1f42. Its real PostgreSQL 18 LOGIN role provision and direct role probe SUCCESS, independent PgBouncer SCRAM startup and restricted runtime probe SUCCESS, synthetic cleanup SUCCESS; pre-existing PG18 migrations, PHPUnit, P0-03 populated upgrade/rollback, two-client concurrency, real PgBouncer Auth/MFA/Session/Queue, Docker build and API health SUCCESS. Journal immutable-state proof is intentionally NOT VERIFIED because Draft PR #14 guards are absent on this independent integration-based branch. This *documentation update* creates a NEW HEAD and must get separate exact-head CI before claiming its final validation.
+
 **Date:** 2026-11-18. **Issue:** https://github.com/Elmo-Tech/erp-backend/issues/21 ; parent #13. **Branch:** task/p0-04-acl-runtime-principal, from unchanged integration 21a085f5b101126cb6f535fdb03f204cb99d0405. **Status:** IN PROGRESS; NO MERGE/DEPLOY. **CI:** NOT VERIFIED until exact PR HEAD completes.
 
 ## Discovery
