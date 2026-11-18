@@ -1,5 +1,13 @@
 # Elmo Tech ERP V2 — Start Here
 
+## Active financial safety review checkpoint — 2026-11-18
+
+- **P0-04A [Draft PR #14](https://github.com/Elmo-Tech/erp-backend/pull/14) CI false-positive was repaired** on code SHA `4543a39652f300f388c5f0aa8e0b4fe0e3e0a7a2`: [exact-head full #44346741810 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44346741810). The standalone P0-03 populated migration fixture now fails with exit code 1 on an assertion, has an intentional negative selftest, strict stage PASS markers, and a two-migration `--step=2` rollback for the A-only branch. P0-04A trigger `23514` and independent composite-FK `23503` are both tested. The old #44308817619 result was **not** sufficient for this regression.
+- P0-04A #14 / B #16 / FX #18 remain **Draft, open, unmerged**; composition [#20](https://github.com/Elmo-Tech/erp-backend/pull/20) is **NEVER MERGE**. Integration `rebuild/erp-v2` remains unchanged. [Review Issue #19](https://github.com/Elmo-Tech/erp-backend/issues/19) / [Parent #13](https://github.com/Elmo-Tech/erp-backend/issues/13) track remaining real runtime ACL, independent human review, posting lock protocol and future authorization/idempotency/audit; **development merge NO-GO** until owner makes a separate decision.
+- This new documentation-only checkpoint requires its **own exact-head CI**; the cited code result applies to `4543a39652f300f388c5f0aa8e0b4fe0e3e0a7a2`.
+
+---
+
 > **Canonical project handoff:** read this page at the beginning of EVERY fresh chat, task, or engineering session.
 > Scope: both repositories, not just the backend. **GitHub is the durable source of truth, not conversation memory.**
 
