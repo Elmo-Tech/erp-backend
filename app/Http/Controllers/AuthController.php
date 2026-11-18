@@ -121,6 +121,9 @@ final class AuthController extends Controller
             // One commit boundary for the grant, the encrypted factor and all recovery digests.
             // Lock the user before claiming the grant: concurrent confirmations cannot rebind a factor.
             $codes = DB::transaction(function () use ($user, $secret, $step, $mfa): ?array {
+                if ($mfa->usesRestrictedRuntime()) {
+                    return $mfa->enrollRestricted($user, $secret, $step);
+                }
                 $lockedUser = User::query()->whereKey($user->id)->lockForUpdate()->first();
                 if (! $lockedUser || ! $lockedUser->is_active || $lockedUser->mfa_secret !== null) {
                     return null;
