@@ -115,12 +115,12 @@ SELECT
                     OR (l.credit_base > 0 AND l.debit_base = 0))
             OR a.id IS NULL OR a.company_id <> l.company_id
             OR a.active IS DISTINCT FROM TRUE
-            OR NOT (
+            OR (
                 (l.transaction_currency IS NULL
                     AND l.amount_currency IS NULL AND l.fx_rate_snapshot IS NULL)
                 OR (l.transaction_currency IS NOT NULL
                     AND l.amount_currency > 0 AND l.fx_rate_snapshot > 0)
-            )
+            ) IS NOT TRUE
         ) = 0
     THEN 1 ELSE 0 END AS eligible
 FROM journal_lines l
