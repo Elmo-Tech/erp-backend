@@ -38,9 +38,9 @@ try {
         throw new RuntimeException('Synthetic SET LOCAL ROLE not active.');
     }
     foreach (['journal_entries', 'journal_lines'] as $table) {
-        $stmt = $pdo->prepare('SELECT has_table_privilege(current_user, ?::regclass, ?)');
+        $stmt = $pdo->prepare('SELECT CASE WHEN has_table_privilege(current_user, ?::regclass, ?) THEN 1 ELSE 0 END');
         $stmt->execute(['public.'.$table, 'TRUNCATE']);
-        if ((bool) $stmt->fetchColumn()) {
+        if ((int) $stmt->fetchColumn() !== 0) {
             throw new RuntimeException('Probe role unexpectedly has TRUNCATE on '.$table);
         }
         $mustDeny('TRUNCATE TABLE public.'.$table);
