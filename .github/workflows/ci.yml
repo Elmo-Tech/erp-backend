@@ -54,6 +54,8 @@ jobs:
         run: php artisan migrate:fresh --force --no-interaction
       - name: Run PHPUnit against disposable PostgreSQL 18
         run: php artisan test --no-ansi
+      - name: P0-04B direct PG18 two-session non-posting lock protocol
+        run: php tests/integration/p004b_lock_protocol.php
       - name: P0-03 verify populated EG/IT upgrade, rollback and reapply (synthetic database only)
         run: |
           set -euo pipefail
@@ -90,6 +92,10 @@ jobs:
           pgbouncer /tmp/p003-dev-pgbouncer.ini > /tmp/p003-dev-pgbouncer.log 2>&1 &
           sleep 2
           PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 16432 -U elmo -d elmo_erp_test -Atc 'SELECT 1' | grep -qx 1
+      - name: P0-04B transaction-pooled two-session lock protocol
+        env:
+          DB_PORT: '16432'
+        run: php tests/integration/p004b_lock_protocol.php
       - name: P0-03 concurrent pooled clients and transaction-local context cleanup
         env:
           DB_PORT: '16432'
