@@ -21,7 +21,7 @@ final class P004BPostingEligibilityTest extends TestCase
     }
 
     /** @return array{company:string,fiscal:string,period:string,debit:string,credit:string,journal:string} */
-    private function seed(string $country = 'EG'): array
+    private function seedLedger(string $country = 'EG'): array
     {
         foreach (['EGP' => 'Egyptian Pound', 'EUR' => 'Euro'] as $code => $name) {
             DB::table('currencies')->insertOrIgnore(['code' => $code, 'name' => $name]);
@@ -99,7 +99,7 @@ final class P004BPostingEligibilityTest extends TestCase
 
     public function test_balanced_draft_is_read_only_and_repeatable_but_never_posts(): void
     {
-        $s = $this->seed();
+        $s = $this->seedLedger();
         $this->balanced($s);
         $this->validate($s);
         $this->validate($s); // Repeated check is not a duplicate posting command.
@@ -114,7 +114,7 @@ final class P004BPostingEligibilityTest extends TestCase
 
     public function test_missing_single_and_unbalanced_lines_are_rejected(): void
     {
-        $s = $this->seed();
+        $s = $this->seedLedger();
         $this->rejects(fn () => $this->validate($s), 'Journal lines');
         $this->addLine($s, 1, '10.0000', '0');
         $this->rejects(fn () => $this->validate($s), 'Journal lines');
@@ -127,7 +127,7 @@ final class P004BPostingEligibilityTest extends TestCase
 
     public function test_postgres_numeric_rejects_overflow_scale_false_balance(): void
     {
-        $s = $this->seed();
+        $s = $this->seedLedger();
         $max = '9999999999999999.9999';
         $this->addLine($s, 1, $max, '0');
         $this->addLine($s, 2, $max, '0');
@@ -141,7 +141,7 @@ final class P004BPostingEligibilityTest extends TestCase
 
     public function test_inactive_account_and_company_are_rejected(): void
     {
-        $s = $this->seed();
+        $s = $this->seedLedger();
         $this->balanced($s);
         DB::table('ledger_accounts')->where('id', $s['debit'])->update(['active' => false]);
         $this->rejects(fn () => $this->validate($s), 'Inactive journal account');
@@ -152,7 +152,7 @@ final class P004BPostingEligibilityTest extends TestCase
 
     public function test_closed_or_locked_period_and_closed_fiscal_year_are_rejected(): void
     {
-        $s = $this->seed();
+        $s = $this->seedLedger();
         $this->balanced($s);
         DB::table('accounting_periods')->where('id', $s['period'])
             ->update(['state' => 'closed', 'locked_at' => now()]);
@@ -168,8 +168,8 @@ final class P004BPostingEligibilityTest extends TestCase
 
     public function test_company_scope_blocks_egypt_italy_access_in_both_directions(): void
     {
-        $eg = $this->seed('EG');
-        $it = $this->seed('IT');
+        $eg = $this->seedLedger('EG');
+        $it = $this->seedLedger('IT');
         $this->balanced($eg);
         $this->balanced($it);
         $this->rejects(fn () => $this->validate($eg, $it['company']), 'Own-company draft');
@@ -180,7 +180,7 @@ final class P004BPostingEligibilityTest extends TestCase
 
     public function test_multicurrency_snapshot_and_inactive_currency_fail_closed(): void
     {
-        $s = $this->seed();
+        $s = $this->seedLedger();
         try {
             DB::transaction(function () use ($s): void {
                 $this->addLine($s, 1, '10', '0', [
@@ -204,7 +204,7 @@ final class P004BPostingEligibilityTest extends TestCase
 
     public function test_rollback_preserves_draft_and_no_financial_side_effects(): void
     {
-        $s = $this->seed();
+        $s = $this->seedLedger();
         $this->balanced($s);
         try {
             DB::transaction(function () use ($s): void {
@@ -222,7 +222,7 @@ final class P004BPostingEligibilityTest extends TestCase
 
     public function test_non_draft_journal_is_not_eligible_even_with_balanced_lines(): void
     {
-        $s = $this->seed();
+        $s = $this->seedLedger();
         $this->balanced($s);
         // Only P0-03 exists on this independent base; P0-04A's DRAFT guards are unmerged.
         DB::table('journal_entries')->where('id', $s['journal'])->update([
