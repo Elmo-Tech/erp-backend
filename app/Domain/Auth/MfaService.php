@@ -36,7 +36,7 @@ final class MfaService
             'SELECT public.p004_enroll_mfa(?::bigint, ?::text, ?::bigint, ?::jsonb) AS ok',
             [$user->id, $encrypted, $step, json_encode($hashes, JSON_THROW_ON_ERROR)]
         );
-        return $row && $row->ok ? $codes : null;
+        return $row && in_array($row->ok, [true, 't', '1', 1], true) ? $codes : null;
     }
 
     public function requiresMfa(User $user): bool
@@ -131,7 +131,7 @@ final class MfaService
                 if ($this->usesRestrictedRuntime()) {
                     $row = DB::selectOne('SELECT public.p004_consume_mfa_step(?::bigint, ?::bigint) AS ok',
                         [$user->id, $step]);
-                    return $row && (bool) $row->ok;
+                    return $row && in_array($row->ok, [true, 't', '1', 1], true);
                 }
                 $updated = DB::table('users')->where('id', $user->id)
                     ->where(fn ($query) => $query->whereNull('mfa_last_step')->orWhere('mfa_last_step', '<', $step))
@@ -145,7 +145,7 @@ final class MfaService
         if ($this->usesRestrictedRuntime()) {
             $row = DB::selectOne('SELECT public.p004_consume_recovery(?::bigint, ?::text) AS ok',
                 [$user->id, $hash]);
-            return $row && (bool) $row->ok;
+            return $row && in_array($row->ok, [true, 't', '1', 1], true);
         }
         return DB::table('user_mfa_recovery_codes')
             ->where('user_id', $user->id)->where('code_hash', $hash)->delete() === 1;
