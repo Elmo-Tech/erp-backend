@@ -1,9 +1,9 @@
 # Project Status — Source of Truth
 
-## P0-04A follow-up — 2026-11-18 (NEW CI EVIDENCE PENDING)
+## P0-04A follow-up — 2026-11-18 (CODE CI VERIFIED; final documentation commit needs separate CI)
 
 - Verified prior documentation HEAD `22a8587b4f3777d86ec9829309c3d051fbda0277` passed [CI #44120415552](https://github.com/Elmo-Tech/erp-backend/actions/runs/44120415552) (workflow completed SUCCESS at matching SHA). This is **prior** to the new concurrency test commit.
-- Added `tests/integration/p004_guard_concurrency.php`: synthetic PostgreSQL 18 two-connection parent locking, line INSERT/UPDATE/DELETE/reparent lock timeouts, atomic rollback, historical posted immutability and PostgreSQL function/trigger metadata checks. CI runs it through direct PG18 and through PgBouncer transaction pooling. **New run must be checked against its exact new SHA; DO NOT record PASS before it finishes.**
+- Added `tests/integration/p004_guard_concurrency.php`: synthetic PostgreSQL 18 two-connection parent locking, line INSERT/UPDATE/DELETE/reparent lock timeouts, atomic rollback, historical posted immutability and PostgreSQL function/trigger metadata checks. **PASS** in [CI #44305404543](https://github.com/Elmo-Tech/erp-backend/actions/runs/44305404543), exactly on code SHA `7c259d4c345c1892bf9f8a3598589c067246f535`. PG18 direct, PgBouncer, Auth/MFA, P0-03 and Docker/API health all SUCCESS.
 - **Security review caveat:** existing P0-04A `BEFORE ROW` line trigger obtains its parent lock after PostgreSQL may already lock the target line tuple; future posting code MUST lock the journal parent first and must **not** acquire line row locks while holding that parent (potential deadlock). This is a pending P0-04B design gate, not a proven full posting/reversal implementation.
 - No financial POST, no API, no merge/approval, no staging/production, no permanent RLS; ADR-022/023/024 remain PROPOSED. P0-04B remains unimplemented pending verified safety tests and owner-reviewed posting design.
 
