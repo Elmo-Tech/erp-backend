@@ -15,8 +15,8 @@ set_exception_handler(static function (Throwable $e): void {
     exit(1);
 });
 $mode = $argv[1] ?? '';
-if (!in_array($mode, ['seed', 'probe', 'cleanup'], true)) {
-    throw new InvalidArgumentException('Usage: php p004_acl_runtime.php seed|probe|cleanup');
+if (!in_array($mode, ['seed', 'probe', 'worker-probe', 'cleanup'], true)) {
+    throw new InvalidArgumentException('Usage: php p004_acl_runtime.php seed|probe|worker-probe|cleanup');
 }
 $ids = [
     'eg'=>'00000000-0000-4000-8000-000000000a01',
@@ -32,11 +32,12 @@ $ids = [
     'leg'=>'00000000-0000-4000-8000-000000000a51',
     'lit'=>'00000000-0000-4000-8000-000000000a52',
 ];
-$connect = static function (bool $runtime): PDO {
+$connect = static function (string $principal): PDO {
+    $runtime = $principal !== 'owner';
     $host = getenv($runtime ? 'RUNTIME_DB_HOST' : 'DB_HOST') ?: '127.0.0.1';
     $port = getenv($runtime ? 'RUNTIME_DB_PORT' : 'DB_PORT') ?: '5432';
-    $user = $runtime ? 'elmo_runtime' : (getenv('DB_USERNAME') ?: 'elmo');
-    $password = getenv($runtime ? 'RUNTIME_DB_PASSWORD' : 'DB_PASSWORD');
+    $user = $principal === 'web' ? 'elmo_runtime' : ($principal === 'worker' ? 'elmo_worker' : (getenv('DB_USERNAME') ?: 'elmo'));
+    $password = getenv($principal === 'web' ? 'RUNTIME_DB_PASSWORD' : ($principal === 'worker' ? 'WORKER_DB_PASSWORD' : 'DB_PASSWORD'));
     if ($password === false || $password === '') {
         throw new RuntimeException('Missing test password');
     }
@@ -58,7 +59,7 @@ $expectDenied = static function (PDO $db, string $sql, string $label): void {
     }
     throw new RuntimeException("{$label} unexpectedly succeeded");
 };
-$owner = $mode !== 'probe' ? $connect(false) : null;
+$owner = $mode !== 'probe' ? $connect('owner') : null;
 if ($mode === 'seed') {
     $owner->beginTransaction();
     foreach ([['EGP','Synthetic EGP'],['EUR','Synthetic EUR']] as [$code,$name]) {
@@ -95,10 +96,11 @@ if ($mode === 'cleanup') {
     echo "PASS: P0-04-ACL synthetic EG/IT fixtures cleaned by owner\n";
     exit;
 }
-$db=$connect(true);
+$db=$connect($mode === 'worker-probe' ? 'worker' : 'web');
 $identity=$db->query("SELECT current_user,session_user")->fetch();
-$check($identity['current_user']==='elmo_runtime' && $identity['session_user']==='elmo_runtime',
-    'Not a real independent elmo_runtime LOGIN');
+$expected = $mode === 'worker-probe' ? 'elmo_worker' : 'elmo_runtime';
+$check($identity['current_user']===$expected && $identity['session_user']===$expected,
+    'Not a real independent expected principal LOGIN');
 $flags=$db->query("SELECT rolsuper,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls,rolinherit
   FROM pg_roles WHERE rolname=current_user")->fetch();
 foreach (['rolsuper','rolcreatedb','rolcreaterole','rolreplication','rolbypassrls','rolinherit'] as $flag) {
@@ -131,6 +133,23 @@ $expectDenied($db,'CREATE TEMP TABLE acl_unsafe (id int)','TEMP DDL');
 $expectDenied($db,'CREATE SCHEMA acl_unsafe','database DDL');
 $expectDenied($db,'SET ROLE elmo','owner impersonation');
 echo "PASS: authentic LOGIN, role flags, ownership, TRUNCATE, trigger-disable, DDL and owner impersonation forbidden\n";
+if ($mode === 'probe') {
+    foreach (['users', 'user_mfa_recovery_codes', 'user_mfa_enrollment_authorizations',
+        'audit_logs', 'outbox_events', 'idempotency_requests', 'migrations',
+        'journal_entries', 'journal_lines'] as $table) {
+        foreach (['INSERT', 'UPDATE', 'DELETE'] as $priv) {
+            $check(in_array($db->query("SELECT has_table_privilege(current_user,'public.{$table}','{$priv}')")->fetchColumn(),
+                [false,'f','0',0], true), "Web has prohibited {$priv} on {$table}");
+        }
+    }
+    $expectDenied($db, "UPDATE public.users SET mfa_secret='unsafe' WHERE id=-1", 'raw MFA factor update');
+    $expectDenied($db, "DELETE FROM public.audit_logs WHERE false", 'audit deletion');
+    $expectDenied($db, "INSERT INTO public.user_mfa_enrollment_authorizations(user_id,approved_reference,expires_at) VALUES(-1,'forged',now())", 'trusted grant issuance');
+    $check(in_array($db->query("SELECT has_table_privilege(current_user,'public.migrations','SELECT')")->fetchColumn(), [false,'f','0',0],true), 'migration metadata leaked');
+    $check(in_array($db->query("SELECT has_table_privilege(current_user,'public.user_mfa_recovery_codes','SELECT')")->fetchColumn(), [false,'f','0',0],true), 'MFA digest read leaked');
+    echo "PASS: Web sensitive tables deny DML, migration metadata and recovery digests are not readable\n";
+    exit;
+}
 foreach (['eg','it'] as $key) {
     $stmt=$db->prepare("INSERT INTO journal_entries(id,company_id,period_id,entry_date,status,description,created_at,updated_at)
         VALUES(?,?,?,'2026-02-01','draft','ACL draft',now(),now())");
