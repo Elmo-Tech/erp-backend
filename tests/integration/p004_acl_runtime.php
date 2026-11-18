@@ -170,4 +170,6 @@ if ($guards===2) {
 } else {
     throw new RuntimeException('Partial P0-04A guard install');
 }
-echo "PASS: distinct runtime LOGIN can edit/delete synthetic drafts; EG/IT composite FKs deny cross-company changes\n";
+$db->prepare("DELETE FROM journal_lines WHERE id=?")->execute([$ids['lit']]);
+$db->prepare("DELETE FROM journal_entries WHERE id=?")->execute([$ids['jit']]);
+echo "PASS: distinct runtime LOGIN can edit/delete synthetic drafts; EG/IT composite FKs deny cross-company changes\\n";
