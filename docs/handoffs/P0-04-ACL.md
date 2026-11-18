@@ -1,10 +1,20 @@
 # P0-04-ACL — Runtime Database Principal Isolation (NON-PRODUCTION PoC)
 
+## 2026-11-18 — Final code CI checkpoint and handoff
+
+**Exact hardened-code CI evidence (2026-11-18):** commit `0a7ee22f489bce8a9727dbec5d10e08a765f960e`, GitHub Actions [#44385647946](https://github.com/Elmo-Tech/erp-backend/actions/runs/44385647946) **COMPLETED SUCCESS**. Verified PostgreSQL 18 owner migrations then independent Web/Worker SCRAM LOGIN, Web-negative object grants, Worker synthetic EG/IT draft CRUD and FK checks, Auth/MFA enrollment/recovery and database Session/Queue/Company CRUD under real `elmo_runtime` both direct and through PgBouncer transaction pooling, runtime migration denial, synthetic Compose PG owner provisioning with nonroot UID 10001 Web and Worker, Docker image build and API health. This documentation-only update creates a later SHA; **the code CI cannot be attributed to that newer documentation SHA** until its own workflow completes.
+
+**Current engineering outcome:** Source and code tests support object-level ACL design with strong **limitations** in [privilege matrix](../security/P0-04-ACL_PRIVILEGE_MATRIX.md). The DB function owner is NOLOGIN, but its SECURITY DEFINER functions can be invoked from a compromised Web process. Worker gets column-only UPDATE on accounting_periods.updated_at due P0-03 trigger locking and has no access to user/MFA/audit reads. `tests/Feature/RestrictedRuntimeTest.php` covers direct/PgBouncer Laravel auth, MFA enrollment + single-use recovery, DB sessions, queue enqueue and company checks; it is not a full queue-consumption or human-identity verification proof.
+
+**Credential plan:** See matrix runbook for distinct Web/Worker secret provisioning, rotation and fail-closed revoke/reconnect/rollback. No real operational drill was executed.
+
+**One precise next action:** independently inspect the three SECURITY DEFINER procedures, function/PUBLIC/extension privilege boundary, grant issuer trust model, Web process takeover and posted-row write policy; record review findings. Do not mark ready or merge until explicit separate owner authorization. Code status remains IN PROGRESS rather than VERIFIED due outstanding human gate.
+
 ## CI failures found and follow-up — 2026-11-18
 
 - [CI #44384002103](https://github.com/Elmo-Tech/erp-backend/actions/runs/44384002103) FAILED on early commit `7a335bc` because the worker password was not yet supplied to the new psql SQL variable; corrected in later workflow change.
 - [CI #44384803179](https://github.com/Elmo-Tech/erp-backend/actions/runs/44384803179) FAILED on `43411992` at Worker draft CRUD: P0-03 `SELECT ... FOR SHARE` needs column-level UPDATE on accounting_periods. Added strictly `UPDATE(updated_at)` for Worker and negative privilege checks denying period state, dates, company and locks. This is a reviewable residual metadata-write weakness.
-- **New commits after these failures require a separate exact-head run.** No claim of passing CI yet.
+- **Superseded by successful hardened-code CI #44385647946** on 0a7ee22 above. Earlier failures remain part of the audit trail.
 
 ## 2026-11-18 — Source-audited follow-up (NEW CODE / CI NOT VERIFIED)
 
