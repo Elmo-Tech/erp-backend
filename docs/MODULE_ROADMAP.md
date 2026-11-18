@@ -1,6 +1,6 @@
 # Module Roadmap — End-to-End ERP V2
 
-**2026-11-18 P0-04-FX:** [Issue #17](https://github.com/Elmo-Tech/erp-backend/issues/17), [Draft PR #18](https://github.com/Elmo-Tech/erp-backend/pull/18) (independent from unmerged P0-04A #14 and P0-04B #16) add a **new strict PostgreSQL CHECK** for currency tuple NULL/UNKNOWN, synthetic preflight, SQLSTATE and pooled tests. **IN PROGRESS / unmerged, latest CI pending.** No posting API/Service or production signoff. [Handoff](handoffs/P0-04-FX.md).
+**2026-11-18 P0-04-FX:** [Issue #17](https://github.com/Elmo-Tech/erp-backend/issues/17), [Draft PR #18](https://github.com/Elmo-Tech/erp-backend/pull/18) (independent from unmerged P0-04A #14 and P0-04B #16) add a **new strict PostgreSQL CHECK** for currency tuple NULL/UNKNOWN, synthetic preflight, SQLSTATE and pooled tests. **IN PROGRESS / unmerged; code HEAD `f1d0bc1` [CI #44323811341 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44323811341), latest documentation HEAD still requires separate CI.** No posting API/Service or production signoff. [Handoff](handoffs/P0-04-FX.md).
 
 
 Status key: `NOT STARTED` = design only; `SCAFFOLD` = source code exists but not verified; `IN PROGRESS` = active task with evidence; `VERIFIED` = acceptance tests passed and PR reviewed; `BLOCKED` = dependency/external signoff prevents delivery.
