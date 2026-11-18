@@ -1,5 +1,10 @@
 # Phase 0 Schema Contract — first migration increment
 
+## P0-04-FX proposed post-P0-03 hardening (Draft PR #18, not integrated)
+
+The P0-03 `p003_currency_snapshot_chk` can accept a missing FX field via PostgreSQL CHECK UNKNOWN. [Issue #17](https://github.com/Elmo-Tech/erp-backend/issues/17) adds a **separate** reversible `p004_fx_snapshot_complete_chk` on `journal_lines`: transaction currency, `amount_currency` and `fx_rate_snapshot` must be all NULL, or all NOT NULL with positive decimal amount/rate; explicit `IS TRUE` makes UNKNOWN invalid. Existing same-company composite FKs and currency FK remain. Migration refuses invalid historical rows without modifying them; full table scan and ACCESS EXCLUSIVE lock need separate human production DDL review. The new constraint has no relationship to posting authorization or status changes; no financial API or live postings are permitted.
+
+
 **Schema is partial by design.** It establishes the security and accounting-shaped base, not final tax posting or issued invoices.
 
 ## Implemented first tables

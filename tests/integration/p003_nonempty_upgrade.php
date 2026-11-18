@@ -167,7 +167,27 @@ if ($stage === 'up') {
             });
             throw new RuntimeException("Cross-company {$own} -> {$foreign} unexpectedly accepted");
         } catch (QueryException $e) {
-            $check(str_contains($e->getMessage(), '23503'), 'SQLSTATE 23503 cross-company FK');
+            $check(str_contains($e->getMessage(), '23514')
+                || str_contains($e->getMessage(), '23503'),
+                'P0-04A guard 23514 or FK 23503 must reject opposite-company entry');
+        }
+
+        // P0-04A guard sees a valid own-company journal, so composite
+        // account FK must still independently reject an opposite-company
+        // account with exact SQLSTATE 23503.
+        try {
+            DB::transaction(static function () use ($ids, $own, $foreign): void {
+                DB::table('journal_lines')->insert([
+                    'id' => (string) Illuminate\Support\Str::uuid7(),
+                    'company_id' => $ids[$own], 'entry_id' => $ids['entry_'.$own],
+                    'account_id' => $ids['account_'.$foreign], 'line_no' => 2,
+                    'debit_base' => '5.0000', 'credit_base' => '0',
+                ]);
+            });
+            throw new RuntimeException('Foreign account unexpectedly accepted');
+        } catch (QueryException $e) {
+            $check(str_contains($e->getMessage(), '23503'),
+                'SQLSTATE 23503 cross-company account FK');
         }
     }
 }

@@ -54,14 +54,44 @@ jobs:
         run: php artisan migrate:fresh --force --no-interaction
       - name: Run PHPUnit against disposable PostgreSQL 18
         run: php artisan test --no-ansi
-      - name: P0-03 verify populated EG/IT upgrade, rollback and reapply (synthetic database only)
+      - name: P0-04A direct PostgreSQL18 journal-lock immutability negatives
+        run: php tests/integration/p004_guard_concurrency.php
+      - name: P0-04B direct PostgreSQL18 read-only lock protocol
+        run: php tests/integration/p004b_lock_protocol.php
+      - name: P0-04 COMPOSITION direct real eligibility vs child writers
+        run: php tests/integration/p004_composition_eligibility_races.php
+      - name: P0-04 COMPOSITION synthetic restricted-role TRUNCATE and trigger DDL probe
+        run: php tests/integration/p004_composition_acl_probe.php
+      - name: P0-04-FX direct PG18 raw INSERT/UPDATE and pg_constraint regression
+        run: php tests/integration/p004_fx_sql_clients.php
+      - name: P0-04-FX synthetic populated bad-row preflight, rollback and reapply (PG18 only)
+        shell: bash
         run: |
           set -euo pipefail
           php artisan migrate:rollback --step=1 --force --no-interaction
+          php tests/integration/p004_fx_upgrade.php seed-invalid
+          if php artisan migrate --force --no-interaction > /tmp/p004-fx-refusal.log 2>&1; then
+            echo '::error::FX migration unexpectedly accepted an incomplete existing snapshot'
+            exit 1
+          fi
+          grep -q 'P0-04-FX preflight rejected incomplete historical FX rows' /tmp/p004-fx-refusal.log
+          php tests/integration/p004_fx_upgrade.php failed
+          php tests/integration/p004_fx_upgrade.php remove-synthetic-invalid
+          php artisan migrate --force --no-interaction
+          php tests/integration/p004_fx_upgrade.php up
+          php artisan migrate:rollback --step=1 --force --no-interaction
+          php tests/integration/p004_fx_upgrade.php down
+          php artisan migrate --force --no-interaction
+          php tests/integration/p004_fx_upgrade.php reup
+          php tests/integration/p004_fx_upgrade.php cleanup
+      - name: P0-03 verify populated EG/IT upgrade, rollback and reapply (synthetic database only)
+        run: |
+          set -euo pipefail
+          php artisan migrate:rollback --step=3 --force --no-interaction
           php tests/integration/p003_nonempty_upgrade.php seed
           php artisan migrate --force --no-interaction
           php tests/integration/p003_nonempty_upgrade.php up
-          php artisan migrate:rollback --step=1 --force --no-interaction
+          php artisan migrate:rollback --step=3 --force --no-interaction
           php tests/integration/p003_nonempty_upgrade.php down
           php artisan migrate --force --no-interaction
           php tests/integration/p003_nonempty_upgrade.php up
@@ -90,6 +120,22 @@ jobs:
           pgbouncer /tmp/p003-dev-pgbouncer.ini > /tmp/p003-dev-pgbouncer.log 2>&1 &
           sleep 2
           PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 16432 -U elmo -d elmo_erp_test -Atc 'SELECT 1' | grep -qx 1
+      - name: P0-04A journal guards through real PgBouncer
+        env:
+          DB_PORT: '16432'
+        run: php tests/integration/p004_guard_concurrency.php
+      - name: P0-04B lock protocol through real PgBouncer
+        env:
+          DB_PORT: '16432'
+        run: php tests/integration/p004b_lock_protocol.php
+      - name: P0-04 COMPOSITION PgBouncer real eligibility vs child writers
+        env:
+          DB_PORT: '16432'
+        run: php tests/integration/p004_composition_eligibility_races.php
+      - name: P0-04-FX PgBouncer transaction pool raw INSERT/UPDATE and constraint regression
+        env:
+          DB_PORT: '16432'
+        run: php tests/integration/p004_fx_sql_clients.php
       - name: P0-03 concurrent pooled clients and transaction-local context cleanup
         env:
           DB_PORT: '16432'
