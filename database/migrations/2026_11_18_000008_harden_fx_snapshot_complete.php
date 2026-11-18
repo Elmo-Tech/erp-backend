@@ -32,19 +32,19 @@ SQL;
         DB::statement("SET LOCAL statement_timeout = '30s'");
 
         $old = DB::selectOne(<<<'SQL'
-SELECT convalidated FROM pg_constraint
+SELECT CASE WHEN convalidated THEN 1 ELSE 0 END AS valid FROM pg_constraint
 WHERE conrelid = 'journal_lines'::regclass
   AND conname = 'p003_currency_snapshot_chk' AND contype = 'c'
 SQL);
-        if ($old === null || ! $old->convalidated) {
+        if ($old === null || (int) $old->valid !== 1) {
             throw new RuntimeException('P0-04-FX requires the validated P0-03 FX constraint.');
         }
 
         // Fail closed on legacy bad rows. No implicit backfill, rewrite or
         // financial-history remediation. Any error rolls back the DDL attempt.
-        $invalid = DB::selectOne('SELECT EXISTS (SELECT 1 FROM journal_lines WHERE ('
-            .self::VALID_TUPLE.') IS NOT TRUE) AS present');
-        if ($invalid !== null && $invalid->present) {
+        $invalid = DB::selectOne('SELECT CASE WHEN EXISTS (SELECT 1 FROM journal_lines WHERE ('
+            .self::VALID_TUPLE.') IS NOT TRUE) THEN 1 ELSE 0 END AS present');
+        if ($invalid === null || (int) $invalid->present !== 0) {
             throw new RuntimeException(
                 'P0-04-FX preflight rejected incomplete historical FX rows; manual review required.'
             );
