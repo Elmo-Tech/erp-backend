@@ -1,5 +1,12 @@
 # Architecture Decision Register — approved 2026-11-16
 
+## P0-04-INTEGRATION design/rehearsal note (2026-11-18) — ADR-024 still PROPOSED
+
+Composition of A guards, B read-only validator and FX CHECK is an **isolated experiment** on Draft PR #20, not an architecture approval. Rehearsal test behavior recognizes PostgreSQL `23514` guard denial **before** composite FK `23503` for a foreign journal target. Same-company journal with foreign ledger account separately proves `23503`. Future parent→child tuple `FOR UPDATE` in a posting transaction is forbidden without an independently proven negative deadlock protocol. No posting transition is implemented, and no CI or synthetic ACL probe can certify a real runtime role. Migration `000008` takes ACCESS EXCLUSIVE with a full validation scan, and rollback reopens legacy NULL weakness; operational rollout decision remains open. Nothing here accepts ADR-024 or authorizes any PR merge, deployment, real data or production operation.
+
+---
+
+
 ## ADR-020 operational elaboration — 2026-11-16 (PROPOSED details; original approval unchanged)
 
 **The six security principles in ADR-020 remain APPROVED. This addition does not approve operational specifications, code, reviewers, merges or production release.** The following implementation-specific documents are prepared for owner decision and independent security inspection:

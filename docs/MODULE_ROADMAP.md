@@ -1,5 +1,8 @@
 # Module Roadmap — End-to-End ERP V2
 
+**P0-04-INTEGRATION rehearsal (2026-11-18):** independent [Draft #20](https://github.com/Elmo-Tech/erp-backend/pull/20), [Issue #19](https://github.com/Elmo-Tech/erp-backend/issues/19) tests P0-04A #14 + B #16 + FX #18 **without merging anything**. Combined CI pending at authoring. Original PRs remain Draft; F02 is IN PROGRESS but real Posting Service, audit/outbox and independent review are NOT IMPLEMENTED. [Handoff](handoffs/P0-04-INTEGRATION.md).
+
+
 Status key: `NOT STARTED` = design only; `SCAFFOLD` = source code exists but not verified; `IN PROGRESS` = active task with evidence; `VERIFIED` = acceptance tests passed and PR reviewed; `BLOCKED` = dependency/external signoff prevents delivery.
 All statuses are as of **2026-11-16** and must be changed only with linked evidence. Full business requirements: [BUSINESS_RULES.md](BUSINESS_RULES.md).
 
@@ -9,7 +12,7 @@ All statuses are as of **2026-11-16** and must be changed only with linked evide
 |---|---|---|---|---|
 | F00 | Platform, CI, Docker, PostgreSQL, Redis | None | Real CI/build/migration smoke tests | VERIFIED (automated CI/build/migration checks; no production release) |
 | F01 | Company model, permissions, internal auth/MFA | F00 | Company scoping and unauthorized-access negatives | IN PROGRESS ([Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4); backend PR #6 and frontend PR #2 MERGED for development; ADR-020 policy principles approved; backend atomic 27 tests/233 assertions PASS and pinned real Chromium PASS; [security sign-off checklist](security/P0-02_SECURITY_REVIEW_CHECKLIST.md) documents SEC-01..SEC-08; security operational release gates SEC-01..08 still OPEN in Issue #7; NO DEPLOY/REAL USERS; P0-03 DB security scoped via Issue #8) |
-| F02 | General Ledger foundational controls | F00, F01 | Balanced immutable posting, locked periods, reversals | NOT STARTED (schema scaffold) |
+| F02 | General Ledger foundational controls | F00, F01 | Balanced immutable posting, locked periods, reversals | IN PROGRESS — composition rehearsal Draft #20, parent PRs #14/#16/#18 unmerged; posting/reversals NOT IMPLEMENTED. |
 | F03 | Audit, outbox, idempotency, notifications base | F00, F01 | Verified retry/deduplication and audit | NOT STARTED (tables scaffold) |
 | M01 | CRM / leads / contacts / attribution | F01 | Sales/social/platform/acquired-by/manager activity history | NOT STARTED |
 | M02 | Proposals / versions / approvals / quotations | M01, F01 | Approved snapshot with price, tax, milestones, installments | NOT STARTED |
