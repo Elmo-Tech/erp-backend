@@ -1,5 +1,15 @@
 # Project Status — Source of Truth
 
+## P0-04A CI false-positive remediation — 2026-11-18 (LATEST)
+
+**Confirmed from prior exact-head [#44308817619](https://github.com/Elmo-Tech/erp-backend/actions/runs/44308817619):** the runner marked the P0-03 populated rollback step SUCCESS despite three standalone fixture assertion exception messages (cross-company journal SQLSTATE expected 23503 but A BEFORE ROW guard returned 23514, then P0-03 CHECK/constraint still present after `--step=1` rolled back only A). Thus the prior green job **did not verify** that particular P0-03 migration regression. Other P0-04A direct/PgBouncer/PHPUnit steps still passed.
+
+**Narrow source fix on the same [Draft PR #14](https://github.com/Elmo-Tech/erp-backend/pull/14):** standalone `p003_nonempty_upgrade.php` now installs its own fail-hard exception handler after Laravel bootstrap (exit 1) and exposes `selftest-failure` to verify that an intentionally thrown assertion cannot exit 0. Workflow asserts both nonzero selftest exit and stage-specific PASS markers, under `set -euo pipefail`. The A-only `migrate:fresh` run has P0-03 `000006` and A `000007`; test rollback uses `--step=2`, not `--step=1`. Cross-company journal reference checks expect **23514 when P0-04A guard actually enabled** (otherwise 23503), while a **separate own-journal/foreign-account path always requires composite FK 23503 in both EG↔IT directions**. These are test/proof repairs only—not production SQL/runtime guard changes.
+
+**Verification status:** New code/CI after this documentation change is **NOT VERIFIED until exact-head GitHub Actions finishes successfully**; a passing standalone fixture selftest and populated migrate→rollback→reapply are mandatory. PR #14 remains Draft/unmerged; rehearsal [PR #20](https://github.com/Elmo-Tech/erp-backend/pull/20) must NEVER be merged, and source PRs #16/#18 are unaffected. No owner merge permission, human independent code/DB/accounting sign-off, Production, live ledger rows, Financial Posting API or deploy. Issues #7/#8/#11 open; ADR-024 PROPOSED.
+
+---
+
 ## P0-04A exact-head closure / AI-assisted source review — 2026-11-18 (LATEST)
 
 **Full engineering CI verified:** [Draft PR #14](https://github.com/Elmo-Tech/erp-backend/pull/14) pre-handoff HEAD `8c0565175381b543b08896f04893fe2dc50c0e63` completed [**GitHub Actions #44306006459 SUCCESS**](https://github.com/Elmo-Tech/erp-backend/actions/runs/44306006459) on the exact SHA. All workflow steps succeeded including PostgreSQL 18 migrations/PHPUnit/P004 guards, nonempty P0-03 EG/IT upgrade/rollback, two-client direct-PG18 and PgBouncer journal-lock negative tests, Auth/MFA/Session/Queue regressions, Docker image and API health. New code `7c259d4c345c1892bf9f8a3598589c067246f535` independently passed [#44305404543](https://github.com/Elmo-Tech/erp-backend/actions/runs/44305404543). The next *documentation-only* SHA requires its own distinct CI conclusion.
