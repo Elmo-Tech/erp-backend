@@ -1,5 +1,20 @@
 # P0-04-ACL — Runtime Database Principal Isolation (NON-PRODUCTION PoC)
 
+## 2026-11-18 — Source-audited follow-up (NEW CODE / CI NOT VERIFIED)
+
+Live GitHub before edits: task branch HEAD `b097db0188b8846377903bc63a6d1b97615a1b26`; [baseline CI #44376461374](https://github.com/Elmo-Tech/erp-backend/actions/runs/44376461374) completed SUCCESS; integration remained `21a085f5b101126cb6f535fdb03f204cb99d0405`. PR #22 Draft/open, Issue #21 open. No newer work found at task intake.
+
+New commits after baseline introduce object-level rights, NOLOGIN MFA executor with parameterized scoped functions, non-root image, separate Worker LOGIN/Compose service, isolated Compose CI override, owner-seeded restricted Laravel suite, direct/PgBouncer permission probes, and this [object-level matrix + lifecycle runbook](../security/P0-04-ACL_PRIVILEGE_MATRIX.md). New files include `tests/Feature/RestrictedRuntimeTest.php`, `tests/integration/p004_laravel_fixture.php`, `compose.ci.yaml`, `docs/security/P0-04-ACL_PRIVILEGE_MATRIX.md`; existing `database/security/p004_acl_disposable.sql`, `app/Domain/Auth/MfaService.php`, `app/Http/Controllers/AuthController.php`, `tests/integration/p004_acl_runtime.php`, `compose.yaml`, `Dockerfile`, `.github/workflows/ci.yml` changed.
+
+**Exact-head evidence:** NOT VERIFIED for this new source. Baseline successful CI predates changes. No local Composer/PostgreSQL/Docker execution was possible. Ensure runner actually executes full workflow, inspect every job and match run `head_sha` with *final* branch HEAD before any claim of success.
+
+**Outstanding:** qualified human security review, MFA function threat model and grant provenance, Web-process compromise, read access to password/MFA ciphertext, worker ability to mutate posted rows in unmerged P0-04A, full operational credential rotation drill, trusted audit/outbox redesign, per-company DB authorization and full queue consumption proof. No integration merge, no PR #20 code, no deployment, no permanent RLS. ADR-024 remains PROPOSED; security issues #7/#8/#11 remain OPEN.
+
+**One precise next action:** obtain an exact-HEAD GitHub Actions run, resolve any SQL/PHP/Compose failures, update this file and status with traceable run/commit results; then independent human reviewer and separate owner merge approval.
+
+---
+
+
 ## Exact-code CI evidence — 2026-11-18
 
 **VERIFIED first complete candidate:** [GitHub Actions #44375723500](https://github.com/Elmo-Tech/erp-backend/actions/runs/44375723500) COMPLETED SUCCESS on exact commit 9da30bdbfeeda5591daa74547b8f069de08f1f42. Its real PostgreSQL 18 LOGIN role provision and direct role probe SUCCESS, independent PgBouncer SCRAM startup and restricted runtime probe SUCCESS, synthetic cleanup SUCCESS; pre-existing PG18 migrations, PHPUnit, P0-03 populated upgrade/rollback, two-client concurrency, real PgBouncer Auth/MFA/Session/Queue, Docker build and API health SUCCESS. Journal immutable-state proof is intentionally NOT VERIFIED because Draft PR #14 guards are absent on this independent integration-based branch. This *documentation update* creates a NEW HEAD and must get separate exact-head CI before claiming its final validation.

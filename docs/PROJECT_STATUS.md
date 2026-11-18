@@ -1,5 +1,14 @@
 # Project Status — Source of Truth
 
+## P0-04-ACL current security-hardening candidate — 2026-11-18 (UNVERIFIED NEW HEAD)
+
+Follow-up on [Issue #21](https://github.com/Elmo-Tech/erp-backend/issues/21) / [Draft PR #22](https://github.com/Elmo-Tech/erp-backend/pull/22): replaced disposable blanket table/sequence grants with explicit Web, Worker and NOLOGIN MFA-function-owner privileges, denied Web raw MFA/Audit/Outbox/Idempotency/migration DML, added restricted-role Laravel Auth/MFA/Session/database Queue/Company CRUD checks, direct PG18 and SCRAM PgBouncer paths, negative probes, synthetic Compose owner-provisioning checks and non-root Docker USER 10001. See [P0-04-ACL privilege matrix](security/P0-04-ACL_PRIVILEGE_MATRIX.md) and [handoff](handoffs/P0-04-ACL.md).
+
+**Evidence boundary:** baseline `b097db0` CI [#44376461374](https://github.com/Elmo-Tech/erp-backend/actions/runs/44376461374) SUCCESS **before** these commits. Latest changed code is NOT VERIFIED: no successful exact-head CI result is available at this documentation point; local Docker, PostgreSQL and Composer were unavailable for executing the new suite. No merge/deploy. Web process takeover and MFA grant function call risks remain; posted journals still lack integrated immutable guards. ADR-024 PROPOSED; security #7/#8/#11 OPEN; PR #20 excluded; independent human review and separate owner merge authorization required.
+
+---
+
+
 ## Exact-code CI evidence — 2026-11-18
 
 **VERIFIED first complete candidate:** [GitHub Actions #44375723500](https://github.com/Elmo-Tech/erp-backend/actions/runs/44375723500) COMPLETED SUCCESS on exact commit 9da30bdbfeeda5591daa74547b8f069de08f1f42. Its real PostgreSQL 18 LOGIN role provision and direct role probe SUCCESS, independent PgBouncer SCRAM startup and restricted runtime probe SUCCESS, synthetic cleanup SUCCESS; pre-existing PG18 migrations, PHPUnit, P0-03 populated upgrade/rollback, two-client concurrency, real PgBouncer Auth/MFA/Session/Queue, Docker build and API health SUCCESS. Journal immutable-state proof is intentionally NOT VERIFIED because Draft PR #14 guards are absent on this independent integration-based branch. This *documentation update* creates a NEW HEAD and must get separate exact-head CI before claiming its final validation.
