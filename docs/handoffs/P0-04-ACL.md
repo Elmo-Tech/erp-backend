@@ -1,5 +1,11 @@
 # P0-04-ACL — Runtime Database Principal Isolation (NON-PRODUCTION PoC)
 
+## CI failures found and follow-up — 2026-11-18
+
+- [CI #44384002103](https://github.com/Elmo-Tech/erp-backend/actions/runs/44384002103) FAILED on early commit `7a335bc` because the worker password was not yet supplied to the new psql SQL variable; corrected in later workflow change.
+- [CI #44384803179](https://github.com/Elmo-Tech/erp-backend/actions/runs/44384803179) FAILED on `43411992` at Worker draft CRUD: P0-03 `SELECT ... FOR SHARE` needs column-level UPDATE on accounting_periods. Added strictly `UPDATE(updated_at)` for Worker and negative privilege checks denying period state, dates, company and locks. This is a reviewable residual metadata-write weakness.
+- **New commits after these failures require a separate exact-head run.** No claim of passing CI yet.
+
 ## 2026-11-18 — Source-audited follow-up (NEW CODE / CI NOT VERIFIED)
 
 Live GitHub before edits: task branch HEAD `b097db0188b8846377903bc63a6d1b97615a1b26`; [baseline CI #44376461374](https://github.com/Elmo-Tech/erp-backend/actions/runs/44376461374) completed SUCCESS; integration remained `21a085f5b101126cb6f535fdb03f204cb99d0405`. PR #22 Draft/open, Issue #21 open. No newer work found at task intake.

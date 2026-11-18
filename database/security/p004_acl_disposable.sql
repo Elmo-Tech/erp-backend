@@ -48,6 +48,10 @@ GRANT SELECT ON TABLE public.users, public.global_role_assignments,
  public.company_memberships, public.company_role_assignments,
  public.companies, public.currencies, public.fiscal_years,
  public.accounting_periods, public.ledger_accounts TO elmo_worker;
+-- P0-03's INVOKER trigger SELECT ... FOR SHARE on accounting_periods
+-- requires at least one UPDATE-able column in PostgreSQL. Grant only the
+-- non-financial metadata timestamp, never period state/dates/lock columns.
+GRANT UPDATE (updated_at) ON TABLE public.accounting_periods TO elmo_worker;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.jobs,
  public.job_batches, public.failed_jobs,
  public.journal_entries, public.journal_lines TO elmo_worker;

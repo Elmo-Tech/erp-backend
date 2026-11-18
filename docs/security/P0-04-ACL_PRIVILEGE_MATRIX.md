@@ -15,7 +15,7 @@ Date: 2026-11-18. Scope: independent synthetic PostgreSQL 18, Web `elmo_runtime`
 | `sessions`, `cache`, `cache_locks` | R/I/U/D | — | owner DDL/DML | no runtime grant |
 | `jobs` | R/I (enqueue) | R/I/U/D | owner DDL/DML | no runtime grant |
 | `job_batches`, `failed_jobs` | — | R/I/U/D | owner DDL/DML | no runtime grant |
-| `fiscal_years`, `accounting_periods`, `ledger_accounts` | — | R | owner DDL/DML | no runtime grant |
+| `fiscal_years`, `accounting_periods`, `ledger_accounts` | — | R; `accounting_periods.updated_at` UPDATE only to allow P0-03 trigger `FOR SHARE` | owner DDL/DML | no runtime grant |
 | `journal_entries`, `journal_lines` | — | R/I/U/D (SYNTHETIC DRAFT ONLY; posted immutability NOT PROVEN) | owner DDL/DML | no runtime grant |
 | `user_mfa_enrollment_authorizations` | R only, no grant issuance | — | owner DDL/DML | MFA executor SELECT and UPDATE `consumed_at,updated_at` only |
 | `user_mfa_recovery_codes` | no raw SELECT/DML | — | owner DDL/DML | MFA executor R/I/D |
@@ -24,7 +24,7 @@ Date: 2026-11-18. Scope: independent synthetic PostgreSQL 18, Web `elmo_runtime`
 | `p004_consume_mfa_step`, `p004_consume_recovery`, `p004_enroll_mfa` | E only | — | owner administration | functions SECURITY DEFINER owned by NOLOGIN MFA executor |
 | Existing `p003_*` functions | no direct E | no direct E | ownership/administration | no unreviewed `PUBLIC EXECUTE` |
 
-All Web/Worker GRANTs are object-specific. No `ALL TABLES`, no `ALL SEQUENCES`, no default future grants; no role memberships, superuser, DDL or owner impersonation. `PUBLIC` function EXECUTE is revoked on preexisting public-schema functions. Audit any inherited/public permissions and object ownership on the *actual* target schema; this synthetic script refuses existing principals and cannot be used as a real-system migration.
+The Worker timestamp-only UPDATE exception on `accounting_periods` was discovered from CI #44384803179: the existing P0-03 trigger uses `SELECT ... FOR SHARE`, which needs at least one UPDATE-able column. This allows timestamp-only metadata mutation and is NOT an ideal final boundary; explicit negative column privilege probes guard financial fields. A separately reviewed guard implementation could remove this exception. All Web/Worker GRANTs are object-specific. No `ALL TABLES`, no `ALL SEQUENCES`, no default future grants; no role memberships, superuser, DDL or owner impersonation. `PUBLIC` function EXECUTE is revoked on preexisting public-schema functions. Audit any inherited/public permissions and object ownership on the *actual* target schema; this synthetic script refuses existing principals and cannot be used as a real-system migration.
 
 ## MFA trust boundary
 

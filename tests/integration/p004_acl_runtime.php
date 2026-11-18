@@ -158,6 +158,12 @@ if ($mode === 'probe') {
     echo "PASS: Web sensitive tables deny DML, migration metadata and recovery digests are not readable\n";
     exit;
 }
+foreach (['starts_on', 'ends_on', 'state', 'locked_at', 'company_id'] as $column) {
+    $check(in_array($db->query("SELECT has_column_privilege(current_user,'public.accounting_periods','{$column}','UPDATE')")->fetchColumn(),
+        [false,'f','0',0], true), "Worker can change accounting_periods.{$column}");
+}
+$check(in_array($db->query("SELECT has_column_privilege(current_user,'public.accounting_periods','updated_at','UPDATE')")->fetchColumn(),
+    [true,'t','1',1], true), 'Worker lacks scoped timestamp UPDATE required for P0-03 SELECT FOR SHARE');
 foreach (['eg','it'] as $key) {
     $stmt=$db->prepare("INSERT INTO journal_entries(id,company_id,period_id,entry_date,status,description,created_at,updated_at)
         VALUES(?,?,?,'2026-02-01','draft','ACL draft',now(),now())");
