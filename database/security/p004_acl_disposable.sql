@@ -11,6 +11,7 @@ BEGIN
   END IF;
 END
 $guard$;
+SET password_encryption = 'scram-sha-256';
 SELECT format(
   'CREATE ROLE elmo_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS PASSWORD %L',
   :'runtime_password'
