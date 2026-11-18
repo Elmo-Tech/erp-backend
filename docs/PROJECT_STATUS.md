@@ -1,5 +1,9 @@
 # Project Status — Source of Truth
 
+## Exact-code CI evidence — 2026-11-18
+
+**VERIFIED first complete candidate:** [GitHub Actions #44375723500](https://github.com/Elmo-Tech/erp-backend/actions/runs/44375723500) COMPLETED SUCCESS on exact commit 9da30bdbfeeda5591daa74547b8f069de08f1f42. Its real PostgreSQL 18 LOGIN role provision and direct role probe SUCCESS, independent PgBouncer SCRAM startup and restricted runtime probe SUCCESS, synthetic cleanup SUCCESS; pre-existing PG18 migrations, PHPUnit, P0-03 populated upgrade/rollback, two-client concurrency, real PgBouncer Auth/MFA/Session/Queue, Docker build and API health SUCCESS. Journal immutable-state proof is intentionally NOT VERIFIED because Draft PR #14 guards are absent on this independent integration-based branch. This *documentation update* creates a NEW HEAD and must get separate exact-head CI before claiming its final validation.
+
 ## P0-04-ACL independent runtime DB principal PoC — 2026-11-18 (IN PROGRESS / DRAFT)
 
 **Issue [#21](https://github.com/Elmo-Tech/erp-backend/issues/21)**; independent branch task/p0-04-acl-runtime-principal forked from still-unchanged integration 21a085f5. Discovered original Compose injects PostgreSQL superuser owner credentials into Web API. Proposed separate SCRAM password LOGIN elmo_runtime, owner-only migrations, explicit Compose environment mapping (no .env owner credential leak), disposable SQL permission tests, real LOGIN PostgreSQL 18 and PgBouncer scram-sha-256. CI NOT VERIFIED pending exact PR head result. [Dedicated handoff](handoffs/P0-04-ACL.md).
