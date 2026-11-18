@@ -8,8 +8,8 @@ Date: 2026-11-18. Scope: independent synthetic PostgreSQL 18, Web `elmo_runtime`
 
 | Object class | Web LOGIN | Worker LOGIN | Migration owner | Trusted operator / MFA executor |
 | --- | --- | --- | --- | --- |
-| `users` (incl. password/MFA ciphertext reads) | R (CURRENT LIMITATION) | R | owner DDL/DML | MFA executor SELECT and UPDATE only `mfa_secret,mfa_last_step,updated_at` |
-| `global_role_assignments`, memberships, company roles | R | R | owner DDL/DML | operator changes grants outside Web/Worker |
+| `users` (incl. password/MFA ciphertext reads) | R (CURRENT LIMITATION) | — | owner DDL/DML | MFA executor SELECT and UPDATE only `mfa_secret,mfa_last_step,updated_at` |
+| `global_role_assignments`, memberships, company roles | R | — | owner DDL/DML | operator changes grants outside Web/Worker |
 | `companies` | R/I/U/D (synthetic proof; no public CRUD API) | R | owner DDL/DML | no separate runtime grant |
 | `currencies` | R | R | owner DDL/DML | no runtime grant |
 | `sessions`, `cache`, `cache_locks` | R/I/U/D | — | owner DDL/DML | no runtime grant |

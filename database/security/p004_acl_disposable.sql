@@ -44,9 +44,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
 GRANT SELECT, INSERT ON TABLE public.jobs TO elmo_runtime;
 GRANT USAGE, SELECT ON SEQUENCE public.jobs_id_seq TO elmo_runtime;
 -- Worker has only the queue and synthetic draft writing powers, no user or MFA writes.
-GRANT SELECT ON TABLE public.users, public.global_role_assignments,
- public.company_memberships, public.company_role_assignments,
- public.companies, public.currencies, public.fiscal_years,
+GRANT SELECT ON TABLE public.companies, public.currencies, public.fiscal_years,
  public.accounting_periods, public.ledger_accounts TO elmo_worker;
 -- P0-03's INVOKER trigger SELECT ... FOR SHARE on accounting_periods
 -- requires at least one UPDATE-able column in PostgreSQL. Grant only the

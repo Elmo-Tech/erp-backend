@@ -158,6 +158,11 @@ if ($mode === 'probe') {
     echo "PASS: Web sensitive tables deny DML, migration metadata and recovery digests are not readable\n";
     exit;
 }
+foreach (['users', 'global_role_assignments', 'company_memberships', 'company_role_assignments',
+    'user_mfa_recovery_codes', 'user_mfa_enrollment_authorizations', 'audit_logs'] as $table) {
+    $check(in_array($db->query("SELECT has_table_privilege(current_user,'public.{$table}','SELECT')")->fetchColumn(),
+        [false,'f','0',0], true), "Worker can read restricted identity/audit table {$table}");
+}
 foreach (['starts_on', 'ends_on', 'state', 'locked_at', 'company_id'] as $column) {
     $check(in_array($db->query("SELECT has_column_privilege(current_user,'public.accounting_periods','{$column}','UPDATE')")->fetchColumn(),
         [false,'f','0',0], true), "Worker can change accounting_periods.{$column}");
