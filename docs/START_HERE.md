@@ -1,7 +1,37 @@
 # Elmo Tech ERP V2 — Start Here
 
+## Active financial safety review checkpoint — 2026-11-18
+
+- **P0-04A [Draft PR #14](https://github.com/Elmo-Tech/erp-backend/pull/14) CI false-positive was repaired** on code SHA `4543a39652f300f388c5f0aa8e0b4fe0e3e0a7a2`: [exact-head full #44346741810 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44346741810). The standalone P0-03 populated migration fixture now fails with exit code 1 on an assertion, has an intentional negative selftest, strict stage PASS markers, and a two-migration `--step=2` rollback for the A-only branch. P0-04A trigger `23514` and independent composite-FK `23503` are both tested. The old #44308817619 result was **not** sufficient for this regression.
+- P0-04A #14 / B #16 / FX #18 remain **Draft, open, unmerged**; composition [#20](https://github.com/Elmo-Tech/erp-backend/pull/20) is **NEVER MERGE**. Integration `rebuild/erp-v2` remains unchanged. [Review Issue #19](https://github.com/Elmo-Tech/erp-backend/issues/19) / [Parent #13](https://github.com/Elmo-Tech/erp-backend/issues/13) track remaining real runtime ACL, independent human review, posting lock protocol and future authorization/idempotency/audit; **development merge NO-GO** until owner makes a separate decision.
+- This new documentation-only checkpoint requires its **own exact-head CI**; the cited code result applies to `4543a39652f300f388c5f0aa8e0b4fe0e3e0a7a2`.
+
+---
+
 > **Canonical project handoff:** read this page at the beginning of EVERY fresh chat, task, or engineering session.
 > Scope: both repositories, not just the backend. **GitHub is the durable source of truth, not conversation memory.**
+
+## Current task checkpoint and next Issue — 2026-11-18 (LATEST)
+
+**Full engineering CI verified:** [Draft PR #14](https://github.com/Elmo-Tech/erp-backend/pull/14) pre-handoff HEAD `8c0565175381b543b08896f04893fe2dc50c0e63` completed [**GitHub Actions #44306006459 SUCCESS**](https://github.com/Elmo-Tech/erp-backend/actions/runs/44306006459) on the exact SHA. All workflow steps succeeded including PostgreSQL 18 migrations/PHPUnit/P004 guards, nonempty P0-03 EG/IT upgrade/rollback, two-client direct-PG18 and PgBouncer journal-lock negative tests, Auth/MFA/Session/Queue regressions, Docker image and API health. New code `7c259d4c345c1892bf9f8a3598589c067246f535` independently passed [#44305404543](https://github.com/Elmo-Tech/erp-backend/actions/runs/44305404543). The next *documentation-only* SHA requires its own distinct CI conclusion.
+
+**Scope remains P0-04A ONLY:** fail-closed new posting/reversal SQL; historical posted/reversed header+line immutable in row-level triggers; **no posting command, public GL API, idempotent source ledger, verified finance authorization or real data**. PR #14 DRAFT/OPEN/UNMERGED; [Issue #13](https://github.com/Elmo-Tech/erp-backend/issues/13) remains OPEN. No owner merger permission has been received for this PR. **AI source review is NOT an independent human security/accounting review**.
+
+**Follow-up findings and next bounded task:** [new Issue #15 — P0-04B exact decimal internal-only posting eligibility](https://github.com/Elmo-Tech/erp-backend/issues/15). The existing `JournalDraftValidator` sums PHP integers without total overflow protection: 1,000 debit lines of `999999999999.0000` and 1,000 corresponding credits with one `999999999998.9999` produce real debit-credit difference `0.0001`, but PHP 8.4 accumulation overflows into float and yields falsely equal aggregates. **Mathematical/implementation defect reproduced locally**, not a report of actual posted money. Separate read-only validation fix and exact PostgreSQL NUMERIC aggregation are required; reject on any overflow/precision uncertainty. P0-04A row-trigger lock-order proof covers parent-held scenarios but NOT future posted-command-vs-child-update: line tuples may be locked before line BEFORE ROW trigger obtains parent; never introduce parent-then-line `FOR UPDATE` without adversarial deadlock test. Also deny `TRUNCATE`/DDL/trigger-disable to runtime roles—row triggers don't block `TRUNCATE` and existing CI uses disposable privileged roles.
+
+**Next action:** keep P0-04A Draft pending qualified source review and explicit separate owner merge instruction; implement Issue #15 in a small independent task branch from `rebuild/erp-v2`, *no posting transition or new API*, and prove overflow/period/account/EG↔IT and PgBouncer negative tests. Lock/period/account scope and F03 audit/idempotency/outbox remain pre-Posting gates. ADR-024 stays PROPOSED; SEC #7, P0-03 residual #8 and MFA broker #11 OPEN; PR #10 exploratory/unmerged. NO merge/deploy/production/real financial rows/`main`/`oberation` changes.
+
+---
+
+## Latest engineering state — 2026-11-17
+
+- **P0-03 development integration FINISHED:** Backend PR #12 squash-merged to `rebuild/erp-v2` as `21a085f5b101126cb6f535fdb03f204cb99d0405`; [post-merge CI #44115915862 SUCCESS](https://github.com/Elmo-Tech/erp-backend/actions/runs/44115915862).
+- **P0-04/F02 actively building (non-production):** [Issue #13](https://github.com/Elmo-Tech/erp-backend/issues/13), [Draft PR #14](https://github.com/Elmo-Tech/erp-backend/pull/14) on `task/p0-04-ledger-posting`. Initial P0-04A immutable journal guard [code commit `f880d7c`](https://github.com/Elmo-Tech/erp-backend/commit/f880d7ce8d6e82dd12d0140a3548bab4d1f140f8) passed [full CI #44119384809](https://github.com/Elmo-Tech/erp-backend/actions/runs/44119384809) including PG18, PHPUnit, P0-03 migration rollback/PgBouncer, Auth/MFA, Docker/API health. A later docs-only commit needs its own CI.
+- **P0-04A safety boundary ONLY:** direct posted/reversed journal writes disabled until reviewed posting service; historic posted headers/lines immutable. This is **not** balanced posting, reversal, idempotency, audit/outbox or a permitted financial API.
+- **Security/production NOT approved:** exploratory P0-03 PR #10 remains draft/unmerged; SEC-01..08 [Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7), P0-03 residual [#8](https://github.com/Elmo-Tech/erp-backend/issues/8) and MFA broker/lock [#11](https://github.com/Elmo-Tech/erp-backend/issues/11) OPEN; ADR-022/023/024 PROPOSED. No deployment/real user MFA/financial posting, no permanent RLS, no `main`/`oberation` changes.
+- **Read [P0-04 Handoff](handoffs/P0-04.md) and live GitHub PR/CI before continuing.** Earlier 'P0-02 active' text farther below is a historical pre-merge snapshot superseded by this section.
+
+---
 
 ## Where the system lives
 

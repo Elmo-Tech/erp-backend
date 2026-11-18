@@ -57,17 +57,37 @@ jobs:
       - name: P0-03 verify populated EG/IT upgrade, rollback and reapply (synthetic database only)
         run: |
           set -euo pipefail
-          php artisan migrate:rollback --step=1 --force --no-interaction
-          php tests/integration/p003_nonempty_upgrade.php seed
+          # Proof that standalone fixture assertions cannot print FAIL yet exit 0.
+          if php tests/integration/p003_nonempty_upgrade.php selftest-failure > /tmp/p003-selftest.log 2>&1; then
+            cat /tmp/p003-selftest.log
+            echo '::error::P0-03 fixture returned exit 0 on intentional failure'
+            exit 1
+          fi
+          grep -Fq 'P0-03 fixture intentional failure sentinel' /tmp/p003-selftest.log
+          run_stage() {
+            local stage="$1"
+            php tests/integration/p003_nonempty_upgrade.php "$stage" 2>&1 | tee "/tmp/p003-${stage}.log"
+            case "$stage" in
+              seed) grep -Fq 'PASS: nonempty synthetic EG and IT legal/accounting/auth rows seeded' "/tmp/p003-${stage}.log" ;;
+              up|down) grep -Fq "PASS: ${stage} retains nonempty EG/IT rows and expected P0-03 constraint state." "/tmp/p003-${stage}.log" ;;
+              cleanup) grep -Fq 'PASS: synthetic upgrade rows removed.' "/tmp/p003-${stage}.log" ;;
+            esac
+          }
+          # On this A-only branch migrate:fresh installed 000006 and 000007
+          # in one batch. --step=1 would remove A only, leaving P0-03 active.
+          php artisan migrate:rollback --step=2 --force --no-interaction
+          run_stage seed
           php artisan migrate --force --no-interaction
-          php tests/integration/p003_nonempty_upgrade.php up
-          php artisan migrate:rollback --step=1 --force --no-interaction
-          php tests/integration/p003_nonempty_upgrade.php down
+          run_stage up
+          php artisan migrate:rollback --step=2 --force --no-interaction
+          run_stage down
           php artisan migrate --force --no-interaction
-          php tests/integration/p003_nonempty_upgrade.php up
-          php tests/integration/p003_nonempty_upgrade.php cleanup
+          run_stage up
+          run_stage cleanup
       - name: P0-03 direct PostgreSQL two-connection overlap and EG/IT isolation
         run: php tests/integration/p003_concurrency.php
+      - name: P0-04A real PostgreSQL 18 journal-lock and immutability race tests
+        run: php tests/integration/p004_guard_concurrency.php
       - name: P0-03 start disposable transaction-pooled PgBouncer
         run: |
           sudo apt-get update -qq
@@ -94,6 +114,10 @@ jobs:
         env:
           DB_PORT: '16432'
         run: php tests/integration/p003_pool_clients.php
+      - name: P0-04A journal guards through PgBouncer transaction pooling
+        env:
+          DB_PORT: '16432'
+        run: php tests/integration/p004_guard_concurrency.php
       - name: P0-03 Laravel Auth/MFA and database Session/Queue regressions via real PgBouncer
         env:
           DB_PORT: '16432'

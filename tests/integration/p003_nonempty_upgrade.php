@@ -17,6 +17,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 $stage = $argv[1] ?? '';
+// Laravel's bootstrap registers an exception handler intended for the console.
+// A standalone PHP CI script must fail the *process* on any assertion error.
+set_exception_handler(static function (Throwable $failure) use ($stage): void {
+    fwrite(STDERR, "FAIL: P0-03 fixture stage {$stage}: {$failure->getMessage()}\n");
+    exit(1);
+});
+if ($stage === 'selftest-failure') {
+    throw new RuntimeException('P0-03 fixture intentional failure sentinel');
+}
 $ids = [
     'eg' => '00000000-0000-4000-8000-000000000301',
     'it' => '00000000-0000-4000-8000-000000000302',
@@ -155,6 +164,17 @@ foreach (['p003_line_company_id_uniq', 'p003_period_no_overlap', 'p003_one_side_
 }
 
 if ($stage === 'up') {
+    // The P0-04A BEFORE ROW guard rejects an invalid journal parent (23514)
+    // before a composite FK can check it. P0-03-only must still raise 23503.
+    $journalGuardActive = (bool) DB::selectOne(<<<'SQL'
+SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_trigger
+    WHERE tgname = 'p004_guard_journal_lines'
+      AND tgrelid = 'public.journal_lines'::regclass
+      AND tgenabled = 'O'
+) AS active
+SQL)->active;
+    $expectedJournalState = $journalGuardActive ? '23514' : '23503';
     foreach ([['eg', 'it'], ['it', 'eg']] as [$own, $foreign]) {
         try {
             DB::transaction(static function () use ($ids, $own, $foreign): void {
@@ -165,9 +185,27 @@ if ($stage === 'up') {
                     'debit_base' => '5.0000', 'credit_base' => '0',
                 ]);
             });
-            throw new RuntimeException("Cross-company {$own} -> {$foreign} unexpectedly accepted");
+            throw new RuntimeException("Cross-company journal {$own} -> {$foreign} unexpectedly accepted");
         } catch (QueryException $e) {
-            $check(str_contains($e->getMessage(), '23503'), 'SQLSTATE 23503 cross-company FK');
+            $check(str_contains($e->getMessage(), $expectedJournalState),
+                "Cross-company journal SQLSTATE {$expectedJournalState}");
+        }
+
+        // The target journal is now valid and same-company, so the independent
+        // company-scoped ACCOUNT FK must still reject 23503 in both directions.
+        try {
+            DB::transaction(static function () use ($ids, $own, $foreign): void {
+                DB::table('journal_lines')->insert([
+                    'id' => (string) Illuminate\Support\Str::uuid7(),
+                    'company_id' => $ids[$own], 'entry_id' => $ids['entry_'.$own],
+                    'account_id' => $ids['account_'.$foreign], 'line_no' => 2,
+                    'debit_base' => '5.0000', 'credit_base' => '0',
+                ]);
+            });
+            throw new RuntimeException("Cross-company account {$own} -> {$foreign} unexpectedly accepted");
+        } catch (QueryException $e) {
+            $check(str_contains($e->getMessage(), '23503'),
+                'SQLSTATE 23503 composite account FK');
         }
     }
 }

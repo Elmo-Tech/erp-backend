@@ -1,5 +1,20 @@
 # Architecture Decision Register — approved 2026-11-16
 
+## ADR-024 review addendum (2026-11-18; still PROPOSED)
+
+P0-04A guards passed [exact-head #44306006459](https://github.com/Elmo-Tech/erp-backend/actions/runs/44306006459), but only **fail-closed immutability**, not an authorized posting path. Review identified that PHP integer journal totals can overflow into float and hide a `0.0001` discrepancy; [Issue #15](https://github.com/Elmo-Tech/erp-backend/issues/15) must enforce exact arithmetic. Real posting transaction must avoid a header-lock → child-tuple-lock deadlock against the P0-04A BEFORE ROW line trigger, and runtime TRUNCATE/DDL privileges require explicit denial. No change to ADR-024 approval; no public API, deployment or merge permitted by this note.
+
+---
+
+## ADR-024 — P0-04 Financial Posting State Machine (PROPOSED; 2026-11-17)
+
+**Proposed / not approved for production.** P0-04A uses a fail-closed PostgreSQL guard to disallow *any new* posted or reversed entry, and prevents editing historical posted/reversed headers and lines. This is a conservative development safety boundary, **not** an implemented posting command or released GL. `P0-04B` must define an authenticated, atomic and idempotent transition that locks the correct legal-company period, proves exactly balanced DECIMAL amounts and active own-company accounts; `P0-04C` must create separate reversal journals; `P0-04D` must integrate audit/outbox/idempotency as a single transaction. Financial API exposure and production release require separate accountant/owner and security approvals.
+
+**Why:** P0-03 constraints prevent invalid individual line sides and period overlaps, but they do not establish that multiple lines sum to a balanced posted journal or guarantee posted immutability. Avoid implying `status=posted` can be safely set directly. Existing P0-03 migration remains unchanged.
+
+**Alternative deferred:** a fully enabled general ledger posting API without audit/outbox and final financial approval is rejected for this phase. Subsequent posting must revise the fail-closed transition only with exact-SHA tests and a reviewed authority model.
+
+---
 ## ADR-020 operational elaboration — 2026-11-16 (PROPOSED details; original approval unchanged)
 
 **The six security principles in ADR-020 remain APPROVED. This addition does not approve operational specifications, code, reviewers, merges or production release.** The following implementation-specific documents are prepared for owner decision and independent security inspection:
