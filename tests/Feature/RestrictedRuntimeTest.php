@@ -79,6 +79,36 @@ final class RestrictedRuntimeTest extends TestCase
         $this->postJson('/api/v1/auth/mfa/verify',['code'=>'AABBCCDDEEFF0011'])->assertUnprocessable();
     }
 
+    public function test_operator_preapproved_mfa_enrollment_consumes_grant_atomically(): void
+    {
+        $this->postJson('/api/v1/auth/login', [
+            'email'=>'acl-web-enroll@example.invalid','password'=>'synthetic-only-password'
+        ])->assertStatus(202);
+        $secret=$this->postJson('/api/v1/auth/mfa/enroll/start')
+            ->assertOk()->json('secret');
+        $alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+        $bits='';
+        foreach (str_split($secret) as $char) {
+            $bits.=str_pad(decbin(strpos($alphabet,$char)),5,'0',STR_PAD_LEFT);
+        }
+        $binary='';
+        foreach (str_split($bits,8) as $byte) {
+            if (strlen($byte)===8) {$binary.=chr(bindec($byte));}
+        }
+        $step=intdiv(now()->timestamp,30);
+        $digest=hash_hmac('sha1',pack('N2',0,$step),$binary,true);
+        $offset=ord($digest[19]) & 0x0f;
+        $code=str_pad((string)((unpack('N',substr($digest,$offset,4))[1] & 0x7fffffff)%1000000),6,'0',STR_PAD_LEFT);
+        $response=$this->postJson('/api/v1/auth/mfa/enroll/confirm',['code'=>$code])
+            ->assertOk()->assertJsonPath('status','authenticated');
+        $this->assertCount(8,$response->json('recovery_codes'));
+        $user=User::query()->where('email','acl-web-enroll@example.invalid')->firstOrFail();
+        $this->assertNotNull($user->mfa_secret);
+        $this->assertNotNull(DB::table('user_mfa_enrollment_authorizations')
+            ->where('user_id',$user->id)->value('consumed_at'));
+        $this->getJson('/api/v1/auth/me')->assertOk();
+    }
+
     public function test_web_company_crud_and_database_queue_enqueue(): void
     {
         $id=(string)\Illuminate\Support\Str::uuid7();
