@@ -26,7 +26,30 @@ services:
     ports:
       - "8000:8000"
     depends_on:
+      worker:
+    build: .
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=1"]
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY:?Set APP_KEY for synthetic worker}
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: elmo_erp_v2
+      DB_USERNAME: elmo_worker
+      DB_PASSWORD: ${WORKER_DB_PASSWORD:?Provision an independent worker LOGIN first}
+    depends_on:
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+  postgres:
         condition: service_healthy
       redis:
         condition: service_started

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // Owner-only synthetic fixtures for a pre-migrated disposable PG18 schema.
-if (getenv('APP_ENV') !== 'testing' || getenv('DB_DATABASE') !== 'elmo_erp_test'
+if (getenv('APP_ENV') !== 'testing' || !in_array(getenv('DB_DATABASE'), ['elmo_erp_test','elmo_erp_compose_ci'],true)
     || getenv('DB_USERNAME') !== 'elmo') {
     fwrite(STDERR, "REFUSED: synthetic owner-only test database required\n");
     exit(2);

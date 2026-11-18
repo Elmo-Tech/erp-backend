@@ -1,0 +1,23 @@
+# Synthetic CI only. Never attach existing volumes.
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: elmo_erp_compose_ci
+    volumes:
+      - pgdata_ci:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U elmo -d elmo_erp_compose_ci"]
+  api:
+    environment:
+      APP_ENV: testing
+      DB_DATABASE: elmo_erp_compose_ci
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: database
+    ports:
+      - "18080:8000"
+  worker:
+    environment:
+      APP_ENV: testing
+      DB_DATABASE: elmo_erp_compose_ci
+volumes:
+  pgdata_ci:
