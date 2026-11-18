@@ -16,6 +16,9 @@ final class RestrictedRuntimeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        if (config('database.connections.pgsql.username') !== 'elmo_runtime') {
+            $this->markTestSkipped('Restricted suite runs only with real elmo_runtime LOGIN after owner migrations.');
+        }
         $this->withHeaders([
             'Origin' => 'http://localhost:5173',
             'Referer' => 'http://localhost:5173/',

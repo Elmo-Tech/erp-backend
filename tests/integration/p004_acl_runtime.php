@@ -59,7 +59,7 @@ $expectDenied = static function (PDO $db, string $sql, string $label): void {
     }
     throw new RuntimeException("{$label} unexpectedly succeeded");
 };
-$owner = $mode !== 'probe' ? $connect('owner') : null;
+$owner = in_array($mode, ['seed', 'cleanup'], true) ? $connect('owner') : null;
 if ($mode === 'seed') {
     $owner->beginTransaction();
     foreach ([['EGP','Synthetic EGP'],['EUR','Synthetic EUR']] as [$code,$name]) {
