@@ -1,5 +1,13 @@
 # Project Status — Source of Truth
 
+## P0-04-ACL independent runtime DB principal PoC — 2026-11-18 (IN PROGRESS / DRAFT)
+
+**Issue [#21](https://github.com/Elmo-Tech/erp-backend/issues/21)**; independent branch task/p0-04-acl-runtime-principal forked from still-unchanged integration 21a085f5. Discovered original Compose injects PostgreSQL superuser owner credentials into Web API. Proposed separate SCRAM password LOGIN elmo_runtime, owner-only migrations, explicit Compose environment mapping (no .env owner credential leak), disposable SQL permission tests, real LOGIN PostgreSQL 18 and PgBouncer scram-sha-256. CI NOT VERIFIED pending exact PR head result. [Dedicated handoff](handoffs/P0-04-ACL.md).
+
+**Security non-proofs:** The integrated baseline lacks unmerged PR #14 immutable journal guards; runtime cannot TRUNCATE/alter triggers/DDL but broad DML permissions alone do NOT prevent UPDATE of existing posted ledger rows. Cross-company FKs protect link integrity but cannot authorize runtime Web identity; same runtime role can access both EG/IT. No proof of separate Web/worker OS principals, key custody, production PgBouncer, PUBLIC function safety, operational rollback or independent human security review. No PR #14/#16/#18/#20 code incorporated. ADR-024 PROPOSED; issues #7/#8/#11 OPEN; PR #20 NEVER MERGE. No finance API, merge, deployment, real data or main/oberation changes.
+
+---
+
 ## P0-03 Development Integration Candidate — 2026-11-17 (DRAFT / NOT MERGE APPROVED)
 
 **Candidate code CI:** exact commit `8110437be702e3a6553f63acc0d68cb281e19543` [GitHub Actions #44110104136](https://github.com/Elmo-Tech/erp-backend/actions/runs/44110104136) **COMPLETED SUCCESS** (PG18 migrate, PHPUnit, populated synthetic Egypt/Italy upgrade + rollback/reapply, direct and pooled concurrency, PgBouncer Auth/MFA and database Session/Queue-driver regression, Docker build and API health). **Still NOT VERIFIED:** dedicated restricted-role queue worker, independent security review, production-like populated database and unsafe `SECURITY DEFINER` replacement. This documentation-only update is a new SHA and must be verified independently; do not attribute the prior code CI to it. No merge approval.
