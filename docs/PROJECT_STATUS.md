@@ -1,5 +1,17 @@
 # Project Status — Source of Truth
 
+## P0-04-ACL provider evaluation and exact-head CI evidence — 2026-11-19 (NO-GO)
+
+**New design-only evaluation:** [IdP options and security-review decision gate](security/P0-04-ACL_IDP_OPTIONS_AND_REVIEW_DECISION.md) compares official Keycloak, ZITADEL, authentik and Microsoft Entra ID capabilities against the independent [assurance contract](security/P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md) and Issue #11. This is **not** a selected IdP/approved architecture/independent human review. Proposed evaluation rule: inventory existing corporate IdP and company/IT/data-residency constraints first; if none meets the boundary, compare disposable Keycloak and ZITADEL. An IdP alone cannot prevent Web-process takeover or Web-executable MFA SQL functions.
+
+**New verified CI:** [GitHub Actions #44521114403](https://github.com/Elmo-Tech/erp-backend/actions/runs/44521114403) is **COMPLETED / FAILURE** on exact *prior* SHA `a13bf42bc7d29f92147dc9ca10283c8d7e48e851`. The final deliberately blocking cross-user MFA security gate was the failing job step; prior migration/PgBouncer/Laravel/Compose/Docker steps passed. Confirmed synthetic arbitrary-target replay-state write remains vulnerable and is rolled back in the probe; no login bypass is proven. **Any subsequent documentation commit's exact-head CI must be checked separately**, never inherit the prior result.
+
+**Dispositions:** Issue #21 OPEN; PR #22 DRAFT/UNMERGED; ADR-024 PROPOSED; independent reviewers, IdP selection and implementation authorization NOT RECORDED. No Auth/MFA/SQL/workflow source changes in this provider evaluation. **NO-GO merge/deploy/real users**; #7/#8/#11 open; posted journal gate #14 unmerged and #20 NEVER MERGE.
+
+**One next action:** capture the existing IdP/IT/tenancy facts and have owner-selected independent PostgreSQL, MFA/session and financial-control reviewers assess the proposed authority/enforcer contract and provider selection; only then scope a separate synthetic adversarial PoC and seek owner approval.
+
+---
+
 ## P0-04-ACL independent assurance design candidate — 2026-11-19 (PROPOSED; NO-GO)
 
 At the existing [Draft PR #22](https://github.com/Elmo-Tech/erp-backend/pull/22), the security boundary analysis now has a proposed [Independent Identity/MFA Assurance Contract](security/P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md). It evaluates a separately controlled OIDC identity authority plus non-bypassable independent enforcement/privileged executor as a **design candidate only**. Owner/provider/issuer approval, security review and implementation are **NOT DONE**. No MFA SQL grants/functions, login code, finance flows, deployment or integration code changed in this documentation step.
