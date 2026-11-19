@@ -1,7 +1,7 @@
 # Module Roadmap — End-to-End ERP V2
 
 Status key: `NOT STARTED` = design only; `SCAFFOLD` = source code exists but not verified; `IN PROGRESS` = active task with evidence; `VERIFIED` = acceptance tests passed and PR reviewed; `BLOCKED` = dependency/external signoff prevents delivery.
-All statuses are as of **2026-11-16** and must be changed only with linked evidence. Full business requirements: [BUSINESS_RULES.md](BUSINESS_RULES.md).
+Base statuses are as of **2026-11-16**; F02 P0-04-ACL branch update 2026-11-18 and must be changed only with linked evidence. Full business requirements: [BUSINESS_RULES.md](BUSINESS_RULES.md).
 
 **P0-02 integration complete (ADR-021):** Backend PR #6 and frontend PR #2 **MERGED** into `rebuild/erp-v2` with passing pre-merge CI; [Frontend post-merge CI #43916083490](https://github.com/Elmo-Tech/erp-frontend/actions/runs/43916083490) PASS. **F01 remains IN PROGRESS, not production verified**, because [security Issue #7](https://github.com/Elmo-Tech/erp-backend/issues/7) tracks SEC-01..08. Next dev [P0-03 Issue #8](https://github.com/Elmo-Tech/erp-backend/issues/8). No real-user enrollment or deployment. See [security checklist](security/P0-02_SECURITY_REVIEW_CHECKLIST.md) and [ADR-021](DECISIONS.md).
 
@@ -9,7 +9,7 @@ All statuses are as of **2026-11-16** and must be changed only with linked evide
 |---|---|---|---|---|
 | F00 | Platform, CI, Docker, PostgreSQL, Redis | None | Real CI/build/migration smoke tests | VERIFIED (automated CI/build/migration checks; no production release) |
 | F01 | Company model, permissions, internal auth/MFA | F00 | Company scoping and unauthorized-access negatives | IN PROGRESS ([Issue #4](https://github.com/Elmo-Tech/erp-backend/issues/4); backend PR #6 and frontend PR #2 MERGED for development; ADR-020 policy principles approved; backend atomic 27 tests/233 assertions PASS and pinned real Chromium PASS; [security sign-off checklist](security/P0-02_SECURITY_REVIEW_CHECKLIST.md) documents SEC-01..SEC-08; security operational release gates SEC-01..08 still OPEN in Issue #7; NO DEPLOY/REAL USERS; P0-03 DB security scoped via Issue #8) |
-| F02 | General Ledger foundational controls | F00, F01 | Balanced immutable posting, locked periods, reversals | NOT STARTED (schema scaffold) |
+| F02 | General Ledger foundational controls | F00, F01 | Balanced immutable posting, locked periods, reversals | IN PROGRESS (independent P0-04-ACL non-production role PoC Issue #21; P0-04A #14, B #16, FX #18 all Draft/unmerged; no posting API, no approval; ADR-024 PROPOSED) |
 | F03 | Audit, outbox, idempotency, notifications base | F00, F01 | Verified retry/deduplication and audit | NOT STARTED (tables scaffold) |
 | M01 | CRM / leads / contacts / attribution | F01 | Sales/social/platform/acquired-by/manager activity history | NOT STARTED |
 | M02 | Proposals / versions / approvals / quotations | M01, F01 | Approved snapshot with price, tax, milestones, installments | NOT STARTED |

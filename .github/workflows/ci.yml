@@ -109,6 +109,140 @@ jobs:
           test ! -e app/Domain/Companies/AuthenticatedDatabaseContext.php
           test ! -e config/erp_runtime.php
           test ! -e tests/integration/p003h_uid_socket_spike.py
+      - name: P0-04-ACL disposable SCRAM LOGIN provision (owner-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUNTIME_DB_PASSWORD="$(openssl rand -hex 32)"
+          WORKER_DB_PASSWORD="$(openssl rand -hex 32)"
+          echo "::add-mask::$WORKER_DB_PASSWORD"
+          printf 'WORKER_DB_PASSWORD=%s\n' "$WORKER_DB_PASSWORD" >> "$GITHUB_ENV"
+          echo "::add-mask::$RUNTIME_DB_PASSWORD"
+          printf 'RUNTIME_DB_PASSWORD=%s\n' "$RUNTIME_DB_PASSWORD" >> "$GITHUB_ENV"
+          PGPASSWORD="$DB_PASSWORD" psql -X -v ON_ERROR_STOP=1 \
+            -h 127.0.0.1 -p 5432 -U elmo -d elmo_erp_test \
+            -v "runtime_password=$RUNTIME_DB_PASSWORD" -v "worker_password=$WORKER_DB_PASSWORD" -f database/security/p004_acl_disposable.sql
+          php tests/integration/p004_acl_runtime.php seed
+      - name: P0-04-ACL direct PostgreSQL 18 authenticated runtime principal
+        shell: bash
+        run: |
+          set -euo pipefail
+          PGPASSWORD="$RUNTIME_DB_PASSWORD" psql -X -h 127.0.0.1 -p 5432 \
+            -U elmo_runtime -d elmo_erp_test -Atc 'SELECT session_user' | grep -qx elmo_runtime
+          php tests/integration/p004_acl_runtime.php probe
+      - name: P0-04-ACL start separate SCRAM-authenticated PgBouncer
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y pgbouncer
+          sudo systemctl stop pgbouncer || true
+          cat > /tmp/p004-acl-pgbouncer.ini <<'EOF'
+          [databases]
+          elmo_erp_test = host=127.0.0.1 port=5432 dbname=elmo_erp_test
+          [pgbouncer]
+          listen_addr = 127.0.0.1
+          listen_port = 16433
+          auth_type = scram-sha-256
+          auth_file = /tmp/p004-acl-pgbouncer-auth.txt
+          pool_mode = transaction
+          default_pool_size = 2
+          max_client_conn = 50
+          server_reset_query = DISCARD ALL
+          EOF
+          printf '"elmo_runtime" "%s"\n' "$RUNTIME_DB_PASSWORD" > /tmp/p004-acl-pgbouncer-auth.txt
+          chmod 600 /tmp/p004-acl-pgbouncer-auth.txt
+          pgbouncer /tmp/p004-acl-pgbouncer.ini > /tmp/p004-acl-pgbouncer.log 2>&1 &
+          sleep 2
+          PGPASSWORD="$RUNTIME_DB_PASSWORD" psql -X -h 127.0.0.1 -p 16433 \
+            -U elmo_runtime -d elmo_erp_test -Atc 'SELECT session_user' | grep -qx elmo_runtime
+      - name: P0-04-ACL authentic restricted LOGIN through SCRAM PgBouncer
+        env:
+          RUNTIME_DB_PORT: '16433'
+        run: php tests/integration/p004_acl_runtime.php probe
+      - name: P0-04-ACL distinct worker LOGIN and synthetic draft CRUD
+        env:
+          RUNTIME_DB_HOST: '127.0.0.1'
+        run: php tests/integration/p004_acl_runtime.php worker-probe
+      - name: P0-04-ACL restricted Laravel Auth/MFA/Session/Queue and Company CRUD
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/integration/p004_laravel_fixture.php seed
+          DB_USERNAME=elmo_runtime DB_PASSWORD="$RUNTIME_DB_PASSWORD" \
+            SESSION_DRIVER=database QUEUE_CONNECTION=database CACHE_STORE=array \
+            php artisan test --no-ansi --filter=RestrictedRuntimeTest
+          php tests/integration/p004_laravel_fixture.php cleanup
+      - name: P0-04-ACL restricted Laravel Auth/MFA/Session/Queue via SCRAM PgBouncer
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/integration/p004_laravel_fixture.php seed
+          DB_USERNAME=elmo_runtime DB_PASSWORD="$RUNTIME_DB_PASSWORD" DB_PORT=16433 \
+            DB_PGBOUNCER_TRANSACTION=true SESSION_DRIVER=database QUEUE_CONNECTION=database CACHE_STORE=array \
+            php artisan test --no-ansi --filter=RestrictedRuntimeTest
+          php tests/integration/p004_laravel_fixture.php cleanup
+      - name: P0-04-ACL verify runtime cannot migrate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if DB_USERNAME=elmo_runtime DB_PASSWORD="$RUNTIME_DB_PASSWORD" \
+             php artisan migrate:status --no-ansi >/tmp/p004-migrate-denial.log 2>&1; then
+            echo '::error::Web runtime unexpectedly reads migration metadata'
+            exit 1
+          fi
+          echo 'PASS: migration metadata unavailable to runtime'
+      - name: P0-04-ACL cleanup synthetic owner fixtures
+        run: php tests/integration/p004_acl_runtime.php cleanup
+      - name: P0-04-ACL synthetic Docker Compose owner-to-runtime provisioning and non-root isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          export POSTGRES_PASSWORD="compose-test-owner-only"
+          export APP_KEY="$(php artisan key:generate --show)"
+          export COMPOSE_PROJECT_NAME="p004acl${GITHUB_RUN_ID}"
+          cleanup() { docker compose -f compose.yaml -f compose.ci.yaml down --volumes --remove-orphans || true; }
+          trap cleanup EXIT
+          docker compose -f compose.yaml -f compose.ci.yaml up -d postgres redis
+          docker compose -f compose.yaml -f compose.ci.yaml run --rm --no-deps \
+            -e DB_USERNAME=elmo -e DB_PASSWORD="$POSTGRES_PASSWORD" \
+            -e DB_DATABASE=elmo_erp_compose_ci \
+            --entrypoint php api artisan migrate --force --no-interaction
+          docker compose -f compose.yaml -f compose.ci.yaml exec -T postgres psql -X -v ON_ERROR_STOP=1 \
+            -U elmo -d elmo_erp_compose_ci \
+            -v "runtime_password=$RUNTIME_DB_PASSWORD" \
+            -v "worker_password=$WORKER_DB_PASSWORD" \
+            < database/security/p004_acl_disposable.sql
+          docker compose -f compose.yaml -f compose.ci.yaml up -d api worker
+          docker compose -f compose.yaml -f compose.ci.yaml exec -T api sh -c 'test "$(id -u)" = 10001'
+          docker compose -f compose.yaml -f compose.ci.yaml exec -T worker sh -c 'test "$(id -u)" = 10001'
+          docker compose -f compose.yaml -f compose.ci.yaml exec -T api php -r '
+            require "vendor/autoload.php";
+            $app=require "bootstrap/app.php";
+            $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            $row=\Illuminate\Support\Facades\DB::selectOne("SELECT session_user AS username");
+            if ($row->username !== "elmo_runtime") {exit(1);}
+          '
+          docker compose -f compose.yaml -f compose.ci.yaml exec -T worker php -r '
+            require "vendor/autoload.php";
+            $app=require "bootstrap/app.php";
+            $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            $row=\Illuminate\Support\Facades\DB::selectOne("SELECT session_user AS username");
+            if ($row->username !== "elmo_worker") {exit(1);}
+          '
+          if docker compose -f compose.yaml -f compose.ci.yaml exec -T api php artisan migrate:status >/tmp/p004-compose-migrate.log 2>&1; then
+            echo '::error::Compose Web principal can access migration metadata'
+            exit 1
+          fi
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18080/api/v1/health | grep -q '"status":"ok"'; then
+              echo 'PASS: synthetic Compose nonroot Web/worker, restricted DB LOGIN, health, migrations denied'
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f compose.yaml -f compose.ci.yaml logs api worker
+          exit 1
       - name: Build backend Docker image
         run: docker build --tag elmo-erp-backend:p0-01 .
       - name: Smoke-test container API health
@@ -127,3 +261,15 @@ jobs:
           done
           docker logs erp-v2-backend-ci
           exit 1
+      - name: P0-04-ACL SECURITY GATE cross-user MFA step negative (synthetic; fail on vulnerability)
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/integration/p004_laravel_fixture.php seed
+          result=0
+          php tests/integration/p004_mfa_cross_user_negative.php || result=$?
+          php tests/integration/p004_laravel_fixture.php cleanup
+          if [ "$result" -ne 0 ]; then
+            echo '::error::P0-04-ACL SECURITY FAIL: cross-user MFA step can advance without independent SQL assurance. DO NOT MERGE.'
+            exit "$result"
+          fi

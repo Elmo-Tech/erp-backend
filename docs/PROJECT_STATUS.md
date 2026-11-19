@@ -1,5 +1,62 @@
 # Project Status — Source of Truth
 
+## P0-04-ACL provider evaluation and exact-head CI evidence — 2026-11-19 (NO-GO)
+
+**New design-only evaluation:** [IdP options and security-review decision gate](security/P0-04-ACL_IDP_OPTIONS_AND_REVIEW_DECISION.md) compares official Keycloak, ZITADEL, authentik and Microsoft Entra ID capabilities against the independent [assurance contract](security/P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md) and Issue #11. This is **not** a selected IdP/approved architecture/independent human review. Proposed evaluation rule: inventory existing corporate IdP and company/IT/data-residency constraints first; if none meets the boundary, compare disposable Keycloak and ZITADEL. An IdP alone cannot prevent Web-process takeover or Web-executable MFA SQL functions.
+
+**New verified CI:** [GitHub Actions #44521114403](https://github.com/Elmo-Tech/erp-backend/actions/runs/44521114403) is **COMPLETED / FAILURE** on exact *prior* SHA `a13bf42bc7d29f92147dc9ca10283c8d7e48e851`. The final deliberately blocking cross-user MFA security gate was the failing job step; prior migration/PgBouncer/Laravel/Compose/Docker steps passed. Confirmed synthetic arbitrary-target replay-state write remains vulnerable and is rolled back in the probe; no login bypass is proven. **Any subsequent documentation commit's exact-head CI must be checked separately**, never inherit the prior result.
+
+**Dispositions:** Issue #21 OPEN; PR #22 DRAFT/UNMERGED; ADR-024 PROPOSED; independent reviewers, IdP selection and implementation authorization NOT RECORDED. No Auth/MFA/SQL/workflow source changes in this provider evaluation. **NO-GO merge/deploy/real users**; #7/#8/#11 open; posted journal gate #14 unmerged and #20 NEVER MERGE.
+
+**One next action:** capture the existing IdP/IT/tenancy facts and have owner-selected independent PostgreSQL, MFA/session and financial-control reviewers assess the proposed authority/enforcer contract and provider selection; only then scope a separate synthetic adversarial PoC and seek owner approval.
+
+---
+
+## P0-04-ACL independent assurance design candidate — 2026-11-19 (PROPOSED; NO-GO)
+
+At the existing [Draft PR #22](https://github.com/Elmo-Tech/erp-backend/pull/22), the security boundary analysis now has a proposed [Independent Identity/MFA Assurance Contract](security/P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md). It evaluates a separately controlled OIDC identity authority plus non-bypassable independent enforcement/privileged executor as a **design candidate only**. Owner/provider/issuer approval, security review and implementation are **NOT DONE**. No MFA SQL grants/functions, login code, finance flows, deployment or integration code changed in this documentation step.
+
+**Exact prior HEAD evidence:** commit `50b99a5674ab7a9784a6ccc63d5364ef80308d78`, [CI #44503777322](https://github.com/Elmo-Tech/erp-backend/actions/runs/44503777322) COMPLETED **FAILURE**, step 28 cross-user MFA security negative; steps 3–27 were successful. The negative is an intentionally blocking **confirmed synthetic unauthorized MFA replay-state mutation**, rolled back, not a successful mitigation or a proven Laravel login bypass. The **new documentation commits have not received independently verified exact-head CI** at writing; status remains **NO-GO**.
+
+**Next precise action:** independent qualified PostgreSQL, MFA/session and financial controls review of the proposed contract and known Worker/journal gaps; record a selected, explicit trusted issuer/enforcer policy and a new scoped implementation task only after owner direction. Preserve Issue #21 OPEN, PR #22 DRAFT, ADR-024 PROPOSED, #14 unmerged, #20 NEVER MERGE, security #7/#8/#11 OPEN. No user data, merged branch changes, staging or production.
+
+---
+
+## P0-04-ACL verification update — 2026-11-19 (NO-GO; reviewer package prepared)
+
+Verified [GitHub Actions #44497530967](https://github.com/Elmo-Tech/erp-backend/actions/runs/44497530967) **COMPLETED / FAILURE** at exact PR #22 HEAD `60cfcec55306459ee83db4268c0c53801c70868c`. PG18 / direct + SCRAM PgBouncer / restricted Laravel Auth-MFA-Sessions-Queue / synthetic EG-IT / Compose / Docker steps succeeded; the final **intentional blocking cross-user MFA negative** failed because `elmo_runtime` successfully modified another synthetic user's `mfa_last_step` without TOTP or independently verified subject. ROLLBACK executed. A source/target ID-array comparison caused a PHP warning and is corrected in a later narrow diagnostic-only commit; no security function/ACL is changed. **New HEAD CI NOT VERIFIED until its own run is inspected**.
+
+**Impact:** MFA replay-state integrity violation confirmed; repeated step advancement may interfere with legitimate MFA availability, but **Authentication Bypass is NOT proven by this SQL test**. Conditional recovery/enrollment vulnerabilities and independent session-issuer design remain open. [Human Threat Model / Reviewer Package](security/P0-04-ACL_THREAT_MODEL_REVIEWER_PACKAGE.md) records impact, proposed alternatives (NOT APPROVED), test plan and PostgreSQL/MFA-session/financial review tracks. No formal human reviews or owner merge consent recorded; **NO-GO** development merge / deploy / production. Issue #21 and Draft PR #22 remain open. ADR-024 PROPOSED; #7/#8/#11 OPEN; #14 UNMERGED; #20 NEVER MERGE; no financial posting API or real data.
+
+## P0-04-ACL focused security review gate — 2026-11-19 (NO-GO)
+
+AI-assisted security source review of prior exact-head CI [#44386318271](https://github.com/Elmo-Tech/erp-backend/actions/runs/44386318271) at `4552a964` identified a **CRITICAL** `p004_consume_mfa_step` cross-user SQL trust failure: a caller using `elmo_runtime` can supply another user's ID and a guessed current TOTP time-step without independent TOTP or session proof. `p004_enroll_mfa` and `p004_consume_recovery` also do not independently bind SQL caller to target user. A synthetic transaction-rollback negative test is now wired to fail CI **if the bypass is observed**, NOT to register a protection PASS. See [security gate matrix](security/P0-04-ACL_SECURITY_REVIEW_GATE.md) and [P0-04-ACL handoff](handoffs/P0-04-ACL.md). **New amended-head CI outcome must be checked independently.** Do not merge or approve production. Human independent review and separate owner merge order remain distinct gates.
+
+---
+
+## P0-04-ACL restricted-principal code candidate — 2026-11-18 (CODE CI SUCCESS; HUMAN REVIEW OPEN)
+
+Follow-up on [Issue #21](https://github.com/Elmo-Tech/erp-backend/issues/21) / [Draft PR #22](https://github.com/Elmo-Tech/erp-backend/pull/22): replaced disposable blanket table/sequence grants with explicit Web, Worker and NOLOGIN MFA-function-owner privileges, denied Web raw MFA/Audit/Outbox/Idempotency/migration DML, added restricted-role Laravel Auth/MFA/Session/database Queue/Company CRUD checks, direct PG18 and SCRAM PgBouncer paths, negative probes, synthetic Compose owner-provisioning checks and non-root Docker USER 10001. See [P0-04-ACL privilege matrix](security/P0-04-ACL_PRIVILEGE_MATRIX.md) and [handoff](handoffs/P0-04-ACL.md).
+
+**Exact hardened-code CI evidence (2026-11-18):** commit `0a7ee22f489bce8a9727dbec5d10e08a765f960e`, GitHub Actions [#44385647946](https://github.com/Elmo-Tech/erp-backend/actions/runs/44385647946) **COMPLETED SUCCESS**. Verified PostgreSQL 18 owner migrations then independent Web/Worker SCRAM LOGIN, Web-negative object grants, Worker synthetic EG/IT draft CRUD and FK checks, Auth/MFA enrollment/recovery and database Session/Queue/Company CRUD under real `elmo_runtime` both direct and through PgBouncer transaction pooling, runtime migration denial, synthetic Compose PG owner provisioning with nonroot UID 10001 Web and Worker, Docker image build and API health. This documentation-only update creates a later SHA; **the code CI cannot be attributed to that newer documentation SHA** until its own workflow completes.
+
+**Security/approval boundary:** Draft PR #22 remains unmerged; independent qualified human security review and separate owner merge authorization required. Web has readable password hashes/MFA ciphertext and can call narrow functions; a Web process takeover is NOT isolated. The Worker can still change posted journals absent PR #14 and can UPDATE only the period `updated_at` column to support a P0-03 FOR SHARE trigger. No trusted audit/outbox writer, full queue worker delivery, real credential rotation or per-company SQL authorization established. ADR-024 PROPOSED; security #7/#8/#11 OPEN; #20 excluded; no production/staging deployment or real data.
+
+---
+
+
+## Exact-code CI evidence — 2026-11-18
+
+**VERIFIED first complete candidate:** [GitHub Actions #44375723500](https://github.com/Elmo-Tech/erp-backend/actions/runs/44375723500) COMPLETED SUCCESS on exact commit 9da30bdbfeeda5591daa74547b8f069de08f1f42. Its real PostgreSQL 18 LOGIN role provision and direct role probe SUCCESS, independent PgBouncer SCRAM startup and restricted runtime probe SUCCESS, synthetic cleanup SUCCESS; pre-existing PG18 migrations, PHPUnit, P0-03 populated upgrade/rollback, two-client concurrency, real PgBouncer Auth/MFA/Session/Queue, Docker build and API health SUCCESS. Journal immutable-state proof is intentionally NOT VERIFIED because Draft PR #14 guards are absent on this independent integration-based branch. This *documentation update* creates a NEW HEAD and must get separate exact-head CI before claiming its final validation.
+
+## P0-04-ACL independent runtime DB principal PoC — 2026-11-18 (IN PROGRESS / DRAFT)
+
+**Issue [#21](https://github.com/Elmo-Tech/erp-backend/issues/21)**; independent branch task/p0-04-acl-runtime-principal forked from still-unchanged integration 21a085f5. Discovered original Compose injects PostgreSQL superuser owner credentials into Web API. Proposed separate SCRAM password LOGIN elmo_runtime, owner-only migrations, explicit Compose environment mapping (no .env owner credential leak), disposable SQL permission tests, real LOGIN PostgreSQL 18 and PgBouncer scram-sha-256. CI NOT VERIFIED pending exact PR head result. [Dedicated handoff](handoffs/P0-04-ACL.md).
+
+**Security non-proofs:** The integrated baseline lacks unmerged PR #14 immutable journal guards; runtime cannot TRUNCATE/alter triggers/DDL but broad DML permissions alone do NOT prevent UPDATE of existing posted ledger rows. Cross-company FKs protect link integrity but cannot authorize runtime Web identity; same runtime role can access both EG/IT. No proof of separate Web/worker OS principals, key custody, production PgBouncer, PUBLIC function safety, operational rollback or independent human security review. No PR #14/#16/#18/#20 code incorporated. ADR-024 PROPOSED; issues #7/#8/#11 OPEN; PR #20 NEVER MERGE. No finance API, merge, deployment, real data or main/oberation changes.
+
+---
+
 ## P0-03 Development Integration Candidate — 2026-11-17 (DRAFT / NOT MERGE APPROVED)
 
 **Candidate code CI:** exact commit `8110437be702e3a6553f63acc0d68cb281e19543` [GitHub Actions #44110104136](https://github.com/Elmo-Tech/erp-backend/actions/runs/44110104136) **COMPLETED SUCCESS** (PG18 migrate, PHPUnit, populated synthetic Egypt/Italy upgrade + rollback/reapply, direct and pooled concurrency, PgBouncer Auth/MFA and database Session/Queue-driver regression, Docker build and API health). **Still NOT VERIFIED:** dedicated restricted-role queue worker, independent security review, production-like populated database and unsafe `SECURITY DEFINER` replacement. This documentation-only update is a new SHA and must be verified independently; do not attribute the prior code CI to it. No merge approval.

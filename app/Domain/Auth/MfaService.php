@@ -4,10 +4,41 @@ namespace App\Domain\Auth;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 
 final class MfaService
 {
+    public function usesRestrictedRuntime(): bool
+    {
+        return config('database.default') === 'pgsql'
+            && config('database.connections.pgsql.username') === 'elmo_runtime';
+    }
+
+    /**
+     * Synthetic proof only: independent operator grants must pre-exist.
+     * DB functions are owned by a NOLOGIN role and never expose raw table DML.
+     * The Web process still has the encrypted MFA key and can call these
+     * functions if compromised. This is not process-takeover isolation.
+     * @return list<string>|null
+     */
+    public function enrollRestricted(User $user, string $secret, int $step): ?array
+    {
+        $codes = [];
+        $hashes = [];
+        for ($i = 0; $i < 8; $i++) {
+            $code = strtoupper(bin2hex(random_bytes(8)));
+            $codes[] = $code;
+            $hashes[] = $this->recoveryHash($code);
+        }
+        $encrypted = Crypt::encryptString($secret);
+        $row = DB::selectOne(
+            'SELECT public.p004_enroll_mfa(?::bigint, ?::text, ?::bigint, ?::jsonb) AS ok',
+            [$user->id, $encrypted, $step, json_encode($hashes, JSON_THROW_ON_ERROR)]
+        );
+        return $row && in_array($row->ok, [true, 't', '1', 1], true) ? $codes : null;
+    }
+
     public function requiresMfa(User $user): bool
     {
         if (DB::table('global_role_assignments')->where('user_id', $user->id)
@@ -97,6 +128,11 @@ final class MfaService
         if ($user->mfa_secret !== null) {
             $step = $this->matchingStep($user->mfa_secret, $code);
             if ($step !== null) {
+                if ($this->usesRestrictedRuntime()) {
+                    $row = DB::selectOne('SELECT public.p004_consume_mfa_step(?::bigint, ?::bigint) AS ok',
+                        [$user->id, $step]);
+                    return $row && in_array($row->ok, [true, 't', '1', 1], true);
+                }
                 $updated = DB::table('users')->where('id', $user->id)
                     ->where(fn ($query) => $query->whereNull('mfa_last_step')->orWhere('mfa_last_step', '<', $step))
                     ->update(['mfa_last_step' => $step]);
@@ -106,6 +142,11 @@ final class MfaService
 
         // Constant-length hashed recovery secrets; single-use deletion is atomic.
         $hash = $this->recoveryHash($code);
+        if ($this->usesRestrictedRuntime()) {
+            $row = DB::selectOne('SELECT public.p004_consume_recovery(?::bigint, ?::text) AS ok',
+                [$user->id, $hash]);
+            return $row && in_array($row->ok, [true, 't', '1', 1], true);
+        }
         return DB::table('user_mfa_recovery_codes')
             ->where('user_id', $user->id)->where('code_hash', $hash)->delete() === 1;
     }

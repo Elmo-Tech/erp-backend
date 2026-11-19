@@ -1,17 +1,53 @@
 services:
   api:
     build: .
-    env_file: .env
+    # Do not inject .env wholesale: it contains the PostgreSQL owner secret.
+    # Keep migration-owner credentials out of the Web container.
     environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY:?Set APP_KEY for the local API}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      SPA_ALLOWED_ORIGINS: ${SPA_ALLOWED_ORIGINS:-http://localhost:5173}
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:5173}
+      SESSION_SAME_SITE: ${SESSION_SAME_SITE:-lax}
+      SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-false}
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      REDIS_CLIENT: phpredis
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_DATABASE: elmo_erp_v2
-      DB_USERNAME: elmo
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      DB_USERNAME: elmo_runtime
+      DB_PASSWORD: ${RUNTIME_DB_PASSWORD:?Provision an independent runtime LOGIN first}
       REDIS_HOST: redis
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+  worker:
+    build: .
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=1"]
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY:?Set APP_KEY for local worker}
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: elmo_erp_v2
+      DB_USERNAME: elmo_worker
+      DB_PASSWORD: ${WORKER_DB_PASSWORD:?Provision independent worker LOGIN first}
     depends_on:
       postgres:
         condition: service_healthy
