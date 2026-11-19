@@ -1,5 +1,17 @@
 # P0-04-ACL — Runtime Database Principal Isolation (NON-PRODUCTION PoC)
 
+## 2026-11-19 — Independent assurance contract proposal (DOCUMENTATION ONLY / NO-GO)
+
+Continued [Issue #21](https://github.com/Elmo-Tech/erp-backend/issues/21) on existing `task/p0-04-acl-runtime-principal` and Draft [PR #22](https://github.com/Elmo-Tech/erp-backend/pull/22). Reviewed current START_HERE, WORK_PROTOCOL, MODULE_ROADMAP, DECISIONS, both AGENTS, actual MFA service/controller, SQL security-gate diagnostics and threat model. New document: [P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md](../security/P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md) (PROPOSED only). Suggested independent OIDC authority plus an independently credentialed verifier/protected executor. Includes verified subject/assurance claims, tenant-scoped authorization, session revocation, denial of Web MFA mutator execution, negative/positive acceptance tests and safe sequencing. **No selected provider, implementation approval, operational changes, new broker, Auth/MFA logic changes, or deployment.**
+
+**Evidence:** exact previous commit `50b99a5674ab7a9784a6ccc63d5364ef80308d78`; [CI #44503777322](https://github.com/Elmo-Tech/erp-backend/actions/runs/44503777322) **COMPLETED FAILURE**, security negative last step detects an unauthorized synthetic MFA replay-state write and rolls back; unrelated PG18/Laravel/Compose/Docker steps succeeded. Existing vulnerability is **NOT FIXED**. New documentation commits' exact-head CI is **NOT VERIFIED**. Independent reviewer assessments and explicit owner code/merge/deploy approvals are **NOT RECORDED**.
+
+**Changed files in this continuation:** new `docs/security/P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md`, plus `docs/PROJECT_STATUS.md` and `docs/handoffs/P0-04-ACL.md`; no logic, SQL, test, workflow or secrets changes. Keep ADR-024 PROPOSED and roadmap milestone unchanged. Do not conflate documented proposal with safe operations.
+
+**Next precise action:** secure independent qualified review and explicit choice of a verifiable authority/enforcement contract (including PostgreSQL and Worker/financial controls), then create a *separate* approved implementation task/branch with synthetic adversarial tests before any merge. No production or real accounts.
+
+---
+
 ## 2026-11-19 — CI #44497530967 verified; narrowly scoped diagnostic and human reviewer package
 
 **Live GitHub confirmation:** Draft PR #22 / Issue #21 OPEN; at intake PR HEAD `60cfcec55306459ee83db4268c0c53801c70868c`, unchanged integration `21a085f5b101126cb6f535fdb03f204cb99d0405`. [Actions #44497530967](https://github.com/Elmo-Tech/erp-backend/actions/runs/44497530967) **COMPLETED / FAILURE** at the exact intake SHA. Every prior workflow step including restricted Laravel/PgBouncer/Compose/Docker succeeded; final cross-user MFA security step failed with the synthetic unauthorized replay-state update, rollback and an unrelated PHP `Array to string conversion` warning. Review submissions and inline threads: **none**.
