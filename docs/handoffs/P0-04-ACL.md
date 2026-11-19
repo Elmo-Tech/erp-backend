@@ -1,5 +1,17 @@
 # P0-04-ACL — Runtime Database Principal Isolation (NON-PRODUCTION PoC)
 
+## 2026-11-19 — Official-source IdP comparison + exact-head CI verification (DESIGN ONLY / NO-GO)
+
+On existing [Issue #21](https://github.com/Elmo-Tech/erp-backend/issues/21), Draft [PR #22](https://github.com/Elmo-Tech/erp-backend/pull/22), reviewed latest PR metadata, Issue #7 MFA controls, Issue #11 independent broker/issuer production gate, prior [assurance proposal](../security/P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md), canonical docs and official product capabilities. Added [P0-04-ACL_IDP_OPTIONS_AND_REVIEW_DECISION.md](../security/P0-04-ACL_IDP_OPTIONS_AND_REVIEW_DECISION.md). This compares Keycloak, ZITADEL, authentik and Entra ID and defines a conditional evaluation rule, concrete independent protected-executor PoC gates and unanswered operational/ownership questions. **No IdP approved or configured; no implementation, user data or secrets.**
+
+**CI exact predecessor:** `a13bf42bc7d29f92147dc9ca10283c8d7e48e851` → [GitHub Actions #44521114403](https://github.com/Elmo-Tech/erp-backend/actions/runs/44521114403), **completed/failure**. The deliberately blocking cross-user MFA negative remains a confirmed rollback-only synthetic unauthorized MFA replay-state write; prior PG18/PgBouncer/Laravel/Compose/Docker steps successful. No authenticated Laravel login bypass demonstrated. The docs added afterward create **new commits whose exact-head CI is not verified at writing**. Never claim a security PASS.
+
+**Scope/changed files:** new `docs/security/P0-04-ACL_IDP_OPTIONS_AND_REVIEW_DECISION.md`, updates to `docs/PROJECT_STATUS.md` and this handoff; no SQL, MFA service, test, Compose or workflow changes. Existing PR #22 remains DRAFT/UNMERGED; Issue #21 OPEN; ADR-024 PROPOSED; security #7/#8/#11 OPEN; #14 UNMERGED; #20 NEVER MERGE.
+
+**ONE NEXT ACTION:** owner confirms whether an existing approved corporate IdP/Entra tenant covers Egypt/Italy and nominates independent qualified PostgreSQL, MFA/session and financial-control reviewers. Review the option matrix, issuer/enforcement design and credential/revocation/worker attack paths before any new scoped synthetic implementation task. No merge, deploy, production/staging or real accounts.
+
+---
+
 ## 2026-11-19 — Independent assurance contract proposal (DOCUMENTATION ONLY / NO-GO)
 
 Continued [Issue #21](https://github.com/Elmo-Tech/erp-backend/issues/21) on existing `task/p0-04-acl-runtime-principal` and Draft [PR #22](https://github.com/Elmo-Tech/erp-backend/pull/22). Reviewed current START_HERE, WORK_PROTOCOL, MODULE_ROADMAP, DECISIONS, both AGENTS, actual MFA service/controller, SQL security-gate diagnostics and threat model. New document: [P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md](../security/P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md) (PROPOSED only). Suggested independent OIDC authority plus an independently credentialed verifier/protected executor. Includes verified subject/assurance claims, tenant-scoped authorization, session revocation, denial of Web MFA mutator execution, negative/positive acceptance tests and safe sequencing. **No selected provider, implementation approval, operational changes, new broker, Auth/MFA logic changes, or deployment.**
