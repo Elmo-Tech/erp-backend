@@ -1,5 +1,15 @@
 # Project Status — Source of Truth
 
+## P0-04-ACL independent assurance design candidate — 2026-11-19 (PROPOSED; NO-GO)
+
+At the existing [Draft PR #22](https://github.com/Elmo-Tech/erp-backend/pull/22), the security boundary analysis now has a proposed [Independent Identity/MFA Assurance Contract](security/P0-04-ACL_INDEPENDENT_ASSURANCE_CONTRACT.md). It evaluates a separately controlled OIDC identity authority plus non-bypassable independent enforcement/privileged executor as a **design candidate only**. Owner/provider/issuer approval, security review and implementation are **NOT DONE**. No MFA SQL grants/functions, login code, finance flows, deployment or integration code changed in this documentation step.
+
+**Exact prior HEAD evidence:** commit `50b99a5674ab7a9784a6ccc63d5364ef80308d78`, [CI #44503777322](https://github.com/Elmo-Tech/erp-backend/actions/runs/44503777322) COMPLETED **FAILURE**, step 28 cross-user MFA security negative; steps 3–27 were successful. The negative is an intentionally blocking **confirmed synthetic unauthorized MFA replay-state mutation**, rolled back, not a successful mitigation or a proven Laravel login bypass. The **new documentation commits have not received independently verified exact-head CI** at writing; status remains **NO-GO**.
+
+**Next precise action:** independent qualified PostgreSQL, MFA/session and financial controls review of the proposed contract and known Worker/journal gaps; record a selected, explicit trusted issuer/enforcer policy and a new scoped implementation task only after owner direction. Preserve Issue #21 OPEN, PR #22 DRAFT, ADR-024 PROPOSED, #14 unmerged, #20 NEVER MERGE, security #7/#8/#11 OPEN. No user data, merged branch changes, staging or production.
+
+---
+
 ## P0-04-ACL verification update — 2026-11-19 (NO-GO; reviewer package prepared)
 
 Verified [GitHub Actions #44497530967](https://github.com/Elmo-Tech/erp-backend/actions/runs/44497530967) **COMPLETED / FAILURE** at exact PR #22 HEAD `60cfcec55306459ee83db4268c0c53801c70868c`. PG18 / direct + SCRAM PgBouncer / restricted Laravel Auth-MFA-Sessions-Queue / synthetic EG-IT / Compose / Docker steps succeeded; the final **intentional blocking cross-user MFA negative** failed because `elmo_runtime` successfully modified another synthetic user's `mfa_last_step` without TOTP or independently verified subject. ROLLBACK executed. A source/target ID-array comparison caused a PHP warning and is corrected in a later narrow diagnostic-only commit; no security function/ACL is changed. **New HEAD CI NOT VERIFIED until its own run is inspected**.
