@@ -1,5 +1,17 @@
 # P0-04-ACL — Runtime Database Principal Isolation (NON-PRODUCTION PoC)
 
+## 2026-11-19 — Focused AI security gate: NO-GO for merge, presentable for independent human review
+
+Original source/CI at `4552a964a6ac6e3e79b221d528be9734034dd286`: [run #44386318271](https://github.com/Elmo-Tech/erp-backend/actions/runs/44386318271) SUCCESS. [Detailed PASS/FAIL/NOT VERIFIED report](../security/P0-04-ACL_SECURITY_REVIEW_GATE.md). CRITICAL: `p004_consume_mfa_step` trusts `elmo_runtime`, caller-supplied target and an unproved time-step; no target identity/TOTP checked in DB. Separate functions `p004_consume_recovery` and `p004_enroll_mfa` also have missing independently bound identity. Web can read password hashes and encrypted MFA fields plus has APP_KEY; Worker can DML Journal rows and mutate period timestamp, while P0-04A remains unmerged. SECURITY DEFINER NOLOGIN/qualified-name and effective grant negatives are genuine but insufficient.
+
+Added a **non-production, synthetic, rolled-back cross-user negative regression test** and an end-of-workflow blocking security check. If cross-user update succeeds, the test prints **SECURITY FAIL** and exits nonzero: **not a PASS of protection**. The resulting amended-head CI is **NOT VERIFIED at time of committing this handoff**; inspect its actual outcome/commit before reporting. No functional MFA rewrite: there is no independently trusted DB proof issuer or agreed design, and a same-process APP_KEY-based claim would not be sufficient.
+
+**Decision:** GO to show blocking evidence to owner-selected qualified independent DBA, application security/MFA and accounting safeguards reviewers; **NO-GO** to development merge, production deployment and real data. Keep PR #22 Draft and Issue #21 open, ADR-024 PROPOSED, security #7/#8/#11 open, PR #20 NEVER MERGE. No human review or owner merge approval implied.
+
+**One exact next action:** Verify the new exact-head GitHub Actions run and have the project owner nominate independent qualified reviewers to design an independently enforced caller-to-user MFA assurance boundary (plus Worker posted-entry/audit gates). After tested fixes and human sign-off, obtain a **separate explicit owner merge command**. No new branch/issue or integration changes.
+
+---
+
 ## 2026-11-18 — Final code CI checkpoint and handoff
 
 **Exact hardened-code CI evidence (2026-11-18):** commit `0a7ee22f489bce8a9727dbec5d10e08a765f960e`, GitHub Actions [#44385647946](https://github.com/Elmo-Tech/erp-backend/actions/runs/44385647946) **COMPLETED SUCCESS**. Verified PostgreSQL 18 owner migrations then independent Web/Worker SCRAM LOGIN, Web-negative object grants, Worker synthetic EG/IT draft CRUD and FK checks, Auth/MFA enrollment/recovery and database Session/Queue/Company CRUD under real `elmo_runtime` both direct and through PgBouncer transaction pooling, runtime migration denial, synthetic Compose PG owner provisioning with nonroot UID 10001 Web and Worker, Docker image build and API health. This documentation-only update creates a later SHA; **the code CI cannot be attributed to that newer documentation SHA** until its own workflow completes.

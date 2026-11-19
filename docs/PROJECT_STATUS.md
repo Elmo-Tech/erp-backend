@@ -1,5 +1,11 @@
 # Project Status — Source of Truth
 
+## P0-04-ACL focused security review gate — 2026-11-19 (NO-GO)
+
+AI-assisted security source review of prior exact-head CI [#44386318271](https://github.com/Elmo-Tech/erp-backend/actions/runs/44386318271) at `4552a964` identified a **CRITICAL** `p004_consume_mfa_step` cross-user SQL trust failure: a caller using `elmo_runtime` can supply another user's ID and a guessed current TOTP time-step without independent TOTP or session proof. `p004_enroll_mfa` and `p004_consume_recovery` also do not independently bind SQL caller to target user. A synthetic transaction-rollback negative test is now wired to fail CI **if the bypass is observed**, NOT to register a protection PASS. See [security gate matrix](security/P0-04-ACL_SECURITY_REVIEW_GATE.md) and [P0-04-ACL handoff](handoffs/P0-04-ACL.md). **New amended-head CI outcome must be checked independently.** Do not merge or approve production. Human independent review and separate owner merge order remain distinct gates.
+
+---
+
 ## P0-04-ACL restricted-principal code candidate — 2026-11-18 (CODE CI SUCCESS; HUMAN REVIEW OPEN)
 
 Follow-up on [Issue #21](https://github.com/Elmo-Tech/erp-backend/issues/21) / [Draft PR #22](https://github.com/Elmo-Tech/erp-backend/pull/22): replaced disposable blanket table/sequence grants with explicit Web, Worker and NOLOGIN MFA-function-owner privileges, denied Web raw MFA/Audit/Outbox/Idempotency/migration DML, added restricted-role Laravel Auth/MFA/Session/database Queue/Company CRUD checks, direct PG18 and SCRAM PgBouncer paths, negative probes, synthetic Compose owner-provisioning checks and non-root Docker USER 10001. See [P0-04-ACL privilege matrix](security/P0-04-ACL_PRIVILEGE_MATRIX.md) and [handoff](handoffs/P0-04-ACL.md).

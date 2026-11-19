@@ -261,3 +261,15 @@ jobs:
           done
           docker logs erp-v2-backend-ci
           exit 1
+      - name: P0-04-ACL SECURITY GATE cross-user MFA step negative (synthetic; fail on vulnerability)
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/integration/p004_laravel_fixture.php seed
+          result=0
+          php tests/integration/p004_mfa_cross_user_negative.php || result=$?
+          php tests/integration/p004_laravel_fixture.php cleanup
+          if [ "$result" -ne 0 ]; then
+            echo '::error::P0-04-ACL SECURITY FAIL: cross-user MFA step can advance without independent SQL assurance. DO NOT MERGE.'
+            exit "$result"
+          fi

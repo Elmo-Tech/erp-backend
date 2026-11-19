@@ -1,5 +1,9 @@
 # P0-04-ACL — Object privilege matrix and operator lifecycle (PROPOSED / NON-PRODUCTION)
 
+## 2026-11-19 focused security gate: Critical cross-user MFA SQL defect
+
+**NO-GO for development merge.** The existing three `SECURITY DEFINER` functions can be invoked by any `elmo_runtime` SQL caller; `p004_consume_mfa_step` accepts another user's ID and a near-current time-step without independent TOTP/session proof. The synthetic rolled-back negative test now fails CI when this vulnerability is present. `p004_enroll_mfa` and `p004_consume_recovery` also have no independently verified caller-to-target binding. Existing role and table privilege negatives remain valid, but do not establish Web-process compromise safety. For detailed severity/evidence/decision: [P0-04-ACL Security Review Gate](P0-04-ACL_SECURITY_REVIEW_GATE.md). New amended-head CI must be verified separately, and independent qualified human security reviewers must be nominated by the owner; AI analysis is not human approval.
+
 Date: 2026-11-18. Scope: independent synthetic PostgreSQL 18, Web `elmo_runtime`, Worker `elmo_worker`, migration owner `elmo`, dedicated NOLOGIN `elmo_mfa_executor`. Related Issue #21, Draft PR #22. **This is a proposed database boundary, not ADR-024 approval, production entitlement or independent human sign-off.**
 
 ## Source-derived permission matrix
