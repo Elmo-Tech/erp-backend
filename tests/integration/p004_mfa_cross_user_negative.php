@@ -34,7 +34,7 @@ try {
         "SELECT id, mfa_last_step, mfa_secret IS NOT NULL AS enrolled
          FROM public.users WHERE email='acl-web-mfa@example.invalid'"
     )->fetch();
-    if (!$source || !$target || (string)$source === (string)$target
+    if (!$source || !$target || (string)$source === (string)$target['id']
         || $target['mfa_last_step'] !== null || !in_array($target['enrolled'], [true, 't', '1', 1], true)) {
         throw new RuntimeException('Missing distinct synthetic identities and fresh enrolled target');
     }
